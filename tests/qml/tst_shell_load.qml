@@ -26,7 +26,9 @@ TestCase {
         "shell/popovers/AudioSection.qml",
         "shell/themes/Theme.qml",
         "shell/services/SettingsStore.qml",
-        "shell/services/HyprlandModel.qml"
+        "shell/services/HyprlandModel.qml",
+        "shell/services/LauncherModel.qml",
+        "shell/launcher/LauncherWindow.qml"
     ]
 
     // These compile with the Qt Quick stubs. shell.qml, BarHost, and BarWindow also

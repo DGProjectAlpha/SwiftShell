@@ -13,6 +13,7 @@ const calendar = require("../shell/logic/calendar.js");
 const popover = require("../shell/logic/popover.js");
 const audio = require("../shell/logic/audio.js");
 const bar = require("../shell/logic/bar.js");
+const launcher = require("../shell/logic/launcher.js");
 
 let failed = 0;
 
@@ -727,6 +728,111 @@ test("defaults.json matches the serializer", function () {
     const file = path.join(__dirname, "..", "shell", "config", "defaults.json");
     const text = fs.readFileSync(file, "utf8");
     assert.equal(text, settings.serializeSettings(settings.DEFAULTS));
+});
+
+test("desktop entries keep visibility and do not build a shell command", function () {
+    const firefox = launcher.parseDesktopEntry([
+        "[Desktop Entry]",
+        "Type=Application",
+        "Name=Firefox",
+        "GenericName=Web Browser",
+        "Comment=Browse the web",
+        "Exec=firefox %u",
+        "Icon=firefox",
+        "Categories=Network;WebBrowser;",
+    ].join("\n"), "firefox.desktop");
+    assert.equal(launcher.entryVisible(firefox, ["Hyprland"]), true);
+    assert.deepEqual(firefox.command, ["firefox"]);
+    assert.equal(firefox.command.indexOf("%u"), -1);
+
+    const quoted = launcher.commandFromExec('kitty -e "foo bar"', { name: "Kitty", icon: "kitty" });
+    assert.deepEqual(quoted, ["kitty", "-e", "foo bar"]);
+    assert.deepEqual(launcher.commandFromExec("app %%", {}), ["app", "%"]);
+    assert.deepEqual(launcher.commandFromExec("app %i", { icon: "firefox" }), ["app", "--icon", "firefox"]);
+    assert.deepEqual(launcher.commandFromExec('broken "quote', {}), []);
+
+    const hidden = launcher.parseDesktopEntry("[Desktop Entry]\nType=Application\nName=Secret\nExec=secret\nNoDisplay=true\n", "secret.desktop");
+    assert.equal(launcher.entryVisible(hidden, []), false);
+    const gnome = launcher.parseDesktopEntry("[Desktop Entry]\nType=Application\nName=Gnome\nExec=gnome\nOnlyShowIn=GNOME;\n", "gnome.desktop");
+    assert.equal(launcher.entryVisible(gnome, ["Hyprland"]), false);
+    assert.equal(launcher.entryVisible(gnome, []), true);
+
+    const dupes = launcher.dedupeApplications([
+        { id: "firefox.desktop", name: "First" },
+        { id: "firefox.desktop", name: "Second" },
+    ]);
+    assert.equal(dupes.length, 1);
+    assert.equal(dupes[0].name, "First");
+    assert.equal(launcher.iconPath("/usr/share/icons/firefox.png"), "/usr/share/icons/firefox.png");
+    assert.equal(launcher.iconPath("firefox"), "");
+    assert.equal(launcher.iconPath("/tmp/a\nb"), "");
+    assert.equal(launcher.monogram("firefox"), "F");
+});
+
+test("launcher ranking is stable and ignores the query as a command", function () {
+    const apps = [
+        { id: "notes.desktop", name: "Notes", genericName: "", comment: "Editor", categories: [], keywords: [] },
+        { id: "editor.desktop", name: "Editor", genericName: "", comment: "Text", categories: ["Utility"], keywords: [] },
+        { id: "firefox.desktop", name: "Firefox", genericName: "Web Browser", comment: "", categories: ["Network"], keywords: ["web"] },
+        { id: "files.desktop", name: "Files", genericName: "", comment: "", categories: [], keywords: [] },
+    ];
+    assert.deepEqual(launcher.rank(apps, "editor").map(function (app) { return app.id; }), ["editor.desktop", "notes.desktop"]);
+    assert.deepEqual(launcher.rank(apps, "fi").map(function (app) { return app.id; }), ["files.desktop", "firefox.desktop"]);
+    assert.deepEqual(launcher.rank(apps, "firefox").map(function (app) { return app.id; }), ["firefox.desktop"]);
+    assert.deepEqual(launcher.rank(apps, "ffx").map(function (app) { return app.id; }), ["firefox.desktop"]);
+    assert.deepEqual(launcher.rank(apps, "web").map(function (app) { return app.id; })[0], "firefox.desktop");
+    assert.deepEqual(launcher.rank(apps, "$(reboot)"), []);
+    const plan = launcher.commandFromExec("firefox %u", { name: "Firefox", icon: "firefox" });
+    assert.equal(plan.join(" ").indexOf("$(reboot)"), -1);
+    assert.equal(plan.indexOf("sh"), -1);
+
+    const rows = launcher.viewRows(apps, "", ["firefox.desktop"], ["notes.desktop"]);
+    assert.equal(rows[0].id, "firefox.desktop");
+    assert.equal(rows[0].section, "Pinned");
+    assert.equal(rows[1].id, "notes.desktop");
+    assert.equal(rows[1].section, "Recent");
+    assert.equal(rows[rows.length - 1].kind, "power");
+    assert.equal(rows.some(function (row) { return row.argv; }), false);
+
+    const armed = launcher.powerStep("", "poweroff");
+    assert.equal(armed.run, false);
+    assert.equal(armed.argv, null);
+    const confirmed = launcher.powerStep("poweroff", "poweroff");
+    assert.equal(confirmed.run, true);
+    assert.deepEqual(confirmed.argv, ["loginctl", "poweroff"]);
+    assert.equal(launcher.powerStep("", "custom").run, false);
+    assert.equal(launcher.moveSelection(0, 4, -1), 3);
+    assert.equal(launcher.moveSelection(3, 4, 1), 0);
+
+    const recent = launcher.pushRecent(["a.desktop", "b.desktop"], "a.desktop");
+    assert.deepEqual(recent, ["a.desktop", "b.desktop"]);
+    assert.equal(launcher.pushRecent(["1.desktop", "2.desktop", "3.desktop", "4.desktop", "5.desktop", "6.desktop", "7.desktop", "8.desktop"], "9.desktop").length, 8);
+
+    const pins = settings.validateSettings({ launcher: { pinnedIds: { length: 1, 0: "firefox.desktop" } } });
+    assert.equal(pins.ok, true);
+    assert.deepEqual(pins.settings.launcher.pinnedIds, ["firefox.desktop"]);
+    const badPins = settings.validateSettings({ launcher: { pinnedIds: ["../x", "firefox.desktop"] } });
+    assert.equal(badPins.ok, false);
+    assert.ok(badPins.errors.indexOf("launcher.pinnedIds") !== -1);
+    assert.deepEqual(badPins.settings.launcher.pinnedIds, ["firefox.desktop"]);
+
+    const many = [];
+    for (let i = 0; i < 400; i++) {
+        many.push({
+            id: "app" + i + ".desktop",
+            name: "Application " + i,
+            genericName: "",
+            comment: "Tool number " + i,
+            categories: ["Utility"],
+            keywords: [],
+        });
+    }
+    const started = process.hrtime.bigint();
+    const ranked = launcher.rank(many, "application 12");
+    const elapsed = Number(process.hrtime.bigint() - started) / 1e6;
+    console.log("launcher rank 400 apps: " + elapsed.toFixed(2) + " ms");
+    assert.equal(ranked[0].id, "app12.desktop");
+    assert.ok(elapsed < 50, "rank took " + elapsed + " ms");
 });
 
 if (failed > 0) {

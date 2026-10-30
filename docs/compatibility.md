@@ -18,8 +18,10 @@ Versions below are the APIs this prototype was written against. They were taken 
 | `ShellRoot`, `Scope`, `Singleton`, `PanelWindow`, `PopupWindow`, `PopupAnchor`, `PopupAdjustment`, `Variants`, `SystemClock`, `ExclusionMode`, `Region` | `Quickshell` | Entry, non-visual parents, per-screen instances, popups, clock |
 | `Hyprland`, `HyprlandFocusGrab` | `Quickshell.Hyprland` | Workspaces, monitors, toplevels, `dispatch`, `monitorFor`, popup dismissal |
 | `WlrLayershell` | `Quickshell.Wayland` | Namespace `swiftshell-bar`, layer `Top`, keyboard focus `None` |
-| `FileView`, `JsonAdapter`, `JsonObject` | `Quickshell.Io` | Settings file |
+| `FileView`, `JsonAdapter`, `JsonObject` | `Quickshell.Io` | Settings file and the launcher request token |
 | `Pipewire`, `PwObjectTracker` | `Quickshell.Services.Pipewire` | Default sink volume and mute |
+| `DesktopEntries`, `DesktopEntry` | `Quickshell` | Application index. `execute()` launches `command` without a shell. `execString` is not used |
+| `Quickshell.execDetached` | `Quickshell` | Fixed `loginctl` power arguments after a second confirmation |
 
 `PanelWindow.color` is fully transparent. `implicitHeight` is 28. Anchors are top, left, and right. `focusable` is false so the bar does not take keyboard focus from the session. Existing Super shortcuts stay where they are.
 
@@ -83,7 +85,8 @@ Quickshell 0.2.0 accepts `--path` and `--no-duplicate` on the main command, and 
 | `BackgroundEffect` | Absent | 0.3+ attached property. Needs `ext-background-effect-v1` | Unsupported. Scrim fallback is what renders |
 | PipeWire default sink | `Pipewire.defaultAudioSink`, `PwObjectTracker`, `PwNodeAudio.volume` / `muted` | Same family | Implemented, not runtime-tested. A missing module stays inside the audio `Loader` |
 | `SystemClock`, `Variants`, `FileView`, `WlrLayershell.namespace` | Documented | Documented | Implemented, not runtime-tested |
-| Network, Bluetooth, media, power, launcher | Not part of this milestone | Not part of this milestone | Deferred |
+| Network, Bluetooth, media, power menu beyond the launcher confirmations, file search | Not part of the verified launcher | Not implemented here | Deferred. The launcher does not invent those results |
+| Launcher window | `DesktopEntries` and `PanelWindow` are documented on the 0.2 pages | Same | Implemented. Ranking of 400 names measured 1.96 ms in Node. The window was not opened with `qs` |
 | Wallpaper sampling | Not implemented | Not implemented | Deferred. The stored tint does not change the palette |
 
 ## Explicitly out of scope

@@ -89,7 +89,50 @@ var DEFAULTS = {
         iconScale: 1,
         topGradient: false,
     },
+    launcher: {
+        pinnedIds: [],
+    },
 };
+
+function pinnedIdValid(value) {
+    return typeof value === "string" && value.length > 0 && value.length <= 128 && /^[A-Za-z0-9._+-]+$/.test(value);
+}
+
+function pinnedSource(ids) {
+    if (Array.isArray(ids))
+        return ids;
+    if (ids && typeof ids === "object" && typeof ids.length === "number") {
+        const out = [];
+        for (let i = 0; i < ids.length; i++)
+            out.push(ids[i]);
+        return out;
+    }
+    return null;
+}
+
+function pinnedIdsValid(ids) {
+    const source = pinnedSource(ids);
+    if (!source || source.length > 12)
+        return false;
+    const seen = [];
+    for (let i = 0; i < source.length; i++) {
+        if (!pinnedIdValid(source[i]) || seen.indexOf(source[i]) !== -1)
+            return false;
+        seen.push(source[i]);
+    }
+    return true;
+}
+
+function normalizePinnedIds(ids) {
+    const source = pinnedSource(ids) || [];
+    const out = [];
+    for (let i = 0; i < source.length && out.length < 12; i++) {
+        if (!pinnedIdValid(source[i]) || out.indexOf(source[i]) !== -1)
+            continue;
+        out.push(source[i]);
+    }
+    return out;
+}
 
 function isPlainObject(value) {
     return !!value && typeof value === "object" && !Array.isArray(value);
@@ -218,6 +261,20 @@ function validateSettings(input) {
     const iconScale = pickNumber(appearance, "iconScale", 0.75, 1.5, DEFAULTS.appearance.iconScale, errors, "appearance.iconScale");
     const topGradient = pickBoolean(appearance, "topGradient", DEFAULTS.appearance.topGradient, errors, "appearance.topGradient");
 
+    const launcher = isPlainObject(source.launcher) ? source.launcher : {};
+    if (source.launcher !== undefined && !isPlainObject(source.launcher))
+        errors.push("launcher");
+
+    let pinnedIds = DEFAULTS.launcher.pinnedIds.slice();
+    if (!isPlainObject(source.launcher) || launcher.pinnedIds === undefined) {
+        pinnedIds = DEFAULTS.launcher.pinnedIds.slice();
+    } else if (pinnedIdsValid(launcher.pinnedIds)) {
+        pinnedIds = normalizePinnedIds(launcher.pinnedIds);
+    } else {
+        errors.push("launcher.pinnedIds");
+        pinnedIds = normalizePinnedIds(launcher.pinnedIds);
+    }
+
     return {
         ok: errors.length === 0,
         errors: errors,
@@ -252,6 +309,9 @@ function validateSettings(input) {
                 iconScale: iconScale,
                 topGradient: topGradient,
             },
+            launcher: {
+                pinnedIds: pinnedIds,
+            },
         },
     };
 }
@@ -266,6 +326,7 @@ var swiftshellSettings = {
     validateSettings: validateSettings,
     serializeSettings: serializeSettings,
     normalizeWorkspaceIds: normalizeWorkspaceIds,
+    normalizePinnedIds: normalizePinnedIds,
 };
 
 if (typeof module !== "undefined" && module.exports)

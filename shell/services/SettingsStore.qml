@@ -34,6 +34,7 @@ Singleton {
     readonly property string fontWeight: appearanceSettings.fontWeight
     readonly property real iconScale: appearanceSettings.iconScale
     readonly property bool topGradient: appearanceSettings.topGradient
+    readonly property var pinnedIds: Settings.normalizePinnedIds(launcherSettings.pinnedIds)
 
     property bool writing: false
     property bool suppressReload: false
@@ -69,6 +70,9 @@ Singleton {
                 fontWeight: appearanceSettings.fontWeight,
                 iconScale: appearanceSettings.iconScale,
                 topGradient: appearanceSettings.topGradient
+            },
+            launcher: {
+                pinnedIds: launcherSettings.pinnedIds
             }
         };
     }
@@ -162,6 +166,11 @@ Singleton {
                 property string fontWeight: "regular"
                 property real iconScale: 1
                 property bool topGradient: false
+            }
+
+            property JsonObject launcher: JsonObject {
+                id: launcherSettings
+                property list<string> pinnedIds: []
             }
         }
     }

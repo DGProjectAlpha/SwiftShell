@@ -25,6 +25,8 @@ else
 fi
 
 mkdir -p "$SETTINGS_DIR"
+STATE_HOME=${XDG_STATE_HOME:-"$HOME/.local/state"}
+mkdir -p "$STATE_HOME/swiftshell"
 if [ ! -e "$SETTINGS_FILE" ]; then
     cp "$CONFIG/config/defaults.json" "$SETTINGS_FILE"
 fi
