@@ -1,0 +1,2 @@
+singleton SettingsStore 1.0 SettingsStore.qml
+singleton HyprlandModel 1.0 HyprlandModel.qml

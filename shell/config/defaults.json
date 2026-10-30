@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "clock": {
+    "use24Hour": true
+  },
+  "bar": {
+    "targetMonitor": "HDMI-A-1",
+    "reserveSpace": false,
+    "showFocusedTitle": true,
+    "workspaceIds": [
+      4,
+      5,
+      6
+    ]
+  }
+}

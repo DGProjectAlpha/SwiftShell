@@ -1,6 +1,6 @@
 # SwiftShell
 
-> **Status:** Specification / pre-implementation. No production shell code has been shipped or verified yet.
+> **Status:** M0/M1 prototype source is in `shell/`. It has not been loaded in a Hyprland session, and graphical behavior is unverified.
 >
 > **Purpose:** A clean, understated, keyboard-first, fully integrated desktop shell built with **Quickshell + Qt 6/QML** for **Hyprland on CachyOS**.
 >
@@ -486,10 +486,24 @@ Acceptance: user explicitly opts in; Noctalia remains readily restorable.
 - [x] GitHub repository created: **DGProjectAlpha/SwiftShell**
 - [x] Initial README created
 - [x] Detailed product/engineering specification established
+- [x] M0/M1 prototype source, launch/stop scripts, and logic tests added
 - [ ] Local Quickshell and Hyprland runtime audited
 - [ ] Agent instructions and design architecture validated locally
-- [ ] Prototype implemented
 - [ ] Visual rendering verified
 - [ ] Any live desktop integration approved
 
-**Current claim:** This document is a design specification, not evidence that the shell already works.
+**Current claim:** The specification still describes the product. The M0/M1 source is a separate Quickshell config. It is not evidence that the bar has been seen on a monitor.
+
+## 13. Running the M0/M1 prototype
+
+Full notes: `docs/architecture.md`, `docs/compatibility.md`, `docs/testing.md`.
+
+On the CachyOS machine, install Quickshell from the distro packages, then from this checkout:
+
+```sh
+scripts/check.sh
+scripts/launch.sh
+scripts/stop.sh
+```
+
+`scripts/launch.sh` runs `qs --path` against `shell/` and does not edit Hyprland or Noctalia. `scripts/stop.sh` kills that path only. The bar targets HDMI-A-1, shows workspaces 4–6 and a clock, and does not reserve screen space unless `bar.reserveSpace` is set to `true` in `~/.config/swiftshell/settings.json`.
