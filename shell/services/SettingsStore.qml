@@ -2,10 +2,11 @@ pragma Singleton
 
 import QtQuick
 import QtCore
+import Quickshell
 import Quickshell.Io
 import "../logic/settings.js" as Settings
 
-QtObject {
+Singleton {
     id: root
 
     readonly property string settingsPath: StandardPaths.writableLocation(StandardPaths.GenericConfigLocation) + "/swiftshell/settings.json"

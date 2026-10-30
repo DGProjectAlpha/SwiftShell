@@ -31,13 +31,13 @@ scripts/check.sh
 - focused-title selection
 - settings validation, repair, and the defaults file
 
-`tests/static_check.py` checks that the QML files exist, local imports resolve, braces and parentheses balance, and the tree does not spawn `hyprctl`, a `Timer`, or a `Process`. It also checks the transparent color, 28px token, HDMI-A-1 default, and shell id. Shell scripts are scanned for edits to Hyprland config, service units, and package installation outside the explicit Arch dependency path.
+`tests/static_check.py` checks that the QML files exist, local imports resolve, braces and parentheses balance, and the tree does not spawn `hyprctl`, a `Timer`, or a `Process`. It rejects a QML object nested directly in `QtObject`, which has no default property, including through a component whose root type is `QtObject`. Property values such as `property Item child: Item {}` are allowed. It also checks the transparent color, 28px token, HDMI-A-1 default, shell id, `Scope` bar host, and `Singleton` service roots. Shell scripts are scanned for edits to Hyprland config, service units, and package installation outside the explicit Arch dependency path.
 
-`tests/install_flow.sh` runs `./install.sh`, activation, deactivation, and uninstallation in a temporary `HOME` with stub `qs` and `Hyprland` commands. It checks that a second install keeps settings, that occupied config names and foreign launchers are refused, and that Hyprland and other shell files in that temporary home stay unchanged. It does not install packages and it does not open a Wayland session.
+`tests/install_flow.sh` runs `./install.sh`, activation, deactivation, and uninstallation in a temporary `HOME` with stub `qs` and `Hyprland` commands. It checks that a second install keeps settings, that occupied config names and foreign launchers are refused, and that Hyprland and other shell files in that temporary home stay unchanged. Stop is checked twice: a stub whose help lists `--any-display` must receive that flag, and a stub that matches Quickshell 0.2.0 must be stopped with `kill --path` alone. It does not install packages and it does not open a Wayland session.
 
 ## What was run for this change
 
-On 30 Oct 2026, in the cloud workspace, with no Hyprland session:
+On 30 Oct 2026 (America/New_York), in the cloud workspace, with no Hyprland session:
 
 ```text
 python3 tests/static_check.py
@@ -45,7 +45,7 @@ node tests/logic.test.js
 sh tests/install_flow.sh
 ```
 
-Node was v22.23.4 and Python was 3.12.3. Static checks passed for 10 QML files. Logic tests passed. Install tests passed. `qmllint` is not installed here, so Qt did not parse the QML. The shell was not launched, and the installer was not run against a real user account.
+Node was v22.23.4 and Python was 3.12.3. Static checks passed for 10 QML files, including the nesting fixtures and the real `Scope` / `Singleton` roots. Logic tests passed. Install tests passed, including the Quickshell 0.2 stop path that must not pass `--any-display`, and a failed `qs kill` that must still print the miss warning. `qmllint`, `qml`, and `qs` are not installed here, so Qt did not parse the QML and the CLI probe was not run against a real Quickshell binary. The shell was not launched, and the installer was not run against a real user account.
 
 ## What these checks do not prove
 
@@ -57,6 +57,9 @@ Node was v22.23.4 and Python was 3.12.3. Static checks passed for 10 QML files. 
 - `reserveSpace: false` leaves Noctalia's exclusive zone unchanged.
 - The shell exits without taking Hyprland down.
 - `./install.sh` behaves the same way on a real Arch or CachyOS account.
+- Qt accepts `Scope` and `Singleton` as used here. That follows the Quickshell 0.2 type pages, and it was not loaded with `qs`.
+- `WlrLayershell.namespace` parses on the installed Quickshell. The 0.2 page documents that property and says it must be set before the layer surface connects.
+- `qs kill --help` on the installed binary matches the 0.2.0 parser or the later `--any-display` flag. The probe was tested with stubs only.
 
 Those need a Hyprland session on the target machine. Do not mark them passed from a cloud log.
 

@@ -75,8 +75,10 @@ qs --path ~/.local/share/swiftshell/app --no-duplicate
 5. Stop that path with:
 
 ```sh
-qs kill --path ~/.local/share/swiftshell/app --any-display
+qs kill --path ~/.local/share/swiftshell/app
 ```
+
+Add `--any-display` on Quickshell builds whose `qs kill --help` lists that flag. Quickshell 0.2.0 does not have it. `swiftshell stop` adds the flag only when the installed `qs` advertises it.
 
 Do not copy these files onto `~/.config/quickshell/shell.qml` or into another shell's directory.
 
