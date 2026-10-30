@@ -35,6 +35,8 @@ PipeWire volume uses `Pipewire.defaultAudioSink`, `PwObjectTracker.objects`, and
 
 `QtObject` has no default property. A child object written directly inside it fails to load. `BarHost` is a `Scope`, whose default property is `children`. `SettingsStore`, `HyprlandModel`, and `Theme` use Quickshell's `Singleton` type, which extends `Scope`. `FileView` stays a child of that singleton, and `JsonAdapter` stays a child of `FileView` because `adapter` is `FileView`'s default property. `SystemClock` stays inside `Item`, whose `data` property accepts non-visual objects.
 
+`Column`, `Row`, `Grid`, `Flow`, `Loader`, `Text`, `TextInput`, `TextEdit`, and `Image` inherit Qt's `QQuickImplicitSizeItem`. That type calculates `implicitWidth` and `implicitHeight`. Assigning either property stops the shell before the next file is compiled, with `Invalid property assignment: "implicitWidth" is a read-only property` (or `implicitHeight`). `Item`, `Rectangle`, `MouseArea`, `FocusScope`, the layout types, `PanelWindow`, and `PopupWindow` still accept an implicit size. The calendar and the control center are `Item`s for that reason. The inner column is given the item's width. A `Loader` is left to adopt the loaded item's implicit size. `qmllint` 6.4.2 does not report the assignment, because it follows the writable property on `Item` and misses the read-only override.
+
 Workspace activation prefers `HyprlandWorkspace.activate()`. The fallback string is `workspace <id>` passed to `Hyprland.dispatch`. Both are socket IPC. The historical Lua parse error from putting `hyprctl` syntax into the Lua config does not apply to this path, because this path does not call `hyprctl`.
 
 ## Launch

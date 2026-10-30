@@ -185,12 +185,12 @@ PopupWindow {
                 }
             }
 
+            // Loader adopts the loaded item's implicit size. Assigning
+            // implicitWidth or implicitHeight here is a startup error.
             Loader {
                 sourceComponent: popup.popupState.panelId === "control"
                     ? controlPanel
                     : popup.popupState.panelId === "calendar" ? calendarPanel : null
-                implicitWidth: item ? item.implicitWidth : 0
-                implicitHeight: item ? item.implicitHeight : 0
             }
         }
     }
