@@ -60,15 +60,17 @@ If the Hyprland socket is absent, the indicators render inactive and clicks log 
 
 ## Panels
 
-Each bar window owns one `PopoverHost`. Opening the clock closes the control center on that monitor, and the reverse. The host is a `PopupWindow` anchored to the clicked item. `shell/logic/popover.js` places the top-left corner in logical pixels and keeps it inside the screen margin. `PopupAdjustment.Flip` and `PopupAdjustment.Slide` are also set so the compositor can move the popup if the shell's rectangle is still outside the output.
+Each bar window owns one `PopoverHost`. That host is the only primary popup for its monitor. Its phase is `closed`, `opening`, `open`, or `closing`. The grab and the click mask follow that phase. Opening the clock replaces the control center on that monitor, and the reverse, without starting a second window.
 
-The popup window color is transparent and `surfaceFormat.opaque` is false, so the surface can blend. The visible card is a separate rectangle using the theme scrim. A flat translucent rectangle sits behind that card. It is not a sampled shadow.
+The host is a `PopupWindow`. `anchor.window` is the bar. `anchor.edges` stays `Top | Left` and `anchor.gravity` stays `Bottom | Right`, so a 1×1 anchor rect is the popup's top-left. `PopupAdjustment.Flip` and `PopupAdjustment.Slide` remain as the compositor's own adjustment. The rect is written inside `anchor.onAnchoring`, which is the documented place for a non-reactive map. The map is `contentItem.mapFromItem(anchorItem, 0, 0, anchorItem.width, anchorItem.height)`. Those values are logical pixels. `QsWindow.itemRect` is not used: its documented equivalent is `mapFromItem(item, 0, 0, 0, 0)`, which has no size, so end alignment cannot use it. `shell/logic/popover.js` then clamps the top-left to the screen margin. A zero-size map produces no rect. `updateAnchor()` runs when the anchor item, the bar window, or the panel size changes. There is no timer.
 
-`BackgroundEffect` is not referenced as a QML type, because Quickshell 0.2.0 does not provide it. On open, the host looks up the attached object dynamically and, when it exists, sets its blur region to the popup content. If the lookup fails, the scrim stays and one warning is logged. Alpha on the scrim is not blur.
+The popup window color is transparent and `surfaceFormat.opaque` is false, so the surface can blend. The visible card is a separate rectangle using the theme scrim. A flat translucent rectangle sits behind that card. It is not a sampled shadow and it is not blur.
 
-Dismissal uses `HyprlandFocusGrab` from Quickshell 0.2. A click outside the popup clears the grab and closes the panel. Escape closes it when the popup has keyboard focus. The same bar control toggles the panel without a global shortcut. The grab is released when the panel closes. The popup does not set an exclusive zone.
+`BackgroundEffect` is not referenced. Quickshell 0.2.0 does not have that type, and a dynamic property lookup does not create the attached object. The 0.3 effect is declarative and needs `ext-background-effect-v1`. A file that names the type would fail to parse on 0.2.0, and version-gated preprocessing is not part of that release. `appearance.panelBlur` stays in the settings file and does not change rendering. The scrim, its opacity, and the flat shadow are the supported surface. Hyprland's blur settings are not modified.
 
-Open animation is 180ms and close is 120ms at motion scale 1, with a 4px move and an opacity fade. `appearance.reducedMotion` or a motion scale of 0 removes both. Hover color changes take 80ms unless motion is reduced.
+Dismissal uses `HyprlandFocusGrab` from Quickshell 0.2. The grab is active only while the phase is `opening` or `open`. Setting it inactive releases the grab and does not emit `cleared`. A click outside emits `cleared`, closes the panel, and ignores the same bar click for one event-loop turn so that click does not reopen the panel. Escape closes the panel while the key scope is focused. During `closing`, the window can stay visible for the fade, the grab is already off, and `mask` is a `Region` with `Intersection.Xor` over the window content so the fading surface does not keep clicks. `closed` hides the window. Monitor loss, anchor loss, and window close go straight to `closed`. `Component.onDestruction` turns the grab off. Stopping SwiftShell also drops the client, which releases a grab the process did not clear. Noctalia is not part of that grab.
+
+Open animation is 180ms and close is 120ms at motion scale 1, with a 4px move and an opacity fade. `appearance.reducedMotion` or a motion scale of 0 skips the fade and sets the finished phase immediately. A close that starts while the surface opacity is still 0 also finishes immediately, so an opening panel cannot remain in `closing` with no animation left to complete. A finish signal is applied only when the phase and the opacity agree, so a stale finish cannot hide a panel that has been reopened. Hover color changes take 80ms unless motion is reduced.
 
 The calendar draws the requested month, highlights today with weight and a 1px mark, and moves by month. "Today" returns to the clock's month. Week numbers are ISO weeks and stay hidden until the panel's week-number control turns them on. The first column follows `clock.weekStart`: `locale` uses `Qt.locale().firstDayOfWeek`, and `monday` or `sunday` override it. Day cells are text. They do not pretend to select an event.
 
@@ -94,7 +96,7 @@ Preferences live in `$XDG_CONFIG_HOME/swiftshell/settings.json`, which is `~/.co
 | `appearance.mode` | `dark` | `dark` or `light` text and panel palette |
 | `appearance.tint` | `neutral` | `wallpaper` is stored and not sampled |
 | `appearance.panelOpacity` | `0.92` | Scrim strength, clamped from 0.72 to 0.96 |
-| `appearance.panelBlur` | `1` | Requests blur when the protocol exists; `0` skips it |
+| `appearance.panelBlur` | `1` | Stored only. It does not enable blur on the Quickshell 0.2 floor |
 | `appearance.topGradient` | `false` | Faint fade inside the bar window |
 | `appearance.reducedMotion` | `false` | Removes panel and hover animation |
 | `appearance.motionScale` | `1` | Scales the 180ms / 120ms / 80ms durations, from 0 to 1 |
@@ -115,4 +117,4 @@ Test-only: Node for `tests/logic.test.js`, Python 3 for `tests/static_check.py`,
 
 ## Decision
 
-The safe preview behavior is recorded in `docs/decisions/0001-m0-m1-boundaries.md`. The install boundaries are recorded in `docs/decisions/0002-install-boundaries.md`. The panel boundaries are recorded in `docs/decisions/0003-m2-panels.md`.
+The safe preview behavior is recorded in `docs/decisions/0001-m0-m1-boundaries.md`. The install boundaries are recorded in `docs/decisions/0002-install-boundaries.md`. The original panel boundaries are recorded in `docs/decisions/0003-m2-panels.md`. The color, blur, anchor, and popup-phase corrections are recorded in `docs/decisions/0004-m2-stability.md`.

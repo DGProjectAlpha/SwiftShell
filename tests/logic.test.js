@@ -333,6 +333,314 @@ test("invalid appearance values fall back to the defaults", function () {
     assert.equal(result.settings.appearance.panelOpacity, settings.DEFAULTS.appearance.panelOpacity);
 });
 
+test("palette bytes become Qt unit channels and alpha stays a unit", function () {
+    assert.equal(palette.byteToUnit(0), 0);
+    assert.equal(palette.byteToUnit(255), 1);
+    assert.equal(palette.byteToUnit(128), 128 / 255);
+    assert.equal(palette.byteToUnit(1), 1 / 255);
+    assert.equal(palette.byteToUnit(-20), 0);
+    assert.equal(palette.byteToUnit(300), 1);
+    assert.equal(palette.byteToUnit("nope"), 0);
+    assert.equal(palette.unitAlpha(0.55), 0.55);
+    assert.equal(palette.unitAlpha(1.4), 1);
+    assert.equal(palette.unitAlpha(-0.2), 0);
+    assert.equal(palette.unitAlpha("nope"), 0);
+
+    const light = palette.resolvePalette("light", "neutral");
+    const units = palette.colorUnits(light.panel, 0.92);
+    assert.equal(units.a, 0.92);
+    assert.ok(Math.abs(units.r - (246 / 255)) < 1e-12);
+    assert.ok(Math.abs(units.g - (246 / 255)) < 1e-12);
+    assert.ok(Math.abs(units.b - (246 / 255)) < 1e-12);
+    assert.ok(units.r <= 1 && units.g <= 1 && units.b <= 1);
+
+    const gradient = palette.gradientUnits("light");
+    assert.deepEqual(gradient, { r: 1, g: 1, b: 1, a: 0.55 });
+    assert.notEqual(gradient.r, 255);
+    assert.deepEqual(palette.gradientUnits("dark"), { r: 0, g: 0, b: 0, a: 0.34 });
+    assert.equal(palette.colorUnits({ r: 242, g: 242, b: 242 }, undefined).a, 1);
+});
+
+test("calendar width stays in logical pixels", function () {
+    assert.equal(theme.calendarWidth(28, 22, false), 196);
+    assert.equal(theme.calendarWidth(28, 22, true), 218);
+    assert.equal(theme.calendarWidth(28, 22, false), 28 * 7);
+});
+
+test("calendar handles leap years, year wrap, and a single today", function () {
+    assert.equal(clock.formatTime(at(0, 0), true), "00:00");
+    assert.equal(clock.formatTime(at(0, 0), false), "12:00 AM");
+
+    const leap = calendar.buildMonth(2024, 1, 1, 2024, 1, 29);
+    const leapDays = leap.weeks.flatMap(function (week) { return week.days; }).filter(function (day) {
+        return day.inMonth;
+    });
+    assert.equal(leapDays.length, 29);
+    assert.equal(leapDays[28].day, 29);
+    assert.equal(leapDays.filter(function (day) { return day.isToday; }).length, 1);
+    assert.equal(calendar.isoWeekNumber(2024, 1, 29), 9);
+
+    const common = calendar.buildMonth(2023, 1, 1, 2023, 1, 28);
+    const commonDays = common.weeks.flatMap(function (week) { return week.days; }).filter(function (day) {
+        return day.inMonth && day.day === 29;
+    });
+    assert.equal(commonDays.length, 0);
+    assert.equal(new Date(2023, 2, 0).getDate(), 28);
+
+    assert.deepEqual(calendar.shiftMonth(2026, 11, 1), { year: 2027, month: 0 });
+    assert.deepEqual(calendar.shiftMonth(2024, 0, -1), { year: 2023, month: 11 });
+    const january = calendar.buildMonth(2027, 0, 1, 2026, 9, 30);
+    assert.equal(january.month, 0);
+    assert.equal(january.weeks.flatMap(function (week) { return week.days; }).some(function (day) {
+        return day.isToday;
+    }), false);
+
+    const october = calendar.buildMonth(2026, 9, 0, 2026, 9, 30);
+    assert.equal(october.weeks[0].days[4].day, 1);
+    assert.equal(october.weeks[0].days[4].inMonth, true);
+    const todays = october.weeks.flatMap(function (week) { return week.days; }).filter(function (day) {
+        return day.isToday;
+    });
+    assert.equal(todays.length, 1);
+    assert.equal(todays[0].day, 30);
+    assert.equal(todays[0].inMonth, true);
+
+    const midnight = new Date(2026, 9, 31, 0, 0, 0);
+    const rolled = calendar.buildMonth(2026, 9, 1, midnight.getFullYear(), midnight.getMonth(), midnight.getDate());
+    const rolledToday = rolled.weeks.flatMap(function (week) { return week.days; }).filter(function (day) {
+        return day.isToday && day.inMonth;
+    });
+    assert.equal(rolledToday.length, 1);
+    assert.equal(rolledToday[0].day, 31);
+});
+
+test("popup anchors use logical pixels on both reference screens", function () {
+    const hdmi = popover.logicalScreen(1920, 1080, 1.5);
+    const dp = popover.logicalScreen(2560, 1440, 1);
+    assert.deepEqual(hdmi, { width: 1280, height: 720 });
+    assert.deepEqual(dp, { width: 2560, height: 1440 });
+    assert.equal(popover.logicalScreen(1920, 1080, 0), null);
+
+    const hdmiAnchor = popover.anchorFromItemMap(
+        { x: 1210, y: 0, width: 48, height: 28 },
+        {
+            popupWidth: 280,
+            popupHeight: 320,
+            screenWidth: hdmi.width,
+            screenHeight: hdmi.height,
+            margin: 8,
+            gap: 6,
+            align: "end",
+            devicePixelRatio: 1.5,
+        }
+    );
+    assert.deepEqual(hdmiAnchor, { x: 978, y: 34, width: 1, height: 1, logicalPixels: true });
+    assert.ok(hdmiAnchor.x + 280 <= hdmi.width - 8);
+    assert.notEqual(hdmiAnchor.x, 978 * 1.5);
+
+    const dpAnchor = popover.anchorFromItemMap(
+        { x: 2460, y: 0, width: 64, height: 28 },
+        {
+            popupWidth: 280,
+            popupHeight: 320,
+            screenWidth: dp.width,
+            screenHeight: dp.height,
+            margin: 8,
+            gap: 6,
+            align: "end",
+            devicePixelRatio: 1,
+        }
+    );
+    assert.deepEqual(dpAnchor, { x: 2244, y: 34, width: 1, height: 1, logicalPixels: true });
+
+    const clamped = popover.anchorFromItemMap(
+        { x: 10, y: 0, width: 20, height: 28 },
+        {
+            popupWidth: 280,
+            popupHeight: 700,
+            screenWidth: hdmi.width,
+            screenHeight: hdmi.height,
+            margin: 8,
+            gap: 6,
+            align: "end",
+        }
+    );
+    assert.equal(clamped.x, 8);
+    assert.equal(clamped.y, 12);
+    assert.equal(popover.anchorFromItemMap({ x: 1210, y: 0, width: 0, height: 0 }, {
+        popupWidth: 280,
+        popupHeight: 320,
+        screenWidth: hdmi.width,
+        screenHeight: hdmi.height,
+        margin: 8,
+        gap: 6,
+    }), null);
+});
+
+test("popup phases release input and survive interruption", function () {
+    const motion = { instantOpen: false, instantClose: false };
+    let state = popover.popupModel();
+
+    state = popover.reducePopup(state, { type: "toggle", id: "calendar" }, motion);
+    assert.equal(state.phase, "opening");
+    assert.equal(state.grab, true);
+    assert.equal(state.interactive, true);
+    assert.equal(state.visible, true);
+
+    state = popover.reducePopup(state, { type: "escape" }, motion);
+    assert.equal(state.phase, "closing");
+    assert.equal(state.grab, false);
+    assert.equal(state.interactive, false);
+    assert.equal(state.visible, true);
+    assert.equal(state.opacity, 0);
+
+    state = popover.reducePopup(state, { type: "animationFinished", opacity: 0 }, motion);
+    assert.deepEqual(popover.reducePopup(popover.popupModel(), { type: "close" }, motion).phase, "closed");
+    assert.equal(state.phase, "closed");
+    assert.equal(state.visible, false);
+    assert.equal(state.grab, false);
+
+    state = popover.reducePopup(state, { type: "toggle", id: "calendar" }, motion);
+    state = popover.reducePopup(state, { type: "animationFinished", opacity: 1 }, motion);
+    assert.equal(state.phase, "open");
+    const outside = popover.reducePopup(state, { type: "outside" }, motion);
+    assert.equal(outside.phase, "closing");
+    assert.equal(outside.suppressId, "calendar");
+    assert.equal(outside.grab, false);
+    const swallowed = popover.reducePopup(outside, { type: "toggle", id: "calendar" }, motion);
+    assert.equal(swallowed.phase, "closing");
+    assert.equal(swallowed.suppressId, "");
+
+    state = popover.reducePopup(state, { type: "toggle", id: "calendar" }, motion);
+    assert.equal(state.phase, "closing");
+    state = popover.reducePopup(state, { type: "animationFinished", opacity: 0 }, motion);
+    state = popover.reducePopup(state, { type: "toggle", id: "calendar" }, motion);
+    state = popover.reducePopup(state, { type: "animationFinished", opacity: 1 }, motion);
+    assert.equal(state.panelId, "calendar");
+
+    state = popover.reducePopup(state, { type: "toggle", id: "control" }, motion);
+    assert.equal(state.phase, "open");
+    assert.equal(state.panelId, "control");
+    state = popover.reducePopup(state, { type: "toggle", id: "calendar" }, motion);
+    assert.equal(state.phase, "open");
+    assert.equal(state.panelId, "calendar");
+    assert.equal(state.grab, true);
+
+    state = popover.reducePopup(popover.popupModel(), { type: "toggle", id: "calendar" }, motion);
+    state = popover.reducePopup(state, { type: "close" }, motion);
+    const staleOpen = popover.reducePopup(state, { type: "animationFinished", opacity: 1 }, motion);
+    assert.equal(staleOpen.phase, "closing");
+    assert.equal(staleOpen.interactive, false);
+    state = popover.reducePopup(staleOpen, { type: "animationFinished", opacity: 0 }, motion);
+    assert.equal(state.phase, "closed");
+
+    state = popover.reducePopup(popover.popupModel(), { type: "toggle", id: "control" }, motion);
+    state = popover.reducePopup(state, { type: "animationFinished", opacity: 1 }, motion);
+    state = popover.reducePopup(state, { type: "close" }, motion);
+    state = popover.reducePopup(state, { type: "toggle", id: "control" }, motion);
+    assert.equal(state.phase, "opening");
+    assert.equal(state.grab, true);
+    assert.equal(state.interactive, true);
+    const staleClose = popover.reducePopup(state, { type: "animationFinished", opacity: 0 }, motion);
+    assert.equal(staleClose.phase, "opening");
+    state = popover.reducePopup(staleClose, { type: "animationFinished", opacity: 1 }, motion);
+    assert.equal(state.phase, "open");
+
+    const resized = popover.reducePopup(state, { type: "geometry" }, motion);
+    assert.equal(resized.phase, "open");
+    assert.equal(resized.panelId, "control");
+
+    const disconnected = popover.reducePopup(state, { type: "monitorLost" }, motion);
+    assert.equal(disconnected.phase, "closed");
+    assert.equal(disconnected.visible, false);
+    assert.equal(disconnected.grab, false);
+    assert.equal(disconnected.interactive, false);
+
+    const stopped = popover.reducePopup(
+        popover.reducePopup(popover.popupModel(), { type: "toggle", id: "calendar" }, motion),
+        { type: "destroy" },
+        motion
+    );
+    assert.equal(stopped.grab, false);
+    assert.equal(stopped.visible, false);
+    assert.equal(stopped.interactive, false);
+
+    const instant = popover.reducePopup(popover.popupModel(), { type: "toggle", id: "calendar" }, {
+        instantOpen: true,
+        instantClose: false,
+    });
+    assert.equal(instant.phase, "open");
+    assert.equal(popover.reducePopup(instant, { type: "escape" }, { instantClose: true }).phase, "closed");
+    assert.equal(popover.reducePopup(instant, { type: "toggle", id: "launcher" }, motion).panelId, "calendar");
+
+    const hidden = popover.dismissalMotion(0, { instantOpen: false, instantClose: false });
+    assert.equal(hidden.instantClose, true);
+    assert.equal(popover.dismissalMotion(1, { instantOpen: false, instantClose: false }).instantClose, false);
+    const aborted = popover.reducePopup(
+        popover.reducePopup(popover.popupModel(), { type: "toggle", id: "calendar" }, motion),
+        { type: "close" },
+        hidden
+    );
+    assert.equal(aborted.phase, "closed");
+    assert.equal(aborted.visible, false);
+    assert.equal(aborted.grab, false);
+    assert.equal(aborted.interactive, false);
+});
+
+test("audio writes stay on the captured sink", function () {
+    assert.equal(audio.sinkIdentity(null), "");
+    assert.equal(audio.sinkIdentity(undefined), "");
+    assert.equal(audio.sinkIdentity("/tmp/secret"), "");
+    assert.equal(audio.sinkIdentity(7), "7");
+    assert.equal(audio.volumeWrite({
+        ready: false,
+        gestureSinkId: "7",
+        currentSinkId: "7",
+        muted: true,
+        requested: 0.4,
+    }), null);
+    assert.equal(audio.volumeWrite({
+        ready: true,
+        gestureSinkId: "7",
+        currentSinkId: "",
+        muted: false,
+        requested: 0.4,
+    }), null);
+    assert.equal(audio.volumeWrite({
+        ready: true,
+        gestureSinkId: "7",
+        currentSinkId: "8",
+        muted: false,
+        requested: 0.4,
+    }), null);
+    assert.deepEqual(audio.volumeWrite({
+        ready: true,
+        gestureSinkId: "7",
+        currentSinkId: "7",
+        muted: true,
+        requested: 1.8,
+    }), { volume: 1, muted: false, sinkId: "7" });
+    assert.deepEqual(audio.volumeWrite({
+        ready: true,
+        gestureSinkId: "7",
+        currentSinkId: "7",
+        muted: true,
+        requested: 0,
+    }), { volume: 0, muted: true, sinkId: "7" });
+    assert.equal(audio.muteWrite({ ready: true, sinkId: "", muted: true }), null);
+    assert.deepEqual(audio.muteWrite({ ready: true, sinkId: "7", muted: false }), { muted: false, sinkId: "7" });
+    assert.equal(audio.muteWrite({ ready: false, sinkId: "7", muted: true }), null);
+});
+
+test("stored blur preference does not enable a background effect", function () {
+    assert.deepEqual(popover.panelBlurPolicy(), { supported: false, protocol: "", fallback: "scrim" });
+    const stored = settings.validateSettings({ appearance: { panelBlur: 0 } });
+    assert.equal(stored.ok, true);
+    assert.equal(stored.settings.appearance.panelBlur, 0);
+    assert.equal(popover.panelBlurPolicy().supported, false);
+    assert.equal(popover.panelBlurPolicy().fallback, "scrim");
+});
+
 test("defaults.json matches the serializer", function () {
     const file = path.join(__dirname, "..", "shell", "config", "defaults.json");
     const text = fs.readFileSync(file, "utf8");

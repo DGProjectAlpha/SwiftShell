@@ -13,32 +13,51 @@ Column {
 
     readonly property var sink: Pipewire.defaultAudioSink
     readonly property bool ready: sink !== null && sink.audio
+    property var gestureSink: null
+    property string gestureSinkId: ""
 
     function percentText() {
+        if (volumeSlider && volumeSlider.adjusting)
+            return String(Audio.percent(volumeSlider.value))
         if (!ready)
             return ""
         return String(Audio.percent(sink.audio.volume))
     }
 
     function applyVolume(next) {
-        if (!ready)
-            return
-        const command = Audio.volumeCommand(sink.audio.muted === true, next)
+        const target = gestureSink
+        const currentId = Audio.sinkIdentity(target ? target.id : null)
+        const command = Audio.volumeWrite({
+            ready: target !== null && target.audio,
+            gestureSinkId: gestureSinkId,
+            currentSinkId: currentId,
+            muted: target !== null && target.audio && target.audio.muted === true,
+            requested: next,
+        })
         if (!command)
             return
         try {
-            sink.audio.volume = command.volume
-            sink.audio.muted = command.muted
+            target.audio.volume = command.volume
+            target.audio.muted = command.muted
         } catch (error) {
             console.warn("SwiftShell: audio volume was not changed")
         }
     }
 
     function applyMute(muted) {
-        if (!ready)
+        const target = sink
+        const id = Audio.sinkIdentity(target ? target.id : null)
+        const command = Audio.muteWrite({
+            ready: target !== null && target.audio,
+            sinkId: id,
+            muted: muted === true,
+        })
+        if (!command || sink !== target)
+            return
+        if (Audio.sinkIdentity(target.id) !== command.sinkId)
             return
         try {
-            sink.audio.muted = muted === true
+            target.audio.muted = command.muted
         } catch (error) {
             console.warn("SwiftShell: audio mute was not changed")
         }
@@ -94,9 +113,26 @@ Column {
         }
 
         CompactSlider {
+            id: volumeSlider
             width: parent.width
             enabled: root.ready
-            value: root.ready ? root.sink.audio.volume : 0
+
+            Binding {
+                target: volumeSlider
+                property: "value"
+                when: !volumeSlider.adjusting
+                value: root.ready ? root.sink.audio.volume : 0
+            }
+
+            onAdjustingChanged: {
+                if (adjusting) {
+                    root.gestureSink = root.sink
+                    root.gestureSinkId = Audio.sinkIdentity(root.sink ? root.sink.id : null)
+                    return
+                }
+                root.gestureSink = null
+                root.gestureSinkId = ""
+            }
             onMoved: function (next) { root.applyVolume(next) }
         }
     }

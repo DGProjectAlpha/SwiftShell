@@ -6,25 +6,32 @@ FocusScope {
 
     property real value: 0
     property bool enabled: true
+    property bool adjusting: false
     signal moved(real next)
 
     implicitWidth: 160
     implicitHeight: Theme.controlHeight
     activeFocusOnTab: true
     Accessible.role: Accessible.Slider
-    Accessible.name: "Volume"
-    Accessible.value: Math.round(value * 100)
+    Accessible.name: "Volume " + Math.round(value * 100)
 
     function setFromX(x) {
         if (!enabled || width <= 0)
             return
-        moved(Math.min(1, Math.max(0, x / width)))
+        adjusting = true
+        const next = Math.min(1, Math.max(0, x / width))
+        value = next
+        moved(next)
     }
 
     function nudge(delta) {
         if (!enabled)
             return
-        moved(Math.min(1, Math.max(0, value + delta)))
+        adjusting = true
+        const next = Math.min(1, Math.max(0, value + delta))
+        value = next
+        moved(next)
+        adjusting = false
     }
 
     Keys.onLeftPressed: nudge(-0.05)
@@ -71,5 +78,7 @@ FocusScope {
             if (pressed)
                 control.setFromX(mouse.x)
         }
+        onReleased: control.adjusting = false
+        onCanceled: control.adjusting = false
     }
 }

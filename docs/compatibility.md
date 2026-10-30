@@ -25,11 +25,11 @@ Versions below are the APIs this prototype was written against. They were taken 
 
 `SystemClock` uses minute precision. That is an update from the clock object, not a workspace poll.
 
-`PopupWindow` is the 0.2 popup surface. Its anchor uses `anchor.window`, `anchor.rect`, `Edges`, and `PopupAdjustment.Flip | PopupAdjustment.Slide`. The shell also computes the anchor rectangle from `QsWindow.itemRect` in the `anchoring` signal, because mapped coordinates are not reactive. The window starts transparent with `surfaceFormat.opaque: false`. Quickshell documents that an opaque color applied before the first show cannot become transparent later.
+`PopupWindow` is the 0.2 popup surface. Its anchor uses `anchor.window`, `anchor.rect`, `Edges`, and `PopupAdjustment.Flip | PopupAdjustment.Slide`. The rect is filled from `contentItem.mapFromItem` inside the `anchoring` signal. `QsWindow.itemRect` is documented as `contentItem.mapFromItem(item, 0, 0, 0, 0)`, so it is not a sized anchor. The window starts transparent with `surfaceFormat.opaque: false`. Quickshell documents that an opaque color applied before the first show cannot become transparent later. `Qt.rgba` takes components from 0.0 to 1.0. Palette bytes are divided by 255 before they reach it. Hex literals such as `#F2F2F2` are already QML colors.
 
-`HyprlandFocusGrab` is the 0.2 click-outside path. It needs `hyprland-focus-grab-v1`. `PopupWindow.grabFocus` is not used; that property is absent from the 0.2.0 page.
+`HyprlandFocusGrab` is the 0.2 click-outside path. It needs `hyprland-focus-grab-v1`. The shell sets `active` and does not set `PopupWindow.grabFocus`. That property is absent from the 0.2.0 page and present on the 0.3.1 page. `setActive(false)` releases the grab without emitting `cleared`.
 
-`BackgroundEffect` and `ext-background-effect-v1` appear in the 0.3 docs, not in 0.2.0. The popup looks the attachment up by name at runtime. The scrim is always painted. Quickshell 0.2.0 therefore shows the scrim and logs that blur is unavailable.
+`BackgroundEffect` and `ext-background-effect-v1` appear in the 0.3 docs, not in 0.2.0. The attached object has to be declared in QML. A JavaScript lookup does not construct it. Naming the type in a file that 0.2.0 parses makes that file fail to load, and this tree does not assume the later version-gated preprocessor. Blur is unsupported. The scrim is the panel surface. Hyprland blur rules are left unchanged.
 
 PipeWire volume uses `Pipewire.defaultAudioSink`, `PwObjectTracker.objects`, and `PwNodeAudio.volume` / `muted`. Those properties are documented as invalid until the node is bound. The audio file is loaded with a `Loader`, so a build without the PipeWire module does not take the bar down.
 
@@ -66,6 +66,24 @@ Quickshell 0.2.0 accepts `--path` and `--no-duplicate` on the main command, and 
 - Light wallpaper can wash out `#F2F2F2` text. M1 does not add a scrim, because a scrim would be a bar background. Contrast on a light wallpaper is unverified.
 - One notification daemon and the current global shortcuts stay with the existing session. This prototype does not register a notification service or a global bind.
 
+## Compatibility matrix
+
+"Verified" here means the cloud checks named in `docs/testing.md`. It does not mean a Hyprland session showed the result.
+
+| Feature | Quickshell 0.2.0 | Later Quickshell | This tree |
+|---|---|---|---|
+| Transparent `PanelWindow` bar | Documented | Documented | Implemented, not runtime-tested |
+| `PopupWindow` and `PopupAnchor` | Documented. `anchoring` is the map point | Documented | Implemented. Placement math is verified. The window was not shown |
+| `contentItem.mapFromItem` sized rect | Qt Quick, logical pixels | Same | Implemented, not runtime-tested |
+| `QsWindow.itemRect` | Documented as a 0×0 map | Same documented equivalent | Not used |
+| `HyprlandFocusGrab` | Documented. Needs `hyprland-focus-grab-v1` | Documented | Implemented, not runtime-tested. Missing protocol logs a warning and does not grab |
+| `PopupWindow.grabFocus` | Absent | Present in 0.3.1 | Not used |
+| `BackgroundEffect` | Absent | 0.3+ attached property. Needs `ext-background-effect-v1` | Unsupported. Scrim fallback is what renders |
+| PipeWire default sink | `Pipewire.defaultAudioSink`, `PwObjectTracker`, `PwNodeAudio.volume` / `muted` | Same family | Implemented, not runtime-tested. A missing module stays inside the audio `Loader` |
+| `SystemClock`, `Variants`, `FileView`, `WlrLayershell.namespace` | Documented | Documented | Implemented, not runtime-tested |
+| Network, Bluetooth, media, power, launcher | Not part of this milestone | Not part of this milestone | Deferred |
+| Wallpaper sampling | Not implemented | Not implemented | Deferred. The stored tint does not change the palette |
+
 ## Explicitly out of scope
 
-Popovers, launcher, settings GUI, tray, media, network, audio, Bluetooth, and Hyprland decoration changes are later milestones. They are not implemented here.
+The launcher, settings GUI, tray, media controls, network management, Bluetooth, power actions, wallpaper sampling, and Hyprland decoration changes are later milestones. Panel blur is unsupported on the current compatibility floor rather than deferred behind a fake effect.

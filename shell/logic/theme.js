@@ -1,3 +1,12 @@
+function calendarWidth(cell, weekNumberWidth, showWeekNumbers) {
+    const cellSize = Number(cell);
+    const weekWidth = Number(weekNumberWidth);
+    if (!Number.isFinite(cellSize) || cellSize <= 0)
+        return 0;
+    const extra = showWeekNumbers === true && Number.isFinite(weekWidth) && weekWidth > 0 ? weekWidth : 0;
+    return cellSize * 7 + extra;
+}
+
 function motionDurations(reducedMotion, scale) {
     if (reducedMotion === true)
         return { open: 0, close: 0, hover: 0 };
@@ -17,6 +26,7 @@ function motionDurations(reducedMotion, scale) {
 }
 
 var swiftshellTheme = {
+    calendarWidth: calendarWidth,
     motionDurations: motionDurations,
 };
 

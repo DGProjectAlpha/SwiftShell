@@ -14,6 +14,36 @@ var LIGHT = {
     scrim: { r: 246, g: 246, b: 246 },
 };
 
+function byteToUnit(value) {
+    const number = Number(value);
+    if (!Number.isFinite(number))
+        return 0;
+    return Math.min(255, Math.max(0, number)) / 255;
+}
+
+function unitAlpha(value) {
+    const number = Number(value);
+    if (!Number.isFinite(number))
+        return 0;
+    return Math.min(1, Math.max(0, number));
+}
+
+function colorUnits(rgb, alpha) {
+    const source = rgb && typeof rgb === "object" ? rgb : {};
+    return {
+        r: byteToUnit(source.r),
+        g: byteToUnit(source.g),
+        b: byteToUnit(source.b),
+        a: unitAlpha(alpha === undefined ? 1 : alpha),
+    };
+}
+
+function gradientUnits(appearance) {
+    if (appearance === "light")
+        return { r: 1, g: 1, b: 1, a: 0.55 };
+    return { r: 0, g: 0, b: 0, a: 0.34 };
+}
+
 function channel(value) {
     const scaled = value / 255;
     if (scaled <= 0.03928)
@@ -73,6 +103,10 @@ function readableOnExtremes(mode, opacity) {
 }
 
 var swiftshellPalette = {
+    byteToUnit: byteToUnit,
+    unitAlpha: unitAlpha,
+    colorUnits: colorUnits,
+    gradientUnits: gradientUnits,
     resolvePalette: resolvePalette,
     contrastRatio: contrastRatio,
     composite: composite,
