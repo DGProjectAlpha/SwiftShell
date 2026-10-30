@@ -1,6 +1,6 @@
 # SwiftShell
 
-> **Status:** M2 source is in `shell/`. On the CachyOS Hyprland session, with Noctalia stopped, SwiftShell loaded, the bar rendered, and the calendar and control center opened. Workspace clicks failed before this change with the Lua dispatch error below. Graphical behavior of the fixes in this tree has not been retested on that machine. Cloud checks do not show pixels.
+> **Status:** M2 and the M3 launcher are in `shell/`. On the CachyOS Hyprland session, with Noctalia stopped, SwiftShell loaded, the bar rendered, and the calendar and control center opened. That was before the M2 runtime fixes. The launcher has not been opened on that session. Cloud checks do not show pixels and do not launch applications.
 >
 > **Purpose:** A clean, understated, keyboard-first, fully integrated desktop shell built with **Quickshell + Qt 6/QML** for **Hyprland on Arch-based systems**. The reference workstation is CachyOS; the installer is not limited to that one machine.
 >
@@ -490,12 +490,13 @@ Acceptance: user explicitly opts in; Noctalia remains readily restorable.
 - [x] Install, activate, deactivate, and uninstall scripts added (not verified on Hyprland)
 - [x] M2 theme tokens, popover host, calendar, and control-center foundation added
 - [x] CachyOS launch observed: bar rendered with Noctalia stopped; calendar and control center opened
-- [ ] Workspace clicks, binding-loop silence, settings warning, and bar reservation retested after the M2 stabilization fix
+- [x] M3 launcher source added: application search, pinned ids, recent ids, and a Search control. Not opened on Hyprland from this environment
+- [ ] Workspace clicks, binding-loop silence, settings warning, bar reservation, and the launcher retested on CachyOS
 - [ ] Local Quickshell and Hyprland versions recorded from `qs -V` and `Hyprland --version`
 - [ ] Visual rendering of the stabilization fixes verified
 - [ ] Any live desktop integration beyond the separate `qs --path` launch approved
 
-**Current claim:** The shell has run on the reference Hyprland session. The bar, calendar, and control center were visible with Noctalia stopped. Workspace activation, the `targetScreens` binding, workspace-id validation, and the installer dependency test were defective in that session. The fixes are in the tree and covered by unit and installer tests. They have not been clicked through on the hardware again.
+**Current claim:** The shell has run on the reference Hyprland session. The bar, calendar, and control center were visible with Noctalia stopped. The M2 fixes and the M3 launcher are in the tree. Node measured a 400-entry search at 1.96 ms during `scripts/check.sh`. No application was launched here, and the launcher window was not shown on a monitor.
 
 ## 13. Running the M0/M1 prototype
 

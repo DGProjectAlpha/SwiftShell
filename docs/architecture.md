@@ -103,8 +103,21 @@ Preferences live in `$XDG_CONFIG_HOME/swiftshell/settings.json`, which is `~/.co
 | `appearance.topGradient` | `false` | Faint fade inside the bar window |
 | `appearance.reducedMotion` | `false` | Removes panel and hover animation |
 | `appearance.motionScale` | `1` | Scales the 180ms / 120ms / 80ms durations, from 0 to 1 |
+| `launcher.pinnedIds` | `[]` | Desktop ids shown first in an empty launcher query. Maximum 12. |
 
 `reserveSpace` defaults off. That mode is a fully transparent overlay: the bar does not reserve an exclusive zone, and tiled, maximized, and fullscreen windows can cover it. Quickshell treats `ExclusionMode.Auto` as a reservation. The window therefore assigns `ExclusionMode.Ignore` and does not also assign `exclusiveZone`, because an `exclusiveZone` write forces normal exclusion inside Quickshell. Setting `bar.reserveSpace` to true assigns `exclusiveZone` to the bar height in logical pixels and does not also assign `exclusionMode`. Tiled and maximized windows then keep out of that strip. The layer stays `WlrLayer.Top`, which Hyprland draws under true fullscreen, so fullscreen clients still cover the bar. This tree does not change Hyprland's fullscreen rules. The zone is applied when the bar window is created and again when the setting changes. It is not multiplied by the output scale.
+
+## Launcher
+
+The Search control on the bar closes any open panel and opens `LauncherWindow` on that bar's screen. `scripts/request-launcher.sh` and `swiftshell request-launcher` write a JSON token under the XDG state directory. The shell watches that file and opens the launcher when the token changes. The token already present at startup does not open it. Neither command edits Hyprland. Super+Space is documented in `docs/launcher-shortcut.md` and is not changed by this repository.
+
+`LauncherModel` reads `DesktopEntries.applications` when the launcher opens, keeps that snapshot, and drops it when the launcher closes. Keystrokes search the snapshot. They do not scan desktop files again. Results come from `shell/logic/launcher.js`: exact name, prefix, word prefix, substring, then a short fuzzy subsequence. Name matches outrank generic name, comment, keywords, and categories. Equal scores sort by name, then id. There is no file, calculation, or settings-search provider.
+
+An empty query shows pinned ids from `launcher.pinnedIds`, then up to eight recent ids, then up to twelve other applications in name order, then Settings and the power rows. Recent ids are recorded only after a launch from this launcher. They are desktop ids in the state file, not commands and not window titles. Settings closes the launcher and opens the control center. Power rows are Lock, Suspend, Restart, and Shut down. The first Enter or click arms confirmation. The second runs a fixed `loginctl` argument list. The search text is not one of those arguments.
+
+Launch uses `DesktopEntry.execute()`. That is Quickshell's parsed `command` list plus the entry's working directory. `execString` is not passed to a shell. Quickshell 0.2's `execute()` ignores the terminal flag and field codes; the log says so when a terminal entry is launched. Icons that are absolute paths are loaded as files. Any other icon is a one-letter monogram. Icon themes are not queried.
+
+The window is layer `Overlay` only so the search field sits above other windows while it is open. It uses `ExclusionMode.Ignore`, so it does not reserve the screen. Keyboard focus is `Exclusive` while the window is visible and `None` after it closes. Focus on the text field is requested on the next frame. Escape, a click on the dim area around the card, and a cleared focus grab all clear the field, drop the grab, and close. Tab and Shift+Tab move the selection. Alt+J and Alt+K do the same. Bare letters stay in the search field.
 
 ## Process identity
 

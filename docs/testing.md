@@ -126,6 +126,16 @@ scripts/check.sh
 
 Exit status 0. Static checks passed for 20 QML files. `node tests/logic.test.js` passed, including the Lua dispatch expression, the QML list-like workspace ids, the single exclusion property, and the popup focus order. `sh tests/install_flow.sh` passed 14 cases. The missing-deps case requested `sudo pacman -S` for `quickshell` and `hyprland` without `/usr/bin` on `PATH`. The present-deps case did not call sudo. The sudo-exit-99 case refused a strict install and continued a non-strict install. `qmltestrunner` 6.4.2 passed `tst_implicit_size.qml` and `tst_shell_load.qml`, 6 tests each, with `QT_QPA_PLATFORM=offscreen`. `QStandardPaths: XDG_RUNTIME_DIR not set` was printed. That warning is from the offscreen Qt platform, not from the shell. Quickshell was not started. Workspace clicks, the binding loop, the exclusive zone, and the text-input line were not observed on a compositor.
 
+## What was run for the M3 launcher
+
+On 30 Oct 2026, at 7:23 PM America/New_York, in the cloud workspace, with no Hyprland session and no `qs` binary:
+
+```text
+scripts/check.sh
+```
+
+Exit status 0. Static checks passed for 22 QML files. Logic tests passed. The run printed `launcher rank 400 apps: 1.96 ms`. Install tests passed, 15 cases, including a launcher request that writes the state file and leaves the temporary Hyprland binds file unchanged. `qmltestrunner` 6.4.2 passed both QML suites, 6 tests each. The shell-load suite still uses Quickshell stubs. It is not a Quickshell integration test. No desktop entry was executed. `loginctl` was not executed. The launcher window was not shown.
+
 ## What the CachyOS session already showed
 
 These were observed before the fixes in this branch, with Noctalia stopped:
@@ -156,6 +166,13 @@ Leave the process in the foreground. Then:
 4. With `reserveSpace` false, confirm the bar still draws and does not push windows down. Set `bar.reserveSpace` to true in `~/.config/swiftshell/settings.json` and confirm tiled and maximized windows stay below the 28px strip. Toggle a true fullscreen window and confirm it still covers the bar. Set the flag back to false.
 5. Open the calendar, press Escape, open the control center, and click outside it. Confirm the grab is gone and the previously focused application receives the keyboard. Note whether the text-input line is still printed. Do not hide it with a logging rule.
 6. Stop with `scripts/stop.sh`. If the instance is not found, `qs list --all` and `qs kill --id` for this checkout only. Start Noctalia the way it was started before. Do not `pkill` Quickshell.
+
+Launcher, after the M2 checks above:
+
+7. Click Search on the bar. The field should take keys immediately. Type part of an installed application name, press Enter, and confirm that application starts. Press Escape and confirm the previously focused application has the keyboard.
+8. Press Tab and Shift+Tab through the results. Type ordinary letters, including j and k, and confirm they stay in the field. Alt+J and Alt+K may move the selection.
+9. With an empty field, confirm pinned ids from `launcher.pinnedIds` and, after one successful launch, that id on the next empty open. Settings should open the control center. Lock, Suspend, Restart, and Shut down should do nothing on the first Enter and should ask for confirmation on the second. Do not confirm a power action unless that is intended.
+10. Run `scripts/request-launcher.sh` while SwiftShell is running and confirm the launcher opens. Confirm Super+Space still does what it did before. The handoff is `docs/launcher-shortcut.md`. Do not apply it as part of this check unless you have made the backup described there.
 
 `scripts/check.sh` on CachyOS needs `qmltestrunner` from `qt6-declarative`. A passing run is not this checklist.
 
