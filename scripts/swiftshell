@@ -34,6 +34,8 @@ Usage: swiftshell <command>
   deactivate   Remove that registration and stop this install.
   uninstall    Remove installed files. Settings are kept.
                uninstall --purge-settings also removes the settings directory.
+  request-launcher
+               Ask a running SwiftShell to open its launcher.
 EOF
 }
 
@@ -131,6 +133,9 @@ case $cmd in
         SWIFTSHELL_PURGE_SETTINGS=$purge
         export SWIFTSHELL_PURGE_SETTINGS
         exec "$lib/uninstall.sh"
+        ;;
+    request-launcher)
+        swiftshell_request_launcher
         ;;
     *)
         swiftshell_die "unknown command: $cmd"

@@ -32,5 +32,8 @@
     "fontWeight": "regular",
     "iconScale": 1,
     "topGradient": false
+  },
+  "launcher": {
+    "pinnedIds": []
   }
 }

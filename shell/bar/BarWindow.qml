@@ -44,6 +44,12 @@ PanelWindow {
     }
     readonly property string windowTitle: Windows.focusedTitle(HyprlandModel.liveToplevels, monitorKey, activeWorkspaceId)
 
+    function openLauncher() {
+        popovers.close();
+        LauncherModel.screen = window.screen;
+        LauncherModel.openLauncher();
+    }
+
     function syncExclusion() {
         const update = Bar.exclusionUpdate(reserveSpace, Theme.barHeight);
         if (update.property === "exclusiveZone") {
@@ -55,7 +61,11 @@ PanelWindow {
         console.info("SwiftShell: bar reserves no space on", monitorKey);
     }
 
-    Component.onCompleted: syncExclusion()
+    Component.onCompleted: {
+        LauncherModel.screen = window.screen;
+        syncExclusion();
+    }
+    onScreenChanged: LauncherModel.screen = window.screen
     onReserveSpaceChanged: syncExclusion()
 
     Rectangle {
@@ -90,21 +100,65 @@ PanelWindow {
             }
         }
 
+        MouseArea {
+            id: searchButton
+            Layout.alignment: Qt.AlignVCenter
+            implicitWidth: searchLabel.implicitWidth
+            implicitHeight: Theme.barHeight
+            width: implicitWidth
+            height: implicitHeight
+            hoverEnabled: true
+            activeFocusOnTab: true
+            cursorShape: Qt.PointingHandCursor
+            Accessible.role: Accessible.Button
+            Accessible.name: "Search"
+            Accessible.description: "Open the launcher"
+
+            onClicked: window.openLauncher()
+
+            Keys.onPressed: function (event) {
+                if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
+                    window.openLauncher();
+                    event.accepted = true;
+                }
+            }
+
+            BarLabel {
+                id: searchLabel
+                anchors.centerIn: parent
+                text: "Search"
+                color: searchButton.containsMouse ? Theme.textHover : Theme.textMuted
+            }
+        }
+
         ClockModule {
             id: clockModule
             Layout.alignment: Qt.AlignVCenter
-            onActivated: popovers.toggle("calendar", clockModule)
+            onActivated: {
+                LauncherModel.closeLauncher();
+                popovers.toggle("calendar", clockModule);
+            }
         }
 
         ControlIndicator {
             id: controlIndicator
             Layout.alignment: Qt.AlignVCenter
-            onActivated: popovers.toggle("control", controlIndicator)
+            onActivated: {
+                LauncherModel.closeLauncher();
+                popovers.toggle("control", controlIndicator);
+            }
         }
     }
 
     PopoverHost {
         id: popovers
         barWindow: window
+    }
+
+    Connections {
+        target: LauncherModel
+        function onControlRequested() {
+            popovers.toggle("control", controlIndicator);
+        }
     }
 }

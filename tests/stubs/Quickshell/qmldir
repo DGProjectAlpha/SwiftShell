@@ -1,6 +1,7 @@
 module Quickshell
 # Test doubles for Qt instantiation. This is not Quickshell.
 singleton Quickshell 1.0 Quickshell.qml
+singleton DesktopEntries 1.0 DesktopEntries.qml
 Edges 1.0 Edges.qml
 PopupAdjustment 1.0 PopupAdjustment.qml
 ExclusionMode 1.0 ExclusionMode.qml

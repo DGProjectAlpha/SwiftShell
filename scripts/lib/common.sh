@@ -63,6 +63,17 @@ swiftshell_state_dir() {
     printf '%s\n' "$(swiftshell_state_home)/swiftshell"
 }
 
+swiftshell_request_launcher() {
+    swiftshell_need_home
+    state=$(swiftshell_state_dir)
+    mkdir -p "$state"
+    token=$(date +%s).$$
+    tmp=$(mktemp "$state/launcher.request.XXXXXX")
+    printf '{\n  "text": "%s"\n}\n' "$token" >"$tmp"
+    mv "$tmp" "$state/launcher.request"
+    swiftshell_say "launcher requested."
+}
+
 swiftshell_bin_path() {
     printf '%s\n' "$HOME/.local/bin/swiftshell"
 }
