@@ -34,7 +34,7 @@ Active workspace state is a brighter weight plus a 1px mark. Inactive text is mu
 
 ## Monitors and scale
 
-`BarHost` asks Quickshell for the current screen list and creates a window only when `monitors.js` matches the configured connector. The default connector is `HDMI-A-1`. A match succeeds when the Shell screen name or the Hyprland monitor name from `Hyprland.monitorFor` equals that connector. Unmatched screens, including DP-1, get no window. An empty match logs a warning and creates no bar. Connecting or disconnecting a screen changes `Quickshell.screens`, and `Variants` creates or destroys the window.
+`BarHost` is a Quickshell `Scope`. `Variants` is a child of that scope. `BarHost` asks Quickshell for the current screen list and creates a window only when `monitors.js` matches the configured connector. The default connector is `HDMI-A-1`. A match succeeds when the Shell screen name or the Hyprland monitor name from `Hyprland.monitorFor` equals that connector. Unmatched screens, including DP-1, get no window. An empty match logs a warning and creates no bar. Connecting or disconnecting a screen changes `Quickshell.screens`, and `Variants` creates or destroys the window.
 
 Fractional scale is left to the compositor. Layout values are logical pixels.
 
@@ -54,7 +54,7 @@ If the Hyprland socket is absent, the indicators render inactive and clicks log 
 
 Preferences live in `$XDG_CONFIG_HOME/swiftshell/settings.json`, which is `~/.config/swiftshell/settings.json` when `XDG_CONFIG_HOME` is unset. That directory is separate from `~/.config/quickshell` and from Noctalia.
 
-`scripts/launch.sh` creates the directory and copies `shell/config/defaults.json` only when the file is missing. `SettingsStore` loads it with Quickshell `FileView` and `JsonAdapter`. `atomicWrites` stays enabled. A missing or unreadable file keeps the built-in defaults and does not overwrite an existing file. Unknown JSON keys are not preserved across a later adapter write; the M1 schema is the whole file.
+`scripts/launch.sh` creates the directory and copies `shell/config/defaults.json` only when the file is missing. `SettingsStore` is a Quickshell `Singleton` and loads the file with `FileView` and `JsonAdapter`. `atomicWrites` stays enabled. A missing or unreadable file keeps the built-in defaults and does not overwrite an existing file. Unknown JSON keys are not preserved across a later adapter write; the M1 schema is the whole file.
 
 `shell/logic/settings.js` is the validation contract. The settings GUI does not exist yet. Edit the JSON file, and a running shell reloads it because `watchChanges` is on.
 

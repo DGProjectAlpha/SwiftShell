@@ -1,8 +1,9 @@
 pragma Singleton
 
 import QtQuick
+import Quickshell
 
-QtObject {
+Singleton {
     readonly property int barHeight: 28
     readonly property int marginH: 10
     readonly property int moduleSpacing: 12

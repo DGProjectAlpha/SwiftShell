@@ -55,6 +55,10 @@ case ${1:-} in
         exit 0
         ;;
     kill)
+        if [ "${2:-}" = "--help" ]; then
+            printf '%s\n' "--path --any-display --id"
+            exit 0
+        fi
         exit 0
         ;;
 esac
@@ -177,7 +181,76 @@ test_activate_cycle() {
     [ -f "$XDG_DATA_HOME/swiftshell/app/shell.qml" ] || fail "deactivate removed the install"
     [ -f "$XDG_CONFIG_HOME/swiftshell/settings.json" ] || fail "deactivate removed settings"
     grep -q 'kill --path' "$SWIFTSHELL_QS_LOG" || fail "stop was not limited to this path"
+    grep 'kill --path' "$SWIFTSHELL_QS_LOG" | grep -q -- '--any-display' || fail "modern stop omitted --any-display"
     ok "activate and deactivate are reversible"
+}
+
+test_stop_on_quickshell_without_any_display() {
+    new_home
+    run_install >/dev/null
+    old=$(mktemp -d)
+    cat >"$old/qs" <<'EOF'
+#!/bin/sh
+printf '%s\n' "$*" >>"${SWIFTSHELL_QS_LOG:-/dev/null}"
+case ${1:-} in
+    -V|--version)
+        printf '%s\n' "quickshell 0.2.0"
+        exit 0
+        ;;
+    kill)
+        case ${2:-} in
+            --help)
+                printf '%s\n' "kill quickshell instances"
+                printf '%s\n' "-p,--path"
+                printf '%s\n' "-i,--id"
+                exit 0
+                ;;
+        esac
+        case " $* " in
+            *" --any-display "*)
+                exit 2
+                ;;
+        esac
+        exit 0
+        ;;
+esac
+exit 0
+EOF
+    chmod +x "$old/qs"
+    : >"$SWIFTSHELL_QS_LOG"
+    PATH="$old:$BASE_PATH" "$HOME/.local/bin/swiftshell" deactivate >/dev/null
+    grep -q 'kill --path' "$SWIFTSHELL_QS_LOG" || fail "old quickshell was not stopped by path"
+    if grep 'kill --path' "$SWIFTSHELL_QS_LOG" | grep -q 'any-display'; then
+        fail "stop passed --any-display to a Quickshell that does not provide it"
+    fi
+    ok "stop omits --any-display on Quickshell 0.2"
+}
+
+test_stop_reports_a_miss() {
+    new_home
+    run_install >/dev/null
+    miss=$(mktemp -d)
+    cat >"$miss/qs" <<'EOF'
+#!/bin/sh
+printf '%s\n' "$*" >>"${SWIFTSHELL_QS_LOG:-/dev/null}"
+case ${1:-} in
+    kill)
+        if [ "${2:-}" = "--help" ]; then
+            printf '%s\n' "--path --any-display"
+            exit 0
+        fi
+        exit 1
+        ;;
+esac
+exit 0
+EOF
+    chmod +x "$miss/qs"
+    if PATH="$miss:$BASE_PATH" "$HOME/.local/bin/swiftshell" stop >"$HOME/stop.out" 2>"$HOME/stop.err"; then
+        fail "stop succeeded when qs kill failed"
+    fi
+    grep -q "no running instance was confirmed" "$HOME/stop.err" || fail "stop aborted before reporting the miss"
+    grep -q 'kill --path' "$SWIFTSHELL_QS_LOG" || fail "failed stop did not select a path"
+    ok "stop reports a miss when qs kill fails"
 }
 
 test_blocked_name() {
@@ -265,6 +338,8 @@ test_optional_deps() {
 test_versions
 test_fresh_install
 test_activate_cycle
+test_stop_on_quickshell_without_any_display
+test_stop_reports_a_miss
 test_blocked_name
 test_foreign_directory
 test_foreign_launcher

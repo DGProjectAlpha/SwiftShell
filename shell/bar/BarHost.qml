@@ -3,7 +3,7 @@ import Quickshell
 import "../logic/monitors.js" as Monitors
 import "../services"
 
-QtObject {
+Scope {
     id: root
 
     property bool warnedMissing: false

@@ -3,6 +3,8 @@ set -eu
 
 ROOT=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
 CONFIG="$ROOT/shell"
+# shellcheck source=lib/common.sh
+. "$ROOT/scripts/lib/common.sh"
 
 if command -v qs >/dev/null 2>&1; then
     QS=qs
@@ -14,7 +16,7 @@ else
 fi
 
 echo "SwiftShell: stopping the prototype launched from this checkout"
-if "$QS" kill --path "$CONFIG" --any-display; then
+if swiftshell_qs_kill_config "$QS" "$CONFIG"; then
     exit 0
 fi
 

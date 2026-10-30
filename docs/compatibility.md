@@ -15,7 +15,7 @@ Versions below are the APIs this prototype was written against. They were taken 
 
 | Type | Module | Use |
 |---|---|---|
-| `ShellRoot`, `PanelWindow`, `Variants`, `SystemClock`, `ExclusionMode` | `Quickshell` | Entry, bar window, per-screen instances, clock |
+| `ShellRoot`, `Scope`, `Singleton`, `PanelWindow`, `Variants`, `SystemClock`, `ExclusionMode` | `Quickshell` | Entry, non-visual parents, per-screen instances, clock |
 | `Hyprland` | `Quickshell.Hyprland` | Workspaces, monitors, toplevels, `dispatch`, `monitorFor` |
 | `WlrLayershell` | `Quickshell.Wayland` | Layer namespace `swiftshell-bar` |
 | `FileView`, `JsonAdapter`, `JsonObject` | `Quickshell.Io` | Settings file |
@@ -23,6 +23,8 @@ Versions below are the APIs this prototype was written against. They were taken 
 `PanelWindow.color` is fully transparent. `implicitHeight` is 28. Anchors are top, left, and right. `focusable` is false so the bar does not take keyboard focus from the session. Existing Super shortcuts stay where they are.
 
 `SystemClock` uses minute precision. That is an update from the clock object, not a workspace poll.
+
+`QtObject` has no default property. A child object written directly inside it fails to load. `BarHost` is a `Scope`, whose default property is `children`. `SettingsStore`, `HyprlandModel`, and `Theme` use Quickshell's `Singleton` type, which extends `Scope`. `FileView` stays a child of that singleton, and `JsonAdapter` stays a child of `FileView` because `adapter` is `FileView`'s default property. `SystemClock` stays inside `Item`, whose `data` property accepts non-visual objects.
 
 Workspace activation prefers `HyprlandWorkspace.activate()`. The fallback string is `workspace <id>` passed to `Hyprland.dispatch`. Both are socket IPC. The historical Lua parse error from putting `hyprctl` syntax into the Lua config does not apply to this path, because this path does not call `hyprctl`.
 
@@ -35,10 +37,10 @@ qs --path /path/to/SwiftShell/shell --no-duplicate
 `--path` runs this checkout without registering it as the default Quickshell config and without copying it over Noctalia. `--no-duplicate` exits if that same config is already running.
 
 ```sh
-qs kill --path /path/to/SwiftShell/shell --any-display
+qs kill --path /path/to/SwiftShell/shell
 ```
 
-`--any-display` lets stop find the instance from another terminal on the same machine. It still selects by this config path.
+Quickshell 0.2.0 accepts `--path` and `--no-duplicate` on the main command, and `kill --path` plus `kill --id`. The `--any-display` kill flag was added after 0.2.1. `scripts/stop.sh` and `swiftshell stop` read `qs kill --help` and pass `--any-display` only when that build lists it. On 0.2.0, kill still selects this config path and only considers instances on the current display connection. The selector is never every Quickshell process.
 
 `//@ pragma ShellId swiftshell` is set so Quickshell state for this config is identifiable. Kill selection uses the path, not the shell id.
 

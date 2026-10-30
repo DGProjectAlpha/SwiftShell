@@ -326,6 +326,35 @@ swiftshell_remove_quickshell_link() {
     fi
 }
 
+swiftshell_qs_help_contains() {
+    bin=$1
+    sub=$2
+    needle=$3
+    help=$("$bin" "$sub" --help 2>&1 || true)
+    case $help in
+        *"$needle"*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+swiftshell_qs_kill_config() {
+    bin=$1
+    config=$2
+    # --any-display arrived after Quickshell 0.2.1. Passing it to 0.2.0
+    # makes kill fail before it selects this config path.
+    # The if guards keep a non-zero qs status from aborting under set -e.
+    if swiftshell_qs_help_contains "$bin" kill "--any-display"; then
+        if "$bin" kill --path "$config" --any-display; then
+            return 0
+        fi
+        return 1
+    fi
+    if "$bin" kill --path "$config"; then
+        return 0
+    fi
+    return 1
+}
+
 swiftshell_stop_running() {
     app=$(swiftshell_app_dir)
     if ! swiftshell_qs_bin >/dev/null 2>&1; then
@@ -333,7 +362,7 @@ swiftshell_stop_running() {
         return 0
     fi
     bin=$(swiftshell_qs_bin)
-    if "$bin" kill --path "$app" --any-display; then
+    if swiftshell_qs_kill_config "$bin" "$app"; then
         swiftshell_say "stop requested for this install."
         return 0
     fi

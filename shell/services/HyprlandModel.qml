@@ -1,10 +1,11 @@
 pragma Singleton
 
 import QtQuick
+import Quickshell
 import Quickshell.Hyprland
 import "../logic/workspaces.js" as Workspaces
 
-QtObject {
+Singleton {
     id: root
 
     readonly property bool connected: Hyprland.eventSocketPath !== ""

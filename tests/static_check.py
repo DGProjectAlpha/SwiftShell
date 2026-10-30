@@ -2,6 +2,7 @@
 """Static checks for the SwiftShell QML tree. This does not load Qt."""
 
 import pathlib
+import re
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -106,6 +107,187 @@ def scan_qml(text):
     return depth, paren, False
 
 
+TYPE_NAME = re.compile(r"^[A-Z][A-Za-z0-9_]*$")
+
+# QtObject has no default property. These types do, or they inherit one.
+ACCEPTS_DEFAULT_CHILD = {
+    "Item",
+    "Rectangle",
+    "Text",
+    "Row",
+    "Column",
+    "Grid",
+    "Flow",
+    "MouseArea",
+    "FocusScope",
+    "Loader",
+    "Repeater",
+    "RowLayout",
+    "ColumnLayout",
+    "GridLayout",
+    "StackLayout",
+    "ShellRoot",
+    "Scope",
+    "Singleton",
+    "PanelWindow",
+    "PopupWindow",
+    "Variants",
+    "FileView",
+    "LazyLoader",
+}
+
+NO_DEFAULT_CHILD = {"QtObject"}
+
+
+def tokenize_qml(text):
+    tokens = []
+    index = 0
+    line = 1
+    length = len(text)
+    while index < length:
+        char = text[index]
+        if char == "\n":
+            line += 1
+            index += 1
+            continue
+        if char.isspace():
+            index += 1
+            continue
+        if char == "/" and index + 1 < length and text[index + 1] == "/":
+            index += 2
+            while index < length and text[index] != "\n":
+                index += 1
+            continue
+        if char == "/" and index + 1 < length and text[index + 1] == "*":
+            index += 2
+            while index + 1 < length and not (text[index] == "*" and text[index + 1] == "/"):
+                if text[index] == "\n":
+                    line += 1
+                index += 1
+            index = min(index + 2, length)
+            continue
+        if char in ("'", '"', "`"):
+            quote = char
+            index += 1
+            while index < length and text[index] != quote:
+                if text[index] == "\\":
+                    index += 2
+                    continue
+                if text[index] == "\n":
+                    line += 1
+                index += 1
+            index += 1
+            tokens.append(("string", "", line))
+            continue
+        if char.isalpha() or char == "_":
+            end = index + 1
+            while end < length and (text[end].isalnum() or text[end] == "_"):
+                end += 1
+            tokens.append(("ident", text[index:end], line))
+            index = end
+            continue
+        if char in "{}:.":
+            tokens.append((char, char, line))
+            index += 1
+            continue
+        if char in "()[];,":
+            tokens.append(("punct", char, line))
+            index += 1
+            continue
+        index += 1
+    return tokens
+
+
+def qml_root_type(text):
+    tokens = tokenize_qml(text)
+    for index, token in enumerate(tokens):
+        if token[0] != "{":
+            continue
+        previous = tokens[index - 1] if index else None
+        if previous and previous[0] == "ident" and TYPE_NAME.match(previous[1]):
+            return previous[1]
+    return ""
+
+
+def parent_accepts_child(parent, component_roots):
+    seen = set()
+    current = parent
+    while current and current not in seen:
+        seen.add(current)
+        if current in ACCEPTS_DEFAULT_CHILD:
+            return True
+        if current in NO_DEFAULT_CHILD:
+            return False
+        current = component_roots.get(current)
+        if current is None:
+            return True
+    return True
+
+
+def nesting_errors(text, filename, component_roots):
+    errors = []
+    tokens = tokenize_qml(text)
+    stack = []
+    for index, token in enumerate(tokens):
+        if token[0] == "{":
+            previous = tokens[index - 1] if index else None
+            type_name = ""
+            assigned = False
+            if previous and previous[0] == "ident" and TYPE_NAME.match(previous[1]):
+                type_name = previous[1]
+                before = tokens[index - 2] if index >= 2 else None
+                assigned = before is not None and before[0] == ":"
+            if type_name and stack and stack[-1][0] == "qml" and not assigned:
+                parent = stack[-1][1]
+                if not parent_accepts_child(parent, component_roots):
+                    errors.append(
+                        filename
+                        + ":"
+                        + str(previous[2])
+                        + " nests "
+                        + type_name
+                        + " inside "
+                        + parent
+                        + ", which has no default object property"
+                    )
+            if type_name and (not stack or stack[-1][0] == "qml"):
+                stack.append(("qml", type_name))
+            else:
+                stack.append(("script", ""))
+            continue
+        if token[0] == "}":
+            if stack:
+                stack.pop()
+            else:
+                errors.append(filename + ":" + str(token[2]) + " has an extra closing brace")
+    return errors
+
+
+def check_nesting_fixtures():
+    errors = []
+    broken = nesting_errors("import QtQuick\nQtObject {\n    Item {}\n}\n", "fixture-broken.qml", {})
+    if not any("nests Item inside QtObject" in item for item in broken):
+        errors.append("nesting fixture missed a QtObject child")
+    assigned = nesting_errors(
+        "import QtQuick\nQtObject {\n    property Item child: Item {}\n}\n",
+        "fixture-assigned.qml",
+        {},
+    )
+    if assigned:
+        errors.append("nesting fixture flagged a property object: " + "; ".join(assigned))
+    scope = nesting_errors("import Quickshell\nScope {\n    Variants {\n        Item {}\n    }\n}\n", "fixture-scope.qml", {})
+    if scope:
+        errors.append("nesting fixture flagged a Scope child: " + "; ".join(scope))
+    script = nesting_errors(
+        "import QtQuick\nQtObject {\n    function run() {\n        if (true) {\n        }\n    }\n}\n",
+        "fixture-script.qml",
+        {},
+    )
+    if script:
+        errors.append("nesting fixture flagged a script block: " + "; ".join(script))
+    return errors
+
+
 def resolve_import(qml_path, spec):
     if spec.startswith("root:"):
         return None
@@ -164,6 +346,7 @@ def check_shell(path, errors):
 
 def main():
     errors = []
+    errors.extend(check_nesting_fixtures())
     for path in REQUIRED:
         if not path.is_file():
             errors.append("missing " + str(path.relative_to(ROOT)))
@@ -171,6 +354,10 @@ def main():
     qml_files = list(SHELL.rglob("*.qml"))
     if not qml_files:
         errors.append("no qml files found")
+
+    component_roots = {}
+    for path in qml_files:
+        component_roots[path.stem] = qml_root_type(path.read_text(encoding="utf-8"))
 
     shell_files = [ROOT / "install.sh", ROOT / "scripts" / "swiftshell"]
     shell_files.extend((ROOT / "scripts").rglob("*.sh"))
@@ -192,6 +379,7 @@ def main():
             )
         if "Timer {" in text or "Process {" in text:
             errors.append(str(path.relative_to(ROOT)) + " polls or spawns a process")
+        errors.extend(nesting_errors(text, str(path.relative_to(ROOT)), component_roots))
         for line in text.splitlines():
             stripped = line.strip()
             if not stripped.startswith("import "):
@@ -215,6 +403,10 @@ def main():
     checks = {
         "shell id": "pragma ShellId swiftshell" in shell_qml,
         "shell root": "ShellRoot" in shell_qml,
+        "bar host is a scope": qml_root_type((SHELL / "bar" / "BarHost.qml").read_text(encoding="utf-8")) == "Scope",
+        "settings singleton type": qml_root_type(store) == "Singleton",
+        "hyprland singleton type": qml_root_type((SHELL / "services" / "HyprlandModel.qml").read_text(encoding="utf-8")) == "Singleton",
+        "theme singleton type": qml_root_type(theme) == "Singleton",
         "transparent bar": "Theme.transparent" in bar and "Qt.rgba(0, 0, 0, 0)" in theme,
         "ignore exclusion by default": "ExclusionMode.Ignore" in bar,
         "bar height": "barHeight: 28" in theme,
