@@ -8,8 +8,26 @@ Scope {
 
     property bool warnedMissing: false
     property bool announcedMatch: false
+    property bool refreshingScreens: false
+    property var targetScreens: []
 
-    readonly property var targetScreens: {
+    function sameScreens(left, right) {
+        const a = left || [];
+        const b = right || [];
+        if (a.length !== b.length)
+            return false;
+        for (let i = 0; i < a.length; i++) {
+            if (a[i] !== b[i])
+                return false;
+        }
+        return true;
+    }
+
+    function refreshTargetScreens() {
+        if (root.refreshingScreens)
+            return;
+        root.refreshingScreens = true;
+
         const matched = [];
         const screens = Quickshell.screens;
         const count = screens ? screens.length : 0;
@@ -20,13 +38,20 @@ Scope {
             if (Monitors.matchesTarget(screenName, hyprlandName, SettingsStore.targetMonitor))
                 matched.push(screen);
         }
-        return matched;
+
+        if (!root.sameScreens(root.targetScreens, matched))
+            root.targetScreens = matched;
+
+        root.refreshingScreens = false;
+        root.warnIfMissing();
     }
 
     function warnIfMissing() {
         if (root.targetScreens.length === 0) {
             if (!root.warnedMissing) {
-                console.warn("SwiftShell: no output matched the target monitor", SettingsStore.targetMonitor);
+                const screens = Quickshell.screens;
+                const count = screens ? screens.length : 0;
+                console.warn("SwiftShell: no output matched the target monitor", SettingsStore.targetMonitor, "among", count, "screens");
                 root.warnedMissing = true;
             }
             return;
@@ -38,8 +63,22 @@ Scope {
         root.announcedMatch = true;
     }
 
-    onTargetScreensChanged: warnIfMissing()
-    Component.onCompleted: warnIfMissing()
+    Component.onCompleted: refreshTargetScreens()
+
+    Connections {
+        target: Quickshell
+        function onScreensChanged() { root.refreshTargetScreens(); }
+    }
+
+    Connections {
+        target: HyprlandModel
+        function onOutputRevisionChanged() { root.refreshTargetScreens(); }
+    }
+
+    Connections {
+        target: SettingsStore
+        function onTargetMonitorChanged() { root.refreshTargetScreens(); }
+    }
 
     Variants {
         model: root.targetScreens

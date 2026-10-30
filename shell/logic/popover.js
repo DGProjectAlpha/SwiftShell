@@ -253,6 +253,18 @@ function reducePopup(state, action, options) {
     return current;
 }
 
+function focusTransition(previous, next) {
+    const prev = previous && typeof previous === "object" ? previous : {};
+    const nxt = next && typeof next === "object" ? next : {};
+    const prevGrab = prev.grab === true;
+    const nextGrab = nxt.grab === true;
+    return {
+        clearFocusBeforeGrab: prevGrab && !nextGrab,
+        grab: nextGrab,
+        takeFocus: nxt.interactive === true && nextGrab,
+    };
+}
+
 function reducePopover(openId, action) {
     const current = typeof openId === "string" ? openId : "";
     if (!action || typeof action.type !== "string")
@@ -281,6 +293,7 @@ var swiftshellPopover = {
     popupModel: popupModel,
     dismissalMotion: dismissalMotion,
     reducePopup: reducePopup,
+    focusTransition: focusTransition,
     reducePopover: reducePopover,
 };
 

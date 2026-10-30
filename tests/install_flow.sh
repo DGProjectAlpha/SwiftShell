@@ -25,11 +25,15 @@ new_home() {
     export SWIFTSHELL_QS_LOG="$HOME/qs.log"
     export SWIFTSHELL_SUDO_LOG="$HOME/sudo.log"
     export SWIFTSHELL_PACMAN_LOG="$HOME/pacman.log"
+    export SWIFTSHELL_DECOY_LOG="$HOME/decoy.log"
     mkdir -p "$HOME/.config" "$HOME/.local/bin" "$HOME/.config/hypr/config" "$HOME/.config/quickshell/noctalia"
     printf '%s\n' 'return { binds = true }' >"$HOME/.config/hypr/config/binds.lua"
     printf '%s\n' 'noctalia' >"$HOME/.config/quickshell/noctalia/shell.qml"
     printf '%s\n' 'ID=arch' >"$HOME/os-release"
     : >"$SWIFTSHELL_QS_LOG"
+    : >"$SWIFTSHELL_SUDO_LOG"
+    : >"$SWIFTSHELL_PACMAN_LOG"
+    : >"$SWIFTSHELL_DECOY_LOG"
     export PATH="$STUBS:$BASE_PATH"
 }
 
@@ -112,6 +116,63 @@ EOF
     chmod +x "$dir/sudo" "$dir/pacman"
 }
 
+isolated_tools() {
+    dir=$(mktemp -d)
+    tool=""
+    src=""
+    for tool in mkdir cp chmod sed grep cat printf ln rm mv head tr awk ls mktemp date readlink dirname; do
+        src=$(PATH="$ORIG_PATH" command -v "$tool" 2>/dev/null || true)
+        if [ -z "$src" ]; then
+            fail "required test tool missing: $tool"
+        fi
+        ln -s "$src" "$dir/$tool"
+    done
+    src=$(PATH="$ORIG_PATH" command -v git 2>/dev/null || true)
+    if [ -n "$src" ]; then
+        ln -s "$src" "$dir/git"
+    fi
+    printf '%s\n' "$dir"
+}
+
+write_decoy_commands() {
+    dir=$1
+    mkdir -p "$dir"
+    cat >"$dir/qs" <<'EOF'
+#!/bin/sh
+printf '%s\n' "qs $*" >>"${SWIFTSHELL_DECOY_LOG:-/dev/null}"
+printf '%s\n' "quickshell 9.9.9"
+exit 0
+EOF
+    cat >"$dir/quickshell" <<'EOF'
+#!/bin/sh
+printf '%s\n' "quickshell $*" >>"${SWIFTSHELL_DECOY_LOG:-/dev/null}"
+exit 0
+EOF
+    cat >"$dir/Hyprland" <<'EOF'
+#!/bin/sh
+printf '%s\n' "Hyprland $*" >>"${SWIFTSHELL_DECOY_LOG:-/dev/null}"
+if [ "${1:-}" = "--version" ]; then
+    printf '%s\n' "Hyprland 9.9.9"
+fi
+exit 0
+EOF
+    cat >"$dir/hyprctl" <<'EOF'
+#!/bin/sh
+printf '%s\n' "hyprctl $*" >>"${SWIFTSHELL_DECOY_LOG:-/dev/null}"
+exit 0
+EOF
+    chmod +x "$dir/qs" "$dir/quickshell" "$dir/Hyprland" "$dir/hyprctl"
+}
+
+assert_host_path_hidden() {
+    case ":$1:" in
+        *:/usr/bin:*|*:/usr/local/bin:*|*:/bin:*)
+            fail "dependency test PATH includes a host bin directory"
+            ;;
+    esac
+}
+
+ORIG_PATH=$PATH
 STUBS=$(mktemp -d)
 write_stubs "$STUBS"
 BASE_PATH="/usr/bin:/bin"
@@ -324,15 +385,78 @@ test_strict_version() {
 
 test_optional_deps() {
     new_home
-    deps=$(mktemp -d)
-    write_dep_stubs "$deps"
-    PATH="$deps:$BASE_PATH" "$ROOT/install.sh" --install-deps --yes >/dev/null
+    bin=$(isolated_tools)
+    write_dep_stubs "$bin"
+    decoy=$(mktemp -d)
+    write_decoy_commands "$decoy"
+    assert_host_path_hidden "$bin"
+    if PATH="$bin" command -v qs >/dev/null 2>&1; then
+        fail "missing-deps PATH can see qs"
+    fi
+    if PATH="$bin" command -v Hyprland >/dev/null 2>&1; then
+        fail "missing-deps PATH can see Hyprland"
+    fi
+    if PATH="$bin" command -v hyprctl >/dev/null 2>&1; then
+        fail "missing-deps PATH can see hyprctl"
+    fi
+    if PATH="$bin:$decoy" command -v qs >/dev/null 2>&1; then
+        :
+    else
+        fail "decoy qs was not executable"
+    fi
+    PATH="$bin" "$ROOT/install.sh" --install-deps --yes >/dev/null
+    [ ! -s "$SWIFTSHELL_DECOY_LOG" ] || fail "a decoy compositor command was executed"
     grep -q 'pacman -S' "$SWIFTSHELL_SUDO_LOG" || fail "pacman was not requested"
     grep -q 'quickshell' "$SWIFTSHELL_SUDO_LOG" || fail "quickshell package missing"
     grep -q 'hyprland' "$SWIFTSHELL_SUDO_LOG" || fail "hyprland package missing"
+    if grep -q -- '-S' "$SWIFTSHELL_PACMAN_LOG"; then
+        fail "pacman -S ran outside the sudo stub"
+    fi
     [ -f "$XDG_DATA_HOME/swiftshell/manifest" ] || fail "files were not installed after the package step"
     [ ! -e "$HOME/.config/hypr/hyprland.conf" ] || fail "package step wrote a hyprland config"
     ok "optional dependency installation is explicit"
+}
+
+test_optional_deps_already_present() {
+    new_home
+    bin=$(isolated_tools)
+    cp "$STUBS/qs" "$bin/qs"
+    cp "$STUBS/Hyprland" "$bin/Hyprland"
+    chmod +x "$bin/qs" "$bin/Hyprland"
+    write_dep_stubs "$bin"
+    assert_host_path_hidden "$bin"
+    PATH="$bin" "$ROOT/install.sh" --install-deps --yes >/dev/null
+    [ ! -s "$SWIFTSHELL_SUDO_LOG" ] || fail "pacman was requested for packages that are already present"
+    [ -f "$XDG_DATA_HOME/swiftshell/manifest" ] || fail "present dependencies skipped the file install"
+    ok "present dependencies do not request pacman"
+}
+
+test_optional_deps_sudo_failure() {
+    new_home
+    bin=$(isolated_tools)
+    write_dep_stubs "$bin"
+    cat >"$bin/sudo" <<'EOF'
+#!/bin/sh
+printf '%s\n' "$*" >>"${SWIFTSHELL_SUDO_LOG:-/dev/null}"
+exit 99
+EOF
+    chmod +x "$bin/sudo"
+    assert_host_path_hidden "$bin"
+    if PATH="$bin" "$ROOT/install.sh" --install-deps --yes --strict >"$HOME/strict.out" 2>"$HOME/strict.err"; then
+        fail "strict install continued after sudo failed"
+    fi
+    [ ! -e "$XDG_DATA_HOME/swiftshell/manifest" ] || fail "strict sudo failure still installed files"
+    grep -q 'pacman -S' "$SWIFTSHELL_SUDO_LOG" || fail "strict failure did not request pacman"
+    : >"$SWIFTSHELL_SUDO_LOG"
+    if PATH="$bin" "$ROOT/install.sh" --install-deps --yes >"$HOME/loose.out" 2>"$HOME/loose.err"; then
+        :
+    else
+        fail "non-strict install aborted when sudo failed"
+    fi
+    grep -q 'package installation did not finish' "$HOME/loose.err" || fail "sudo failure was not reported"
+    [ -f "$XDG_DATA_HOME/swiftshell/manifest" ] || fail "non-strict install dropped the files"
+    [ ! -e "$HOME/.config/hypr/hyprland.conf" ] || fail "sudo failure wrote a hyprland config"
+    ok "sudo failure is contained"
 }
 
 test_versions
@@ -346,5 +470,7 @@ test_foreign_launcher
 test_uninstall
 test_strict_version
 test_optional_deps
+test_optional_deps_already_present
+test_optional_deps_sudo_failure
 
 printf 'install tests passed (%s)\n' "$PASS"

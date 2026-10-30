@@ -41,22 +41,48 @@ function normalizeWorkspaceIds(ids) {
 }
 
 function workspaceIdsValid(ids) {
-    if (!Array.isArray(ids) || ids.length === 0 || ids.length > MAX_WORKSPACE_IDS)
+    const source = asList(ids);
+    if (source.length === 0 || source.length > MAX_WORKSPACE_IDS)
+        return false;
+    if (ids && typeof ids === "object" && typeof ids.length === "number" && source.length !== ids.length)
         return false;
 
     const seen = [];
-    for (let i = 0; i < ids.length; i++) {
-        const id = asWorkspaceId(ids[i]);
-        if (id == null || id !== ids[i] && String(id) !== String(ids[i]))
+    for (let i = 0; i < source.length; i++) {
+        if (typeof source[i] !== "number" || !Number.isInteger(source[i]))
             return false;
-        if (typeof ids[i] !== "number" || !Number.isInteger(ids[i]))
-            return false;
-        if (seen.indexOf(id) !== -1)
+        const id = asWorkspaceId(source[i]);
+        if (id == null || seen.indexOf(id) !== -1)
             return false;
         seen.push(id);
     }
 
     return true;
+}
+
+// Hyprland's Lua config evaluates IPC as `return hl.dispatch(<request>)`.
+// `workspace 5` is a syntax error there (`')' expected near '5'`).
+// The dispatcher table is what the wiki and a confirmed click test accept:
+// `hl.dsp.focus({ workspace = <id> })`. The id is an integer, never a string.
+function resolveDispatchMode(configured, usingLua) {
+    if (configured === "lua" || configured === "legacy")
+        return configured;
+    if (usingLua === true)
+        return "lua";
+    if (usingLua === false)
+        return "legacy";
+    return "lua";
+}
+
+function dispatchWorkspaceCommand(id, mode, usingLua) {
+    const workspaceId = asWorkspaceId(id);
+    if (workspaceId == null || typeof id !== "number" || !Number.isInteger(id))
+        return "";
+
+    if (resolveDispatchMode(mode, usingLua) === "legacy")
+        return "workspace " + workspaceId;
+
+    return "hl.dsp.focus({ workspace = " + workspaceId + " })";
 }
 
 function findWorkspace(liveWorkspaces, id, monitorName) {
@@ -102,19 +128,13 @@ function buildWorkspaceItems(configuredIds, liveWorkspaces, monitorName) {
     });
 }
 
-function dispatchWorkspaceCommand(id) {
-    const workspaceId = asWorkspaceId(id);
-    if (workspaceId == null || typeof id !== "number")
-        return "";
-    return "workspace " + workspaceId;
-}
-
 var swiftshellWorkspaces = {
     DEFAULT_WORKSPACE_IDS: DEFAULT_WORKSPACE_IDS,
     MAX_WORKSPACE_IDS: MAX_WORKSPACE_IDS,
     asWorkspaceId: asWorkspaceId,
     normalizeWorkspaceIds: normalizeWorkspaceIds,
     workspaceIdsValid: workspaceIdsValid,
+    resolveDispatchMode: resolveDispatchMode,
     buildWorkspaceItems: buildWorkspaceItems,
     dispatchWorkspaceCommand: dispatchWorkspaceCommand,
 };

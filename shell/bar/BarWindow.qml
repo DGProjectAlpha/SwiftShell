@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Wayland
+import "../logic/bar.js" as Bar
 import "../logic/windows.js" as Windows
 import "../logic/workspaces.js" as Workspaces
 import "../popovers"
@@ -24,8 +25,11 @@ PanelWindow {
         right: true
     }
 
+    // Top stays under true fullscreen. Overlay would cover fullscreen clients.
+    // keyboardFocus None keeps the bar from taking text input.
     WlrLayershell.namespace: "swiftshell-bar"
-    exclusionMode: reserveSpace ? ExclusionMode.Normal : ExclusionMode.Ignore
+    WlrLayershell.layer: WlrLayer.Top
+    WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
 
     readonly property bool reserveSpace: SettingsStore.reserveSpace
     readonly property string hyprlandMonitorName: HyprlandModel.hyprlandNameForScreen(modelData)
@@ -41,11 +45,14 @@ PanelWindow {
     readonly property string windowTitle: Windows.focusedTitle(HyprlandModel.liveToplevels, monitorKey, activeWorkspaceId)
 
     function syncExclusion() {
-        if (reserveSpace) {
-            exclusiveZone = Theme.barHeight;
+        const update = Bar.exclusionUpdate(reserveSpace, Theme.barHeight);
+        if (update.property === "exclusiveZone") {
+            exclusiveZone = update.value;
+            console.info("SwiftShell: bar reserves", update.value, "logical px on", monitorKey);
             return;
         }
         exclusionMode = ExclusionMode.Ignore;
+        console.info("SwiftShell: bar reserves no space on", monitorKey);
     }
 
     Component.onCompleted: syncExclusion()

@@ -12,6 +12,7 @@ const theme = require("../shell/logic/theme.js");
 const calendar = require("../shell/logic/calendar.js");
 const popover = require("../shell/logic/popover.js");
 const audio = require("../shell/logic/audio.js");
+const bar = require("../shell/logic/bar.js");
 
 let failed = 0;
 
@@ -114,13 +115,44 @@ test("missing monitor name does not mark a foreign workspace active", function (
     assert.equal(items[0].exists, true);
 });
 
-test("workspace dispatch is a single ipc command", function () {
-    assert.equal(workspaces.dispatchWorkspaceCommand(4), "workspace 4");
-    assert.equal(workspaces.dispatchWorkspaceCommand(6), "workspace 6");
+test("moving a window onto the bar monitor updates the active workspace", function () {
+    const before = workspaces.buildWorkspaceItems([4, 5, 6], [
+        { id: 4, name: "4", monitorName: "HDMI-A-1", active: true, focused: true, urgent: false },
+        { id: 5, name: "5", monitorName: "HDMI-A-1", active: false, focused: false, urgent: false },
+    ], "HDMI-A-1");
+    assert.equal(before[0].active, true);
+    assert.equal(before[1].active, false);
+    const after = workspaces.buildWorkspaceItems([4, 5, 6], [
+        { id: 4, name: "4", monitorName: "HDMI-A-1", active: false, focused: false, urgent: false },
+        { id: 5, name: "5", monitorName: "HDMI-A-1", active: true, focused: true, urgent: false },
+    ], "HDMI-A-1");
+    assert.equal(after[0].active, false);
+    assert.equal(after[1].active, true);
+    assert.equal(after[1].onMonitor, true);
+    assert.equal(after[2].exists, false);
+});
+
+test("workspace dispatch uses the lua expression unless legacy is selected", function () {
+    assert.equal(workspaces.dispatchWorkspaceCommand(4), "hl.dsp.focus({ workspace = 4 })");
+    assert.equal(workspaces.dispatchWorkspaceCommand(6), "hl.dsp.focus({ workspace = 6 })");
+    assert.equal(workspaces.dispatchWorkspaceCommand(5, "auto", true), "hl.dsp.focus({ workspace = 5 })");
+    assert.equal(workspaces.dispatchWorkspaceCommand(5, "auto", null), "hl.dsp.focus({ workspace = 5 })");
+    assert.equal(workspaces.dispatchWorkspaceCommand(5, "lua", false), "hl.dsp.focus({ workspace = 5 })");
+    assert.equal(workspaces.dispatchWorkspaceCommand(5, "legacy", true), "workspace 5");
+    assert.equal(workspaces.dispatchWorkspaceCommand(5, "auto", false), "workspace 5");
+    assert.equal(workspaces.dispatchWorkspaceCommand(5).includes("on_current_monitor"), false);
+    assert.equal(workspaces.dispatchWorkspaceCommand(5).indexOf("workspace 5"), -1);
     assert.equal(workspaces.dispatchWorkspaceCommand("4"), "");
     assert.equal(workspaces.dispatchWorkspaceCommand(4.2), "");
     assert.equal(workspaces.dispatchWorkspaceCommand(-4), "");
-    assert.equal(workspaces.dispatchWorkspaceCommand(4).includes("hyprctl"), false);
+    assert.equal(workspaces.dispatchWorkspaceCommand("5);"), "");
+    assert.equal(workspaces.dispatchWorkspaceCommand(5).includes("hyprctl"), false);
+    assert.equal(workspaces.resolveDispatchMode("auto", true), "lua");
+    assert.equal(workspaces.resolveDispatchMode("auto", false), "legacy");
+    assert.equal(workspaces.resolveDispatchMode("auto", null), "lua");
+    assert.equal(workspaces.resolveDispatchMode("legacy", true), "legacy");
+    assert.equal(workspaces.workspaceIdsValid({ length: 3, 0: 4, 1: 5, 2: 6 }), true);
+    assert.equal(workspaces.workspaceIdsValid({ length: 3, 0: 4, 1: 5, 2: "6" }), false);
 });
 
 test("focused title stays on the bar monitor", function () {
@@ -194,6 +226,31 @@ test("valid custom settings round-trip", function () {
     assert.equal(result.settings.bar.targetMonitor, "HDMI-A-1");
     assert.equal(result.settings.bar.reserveSpace, true);
     assert.equal(result.settings.bar.showFocusedTitle, false);
+    assert.equal(result.settings.bar.workspaceDispatch, "auto");
+});
+
+test("qml list workspace ids validate without a warning", function () {
+    const qmlList = { length: 3, 0: 4, 1: 5, 2: 6 };
+    const result = settings.validateSettings({
+        bar: { workspaceIds: qmlList, workspaceDispatch: "lua" },
+    });
+    assert.equal(result.ok, true);
+    assert.equal(Array.isArray(qmlList), false);
+    assert.deepEqual(result.settings.bar.workspaceIds, [4, 5, 6]);
+    assert.equal(result.settings.bar.workspaceDispatch, "lua");
+
+    const strings = settings.validateSettings({
+        bar: { workspaceIds: { length: 3, 0: 4, 1: 5, 2: "6" } },
+    });
+    assert.equal(strings.ok, false);
+    assert.ok(strings.errors.indexOf("bar.workspaceIds") !== -1);
+
+    const mode = settings.validateSettings({
+        bar: { workspaceIds: [4, 5, 6], workspaceDispatch: "workspace 5" },
+    });
+    assert.equal(mode.ok, false);
+    assert.ok(mode.errors.indexOf("bar.workspaceDispatch") !== -1);
+    assert.equal(mode.settings.bar.workspaceDispatch, "auto");
 });
 
 test("non-object settings are rejected", function () {
@@ -639,6 +696,31 @@ test("stored blur preference does not enable a background effect", function () {
     assert.equal(stored.settings.appearance.panelBlur, 0);
     assert.equal(popover.panelBlurPolicy().supported, false);
     assert.equal(popover.panelBlurPolicy().fallback, "scrim");
+});
+
+test("bar exclusion writes one property and popup focus clears before the grab", function () {
+    const reserved = bar.exclusionUpdate(true, 28);
+    assert.deepEqual(reserved, { property: "exclusiveZone", value: 28 });
+    assert.equal(Object.prototype.hasOwnProperty.call(reserved, "exclusionMode"), false);
+    const overlay = bar.exclusionUpdate(false, 28);
+    assert.deepEqual(overlay, { property: "exclusionMode", value: "ignore" });
+    assert.equal(Object.prototype.hasOwnProperty.call(overlay, "exclusiveZone"), false);
+    assert.deepEqual(bar.exclusionUpdate(true, 0), { property: "exclusionMode", value: "ignore" });
+    assert.equal(bar.exclusionUpdate(true, 28).value, 28);
+    assert.equal(bar.layerForBar(), "top");
+
+    const open = popover.reducePopup(popover.popupModel(), { type: "open", id: "calendar" }, { instantOpen: true });
+    const entering = popover.focusTransition(popover.popupModel(), open);
+    assert.equal(entering.clearFocusBeforeGrab, false);
+    assert.equal(entering.grab, true);
+    assert.equal(entering.takeFocus, true);
+    const leaving = popover.focusTransition(open, popover.reducePopup(open, { type: "close" }, { instantClose: true }));
+    assert.equal(leaving.clearFocusBeforeGrab, true);
+    assert.equal(leaving.grab, false);
+    assert.equal(leaving.takeFocus, false);
+    const outside = popover.focusTransition(open, popover.reducePopup(open, { type: "outside" }, { instantClose: false }));
+    assert.equal(outside.clearFocusBeforeGrab, true);
+    assert.equal(outside.grab, false);
 });
 
 test("defaults.json matches the serializer", function () {
