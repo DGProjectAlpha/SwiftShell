@@ -5,6 +5,7 @@ import Quickshell.Wayland
 import "../logic/bar.js" as Bar
 import "../logic/windows.js" as Windows
 import "../logic/workspaces.js" as Workspaces
+import "../components"
 import "../popovers"
 import "../services"
 import "../themes"
