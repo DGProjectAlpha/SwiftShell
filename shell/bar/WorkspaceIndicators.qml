@@ -24,7 +24,7 @@ Row {
             Accessible.name: "Workspace " + modelData.id
             Accessible.description: modelData.active ? "Active on this monitor" : "Switch to this workspace"
 
-            onClicked: HyprlandModel.activateWorkspace(modelData.id)
+            onClicked: HyprlandModel.activateWorkspace(modelData.id, SettingsStore.workspaceDispatch)
 
             BarLabel {
                 id: label

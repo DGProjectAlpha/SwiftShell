@@ -114,33 +114,60 @@ Singleton {
         return resolved;
     }
 
-    function activateWorkspace(id) {
+    property int outputRevision: 0
+    property bool warnedDispatchDown: false
+    property string announcedDispatchMode: ""
+
+    function detectedLua() {
+        try {
+            const value = Hyprland["usingLua"];
+            if (value === true)
+                return true;
+            if (value === false)
+                return false;
+        } catch (error) {
+            return null;
+        }
+        return null;
+    }
+
+    function activateWorkspace(id, configuredMode) {
         if (!root.connected) {
-            console.warn("SwiftShell: Hyprland IPC is unavailable; workspace", id, "was not activated");
+            if (!root.warnedDispatchDown) {
+                console.warn("SwiftShell: Hyprland IPC is unavailable; workspace activation was not sent");
+                root.warnedDispatchDown = true;
+            }
             return;
         }
 
-        const values = Hyprland.workspaces.values;
-        for (let i = 0; i < values.length; i++) {
-            if (values[i].id === id) {
-                values[i].activate();
-                return;
-            }
-        }
-
-        const command = Workspaces.dispatchWorkspaceCommand(id);
+        root.warnedDispatchDown = false;
+        const mode = Workspaces.resolveDispatchMode(configuredMode, root.detectedLua());
+        const command = Workspaces.dispatchWorkspaceCommand(id, configuredMode, root.detectedLua());
         if (command === "") {
             console.warn("SwiftShell: ignored workspace activation for", id);
             return;
         }
 
-        Hyprland.dispatch(command);
+        if (root.announcedDispatchMode !== mode) {
+            console.info("SwiftShell: workspace dispatch mode", mode);
+            root.announcedDispatchMode = mode;
+        }
+
+        try {
+            Hyprland.dispatch(command);
+        } catch (error) {
+            console.warn("SwiftShell: workspace", id, "was not activated");
+            return;
+        }
+
+        Qt.callLater(function () { root.refresh(); });
     }
 
     function refresh() {
         Hyprland.refreshMonitors();
         Hyprland.refreshWorkspaces();
         Hyprland.refreshToplevels();
+        root.outputRevision += 1;
     }
 
     onConnectedChanged: {
@@ -149,6 +176,7 @@ Singleton {
             refresh();
         } else {
             console.warn("SwiftShell: Hyprland event socket is unavailable; workspace clicks will be ignored");
+            root.outputRevision += 1;
         }
     }
 
