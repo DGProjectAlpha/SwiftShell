@@ -30,14 +30,20 @@ Singleton {
     readonly property color textMuted: palette.appearance === "light" ? "#525252" : "#A3A3A3"
     readonly property color textHover: palette.appearance === "light" ? "#2E2E2E" : "#D4D4D4"
     readonly property color transparent: Qt.rgba(0, 0, 0, 0)
-    readonly property color panelText: Qt.rgba(palette.text.r / 255, palette.text.g / 255, palette.text.b / 255, 1)
-    readonly property color panelMuted: Qt.rgba(palette.muted.r / 255, palette.muted.g / 255, palette.muted.b / 255, 1)
-    readonly property color panelHover: Qt.rgba(palette.hover.r / 255, palette.hover.g / 255, palette.hover.b / 255, 1)
-    readonly property color panelColor: Qt.rgba(palette.panel.r / 255, palette.panel.g / 255, palette.panel.b / 255, SettingsStore.panelOpacity)
+    readonly property var panelTextUnits: Palette.colorUnits(palette.text, 1)
+    readonly property var panelMutedUnits: Palette.colorUnits(palette.muted, 1)
+    readonly property var panelHoverUnits: Palette.colorUnits(palette.hover, 1)
+    readonly property var panelUnits: Palette.colorUnits(palette.panel, SettingsStore.panelOpacity)
+    readonly property var gradientUnits: Palette.gradientUnits(palette.appearance)
+    readonly property color panelText: Qt.rgba(panelTextUnits.r, panelTextUnits.g, panelTextUnits.b, panelTextUnits.a)
+    readonly property color panelMuted: Qt.rgba(panelMutedUnits.r, panelMutedUnits.g, panelMutedUnits.b, panelMutedUnits.a)
+    readonly property color panelHover: Qt.rgba(panelHoverUnits.r, panelHoverUnits.g, panelHoverUnits.b, panelHoverUnits.a)
+    readonly property color panelColor: Qt.rgba(panelUnits.r, panelUnits.g, panelUnits.b, panelUnits.a)
     readonly property color shadowColor: Qt.rgba(0, 0, 0, 1)
-    readonly property color gradientTop: palette.appearance === "light" ? Qt.rgba(255, 255, 255, 0.55) : Qt.rgba(0, 0, 0, 0.34)
+    readonly property color gradientTop: Qt.rgba(gradientUnits.r, gradientUnits.g, gradientUnits.b, gradientUnits.a)
 
     readonly property real panelOpacity: SettingsStore.panelOpacity
+    // Stored only. Quickshell 0.2 has no BackgroundEffect, so this does not blur the panel.
     readonly property real panelBlur: SettingsStore.panelBlur
     readonly property int radius: SettingsStore.radius
     readonly property real shadowOpacity: SettingsStore.shadowOpacity
@@ -51,5 +57,5 @@ Singleton {
     readonly property int motionOpen: motion.open
     readonly property int motionClose: motion.close
     readonly property int motionHover: motion.hover
-    readonly property int calendarWidth: calendarCell * 7 + (SettingsStore.showWeekNumbers ? weekNumberWidth : 0)
+    readonly property int calendarWidth: ThemeLogic.calendarWidth(calendarCell, weekNumberWidth, SettingsStore.showWeekNumbers)
 }

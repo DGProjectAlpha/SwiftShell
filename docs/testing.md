@@ -31,11 +31,16 @@ scripts/check.sh
 - focused-title selection
 - settings validation, repair, and the defaults file
 - palette contrast for the dark and light scrims, including the unsampled wallpaper tint
+- byte-to-unit color conversion, separate alpha, and the light gradient at 1.0 rather than 255
 - motion durations and reduced motion
-- calendar month grids, locale week start, and ISO week numbers
-- popup placement in logical pixels, including a 1.5 scale screen size
+- calendar month grids, locale week start, ISO week numbers, leap years, year wrap, and a single today cell
+- calendar width in logical pixels
+- popup placement in logical pixels for 1920×1080 at scale 1.5 and 2560×1440 at scale 1.0
+- rejection of a zero-size item map
+- popup phases, including Escape, outside click, repeated toggles, panel switches, interrupted fades, monitor loss, and process stop
 - one open popover id at a time
-- audio volume clamping, unmute behavior, and output labels
+- audio volume clamping, unmute behavior, output labels, and refusal to write a different or missing sink
+- the stored blur preference remaining a scrim, not an effect
 
 `tests/static_check.py` checks that the QML files exist, local imports resolve, braces and parentheses balance, and the tree does not spawn `hyprctl`, a `Timer`, or a `Process`. It rejects a QML object nested directly in `QtObject`, which has no default property, including through a component whose root type is `QtObject`. Property values such as `property Item child: Item {}` are allowed. It also checks the transparent color, 28px token, HDMI-A-1 default, shell id, `Scope` bar host, `Singleton` service roots, the transparent popup surface, and that wallpaper sampling is not claimed. Shell scripts are scanned for edits to Hyprland config, service units, and package installation outside the explicit Arch dependency path.
 
@@ -43,15 +48,18 @@ scripts/check.sh
 
 ## What was run for this change
 
-On 30 Oct 2026 (America/New_York), in the cloud workspace, with no Hyprland session:
+On 30 Oct 2026, about 3:03 PM America/New_York, in the cloud workspace, with no Hyprland session:
 
 ```text
 python3 tests/static_check.py
 node tests/logic.test.js
 sh tests/install_flow.sh
+/usr/lib/qt6/bin/qmllint --ignore-settings -I /usr/lib/x86_64-linux-gnu/qt6/qml shell/**/*.qml
 ```
 
-Node was v22.23.4 and Python was 3.12.3. Static checks passed for 20 QML files, including the nesting fixtures and the real `Scope` / `Singleton` roots. Logic tests passed, including calendar, placement, theme contrast, popover state, and audio commands. Install tests passed, including the Quickshell 0.2 stop path that must not pass `--any-display`, and a failed `qs kill` that must still print the miss warning. `qmllint`, `qml`, and `qs` are not installed here, so Qt did not parse the QML and the CLI probe was not run against a real Quickshell binary. The shell was not launched. Blur, focus grab, fractional-scale placement, PipeWire volume, and panel animation were not seen on a compositor.
+Node was v22.23.4 and Python was 3.12.3. Static checks passed for 20 QML files, including the nesting fixtures and the real `Scope` / `Singleton` roots. Logic tests passed, including color units, calendar leap years, both reference screen sizes, popup phase interruptions, and audio sink identity. Install tests passed, including the Quickshell 0.2 stop path that must not pass `--any-display`, and a failed `qs kill` that must still print the miss warning.
+
+`qmllint` 6.4.2 from Ubuntu `qt6-declarative-dev-tools` was run after installing `qml6-module-qtquick`, `qml6-module-qtquick-layouts`, `qml6-module-qtqml`, and `qml6-module-qtcore`. With that import path, Qt Quick itself resolves. Quickshell is not installed, so `PanelWindow`, `PopupWindow`, `HyprlandFocusGrab`, `Pipewire`, and the other Quickshell types stay unresolved. Those warnings do not show whether Quickshell would load the files. The same run caught `Accessible.value`, which Qt 6.4's attached `Accessible` type does not have. That binding was removed. `Loader.item` is typed as `QObject` in the 6.4 qmltypes, so `item.implicitHeight` is reported even though the loaded object is an `Item` at runtime. `jsroot.qmltypes` was not in the installed set. `qs` is not installed. The shell was not launched. Blur, focus grab, fractional-scale placement, PipeWire volume, and panel animation were not seen on a compositor.
 
 ## What these checks do not prove
 
@@ -64,8 +72,7 @@ Node was v22.23.4 and Python was 3.12.3. Static checks passed for 20 QML files, 
 - The shell exits without taking Hyprland down.
 - `./install.sh` behaves the same way on a real Arch or CachyOS account.
 - Qt accepts `Scope`, `Singleton`, `PopupWindow`, and `HyprlandFocusGrab` as used here. That follows the Quickshell 0.2 type pages, and it was not loaded with `qs`.
-- The popup stays inside the HDMI-A-1 output at scale 1.5, and the scrim stays readable on the real wallpaper.
-- `BackgroundEffect` either attaches or the warning is logged once. The blur itself was not observed.
+- The popup stays inside the HDMI-A-1 output at scale 1.5, and the scrim stays readable on the real wallpaper. Blur is unsupported on Quickshell 0.2.0 and was not observed.
 - PipeWire reports the default sink and accepts volume and mute writes.
 - Escape and an outside click close the panel without leaving a focus grab behind.
 - The optional top gradient remains inside the bar and does not steal clicks from windows below it.
