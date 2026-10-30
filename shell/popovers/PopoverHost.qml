@@ -35,8 +35,11 @@ PopupWindow {
     }
 
     function commit(next) {
-        popupState = next
-        focusGrab.active = next.grab === true
+        const step = Popover.focusTransition(popupState, next);
+        if (step.clearFocusBeforeGrab || !step.takeFocus)
+            keyScope.focus = false;
+        popupState = next;
+        focusGrab.active = step.grab === true;
     }
 
     function toggle(id, item) {
@@ -48,7 +51,13 @@ PopupWindow {
         if (next.phase === "opening" || next.phase === "open") {
             Qt.callLater(function () {
                 popup.reposition()
-                if (next.panelId !== previous || next.phase === "opening")
+                if (!popup.visible)
+                    return
+                if (popup.popupState.phase !== "opening" && popup.popupState.phase !== "open")
+                    return
+                if (!focusGrab.active)
+                    return
+                if (popup.popupState.panelId !== previous || popup.popupState.phase === "opening")
                     keyScope.forceActiveFocus()
             })
         }
@@ -106,7 +115,10 @@ PopupWindow {
             reposition()
     }
 
-    Component.onDestruction: focusGrab.active = false
+    Component.onDestruction: {
+        keyScope.focus = false
+        focusGrab.active = false
+    }
     anchor.onAnchoring: applyAnchor()
     onClosed: commit(Popover.reducePopup(popupState, { type: "destroy" }, motionOptions()))
 
@@ -150,7 +162,8 @@ PopupWindow {
     Item {
         id: keyScope
 
-        focus: popup.popupState.interactive
+        focus: false
+        activeFocusOnTab: false
         implicitWidth: surface.implicitWidth
         implicitHeight: surface.implicitHeight + 4
 
