@@ -459,6 +459,17 @@ EOF
     ok "sudo failure is contained"
 }
 
+test_request_launcher() {
+    new_home
+    binds_sum=$(checksum "$HOME/.config/hypr/config/binds.lua")
+    "$ROOT/scripts/swiftshell" request-launcher >/dev/null
+    [ -s "$XDG_STATE_HOME/swiftshell/launcher.request" ] || fail "launcher request was not written"
+    grep -q '"text"' "$XDG_STATE_HOME/swiftshell/launcher.request" || fail "launcher request is not json"
+    [ "$(checksum "$HOME/.config/hypr/config/binds.lua")" = "$binds_sum" ] || fail "launcher request edited hypr binds"
+    [ ! -e "$HOME/.config/hypr/hyprland.conf" ] || fail "launcher request wrote a hyprland config"
+    ok "launcher request does not touch Hyprland"
+}
+
 test_versions
 test_fresh_install
 test_activate_cycle
@@ -472,5 +483,6 @@ test_strict_version
 test_optional_deps
 test_optional_deps_already_present
 test_optional_deps_sudo_failure
+test_request_launcher
 
 printf 'install tests passed (%s)\n' "$PASS"
