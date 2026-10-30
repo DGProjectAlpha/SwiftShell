@@ -17,7 +17,7 @@ Versions below are the APIs this prototype was written against. They were taken 
 |---|---|---|
 | `ShellRoot`, `Scope`, `Singleton`, `PanelWindow`, `PopupWindow`, `PopupAnchor`, `PopupAdjustment`, `Variants`, `SystemClock`, `ExclusionMode`, `Region` | `Quickshell` | Entry, non-visual parents, per-screen instances, popups, clock |
 | `Hyprland`, `HyprlandFocusGrab` | `Quickshell.Hyprland` | Workspaces, monitors, toplevels, `dispatch`, `monitorFor`, popup dismissal |
-| `WlrLayershell` | `Quickshell.Wayland` | Layer namespace `swiftshell-bar` |
+| `WlrLayershell` | `Quickshell.Wayland` | Namespace `swiftshell-bar`, layer `Top`, keyboard focus `None` |
 | `FileView`, `JsonAdapter`, `JsonObject` | `Quickshell.Io` | Settings file |
 | `Pipewire`, `PwObjectTracker` | `Quickshell.Services.Pipewire` | Default sink volume and mute |
 
@@ -37,7 +37,7 @@ PipeWire volume uses `Pipewire.defaultAudioSink`, `PwObjectTracker.objects`, and
 
 `Column`, `Row`, `Grid`, `Flow`, `Loader`, `Text`, `TextInput`, `TextEdit`, and `Image` inherit Qt's `QQuickImplicitSizeItem`. That type calculates `implicitWidth` and `implicitHeight`. Assigning either property stops the shell before the next file is compiled, with `Invalid property assignment: "implicitWidth" is a read-only property` (or `implicitHeight`). `Item`, `Rectangle`, `MouseArea`, `FocusScope`, the layout types, `PanelWindow`, and `PopupWindow` still accept an implicit size. The calendar and the control center are `Item`s for that reason. The inner column is given the item's width. A `Loader` is left to adopt the loaded item's implicit size. `qmllint` 6.4.2 does not report the assignment, because it follows the writable property on `Item` and misses the read-only override.
 
-Workspace activation prefers `HyprlandWorkspace.activate()`. The fallback string is `workspace <id>` passed to `Hyprland.dispatch`. Both are socket IPC. The historical Lua parse error from putting `hyprctl` syntax into the Lua config does not apply to this path, because this path does not call `hyprctl`.
+Workspace activation sends `hl.dsp.focus({ workspace = <id> })` through `Hyprland.dispatch` for Lua configs. Quickshell 0.2's `HyprlandWorkspace.activate()` is documented as `dispatch("workspace " + name)`. That string is what the CachyOS session rejected: `return hl.dispatch(workspace 5)` with `')' expected near '5'`. The shell does not call `activate()`. `Hyprland.usingLua` exists on the Quickshell 0.3.2 page and is not on the 0.2 page. The code reads it with a bracket lookup. A missing property keeps the Lua request. `bar.workspaceDispatch: "legacy"` is the override for a text dispatcher. Neither form calls `hyprctl`.
 
 ## Launch
 
@@ -63,8 +63,8 @@ Quickshell 0.2.0 accepts `--path` and `--no-duplicate` on the main command, and 
 
 - Shell screen name and Hyprland monitor name for HDMI-A-1 may differ. The matcher accepts either. If both differ from `HDMI-A-1`, the bar is not created and the log says no output matched.
 - Focused title reads `title`, `activated`, `monitor`, and `workspace` on the toplevel object, then the attached `HyprlandToplevel` when those fields are empty. A Quickshell build that exposes neither will load and will show no title.
-- `WlrLayershell.namespace` must be set before the layer surface connects. If the local module rejects the attached property, the shell will fail at load. The fallback is to remove the `Quickshell.Wayland` import and the namespace line from `shell/bar/BarWindow.qml`. The bar can still run; its layer name will be Quickshell's default.
-- `exclusiveZone` writes force exclusion mode to normal inside Quickshell. Reservation therefore assigns the zone only when `bar.reserveSpace` is true. The default remains ignore.
+- `WlrLayershell.namespace` must be set before the layer surface connects. The bar also sets `layer` to `WlrLayer.Top` and `keyboardFocus` to `WlrKeyboardFocus.None`. Both are on the Quickshell 0.2.0 `WlrLayershell` page. `Top` is documented as above normal windows and below fullscreen windows. `Overlay` is not used. If the local module rejects the attached property, the shell will fail at load. The fallback is to remove the `Quickshell.Wayland` import and the attached lines from `shell/bar/BarWindow.qml`. The bar can still run; its layer name and keyboard focus will be Quickshell's defaults, which are the same `Top` and `None`.
+- `exclusiveZone` writes force exclusion mode to normal inside Quickshell. `bar.reserveSpace: false` assigns only `ExclusionMode.Ignore`. `true` assigns only `exclusiveZone` to the logical bar height. The two are not written together. True fullscreen still covers a `Top` layer. Hyprland's fullscreen rules are not edited.
 - Light wallpaper can wash out `#F2F2F2` text. M1 does not add a scrim, because a scrim would be a bar background. Contrast on a light wallpaper is unverified.
 - One notification daemon and the current global shortcuts stay with the existing session. This prototype does not register a notification service or a global bind.
 
@@ -74,8 +74,8 @@ Quickshell 0.2.0 accepts `--path` and `--no-duplicate` on the main command, and 
 
 | Feature | Quickshell 0.2.0 | Later Quickshell | This tree |
 |---|---|---|---|
-| Transparent `PanelWindow` bar | Documented | Documented | Implemented, not runtime-tested |
-| `PopupWindow` and `PopupAnchor` | Documented. `anchoring` is the map point | Documented | Implemented. Placement math is verified. The window was not shown |
+| Transparent `PanelWindow` bar | Documented | Documented | Launched on CachyOS with Noctalia stopped. Cloud checks still do not show pixels |
+| `PopupWindow` and `PopupAnchor` | Documented. `anchoring` is the map point | Documented | Calendar and control center opened on CachyOS. Placement math is unit-tested. This cloud run did not show them |
 | `contentItem.mapFromItem` sized rect | Qt Quick, logical pixels | Same | Implemented, not runtime-tested |
 | `QsWindow.itemRect` | Documented as a 0×0 map | Same documented equivalent | Not used |
 | `HyprlandFocusGrab` | Documented. Needs `hyprland-focus-grab-v1` | Documented | Implemented, not runtime-tested. Missing protocol logs a warning and does not grab |

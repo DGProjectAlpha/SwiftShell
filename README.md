@@ -1,6 +1,6 @@
 # SwiftShell
 
-> **Status:** M0/M1 prototype source is in `shell/`. It has not been loaded in a Hyprland session, and graphical behavior is unverified.
+> **Status:** M2 source is in `shell/`. On the CachyOS Hyprland session, with Noctalia stopped, SwiftShell loaded, the bar rendered, and the calendar and control center opened. Workspace clicks failed before this change with the Lua dispatch error below. Graphical behavior of the fixes in this tree has not been retested on that machine. Cloud checks do not show pixels.
 >
 > **Purpose:** A clean, understated, keyboard-first, fully integrated desktop shell built with **Quickshell + Qt 6/QML** for **Hyprland on Arch-based systems**. The reference workstation is CachyOS; the installer is not limited to that one machine.
 >
@@ -488,13 +488,14 @@ Acceptance: user explicitly opts in; Noctalia remains readily restorable.
 - [x] Detailed product/engineering specification established
 - [x] M0/M1 prototype source, launch/stop scripts, and logic tests added
 - [x] Install, activate, deactivate, and uninstall scripts added (not verified on Hyprland)
-- [x] M2 theme tokens, popover host, calendar, and control-center foundation added (not verified on Hyprland)
-- [ ] Local Quickshell and Hyprland runtime audited
-- [ ] Agent instructions and design architecture validated locally
-- [ ] Visual rendering verified
-- [ ] Any live desktop integration approved
+- [x] M2 theme tokens, popover host, calendar, and control-center foundation added
+- [x] CachyOS launch observed: bar rendered with Noctalia stopped; calendar and control center opened
+- [ ] Workspace clicks, binding-loop silence, settings warning, and bar reservation retested after the M2 stabilization fix
+- [ ] Local Quickshell and Hyprland versions recorded from `qs -V` and `Hyprland --version`
+- [ ] Visual rendering of the stabilization fixes verified
+- [ ] Any live desktop integration beyond the separate `qs --path` launch approved
 
-**Current claim:** The specification still describes the product. The M0/M1 bar and the M2 panels are a separate Quickshell config. They are not evidence that the bar or the panels have been seen on a monitor.
+**Current claim:** The shell has run on the reference Hyprland session. The bar, calendar, and control center were visible with Noctalia stopped. Workspace activation, the `targetScreens` binding, workspace-id validation, and the installer dependency test were defective in that session. The fixes are in the tree and covered by unit and installer tests. They have not been clicked through on the hardware again.
 
 ## 13. Running the M0/M1 prototype
 

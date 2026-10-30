@@ -29,8 +29,8 @@ These commands use the checkout as the Quickshell config. They do not install ov
 
 ```sh
 git fetch origin
-git checkout cursor/qml-implicit-size-915d
-git pull origin cursor/qml-implicit-size-915d
+git checkout cursor/m2-runtime-915d
+git pull origin cursor/m2-runtime-915d
 ```
 
 After the branch is merged, `git checkout main` and `git pull origin main` is the same tree.
@@ -89,7 +89,7 @@ To try the installed copy instead of the checkout, run `./install.sh` again afte
 
 `tests/qml/tst_shell_load.qml` loads the shell documents with `tests/stubs/` standing in for Quickshell. The stubs are not Quickshell. Under that loader, the calendar, control center, audio section, popup host, and bar widgets instantiate. The calendar grid rows are 28px tall, the control center is 248px wide, and the volume slider inside a 248px column is 248×28. The popup host grows when the calendar opens and again when the control center replaces it. `shell.qml` still stops at `WlrLayershell.namespace` because that attached object is not something a QML file can imitate. The error from that line is not a read-only property assignment. This does not load Quickshell and it does not show a window on a monitor.
 
-`tests/install_flow.sh` runs `./install.sh`, activation, deactivation, and uninstallation in a temporary `HOME` with stub `qs` and `Hyprland` commands. It checks that a second install keeps settings, that occupied config names and foreign launchers are refused, and that Hyprland and other shell files in that temporary home stay unchanged. Stop is checked twice: a stub whose help lists `--any-display` must receive that flag, and a stub that matches Quickshell 0.2.0 must be stopped with `kill --path` alone. It does not install packages and it does not open a Wayland session.
+`tests/install_flow.sh` runs `./install.sh`, activation, deactivation, and uninstallation in a temporary `HOME` with stub `qs` and `Hyprland` commands. It checks that a second install keeps settings, that occupied config names and foreign launchers are refused, and that Hyprland and other shell files in that temporary home stay unchanged. Stop is checked twice: a stub whose help lists `--any-display` must receive that flag, and a stub that matches Quickshell 0.2.0 must be stopped with `kill --path` alone. The `--install-deps --yes` case uses a PATH that contains only symlinked host tools plus stub `sudo` and `pacman`. It does not include `/usr/bin`, `/bin`, `qs`, `Hyprland`, or `hyprctl`. A decoy `qs` sits beside that PATH and must not run. A second case puts good `qs` and `Hyprland` stubs on that same isolated PATH and requires that `sudo` is not called. A sudo stub that exits 99 must stop a `--strict` install before files are written, and a non-strict install must keep the files and print the failure. The suite does not install packages and it does not open a Wayland session.
 
 ## What was run for the M2 stability change
 
@@ -114,24 +114,67 @@ On 30 Oct 2026, at 6:39 PM America/New_York, in the cloud workspace, with no Hyp
 scripts/check.sh
 ```
 
-That script ran `python3 tests/static_check.py`, `node tests/logic.test.js`, `sh tests/install_flow.sh`, and `qmltestrunner` 6.4.2 on `tests/qml/tst_implicit_size.qml` and `tests/qml/tst_shell_load.qml` with `QT_QPA_PLATFORM=offscreen`. Static checks passed for 20 QML files, including the read-only property fixtures and the `plugins.qmltypes` agreement for `QQuickImplicitSizeItem`. Logic tests passed. Install tests passed, 12 cases. Both QML suites passed, 6 tests each. The shell-load suite instantiated the calendar, control center, audio slider, popup surface, and popup host. `shell.qml` under the same stubs stopped at `BarWindow.qml:27` (`WlrLayershell` attached object). `qmllint` 6.4.2 was run again and still does not report the read-only implicit-size override; unresolved Quickshell types remain when the real module is absent. Quickshell was not started. The panels were not seen on a compositor.
+That script ran `python3 tests/static_check.py`, `node tests/logic.test.js`, `sh tests/install_flow.sh`, and `qmltestrunner` 6.4.2 on `tests/qml/tst_implicit_size.qml` and `tests/qml/tst_shell_load.qml` with `QT_QPA_PLATFORM=offscreen`. Static checks passed for 20 QML files, including the read-only property fixtures and the `plugins.qmltypes` agreement for `QQuickImplicitSizeItem`. Logic tests passed. Install tests passed, 12 cases. Both QML suites passed, 6 tests each. The shell-load suite instantiated the calendar, control center, audio slider, popup surface, and popup host. `shell.qml` under the same stubs stopped at `BarWindow.qml` (`WlrLayershell` attached object). `qmllint` 6.4.2 was run again and still does not report the read-only implicit-size override; unresolved Quickshell types remain when the real module is absent. Quickshell was not started. The panels were not seen on a compositor.
+
+## What was run for the M2 runtime stabilization
+
+On 30 Oct 2026, at 7:14 PM America/New_York, in the cloud workspace, with no Hyprland session and no `qs` binary:
+
+```text
+scripts/check.sh
+```
+
+Exit status 0. Static checks passed for 20 QML files. `node tests/logic.test.js` passed, including the Lua dispatch expression, the QML list-like workspace ids, the single exclusion property, and the popup focus order. `sh tests/install_flow.sh` passed 14 cases. The missing-deps case requested `sudo pacman -S` for `quickshell` and `hyprland` without `/usr/bin` on `PATH`. The present-deps case did not call sudo. The sudo-exit-99 case refused a strict install and continued a non-strict install. `qmltestrunner` 6.4.2 passed `tst_implicit_size.qml` and `tst_shell_load.qml`, 6 tests each, with `QT_QPA_PLATFORM=offscreen`. `QStandardPaths: XDG_RUNTIME_DIR not set` was printed. That warning is from the offscreen Qt platform, not from the shell. Quickshell was not started. Workspace clicks, the binding loop, the exclusive zone, and the text-input line were not observed on a compositor.
+
+## What the CachyOS session already showed
+
+These were observed before the fixes in this branch, with Noctalia stopped:
+
+- SwiftShell loaded and the bar rendered.
+- The calendar opened. The control center opened.
+- Clicking a workspace logged `Dispatch request "workspace 5" failed` and `return hl.dispatch(workspace 5)` / `')' expected near '5'`.
+- Startup logged `Binding loop detected for property "targetScreens"`.
+- Startup logged `SwiftShell: settings need attention: bar.workspaceIds` for `[4, 5, 6]`.
+- Windows overlapped the bar. `bar.reserveSpace` was false.
+- Popup interaction logged `qt.qpa.wayland.textinput: Trying to disable ... but 0x0 is focused`.
+- `tests/install_flow.sh` failed with `grep: .../sudo.log: No such file or directory` and `not ok - pacman was not requested` on a machine where `qs` and `Hyprland` were already on `PATH`.
+
+## Hardware retest
+
+From this checkout, after `git pull`:
+
+```sh
+scripts/stop.sh
+scripts/launch.sh
+```
+
+Leave the process in the foreground. Then:
+
+1. Click workspaces 4, 5, and 6, including one with no windows. The log must not contain `')' expected near`. The focused workspace on HDMI-A-1 should match the indicator. DP-1's workspaces 1–3 should stay on DP-1.
+2. Move a window to another HDMI-A-1 workspace and confirm the active mark follows it.
+3. Confirm startup does not log `Binding loop detected for property "targetScreens"` or `settings need attention: bar.workspaceIds`.
+4. With `reserveSpace` false, confirm the bar still draws and does not push windows down. Set `bar.reserveSpace` to true in `~/.config/swiftshell/settings.json` and confirm tiled and maximized windows stay below the 28px strip. Toggle a true fullscreen window and confirm it still covers the bar. Set the flag back to false.
+5. Open the calendar, press Escape, open the control center, and click outside it. Confirm the grab is gone and the previously focused application receives the keyboard. Note whether the text-input line is still printed. Do not hide it with a logging rule.
+6. Stop with `scripts/stop.sh`. If the instance is not found, `qs list --all` and `qs kill --id` for this checkout only. Start Noctalia the way it was started before. Do not `pkill` Quickshell.
+
+`scripts/check.sh` on CachyOS needs `qmltestrunner` from `qt6-declarative`. A passing run is not this checklist.
 
 ## What these checks do not prove
 
 - The bar is transparent on a real wallpaper.
 - Text remains readable at 1.0 and 1.5 scale.
 - `HDMI-A-1` matches the Qt screen name on the target machine.
-- Hyprland IPC accepts `workspace 4` through the installed Quickshell build.
-- Hotplug destroys and recreates the window.
-- `reserveSpace: false` leaves Noctalia's exclusive zone unchanged.
+- Hyprland IPC accepts `hl.dsp.focus({ workspace = 4 })` through the installed Quickshell build. The old `workspace 4` string was rejected on the Lua session. The replacement is unit-tested and has not been clicked on that session again.
+- Hotplug destroys and recreates the window without a `targetScreens` binding loop. The loop was observed before this change. The property is no longer a binding. Silence on startup is not yet rechecked.
+- `reserveSpace: false` leaves the output's exclusive zone unset, and `true` reserves 28 logical pixels without covering true fullscreen. The overlap was seen while the flag was false. The one-property update has not been watched on the outputs.
 - The shell exits without taking Hyprland down.
-- `./install.sh` behaves the same way on a real Arch or CachyOS account.
-- Qt accepts `Scope`, `Singleton`, `PopupWindow`, and `HyprlandFocusGrab` as used here. That follows the Quickshell 0.2 type pages, and it was not loaded with `qs`.
+- `./install.sh --install-deps` on a real Arch account. The hermetic test now fails if `/usr/bin` is on that test's PATH. It still does not run real `pacman`.
+- Qt accepts `Scope`, `Singleton`, `PopupWindow`, and `HyprlandFocusGrab` as used here. The calendar and control center did open on CachyOS before this branch. This branch's focus-order change was not part of that launch.
 - The popup stays inside the HDMI-A-1 output at scale 1.5, and the scrim stays readable on the real wallpaper. Blur is unsupported on Quickshell 0.2.0 and was not observed.
 - PipeWire reports the default sink and accepts volume and mute writes.
-- Escape and an outside click close the panel without leaving a focus grab behind.
+- Escape and an outside click close the panel and return keyboard focus. The text-input diagnostic was seen. It is explained above and was not reproduced after the focus-order change.
 - The optional top gradient remains inside the bar and does not steal clicks from windows below it.
-- `WlrLayershell.namespace` parses on the installed Quickshell. The 0.2 page documents that property and says it must be set before the layer surface connects.
+- `WlrLayershell.namespace`, `WlrLayer.Top`, and `WlrKeyboardFocus.None` parse on the installed Quickshell. The 0.2 page documents those members. The namespace line had already been passed on the CachyOS startup that reached the calendar.
 - `qs kill --help` on the installed binary matches the 0.2.0 parser or the later `--any-display` flag. The probe was tested with stubs only.
 - Quickshell loaded `shell.qml`. The instantiation test uses QML stand-ins. `WlrLayershell.namespace` still stops that stand-in at `BarWindow.qml` because an attached object cannot be declared in QML. On the CachyOS run, startup had already passed that line and failed later on read-only implicit size.
 
