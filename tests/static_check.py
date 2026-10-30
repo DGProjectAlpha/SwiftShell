@@ -54,6 +54,13 @@ REQUIRED = [
     SCRIPTS / "lib" / "uninstall.sh",
     ROOT / "install.sh",
     ROOT / "docs" / "install.md",
+    ROOT / "tests" / "qml" / "tst_implicit_size.qml",
+    ROOT / "tests" / "qml" / "tst_shell_load.qml",
+    ROOT / "tests" / "stubs" / "Quickshell" / "qmldir",
+    ROOT / "tests" / "stubs" / "Quickshell" / "Hyprland" / "qmldir",
+    ROOT / "tests" / "stubs" / "Quickshell" / "Io" / "qmldir",
+    ROOT / "tests" / "stubs" / "Quickshell" / "Services" / "Pipewire" / "qmldir",
+    ROOT / "tests" / "stubs" / "Quickshell" / "Wayland" / "qmldir",
     ROOT / "packaging" / "README.md",
     ROOT / "packaging" / "aur" / "PKGBUILD",
 ]
@@ -278,6 +285,371 @@ def nesting_errors(text, filename, component_roots):
     return errors
 
 
+# Qt 6.4 qmltypes: QQuickImplicitSizeItem marks implicitWidth and implicitHeight
+# read-only. qmllint still treats the base Item property as writable, so the
+# engine is the authority. Item, Rectangle, MouseArea, FocusScope, and the
+# Layout types keep a writable implicit size. PopupWindow and PanelWindow are
+# Quickshell windows and are not in this map.
+QT_PROTOTYPE = {
+    "AnimatedImage": "Image",
+    "BorderImage": "ImageBase",
+    "Column": "Positioner",
+    "ColumnLayout": "Item",
+    "Flow": "Positioner",
+    "FocusScope": "Item",
+    "Gradient": "QtObject",
+    "Grid": "Positioner",
+    "GridLayout": "Item",
+    "Image": "ImageBase",
+    "ImageBase": "ImplicitSizeItem",
+    "ImplicitSizeItem": "Item",
+    "Item": "QtObject",
+    "Loader": "ImplicitSizeItem",
+    "MouseArea": "Item",
+    "Positioner": "ImplicitSizeItem",
+    "Rectangle": "Item",
+    "Repeater": "Item",
+    "Row": "Positioner",
+    "RowLayout": "Item",
+    "StackLayout": "Item",
+    "Text": "ImplicitSizeItem",
+    "TextEdit": "ImplicitSizeItem",
+    "TextInput": "ImplicitSizeItem",
+}
+
+READONLY_PROPS = {
+    "Flow": {"effectiveLayoutDirection"},
+    "Gradient": {"stops"},
+    "Grid": {"effectiveLayoutDirection", "effectiveHorizontalItemAlignment"},
+    "Image": {"paintedWidth", "paintedHeight"},
+    "ImageBase": {"status", "progress", "frameCount"},
+    "ImplicitSizeItem": {"implicitWidth", "implicitHeight"},
+    "Item": {
+        "activeFocus",
+        "anchors",
+        "baseline",
+        "bottom",
+        "children",
+        "childrenRect",
+        "data",
+        "horizontalCenter",
+        "layer",
+        "left",
+        "resources",
+        "right",
+        "states",
+        "top",
+        "transform",
+        "transformOriginPoint",
+        "transitions",
+        "verticalCenter",
+        "visibleChildren",
+    },
+    "Loader": {"item", "progress", "status"},
+    "MouseArea": {
+        "containsMouse",
+        "containsPress",
+        "drag",
+        "mouseX",
+        "mouseY",
+        "pressed",
+        "pressedButtons",
+    },
+    "Rectangle": {"border"},
+    "Repeater": {"count"},
+    "Row": {"effectiveLayoutDirection"},
+    "Text": {
+        "advance",
+        "contentHeight",
+        "contentWidth",
+        "effectiveHorizontalAlignment",
+        "fontInfo",
+        "hoveredLink",
+        "lineCount",
+        "paintedHeight",
+        "paintedWidth",
+        "truncated",
+    },
+    "TextEdit": {
+        "canPaste",
+        "canRedo",
+        "canUndo",
+        "contentHeight",
+        "contentWidth",
+        "cursorRectangle",
+        "effectiveHorizontalAlignment",
+        "hoveredLink",
+        "inputMethodComposing",
+        "length",
+        "lineCount",
+        "paintedHeight",
+        "paintedWidth",
+        "preeditText",
+        "selectedText",
+        "selectionEnd",
+        "selectionStart",
+        "textDocument",
+    },
+    "TextInput": {
+        "acceptableInput",
+        "canPaste",
+        "canRedo",
+        "canUndo",
+        "contentHeight",
+        "contentWidth",
+        "cursorRectangle",
+        "displayText",
+        "effectiveHorizontalAlignment",
+        "inputMethodComposing",
+        "length",
+        "preeditText",
+        "selectedText",
+        "selectionEnd",
+        "selectionStart",
+    },
+}
+
+
+def readonly_names(type_name, component_roots):
+    names = set()
+    seen = set()
+    current = type_name
+    while current and current not in seen:
+        seen.add(current)
+        names.update(READONLY_PROPS.get(current, ()))
+        if current in component_roots and component_roots[current]:
+            current = component_roots[current]
+            continue
+        current = QT_PROTOTYPE.get(current)
+    return names
+
+
+def is_property_declaration(tokens, index):
+    for back in range(1, 5):
+        if index >= back and tokens[index - back][1] == "property":
+            return True
+    return False
+
+
+def is_signal_handler(name):
+    return len(name) > 2 and name.startswith("on") and name[2].isupper()
+
+
+def readonly_implicit_errors(text, filename, component_roots):
+    errors = []
+    tokens = tokenize_qml(text)
+    stack = []
+    for index, token in enumerate(tokens):
+        if token[0] == "{":
+            previous = tokens[index - 1] if index else None
+            type_name = ""
+            if previous and previous[0] == "ident" and TYPE_NAME.match(previous[1]):
+                type_name = previous[1]
+            stack.append(type_name)
+            continue
+        if token[0] == "}":
+            if stack:
+                stack.pop()
+            continue
+        if token[0] != "ident":
+            continue
+        nxt = tokens[index + 1] if index + 1 < len(tokens) else None
+        if not nxt or nxt[0] != ":":
+            continue
+        name = token[1]
+        if name == "id" or is_signal_handler(name) or is_property_declaration(tokens, index):
+            continue
+        if index > 0 and tokens[index - 1][0] == ".":
+            continue
+        if not stack or stack[-1] == "":
+            continue
+        if name not in readonly_names(stack[-1], component_roots):
+            continue
+        errors.append(
+            filename
+            + ":"
+            + str(token[2])
+            + " assigns "
+            + name
+            + " on "
+            + stack[-1]
+            + ", which is read-only"
+        )
+    return errors
+
+
+def check_readonly_implicit_fixtures():
+    errors = []
+    column = readonly_implicit_errors(
+        "import QtQuick\nColumn {\n    implicitWidth: 10\n    width: implicitWidth\n}\n",
+        "fixture-column.qml",
+        {},
+    )
+    if not any("assigns implicitWidth on Column" in item for item in column):
+        errors.append("readonly fixture missed a Column implicitWidth assignment")
+    if any("width" in item and "assigns implicitWidth" not in item for item in column):
+        errors.append("readonly fixture flagged a read of implicitWidth")
+    loader = readonly_implicit_errors(
+        "import QtQuick\nLoader {\n    implicitHeight: item ? item.implicitHeight : 0\n}\n",
+        "fixture-loader.qml",
+        {},
+    )
+    if not any("assigns implicitHeight on Loader" in item for item in loader):
+        errors.append("readonly fixture missed a Loader implicitHeight assignment")
+    item = readonly_implicit_errors(
+        "import QtQuick\nItem {\n    implicitWidth: 10\n    implicitHeight: 4\n}\n",
+        "fixture-item.qml",
+        {},
+    )
+    if item:
+        errors.append("readonly fixture flagged an Item: " + "; ".join(item))
+    read = readonly_implicit_errors(
+        "import QtQuick\nRow {\n    width: implicitWidth\n}\n",
+        "fixture-read.qml",
+        {},
+    )
+    if read:
+        errors.append("readonly fixture flagged a read: " + "; ".join(read))
+    handler = readonly_implicit_errors(
+        "import QtQuick\nItem {\n    onImplicitWidthChanged: reposition()\n}\n",
+        "fixture-handler.qml",
+        {},
+    )
+    if handler:
+        errors.append("readonly fixture flagged a signal handler: " + "; ".join(handler))
+    nested = readonly_implicit_errors(
+        "import QtQuick\nItem {\n    Column {\n        implicitWidth: 3\n    }\n}\n",
+        "fixture-nested.qml",
+        {},
+    )
+    if not any("assigns implicitWidth on Column" in item for item in nested):
+        errors.append("readonly fixture missed a nested Column")
+    custom = readonly_implicit_errors(
+        "import QtQuick\nCalendarPanel {\n    implicitWidth: 10\n}\n",
+        "fixture-custom.qml",
+        {"CalendarPanel": "Column"},
+    )
+    if not any("CalendarPanel" in item for item in custom):
+        errors.append("readonly fixture missed a component rooted in Column")
+    safe_custom = readonly_implicit_errors(
+        "import QtQuick\nCalendarPanel {\n    implicitWidth: 10\n}\n",
+        "fixture-custom-item.qml",
+        {"CalendarPanel": "Item"},
+    )
+    if safe_custom:
+        errors.append("readonly fixture flagged an Item-rooted component: " + "; ".join(safe_custom))
+    anchors = readonly_implicit_errors(
+        "import QtQuick\nItem {\n    anchors.top: parent.top\n    anchors { top: true; left: true }\n    Rectangle { border.width: 1 }\n    onImplicitWidthChanged: reposition()\n}\n",
+        "fixture-anchors.qml",
+        {},
+    )
+    if anchors:
+        errors.append("readonly fixture flagged a grouped property or handler: " + "; ".join(anchors))
+    content = readonly_implicit_errors(
+        "import QtQuick\nText {\n    contentWidth: 10\n}\n",
+        "fixture-text.qml",
+        {},
+    )
+    if not any("assigns contentWidth on Text" in item for item in content):
+        errors.append("readonly fixture missed Text.contentWidth")
+    pressed = readonly_implicit_errors(
+        "import QtQuick\nMouseArea {\n    pressed: true\n    onClicked: activated()\n}\n",
+        "fixture-mouse.qml",
+        {},
+    )
+    if not any("assigns pressed on MouseArea" in item for item in pressed):
+        errors.append("readonly fixture missed MouseArea.pressed")
+    if any("onClicked" in item or "clicked" in item for item in pressed):
+        errors.append("readonly fixture flagged a click handler: " + "; ".join(pressed))
+    status = readonly_implicit_errors(
+        "import QtQuick\nLoader {\n    status: Loader.Ready\n}\n",
+        "fixture-status.qml",
+        {},
+    )
+    if not any("assigns status on Loader" in item for item in status):
+        errors.append("readonly fixture missed Loader.status")
+    layout = readonly_implicit_errors(
+        "import QtQuick\nimport QtQuick.Layouts\nRowLayout {\n    implicitWidth: 12\n    implicitHeight: 8\n}\n",
+        "fixture-layout.qml",
+        {},
+    )
+    if layout:
+        errors.append("readonly fixture flagged a layout: " + "; ".join(layout))
+    return errors
+
+
+def qmltypes_candidates():
+    found = []
+    import os
+
+    for part in os.environ.get("QML_IMPORT_PATH", "").split(":"):
+        if part:
+            found.append(pathlib.Path(part) / "QtQuick" / "plugins.qmltypes")
+    found.extend(
+        [
+            pathlib.Path("/usr/lib/x86_64-linux-gnu/qt6/qml/QtQuick/plugins.qmltypes"),
+            pathlib.Path("/usr/lib/qt6/qml/QtQuick/plugins.qmltypes"),
+            pathlib.Path("/usr/lib64/qt6/qml/QtQuick/plugins.qmltypes"),
+        ]
+    )
+    return [path for path in found if path.is_file()]
+
+
+def qmltypes_property_readonly(text, component_name, property_name):
+    marker = 'name: "' + component_name + '"'
+    start = text.find(marker)
+    if start < 0:
+        return None
+    end = text.find("\n    Component {", start)
+    body = text[start:] if end < 0 else text[start:end]
+    prop = 'name: "' + property_name + '"'
+    at = body.find(prop)
+    if at < 0:
+        return None
+    block = body[at:body.find("}", at)]
+    return "isReadonly: true" in block and "write:" not in block
+
+
+def check_qmltypes_agreement():
+    paths = qmltypes_candidates()
+    if not paths:
+        return []
+    text = paths[0].read_text(encoding="utf-8", errors="replace")
+    errors = []
+    expectations = {
+        ("QQuickImplicitSizeItem", "implicitWidth", True),
+        ("QQuickImplicitSizeItem", "implicitHeight", True),
+        ("QQuickItem", "implicitWidth", False),
+        ("QQuickItem", "implicitHeight", False),
+        ("QQuickLoader", "status", True),
+        ("QQuickText", "contentWidth", True),
+    }
+    for component_name, property_name, readonly in expectations:
+        actual = qmltypes_property_readonly(text, component_name, property_name)
+        if actual is None:
+            errors.append(
+                "qmltypes agreement: missing "
+                + component_name
+                + "."
+                + property_name
+                + " in "
+                + str(paths[0])
+            )
+            continue
+        if actual != readonly:
+            errors.append(
+                "qmltypes agreement: "
+                + component_name
+                + "."
+                + property_name
+                + " readonly="
+                + str(actual)
+                + ", expected "
+                + str(readonly)
+            )
+    return errors
+
+
 def check_nesting_fixtures():
     errors = []
     broken = nesting_errors("import QtQuick\nQtObject {\n    Item {}\n}\n", "fixture-broken.qml", {})
@@ -362,6 +734,8 @@ def check_shell(path, errors):
 def main():
     errors = []
     errors.extend(check_nesting_fixtures())
+    errors.extend(check_readonly_implicit_fixtures())
+    errors.extend(check_qmltypes_agreement())
     for path in REQUIRED:
         if not path.is_file():
             errors.append("missing " + str(path.relative_to(ROOT)))
@@ -373,6 +747,14 @@ def main():
     component_roots = {}
     for path in qml_files:
         component_roots[path.stem] = qml_root_type(path.read_text(encoding="utf-8"))
+
+    load_test = ROOT / "tests" / "qml" / "tst_shell_load.qml"
+    if load_test.is_file():
+        load_text = load_test.read_text(encoding="utf-8")
+        for path in qml_files:
+            relative = str(path.relative_to(ROOT))
+            if relative not in load_text:
+                errors.append("shell load test does not mention " + relative)
 
     shell_files = [ROOT / "install.sh", ROOT / "scripts" / "swiftshell"]
     shell_files.extend((ROOT / "scripts").rglob("*.sh"))
@@ -395,6 +777,7 @@ def main():
         if "Timer {" in text or "Process {" in text:
             errors.append(str(path.relative_to(ROOT)) + " polls or spawns a process")
         errors.extend(nesting_errors(text, str(path.relative_to(ROOT)), component_roots))
+        errors.extend(readonly_implicit_errors(text, str(path.relative_to(ROOT)), component_roots))
         for line in text.splitlines():
             stripped = line.strip()
             if not stripped.startswith("import "):

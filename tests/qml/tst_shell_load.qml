@@ -1,0 +1,181 @@
+import QtQuick
+import QtTest
+
+TestCase {
+    name: "ShellLoad"
+    when: windowShown
+
+    // Every shell QML document. The static check requires this list to match the tree.
+    readonly property var shellFiles: [
+        "shell/shell.qml",
+        "shell/bar/BarHost.qml",
+        "shell/bar/BarWindow.qml",
+        "shell/bar/WorkspaceIndicators.qml",
+        "shell/bar/ClockModule.qml",
+        "shell/bar/FocusedTitle.qml",
+        "shell/bar/ControlIndicator.qml",
+        "shell/components/BarLabel.qml",
+        "shell/components/FlatButton.qml",
+        "shell/components/CompactSlider.qml",
+        "shell/components/SectionHeader.qml",
+        "shell/components/ServiceStatus.qml",
+        "shell/popovers/PopoverHost.qml",
+        "shell/popovers/PopoverSurface.qml",
+        "shell/popovers/CalendarPanel.qml",
+        "shell/popovers/ControlCenterPanel.qml",
+        "shell/popovers/AudioSection.qml",
+        "shell/themes/Theme.qml",
+        "shell/services/SettingsStore.qml",
+        "shell/services/HyprlandModel.qml"
+    ]
+
+    // These compile with the Qt Quick stubs. shell.qml, BarHost, and BarWindow also
+    // reference WlrLayershell, which is a C++ attached property and is not stubbed.
+    readonly property var readyFiles: [
+        "shell/bar/WorkspaceIndicators.qml",
+        "shell/bar/ClockModule.qml",
+        "shell/bar/FocusedTitle.qml",
+        "shell/bar/ControlIndicator.qml",
+        "shell/components/BarLabel.qml",
+        "shell/components/FlatButton.qml",
+        "shell/components/CompactSlider.qml",
+        "shell/components/SectionHeader.qml",
+        "shell/components/ServiceStatus.qml",
+        "shell/popovers/PopoverHost.qml",
+        "shell/popovers/PopoverSurface.qml",
+        "shell/popovers/CalendarPanel.qml",
+        "shell/popovers/ControlCenterPanel.qml",
+        "shell/popovers/AudioSection.qml"
+    ]
+
+    function componentFor(path) {
+        return Qt.createComponent(Qt.resolvedUrl("../../" + path))
+    }
+
+    function errorText(component) {
+        if (!component || component.status === Component.Ready)
+            return ""
+        return component.errorString()
+    }
+
+    function test_documents_do_not_assign_readonly_properties() {
+        for (var index = 0; index < shellFiles.length; index++) {
+            var path = shellFiles[index]
+            var message = errorText(componentFor(path))
+            verify(message.indexOf("read-only property") === -1, path + "\n" + message)
+        }
+    }
+
+    function test_panel_documents_instantiate() {
+        for (var index = 0; index < readyFiles.length; index++) {
+            var path = readyFiles[index]
+            var component = componentFor(path)
+            compare(errorText(component), "", path)
+            verify(component.status === Component.Ready, path)
+        }
+    }
+
+    function gridRowCount(column) {
+        var count = 0
+        for (var index = 0; index < column.children.length; index++) {
+            var child = column.children[index]
+            if (child.children && child.children.length >= 7) {
+                compare(child.height, 28)
+                count += 1
+            }
+        }
+        return count
+    }
+
+    function findSlider(node, depth) {
+        if (!node || depth > 24)
+            return null
+        if (node.adjusting === false && node.implicitWidth === 160 && node.implicitHeight === 28)
+            return node
+        var kids = node.children
+        if (kids) {
+            for (var index = 0; index < kids.length; index++) {
+                var found = findSlider(kids[index], depth + 1)
+                if (found)
+                    return found
+            }
+        }
+        if (node.item)
+            return findSlider(node.item, depth + 1)
+        return null
+    }
+
+    function test_calendar_control_and_slider_sizes() {
+        var calendarComponent = componentFor("shell/popovers/CalendarPanel.qml")
+        var calendar = calendarComponent.createObject(this)
+        verify(calendar !== null)
+        compare(calendar.width, calendar.implicitWidth)
+        compare(calendar.height, calendar.implicitHeight)
+        verify(calendar.implicitWidth >= 196)
+        verify(calendar.implicitWidth < 400)
+        verify(gridRowCount(calendar.children[0]) >= 5)
+
+        var controlComponent = componentFor("shell/popovers/ControlCenterPanel.qml")
+        var control = controlComponent.createObject(this)
+        verify(control !== null)
+        compare(control.implicitWidth, 248)
+        compare(control.width, 248)
+        compare(control.height, control.implicitHeight)
+        verify(control.implicitHeight > 80)
+        compare(control.children[0].width, 248)
+        compare(control.children[0].children[0].width, 248)
+
+        var audioHost = Qt.createQmlObject("import QtQuick; Item { width: 248; height: 200 }", this, "audio-host")
+        var audio = componentFor("shell/popovers/AudioSection.qml").createObject(audioHost)
+        verify(audio !== null)
+        compare(audio.width, 248)
+        var slider = findSlider(audio, 0)
+        verify(slider !== null)
+        tryVerify(function() { return slider.width === 248 && slider.height === 28 }, 1000)
+        compare(slider.implicitHeight, 28)
+
+        var surfaceComponent = componentFor("shell/popovers/PopoverSurface.qml")
+        var calendarCard = surfaceComponent.createObject(this)
+        var calendarColumn = calendarCard.children[1].children[0]
+        calendarComponent.createObject(calendarColumn)
+        tryVerify(function() { return calendarColumn.implicitWidth >= 196 }, 1000)
+        var card = calendarCard.children[1]
+        // Default settings: panel padding 12 on each side, shadow softness 10.
+        compare(card.width, calendarColumn.implicitWidth + 24)
+        compare(calendarCard.implicitWidth, card.width + 10)
+        compare(calendarCard.implicitHeight, card.height + 10)
+        verify(calendarCard.implicitHeight > calendar.implicitHeight)
+
+        var controlCard = surfaceComponent.createObject(this)
+        var controlColumn = controlCard.children[1].children[0]
+        var loader = Qt.createQmlObject("import QtQuick; Loader {}", controlColumn, "control-loader")
+        loader.sourceComponent = controlComponent
+        tryVerify(function() { return loader.item !== null && loader.implicitWidth === 248 }, 1000)
+        tryVerify(function() { return controlCard.implicitWidth >= 248 + 34 && controlCard.implicitHeight > control.implicitHeight }, 1000)
+
+        calendar.destroy()
+        control.destroy()
+        audio.destroy()
+        audioHost.destroy()
+        calendarCard.destroy()
+        controlCard.destroy()
+    }
+
+    function test_popup_host_tracks_panel_implicit_size() {
+        var bar = Qt.createQmlObject("import QtQuick; Item { property Item contentItem: null; property var screen: null }", this, "bar")
+        bar.contentItem = bar
+        bar.screen = Qt.createQmlObject("import QtQuick; QtObject { property real width: 1920; property real height: 1080 }", this, "screen")
+        var anchor = Qt.createQmlObject("import QtQuick; Item { width: 48; height: 28 }", bar, "anchor")
+        var popup = componentFor("shell/popovers/PopoverHost.qml").createObject(this, { barWindow: bar })
+        verify(popup !== null)
+        popup.toggle("calendar", anchor)
+        tryVerify(function() { return popup.implicitWidth >= 196 + 34 && popup.implicitHeight > 80 }, 1000)
+        var calendarWidth = popup.implicitWidth
+        popup.toggle("control", anchor)
+        tryVerify(function() { return popup.implicitWidth >= 248 + 34 && popup.implicitWidth !== calendarWidth }, 1000)
+        popup.destroy()
+        anchor.destroy()
+        bar.screen.destroy()
+        bar.destroy()
+    }
+}

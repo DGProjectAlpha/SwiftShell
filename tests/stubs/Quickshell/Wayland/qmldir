@@ -1,0 +1,2 @@
+module Quickshell.Wayland
+WaylandModule 1.0 WaylandModule.qml
