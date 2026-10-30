@@ -1,0 +1,37 @@
+# Maintainer: SwiftShell contributors
+# Draft only. Do not publish until a license is chosen and this package
+# has been built on an Arch system. sha256sums uses SKIP on purpose.
+
+pkgname=swiftshell
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='Transparent Quickshell bar for Hyprland'
+arch=('any')
+url='https://github.com/DGProjectAlpha/SwiftShell'
+license=('LicenseRef-None')
+depends=('quickshell' 'hyprland' 'qt6-base' 'qt6-declarative')
+source=("$pkgname-$pkgver.tar.gz::https://github.com/DGProjectAlpha/SwiftShell/archive/refs/tags/v$pkgver.tar.gz")
+sha256sums=('SKIP')
+
+package() {
+    cd "$srcdir/SwiftShell-$pkgver"
+    install -d "$pkgdir/usr/share/swiftshell/lib"
+    cp -a shell "$pkgdir/usr/share/swiftshell/app"
+    install -m 0644 scripts/lib/common.sh "$pkgdir/usr/share/swiftshell/lib/common.sh"
+    install -m 0644 scripts/lib/deps.sh "$pkgdir/usr/share/swiftshell/lib/deps.sh"
+    install -m 0755 scripts/lib/activate.sh "$pkgdir/usr/share/swiftshell/lib/activate.sh"
+    install -m 0755 scripts/lib/deactivate.sh "$pkgdir/usr/share/swiftshell/lib/deactivate.sh"
+    install -m 0755 scripts/lib/uninstall.sh "$pkgdir/usr/share/swiftshell/lib/uninstall.sh"
+    install -m 0755 scripts/swiftshell "$pkgdir/usr/share/swiftshell/lib/swiftshell"
+    install -d "$pkgdir/usr/bin"
+    cat >"$pkgdir/usr/bin/swiftshell" <<'EOF'
+#!/bin/sh
+# swiftshell-managed-launcher
+set -eu
+if [ -x "${XDG_DATA_HOME:-$HOME/.local/share}/swiftshell/lib/swiftshell" ]; then
+    exec "${XDG_DATA_HOME:-$HOME/.local/share}/swiftshell/lib/swiftshell" "$@"
+fi
+exec /usr/share/swiftshell/lib/swiftshell "$@"
+EOF
+    chmod 0755 "$pkgdir/usr/bin/swiftshell"
+}

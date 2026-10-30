@@ -53,3 +53,7 @@ Read-only runtime audit (Quickshell, Hyprland Lua wrapper, monitors, Noctalia ow
 Safety > correct behavior > accessibility > performance > visual polish > experimental features.
 
 Do not interpret README's long-term roadmap as permission to implement M2–M8 in the first task.
+
+## Repository status
+
+M0/M1 source lives in `shell/`. Install, activate, deactivate, and uninstall scripts live in `install.sh` and `scripts/`. They have not been run against the user's Hyprland session. Do not mark rendering, scaling, hotplug, or installation on a real session as verified from a cloud environment. Do not start M2 features until that local check is recorded.
