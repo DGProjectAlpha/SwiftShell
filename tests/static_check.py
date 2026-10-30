@@ -29,6 +29,17 @@ REQUIRED = [
     SHELL / "logic" / "settings.js",
     SCRIPTS / "launch.sh",
     SCRIPTS / "stop.sh",
+    SCRIPTS / "install.sh",
+    SCRIPTS / "swiftshell",
+    SCRIPTS / "lib" / "common.sh",
+    SCRIPTS / "lib" / "deps.sh",
+    SCRIPTS / "lib" / "activate.sh",
+    SCRIPTS / "lib" / "deactivate.sh",
+    SCRIPTS / "lib" / "uninstall.sh",
+    ROOT / "install.sh",
+    ROOT / "docs" / "install.md",
+    ROOT / "packaging" / "README.md",
+    ROOT / "packaging" / "aur" / "PKGBUILD",
 ]
 
 FORBIDDEN = (
@@ -109,6 +120,48 @@ def resolve_import(qml_path, spec):
     return None
 
 
+def shell_code(text):
+    lines = []
+    for line in text.splitlines():
+        in_single = False
+        in_double = False
+        out = []
+        for char in line:
+            if char == "'" and not in_double:
+                in_single = not in_single
+            elif char == '"' and not in_single:
+                in_double = not in_double
+            elif char == "#" and not in_single and not in_double:
+                break
+            out.append(char)
+        lines.append("".join(out))
+    return lines
+
+
+def check_shell(path, errors):
+    relative = str(path.relative_to(ROOT))
+    for line in shell_code(path.read_text(encoding="utf-8")):
+        for token in (
+            "hyprctl dispatch",
+            "hyprctl keyword",
+            "hyprctl reload",
+            "pkill",
+            "killall",
+            "systemctl",
+            "binds.lua",
+            "monitors.lua",
+            "decorations.lua",
+            ".config/hypr",
+            "quickshell/noctalia",
+        ):
+            if token in line:
+                errors.append(relative + " contains " + token)
+        if "hyprctl" in line and "hyprctl version" not in line and "command -v hyprctl" not in line:
+            errors.append(relative + " contains hyprctl outside a version probe")
+        if "sudo" in line and not (path.name == "deps.sh" and "pacman -S" in line):
+            errors.append(relative + " contains sudo")
+
+
 def main():
     errors = []
     for path in REQUIRED:
@@ -119,36 +172,41 @@ def main():
     if not qml_files:
         errors.append("no qml files found")
 
-    for path in qml_files + list(SCRIPTS.glob("*.sh")):
+    shell_files = [ROOT / "install.sh", ROOT / "scripts" / "swiftshell"]
+    shell_files.extend((ROOT / "scripts").rglob("*.sh"))
+
+    for path in qml_files:
         text = path.read_text(encoding="utf-8")
         for token in FORBIDDEN:
             if token in text:
                 errors.append(str(path.relative_to(ROOT)) + " contains " + token)
-        if path.suffix == ".qml":
-            depth, paren, negative = scan_qml(text)
-            if negative or depth != 0 or paren != 0:
-                errors.append(
-                    str(path.relative_to(ROOT))
-                    + " has unbalanced structure (braces "
-                    + str(depth)
-                    + ", parentheses "
-                    + str(paren)
-                    + ")"
-                )
-            if "Timer {" in text or "Process {" in text:
-                errors.append(str(path.relative_to(ROOT)) + " polls or spawns a process")
-            for line in text.splitlines():
-                stripped = line.strip()
-                if not stripped.startswith("import "):
-                    continue
-                if '"' not in stripped and "'" not in stripped:
-                    continue
-                quote = '"' if '"' in stripped else "'"
-                spec = stripped.split(quote)[1]
-                if spec.startswith("Qt") or spec.startswith("Quickshell"):
-                    continue
-                if resolve_import(path, spec) is None:
-                    errors.append(str(path.relative_to(ROOT)) + " has unresolved import " + spec)
+        depth, paren, negative = scan_qml(text)
+        if negative or depth != 0 or paren != 0:
+            errors.append(
+                str(path.relative_to(ROOT))
+                + " has unbalanced structure (braces "
+                + str(depth)
+                + ", parentheses "
+                + str(paren)
+                + ")"
+            )
+        if "Timer {" in text or "Process {" in text:
+            errors.append(str(path.relative_to(ROOT)) + " polls or spawns a process")
+        for line in text.splitlines():
+            stripped = line.strip()
+            if not stripped.startswith("import "):
+                continue
+            if '"' not in stripped and "'" not in stripped:
+                continue
+            quote = '"' if '"' in stripped else "'"
+            spec = stripped.split(quote)[1]
+            if spec.startswith("Qt") or spec.startswith("Quickshell"):
+                continue
+            if resolve_import(path, spec) is None:
+                errors.append(str(path.relative_to(ROOT)) + " has unresolved import " + spec)
+
+    for path in shell_files:
+        check_shell(path, errors)
 
     shell_qml = (SHELL / "shell.qml").read_text(encoding="utf-8")
     bar = (SHELL / "bar" / "BarWindow.qml").read_text(encoding="utf-8")

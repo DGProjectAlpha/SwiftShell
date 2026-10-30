@@ -12,3 +12,4 @@ else
 fi
 
 "$NODE" "$ROOT/tests/logic.test.js"
+sh "$ROOT/tests/install_flow.sh"

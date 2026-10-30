@@ -2,7 +2,7 @@
 
 > **Status:** M0/M1 prototype source is in `shell/`. It has not been loaded in a Hyprland session, and graphical behavior is unverified.
 >
-> **Purpose:** A clean, understated, keyboard-first, fully integrated desktop shell built with **Quickshell + Qt 6/QML** for **Hyprland on CachyOS**.
+> **Purpose:** A clean, understated, keyboard-first, fully integrated desktop shell built with **Quickshell + Qt 6/QML** for **Hyprland on Arch-based systems**. The reference workstation is CachyOS; the installer is not limited to that one machine.
 >
 > **Non-negotiable:** Do not damage, overwrite, disable, or silently reconfigure the user's working **Noctalia** installation or existing **Lua-based Hyprland** setup.
 
@@ -487,6 +487,7 @@ Acceptance: user explicitly opts in; Noctalia remains readily restorable.
 - [x] Initial README created
 - [x] Detailed product/engineering specification established
 - [x] M0/M1 prototype source, launch/stop scripts, and logic tests added
+- [x] Install, activate, deactivate, and uninstall scripts added (not verified on Hyprland)
 - [ ] Local Quickshell and Hyprland runtime audited
 - [ ] Agent instructions and design architecture validated locally
 - [ ] Visual rendering verified
@@ -507,3 +508,19 @@ scripts/stop.sh
 ```
 
 `scripts/launch.sh` runs `qs --path` against `shell/` and does not edit Hyprland or Noctalia. `scripts/stop.sh` kills that path only. The bar targets HDMI-A-1, shows workspaces 4–6 and a clock, and does not reserve screen space unless `bar.reserveSpace` is set to `true` in `~/.config/swiftshell/settings.json`.
+
+## 14. Install and remove
+
+The distributable path is separate from the development launcher:
+
+```sh
+git clone https://github.com/DGProjectAlpha/SwiftShell.git
+cd SwiftShell
+./install.sh
+swiftshell activate
+swiftshell start
+```
+
+`./install.sh` copies SwiftShell into `$XDG_DATA_HOME/swiftshell` and adds a user launcher. It does not replace another Quickshell config. `swiftshell activate` registers a free config name and a desktop entry. `swiftshell deactivate` reverses that registration. `swiftshell uninstall` removes the installed files and keeps `~/.config/swiftshell` unless `--purge-settings` is passed.
+
+None of these commands edit Hyprland startup, keyboard shortcuts, or system services. Details, the manual copy steps, and the draft AUR package are in `docs/install.md` and `packaging/README.md`. The installer has been exercised with stub commands in a temporary home directory. It has not been run on a Hyprland session.

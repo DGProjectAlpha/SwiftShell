@@ -1,0 +1,138 @@
+#!/bin/sh
+# SwiftShell command. From a git checkout this file lives in scripts/.
+# An install copies it to the XDG data directory and points ~/.local/bin at it.
+set -eu
+
+HERE=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
+if [ -f "$HERE/common.sh" ]; then
+    # shellcheck source=lib/common.sh
+    . "$HERE/common.sh"
+    # shellcheck source=lib/deps.sh
+    . "$HERE/deps.sh"
+elif [ -f "$HERE/lib/common.sh" ]; then
+    # shellcheck source=lib/common.sh
+    . "$HERE/lib/common.sh"
+    # shellcheck source=lib/deps.sh
+    . "$HERE/lib/deps.sh"
+else
+    DATA=${XDG_DATA_HOME:-"$HOME/.local/share"}/swiftshell
+    # shellcheck source=lib/common.sh
+    . "$DATA/lib/common.sh"
+    # shellcheck source=lib/deps.sh
+    . "$DATA/lib/deps.sh"
+fi
+
+usage() {
+    cat <<'EOF'
+Usage: swiftshell <command>
+
+  check        Report Quickshell and Hyprland versions.
+  status       Show install, settings, and activation paths.
+  start        Launch this install. Does not replace another shell.
+  stop         Stop this install only.
+  activate     Register the launcher without editing Hyprland.
+  deactivate   Remove that registration and stop this install.
+  uninstall    Remove installed files. Settings are kept.
+               uninstall --purge-settings also removes the settings directory.
+EOF
+}
+
+cmd=${1:-}
+if [ "$#" -gt 0 ]; then
+    shift
+fi
+
+case $cmd in
+    ""|-h|--help|help)
+        usage
+        exit 0
+        ;;
+    check)
+        swiftshell_need_home
+        if swiftshell_report_dependencies; then
+            exit 0
+        fi
+        exit 1
+        ;;
+    status)
+        swiftshell_need_home
+        data=$(swiftshell_data_dir)
+        if swiftshell_is_our_install "$data"; then
+            swiftshell_say "install: present"
+        else
+            swiftshell_say "install: absent"
+        fi
+        if [ -f "$(swiftshell_state_dir)/active" ]; then
+            swiftshell_say "activation: on"
+        else
+            swiftshell_say "activation: off"
+        fi
+        swiftshell_say "quickshell name: $(swiftshell_link_status)"
+        swiftshell_say "settings: $(swiftshell_config_dir)/settings.json"
+        ;;
+    start)
+        swiftshell_need_home
+        swiftshell_require_install
+        if ! swiftshell_qs_bin >/dev/null 2>&1; then
+            swiftshell_die "qs or quickshell was not found on PATH."
+        fi
+        swiftshell_seed_settings "$(swiftshell_app_dir)"
+        bin=$(swiftshell_qs_bin)
+        swiftshell_say "starting."
+        exec "$bin" --path "$(swiftshell_app_dir)" --no-duplicate
+        ;;
+    stop)
+        swiftshell_need_home
+        swiftshell_stop_running
+        ;;
+    activate)
+        lib=$(swiftshell_lib_dir)
+        if [ ! -x "$lib/activate.sh" ]; then
+            swiftshell_die "SwiftShell is not installed. From a git checkout, run ./install.sh"
+        fi
+        exec "$lib/activate.sh" "$@"
+        ;;
+    deactivate)
+        lib=$(swiftshell_lib_dir)
+        if [ ! -x "$lib/deactivate.sh" ]; then
+            swiftshell_die "SwiftShell is not installed. From a git checkout, run ./install.sh"
+        fi
+        exec "$lib/deactivate.sh" "$@"
+        ;;
+    uninstall)
+        purge=0
+        while [ "$#" -gt 0 ]; do
+            case $1 in
+                --purge-settings) purge=1 ;;
+                *) swiftshell_die "unknown argument: $1" ;;
+            esac
+            shift
+        done
+        lib=$(swiftshell_lib_dir)
+        if [ ! -x "$lib/uninstall.sh" ]; then
+            if [ "$purge" = 1 ]; then
+                SWIFTSHELL_PURGE_SETTINGS=1
+                export SWIFTSHELL_PURGE_SETTINGS
+                swiftshell_need_home
+                config=$(swiftshell_config_dir)
+                swiftshell_assert_managed_path "$config"
+                if [ -L "$config" ]; then
+                    swiftshell_die "refusing to remove a settings path that is a symlink."
+                fi
+                if [ -d "$config" ]; then
+                    rm -rf "$config"
+                fi
+                swiftshell_say "removed user settings."
+                exit 0
+            fi
+            swiftshell_say "SwiftShell is not installed."
+            exit 0
+        fi
+        SWIFTSHELL_PURGE_SETTINGS=$purge
+        export SWIFTSHELL_PURGE_SETTINGS
+        exec "$lib/uninstall.sh"
+        ;;
+    *)
+        swiftshell_die "unknown command: $cmd"
+        ;;
+esac

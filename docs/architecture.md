@@ -76,8 +76,10 @@ Preferences live in `$XDG_CONFIG_HOME/swiftshell/settings.json`, which is `~/.co
 
 Runtime: Quickshell with the Hyprland and layer-shell modules, Qt 6 Quick, Qt 6 Quick Layouts, and Qt 6 Core (`StandardPaths`). No npm packages and no vendored Quickshell.
 
-Test-only: Node for `tests/logic.test.js`, Python 3 for `tests/static_check.py`. Neither is required to run the shell.
+Installed files live under `$XDG_DATA_HOME/swiftshell`. Settings live under `$XDG_CONFIG_HOME/swiftshell`. `./install.sh` copies the app and launcher. `swiftshell activate` registers a free Quickshell name and a desktop entry. Those commands do not edit Hyprland startup, shortcuts, or service units. See `docs/install.md`.
+
+Test-only: Node for `tests/logic.test.js`, Python 3 for `tests/static_check.py`, and a POSIX shell for `tests/install_flow.sh`. None of these are required to run the shell.
 
 ## Decision
 
-The safe preview behavior is recorded in `docs/decisions/0001-m0-m1-boundaries.md`.
+The safe preview behavior is recorded in `docs/decisions/0001-m0-m1-boundaries.md`. The install boundaries are recorded in `docs/decisions/0002-install-boundaries.md`.

@@ -42,6 +42,10 @@ qs kill --path /path/to/SwiftShell/shell --any-display
 
 `//@ pragma ShellId swiftshell` is set so Quickshell state for this config is identifiable. Kill selection uses the path, not the shell id.
 
+## Installation
+
+`./install.sh` and `swiftshell` are the distributable entry points. They copy files into XDG data, config, and state directories and can run `qs -V` and `Hyprland --version` as read-only probes. Optional package installation is `pacman` on Arch-based systems and only runs with `--install-deps`. The version floors in `scripts/lib/deps.sh` are documented assumptions, not measurements from the target machine. See `docs/install.md`.
+
 ## Behavior that depends on the local compositor
 
 - Shell screen name and Hyprland monitor name for HDMI-A-1 may differ. The matcher accepts either. If both differ from `HDMI-A-1`, the bar is not created and the log says no output matched.

@@ -1,6 +1,6 @@
 # Testing
 
-The cloud environment used to add this prototype has no Hyprland session, no monitors, and no Noctalia installation. Checks here cover logic and source structure. They do not show pixels.
+The cloud environment used to add this prototype has no Hyprland session, no monitors, and no Noctalia installation. Checks here cover logic, source structure, and the installer in a temporary home directory. They do not show pixels.
 
 ## Commands
 
@@ -9,9 +9,10 @@ From the repository root:
 ```sh
 python3 tests/static_check.py
 node tests/logic.test.js
+sh tests/install_flow.sh
 ```
 
-Or both:
+Or all three:
 
 ```sh
 scripts/check.sh
@@ -30,7 +31,9 @@ scripts/check.sh
 - focused-title selection
 - settings validation, repair, and the defaults file
 
-`tests/static_check.py` checks that the QML files exist, local imports resolve, braces and parentheses balance, and the tree does not spawn `hyprctl`, a `Timer`, or a `Process`. It also checks the transparent color, 28px token, HDMI-A-1 default, and shell id.
+`tests/static_check.py` checks that the QML files exist, local imports resolve, braces and parentheses balance, and the tree does not spawn `hyprctl`, a `Timer`, or a `Process`. It also checks the transparent color, 28px token, HDMI-A-1 default, and shell id. Shell scripts are scanned for edits to Hyprland config, service units, and package installation outside the explicit Arch dependency path.
+
+`tests/install_flow.sh` runs `./install.sh`, activation, deactivation, and uninstallation in a temporary `HOME` with stub `qs` and `Hyprland` commands. It checks that a second install keeps settings, that occupied config names and foreign launchers are refused, and that Hyprland and other shell files in that temporary home stay unchanged. It does not install packages and it does not open a Wayland session.
 
 ## What was run for this change
 
@@ -39,9 +42,10 @@ On 30 Oct 2026, in the cloud workspace, with no Hyprland session:
 ```text
 python3 tests/static_check.py
 node tests/logic.test.js
+sh tests/install_flow.sh
 ```
 
-Node was v22.23.4 and Python was 3.12.3. Static checks passed for 10 QML files. Logic tests passed. `qmllint` is not installed here, so Qt did not parse the QML. The shell was not launched.
+Node was v22.23.4 and Python was 3.12.3. Static checks passed for 10 QML files. Logic tests passed. Install tests passed. `qmllint` is not installed here, so Qt did not parse the QML. The shell was not launched, and the installer was not run against a real user account.
 
 ## What these checks do not prove
 
@@ -52,17 +56,20 @@ Node was v22.23.4 and Python was 3.12.3. Static checks passed for 10 QML files. 
 - Hotplug destroys and recreates the window.
 - `reserveSpace: false` leaves Noctalia's exclusive zone unchanged.
 - The shell exits without taking Hyprland down.
+- `./install.sh` behaves the same way on a real Arch or CachyOS account.
 
-Those need the CachyOS session. Do not mark them passed from a cloud log.
+Those need a Hyprland session on the target machine. Do not mark them passed from a cloud log.
 
-## Install, launch, and stop on CachyOS
+## Install, launch, and stop
 
-1. Install Quickshell with the Hyprland module using the distro package. This repository does not install it. On CachyOS the package name is `quickshell`.
-2. Leave Noctalia and the existing Hyprland config in place.
-3. From this checkout, run `scripts/launch.sh`.
-4. The script creates `$XDG_CONFIG_HOME/swiftshell` (or `~/.config/swiftshell`) and copies default settings only if that file is absent.
-5. Quickshell is started as `qs --path <checkout>/shell --no-duplicate`. The process stays in that terminal. Ctrl-C stops it.
-6. `scripts/stop.sh` runs `qs kill --path <checkout>/shell --any-display`. That path is this prototype, not Noctalia's config.
+Development launch from a checkout is `scripts/launch.sh` and `scripts/stop.sh`. The distributable install path is `docs/install.md`.
+
+1. Install Quickshell with the Hyprland module using the distro package, or pass `--install-deps` to `./install.sh` on an Arch-based system.
+2. Leave the existing shell and Hyprland config in place.
+3. From this checkout, `scripts/launch.sh` runs the source tree. `./install.sh` installs a separate copy.
+4. The launcher creates `$XDG_CONFIG_HOME/swiftshell` (or `~/.config/swiftshell`) and copies default settings only if that file is absent.
+5. Quickshell is started with `qs --path` and `--no-duplicate`. Ctrl-C stops a foreground development launch.
+6. `scripts/stop.sh` stops the source-tree path. `swiftshell stop` stops the installed path.
 
 If stop cannot find the instance:
 
@@ -71,12 +78,12 @@ qs list --all
 qs kill --id <instance-id>
 ```
 
-Read the instance id from `qs list` before killing anything. A blanket process kill can stop Noctalia.
+Read the instance id from `qs list` before killing anything. A blanket process kill can stop the shell that was already running.
 
-To reserve space for maximized windows on HDMI-A-1, set `bar.reserveSpace` to `true` in the settings file and restart the prototype. Leave it `false` while Noctalia is also drawing on that output.
+To reserve space for maximized windows on HDMI-A-1, set `bar.reserveSpace` to `true` in the settings file and restart the prototype. Leave it `false` while another shell is also drawing on that output.
 
 Clock format is `clock.use24Hour` in the same file. `true` prints `09:04`. `false` prints `9:04 AM`.
 
 ## Recovery
 
-Stopping SwiftShell releases its layer surface. This milestone does not write Hyprland or Noctalia files, so there is no compositor config to roll back. If a bar remains after stop, run `qs list --all` and kill only the instance whose config path is this checkout's `shell/shell.qml`.
+Stopping SwiftShell releases its layer surface. These milestones do not write Hyprland or another shell's files, so there is no compositor config to roll back. If a bar remains after stop, run `qs list --all` and kill only the instance whose config path is this checkout's `shell/shell.qml` or the installed `swiftshell/app` directory.
