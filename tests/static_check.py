@@ -811,6 +811,7 @@ def main():
         "theme singleton type": qml_root_type(theme) == "Singleton",
         "transparent bar": "Theme.transparent" in bar and "Qt.rgba(0, 0, 0, 0)" in theme,
         "ignore exclusion by default": "ExclusionMode.Ignore" in bar,
+        "bar search label module": 'import "../components"' in bar,
         "bar height": "barHeight: 28" in theme,
         "target monitor": 'targetMonitor: "HDMI-A-1"' in store,
         "clock default": "use24Hour: true" in store,
