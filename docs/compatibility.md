@@ -15,14 +15,23 @@ Versions below are the APIs this prototype was written against. They were taken 
 
 | Type | Module | Use |
 |---|---|---|
-| `ShellRoot`, `Scope`, `Singleton`, `PanelWindow`, `Variants`, `SystemClock`, `ExclusionMode` | `Quickshell` | Entry, non-visual parents, per-screen instances, clock |
-| `Hyprland` | `Quickshell.Hyprland` | Workspaces, monitors, toplevels, `dispatch`, `monitorFor` |
+| `ShellRoot`, `Scope`, `Singleton`, `PanelWindow`, `PopupWindow`, `PopupAnchor`, `PopupAdjustment`, `Variants`, `SystemClock`, `ExclusionMode`, `Region` | `Quickshell` | Entry, non-visual parents, per-screen instances, popups, clock |
+| `Hyprland`, `HyprlandFocusGrab` | `Quickshell.Hyprland` | Workspaces, monitors, toplevels, `dispatch`, `monitorFor`, popup dismissal |
 | `WlrLayershell` | `Quickshell.Wayland` | Layer namespace `swiftshell-bar` |
 | `FileView`, `JsonAdapter`, `JsonObject` | `Quickshell.Io` | Settings file |
+| `Pipewire`, `PwObjectTracker` | `Quickshell.Services.Pipewire` | Default sink volume and mute |
 
 `PanelWindow.color` is fully transparent. `implicitHeight` is 28. Anchors are top, left, and right. `focusable` is false so the bar does not take keyboard focus from the session. Existing Super shortcuts stay where they are.
 
 `SystemClock` uses minute precision. That is an update from the clock object, not a workspace poll.
+
+`PopupWindow` is the 0.2 popup surface. Its anchor uses `anchor.window`, `anchor.rect`, `Edges`, and `PopupAdjustment.Flip | PopupAdjustment.Slide`. The shell also computes the anchor rectangle from `QsWindow.itemRect` in the `anchoring` signal, because mapped coordinates are not reactive. The window starts transparent with `surfaceFormat.opaque: false`. Quickshell documents that an opaque color applied before the first show cannot become transparent later.
+
+`HyprlandFocusGrab` is the 0.2 click-outside path. It needs `hyprland-focus-grab-v1`. `PopupWindow.grabFocus` is not used; that property is absent from the 0.2.0 page.
+
+`BackgroundEffect` and `ext-background-effect-v1` appear in the 0.3 docs, not in 0.2.0. The popup looks the attachment up by name at runtime. The scrim is always painted. Quickshell 0.2.0 therefore shows the scrim and logs that blur is unavailable.
+
+PipeWire volume uses `Pipewire.defaultAudioSink`, `PwObjectTracker.objects`, and `PwNodeAudio.volume` / `muted`. Those properties are documented as invalid until the node is bound. The audio file is loaded with a `Loader`, so a build without the PipeWire module does not take the bar down.
 
 `QtObject` has no default property. A child object written directly inside it fails to load. `BarHost` is a `Scope`, whose default property is `children`. `SettingsStore`, `HyprlandModel`, and `Theme` use Quickshell's `Singleton` type, which extends `Scope`. `FileView` stays a child of that singleton, and `JsonAdapter` stays a child of `FileView` because `adapter` is `FileView`'s default property. `SystemClock` stays inside `Item`, whose `data` property accepts non-visual objects.
 
