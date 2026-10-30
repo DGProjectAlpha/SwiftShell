@@ -41,14 +41,15 @@ function normalizeWorkspaceIds(ids) {
 }
 
 function workspaceIdsValid(ids) {
-    if (!Array.isArray(ids) || ids.length === 0 || ids.length > MAX_WORKSPACE_IDS)
+    const source = asList(ids);
+    if (source.length === 0 || source.length > MAX_WORKSPACE_IDS)
         return false;
 
     const seen = [];
-    for (let i = 0; i < ids.length; i++) {
-        if (typeof ids[i] !== "number" || !Number.isInteger(ids[i]))
+    for (let i = 0; i < source.length; i++) {
+        if (typeof source[i] !== "number" || !Number.isInteger(source[i]))
             return false;
-        const id = asWorkspaceId(ids[i]);
+        const id = asWorkspaceId(source[i]);
         if (id == null || seen.indexOf(id) !== -1)
             return false;
         seen.push(id);
@@ -69,6 +70,7 @@ var DEFAULTS = {
         reserveSpace: false,
         showFocusedTitle: true,
         workspaceIds: DEFAULT_WORKSPACE_IDS.slice(),
+        workspaceDispatch: "auto",
     },
     appearance: {
         mode: "dark",
@@ -187,6 +189,15 @@ function validateSettings(input) {
         workspaceIds = normalizeWorkspaceIds(bar.workspaceIds);
     }
 
+    const workspaceDispatch = pickEnum(
+        bar,
+        "workspaceDispatch",
+        ["auto", "lua", "legacy"],
+        DEFAULTS.bar.workspaceDispatch,
+        errors,
+        "bar.workspaceDispatch"
+    );
+
     const appearance = isPlainObject(source.appearance) ? source.appearance : {};
     if (source.appearance !== undefined && !isPlainObject(source.appearance))
         errors.push("appearance");
@@ -222,6 +233,7 @@ function validateSettings(input) {
                 reserveSpace: reserveSpace,
                 showFocusedTitle: showFocusedTitle,
                 workspaceIds: workspaceIds,
+                workspaceDispatch: workspaceDispatch,
             },
             appearance: {
                 mode: appearanceMode,

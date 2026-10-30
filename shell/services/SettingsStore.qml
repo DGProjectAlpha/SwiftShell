@@ -18,6 +18,7 @@ Singleton {
     readonly property bool reserveSpace: barSettings.reserveSpace
     readonly property bool showFocusedTitle: barSettings.showFocusedTitle
     readonly property var workspaceIds: Settings.normalizeWorkspaceIds(barSettings.workspaceIds)
+    readonly property string workspaceDispatch: barSettings.workspaceDispatch === "lua" || barSettings.workspaceDispatch === "legacy" ? barSettings.workspaceDispatch : "auto"
     readonly property string appearanceMode: appearanceSettings.mode
     readonly property string appearanceTint: appearanceSettings.tint
     readonly property real panelOpacity: appearanceSettings.panelOpacity
@@ -49,7 +50,8 @@ Singleton {
                 targetMonitor: barSettings.targetMonitor,
                 reserveSpace: barSettings.reserveSpace,
                 showFocusedTitle: barSettings.showFocusedTitle,
-                workspaceIds: barSettings.workspaceIds
+                workspaceIds: barSettings.workspaceIds,
+                workspaceDispatch: barSettings.workspaceDispatch
             },
             appearance: {
                 mode: appearanceSettings.mode,
@@ -140,6 +142,7 @@ Singleton {
                 property bool reserveSpace: false
                 property bool showFocusedTitle: true
                 property list<int> workspaceIds: [4, 5, 6]
+                property string workspaceDispatch: "auto"
             }
 
             property JsonObject appearance: JsonObject {
