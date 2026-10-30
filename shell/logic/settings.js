@@ -61,6 +61,8 @@ var DEFAULTS = {
     version: 1,
     clock: {
         use24Hour: true,
+        showWeekNumbers: false,
+        weekStart: "locale",
     },
     bar: {
         targetMonitor: "HDMI-A-1",
@@ -68,10 +70,54 @@ var DEFAULTS = {
         showFocusedTitle: true,
         workspaceIds: DEFAULT_WORKSPACE_IDS.slice(),
     },
+    appearance: {
+        mode: "dark",
+        tint: "neutral",
+        panelOpacity: 0.92,
+        panelBlur: 1,
+        radius: 10,
+        shadowOpacity: 0.16,
+        shadowSoftness: 10,
+        motionScale: 1,
+        reducedMotion: false,
+        panelPadding: 12,
+        panelSpacing: 8,
+        fontSize: 12,
+        fontWeight: "regular",
+        iconScale: 1,
+        topGradient: false,
+    },
 };
 
 function isPlainObject(value) {
     return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function pickBoolean(source, key, fallback, errors, label) {
+    if (source[key] === undefined)
+        return fallback;
+    if (typeof source[key] === "boolean")
+        return source[key];
+    errors.push(label);
+    return fallback;
+}
+
+function pickEnum(source, key, allowed, fallback, errors, label) {
+    if (source[key] === undefined)
+        return fallback;
+    if (typeof source[key] === "string" && allowed.indexOf(source[key]) !== -1)
+        return source[key];
+    errors.push(label);
+    return fallback;
+}
+
+function pickNumber(source, key, min, max, fallback, errors, label) {
+    if (source[key] === undefined)
+        return fallback;
+    if (typeof source[key] === "number" && Number.isFinite(source[key]) && source[key] >= min && source[key] <= max)
+        return source[key];
+    errors.push(label);
+    return fallback;
 }
 
 function validateSettings(input) {
@@ -96,6 +142,9 @@ function validateSettings(input) {
     } else {
         errors.push("clock.use24Hour");
     }
+
+    const showWeekNumbers = pickBoolean(clock, "showWeekNumbers", DEFAULTS.clock.showWeekNumbers, errors, "clock.showWeekNumbers");
+    const weekStart = pickEnum(clock, "weekStart", ["locale", "monday", "sunday"], DEFAULTS.clock.weekStart, errors, "clock.weekStart");
 
     const bar = isPlainObject(source.bar) ? source.bar : {};
     if (source.bar !== undefined && !isPlainObject(source.bar))
@@ -138,6 +187,26 @@ function validateSettings(input) {
         workspaceIds = normalizeWorkspaceIds(bar.workspaceIds);
     }
 
+    const appearance = isPlainObject(source.appearance) ? source.appearance : {};
+    if (source.appearance !== undefined && !isPlainObject(source.appearance))
+        errors.push("appearance");
+
+    const appearanceMode = pickEnum(appearance, "mode", ["dark", "light"], DEFAULTS.appearance.mode, errors, "appearance.mode");
+    const appearanceTint = pickEnum(appearance, "tint", ["neutral", "wallpaper"], DEFAULTS.appearance.tint, errors, "appearance.tint");
+    const panelOpacity = pickNumber(appearance, "panelOpacity", 0.72, 0.96, DEFAULTS.appearance.panelOpacity, errors, "appearance.panelOpacity");
+    const panelBlur = pickNumber(appearance, "panelBlur", 0, 1, DEFAULTS.appearance.panelBlur, errors, "appearance.panelBlur");
+    const radius = pickNumber(appearance, "radius", 6, 12, DEFAULTS.appearance.radius, errors, "appearance.radius");
+    const shadowOpacity = pickNumber(appearance, "shadowOpacity", 0, 0.4, DEFAULTS.appearance.shadowOpacity, errors, "appearance.shadowOpacity");
+    const shadowSoftness = pickNumber(appearance, "shadowSoftness", 0, 24, DEFAULTS.appearance.shadowSoftness, errors, "appearance.shadowSoftness");
+    const motionScale = pickNumber(appearance, "motionScale", 0, 1, DEFAULTS.appearance.motionScale, errors, "appearance.motionScale");
+    const reducedMotion = pickBoolean(appearance, "reducedMotion", DEFAULTS.appearance.reducedMotion, errors, "appearance.reducedMotion");
+    const panelPadding = pickNumber(appearance, "panelPadding", 8, 20, DEFAULTS.appearance.panelPadding, errors, "appearance.panelPadding");
+    const panelSpacing = pickNumber(appearance, "panelSpacing", 4, 16, DEFAULTS.appearance.panelSpacing, errors, "appearance.panelSpacing");
+    const fontSize = pickNumber(appearance, "fontSize", 11, 16, DEFAULTS.appearance.fontSize, errors, "appearance.fontSize");
+    const fontWeight = pickEnum(appearance, "fontWeight", ["regular", "medium"], DEFAULTS.appearance.fontWeight, errors, "appearance.fontWeight");
+    const iconScale = pickNumber(appearance, "iconScale", 0.75, 1.5, DEFAULTS.appearance.iconScale, errors, "appearance.iconScale");
+    const topGradient = pickBoolean(appearance, "topGradient", DEFAULTS.appearance.topGradient, errors, "appearance.topGradient");
+
     return {
         ok: errors.length === 0,
         errors: errors,
@@ -145,12 +214,31 @@ function validateSettings(input) {
             version: DEFAULTS.version,
             clock: {
                 use24Hour: use24Hour,
+                showWeekNumbers: showWeekNumbers,
+                weekStart: weekStart,
             },
             bar: {
                 targetMonitor: targetMonitor,
                 reserveSpace: reserveSpace,
                 showFocusedTitle: showFocusedTitle,
                 workspaceIds: workspaceIds,
+            },
+            appearance: {
+                mode: appearanceMode,
+                tint: appearanceTint,
+                panelOpacity: panelOpacity,
+                panelBlur: panelBlur,
+                radius: radius,
+                shadowOpacity: shadowOpacity,
+                shadowSoftness: shadowSoftness,
+                motionScale: motionScale,
+                reducedMotion: reducedMotion,
+                panelPadding: panelPadding,
+                panelSpacing: panelSpacing,
+                fontSize: fontSize,
+                fontWeight: fontWeight,
+                iconScale: iconScale,
+                topGradient: topGradient,
             },
         },
     };

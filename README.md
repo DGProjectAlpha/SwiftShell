@@ -488,12 +488,13 @@ Acceptance: user explicitly opts in; Noctalia remains readily restorable.
 - [x] Detailed product/engineering specification established
 - [x] M0/M1 prototype source, launch/stop scripts, and logic tests added
 - [x] Install, activate, deactivate, and uninstall scripts added (not verified on Hyprland)
+- [x] M2 theme tokens, popover host, calendar, and control-center foundation added (not verified on Hyprland)
 - [ ] Local Quickshell and Hyprland runtime audited
 - [ ] Agent instructions and design architecture validated locally
 - [ ] Visual rendering verified
 - [ ] Any live desktop integration approved
 
-**Current claim:** The specification still describes the product. The M0/M1 source is a separate Quickshell config. It is not evidence that the bar has been seen on a monitor.
+**Current claim:** The specification still describes the product. The M0/M1 bar and the M2 panels are a separate Quickshell config. They are not evidence that the bar or the panels have been seen on a monitor.
 
 ## 13. Running the M0/M1 prototype
 
@@ -507,7 +508,7 @@ scripts/launch.sh
 scripts/stop.sh
 ```
 
-`scripts/launch.sh` runs `qs --path` against `shell/` and does not edit Hyprland or Noctalia. `scripts/stop.sh` kills that path only. The bar targets HDMI-A-1, shows workspaces 4–6 and a clock, and does not reserve screen space unless `bar.reserveSpace` is set to `true` in `~/.config/swiftshell/settings.json`.
+`scripts/launch.sh` runs `qs --path` against `shell/` and does not edit Hyprland or Noctalia. `scripts/stop.sh` kills that path only. The bar targets HDMI-A-1, shows workspaces 4–6 and a clock, and does not reserve screen space unless `bar.reserveSpace` is set to `true` in `~/.config/swiftshell/settings.json`. The clock opens the calendar. The mark at the right opens the control center. Neither capture takes a global shortcut.
 
 ## 14. Install and remove
 

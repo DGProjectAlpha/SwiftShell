@@ -56,4 +56,4 @@ Do not interpret README's long-term roadmap as permission to implement M2–M8 i
 
 ## Repository status
 
-M0/M1 source lives in `shell/`. Install, activate, deactivate, and uninstall scripts live in `install.sh` and `scripts/`. They have not been run against the user's Hyprland session. Do not mark rendering, scaling, hotplug, or installation on a real session as verified from a cloud environment. Do not start M2 features until that local check is recorded.
+M0/M1 and M2 source lives in `shell/`. Install, activate, deactivate, and uninstall scripts live in `install.sh` and `scripts/`. They have not been run against the user's Hyprland session. Do not mark rendering, scaling, hotplug, blur, focus, or installation on a real session as verified from a cloud environment. Do not start M3 unless the user asks for it.

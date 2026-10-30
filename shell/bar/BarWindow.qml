@@ -4,6 +4,7 @@ import Quickshell
 import Quickshell.Wayland
 import "../logic/windows.js" as Windows
 import "../logic/workspaces.js" as Workspaces
+import "../popovers"
 import "../services"
 import "../themes"
 
@@ -50,6 +51,17 @@ PanelWindow {
     Component.onCompleted: syncExclusion()
     onReserveSpaceChanged: syncExclusion()
 
+    Rectangle {
+        z: -1
+        visible: Theme.topGradient
+        anchors.fill: parent
+        color: Theme.transparent
+        gradient: Gradient {
+            GradientStop { position: 0.0; color: Theme.gradientTop }
+            GradientStop { position: 1.0; color: Theme.transparent }
+        }
+    }
+
     RowLayout {
         anchors.fill: parent
         anchors.leftMargin: Theme.marginH
@@ -72,7 +84,20 @@ PanelWindow {
         }
 
         ClockModule {
+            id: clockModule
             Layout.alignment: Qt.AlignVCenter
+            onActivated: popovers.toggle("calendar", clockModule)
         }
+
+        ControlIndicator {
+            id: controlIndicator
+            Layout.alignment: Qt.AlignVCenter
+            onActivated: popovers.toggle("control", controlIndicator)
+        }
+    }
+
+    PopoverHost {
+        id: popovers
+        barWindow: window
     }
 }

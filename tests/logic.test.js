@@ -7,6 +7,11 @@ const monitors = require("../shell/logic/monitors.js");
 const workspaces = require("../shell/logic/workspaces.js");
 const windows = require("../shell/logic/windows.js");
 const settings = require("../shell/logic/settings.js");
+const palette = require("../shell/logic/palette.js");
+const theme = require("../shell/logic/theme.js");
+const calendar = require("../shell/logic/calendar.js");
+const popover = require("../shell/logic/popover.js");
+const audio = require("../shell/logic/audio.js");
 
 let failed = 0;
 
@@ -196,6 +201,136 @@ test("non-object settings are rejected", function () {
     assert.equal(result.ok, false);
     assert.equal(result.errors[0], "settings");
     assert.equal(result.settings.bar.targetMonitor, "HDMI-A-1");
+});
+
+test("theme defaults stay readable on black and white", function () {
+    const opacity = settings.DEFAULTS.appearance.panelOpacity;
+    assert.equal(palette.readableOnExtremes("dark", opacity).ok, true);
+    assert.equal(palette.readableOnExtremes("light", opacity).ok, true);
+    const sampled = palette.resolvePalette("dark", "wallpaper");
+    assert.equal(sampled.adaptive, false);
+    assert.equal(sampled.adaptiveReason, "Wallpaper tint is not sampled yet.");
+    assert.deepEqual(sampled.panel, palette.resolvePalette("dark", "neutral").panel);
+});
+
+test("motion defaults sit inside the restrained ranges", function () {
+    assert.deepEqual(theme.motionDurations(false, 1), { open: 180, close: 120, hover: 80 });
+    assert.deepEqual(theme.motionDurations(true, 1), { open: 0, close: 0, hover: 0 });
+    assert.deepEqual(theme.motionDurations(false, 0), { open: 0, close: 0, hover: 0 });
+    assert.equal(theme.motionDurations(false, 2).open, 180);
+});
+
+test("calendar month grid and iso weeks", function () {
+    assert.equal(calendar.isoWeekNumber(2005, 0, 1), 53);
+    assert.equal(calendar.isoWeekNumber(2005, 0, 3), 1);
+    assert.equal(calendar.weekStartIndex("sunday", 1, 7), 0);
+    assert.equal(calendar.weekStartIndex("monday", 7, 7), 1);
+    assert.equal(calendar.weekStartIndex("locale", 7, 7), 0);
+    assert.equal(calendar.weekStartIndex("locale", 1, 7), 1);
+    assert.deepEqual(calendar.shiftMonth(2026, 0, -1), { year: 2025, month: 11 });
+
+    const october = calendar.buildMonth(2026, 9, 1, 2026, 9, 30);
+    assert.equal(october.weeks[0].days[3].day, 1);
+    assert.equal(october.weeks[0].days[3].inMonth, true);
+    const today = october.weeks.flatMap(function (week) { return week.days; }).find(function (day) {
+        return day.inMonth && day.day === 30;
+    });
+    assert.equal(today.isToday, true);
+    assert.equal(new Date(2026, 9, 30).getDay(), 5);
+});
+
+test("popup placement stays inside logical screen bounds", function () {
+    const logicalWidth = 1920 / 1.5;
+    const placed = popover.placePopup({
+        anchorX: 1200,
+        anchorY: 28,
+        anchorWidth: 40,
+        popupWidth: 280,
+        popupHeight: 320,
+        screenWidth: logicalWidth,
+        screenHeight: 1080 / 1.5,
+        margin: 8,
+        align: "end",
+        devicePixelRatio: 1.5,
+    });
+    assert.equal(placed.logicalPixels, true);
+    assert.equal(placed.x, 960);
+    assert.equal(placed.y, 28);
+    assert.ok(placed.x >= 8);
+    assert.ok(placed.x + placed.width <= logicalWidth - 8);
+
+    const clamped = popover.placePopup({
+        anchorX: 4,
+        anchorY: 900,
+        anchorWidth: 20,
+        popupWidth: 280,
+        popupHeight: 320,
+        screenWidth: logicalWidth,
+        screenHeight: 720,
+        margin: 8,
+        align: "end",
+    });
+    assert.equal(clamped.x, 8);
+    assert.equal(clamped.y, 720 - 320 - 8);
+});
+
+test("one popover id is open at a time", function () {
+    assert.deepEqual(popover.reducePopover("", { type: "toggle", id: "calendar" }), { openId: "calendar", changed: true });
+    assert.deepEqual(popover.reducePopover("calendar", { type: "toggle", id: "calendar" }), { openId: "", changed: true });
+    assert.deepEqual(popover.reducePopover("calendar", { type: "toggle", id: "control" }), { openId: "control", changed: true });
+    assert.deepEqual(popover.reducePopover("control", { type: "close" }), { openId: "", changed: true });
+    assert.deepEqual(popover.reducePopover("", { type: "close" }), { openId: "", changed: false });
+});
+
+test("audio commands clamp and unmute on an audible volume", function () {
+    assert.equal(audio.clampVolume(-1), 0);
+    assert.equal(audio.clampVolume(1.4), 1);
+    assert.equal(audio.clampVolume("nope"), null);
+    assert.equal(audio.percent(0.126), 13);
+    assert.deepEqual(audio.volumeCommand(true, 0.4), { volume: 0.4, muted: false });
+    assert.deepEqual(audio.volumeCommand(true, 0), { volume: 0, muted: true });
+    assert.deepEqual(audio.volumeCommand(false, 0), { volume: 0, muted: false });
+    assert.equal(audio.outputLabel(""), "Output");
+    assert.equal(audio.outputLabel("/home/secret/sink"), "Output");
+    assert.equal(audio.outputLabel("Speakers"), "Speakers");
+});
+
+test("settings without appearance keep the new defaults", function () {
+    const result = settings.validateSettings({
+        version: 1,
+        clock: { use24Hour: false },
+        bar: {
+            targetMonitor: "HDMI-A-1",
+            reserveSpace: false,
+            showFocusedTitle: true,
+            workspaceIds: [4, 5, 6],
+        },
+    });
+    assert.equal(result.ok, true);
+    assert.equal(result.settings.clock.use24Hour, false);
+    assert.equal(result.settings.clock.showWeekNumbers, false);
+    assert.equal(result.settings.clock.weekStart, "locale");
+    assert.equal(result.settings.appearance.mode, "dark");
+    assert.equal(result.settings.appearance.topGradient, false);
+    assert.equal(result.settings.appearance.panelBlur, 1);
+});
+
+test("invalid appearance values fall back to the defaults", function () {
+    const result = settings.validateSettings({
+        appearance: {
+            mode: "blue",
+            tint: "wallpaper",
+            panelOpacity: 0.2,
+            topGradient: "yes",
+        },
+    });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.indexOf("appearance.mode") !== -1);
+    assert.ok(result.errors.indexOf("appearance.panelOpacity") !== -1);
+    assert.ok(result.errors.indexOf("appearance.topGradient") !== -1);
+    assert.equal(result.settings.appearance.mode, "dark");
+    assert.equal(result.settings.appearance.tint, "wallpaper");
+    assert.equal(result.settings.appearance.panelOpacity, settings.DEFAULTS.appearance.panelOpacity);
 });
 
 test("defaults.json matches the serializer", function () {

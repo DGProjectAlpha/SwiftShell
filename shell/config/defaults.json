@@ -1,7 +1,9 @@
 {
   "version": 1,
   "clock": {
-    "use24Hour": true
+    "use24Hour": true,
+    "showWeekNumbers": false,
+    "weekStart": "locale"
   },
   "bar": {
     "targetMonitor": "HDMI-A-1",
@@ -12,5 +14,22 @@
       5,
       6
     ]
+  },
+  "appearance": {
+    "mode": "dark",
+    "tint": "neutral",
+    "panelOpacity": 0.92,
+    "panelBlur": 1,
+    "radius": 10,
+    "shadowOpacity": 0.16,
+    "shadowSoftness": 10,
+    "motionScale": 1,
+    "reducedMotion": false,
+    "panelPadding": 12,
+    "panelSpacing": 8,
+    "fontSize": 12,
+    "fontWeight": "regular",
+    "iconScale": 1,
+    "topGradient": false
   }
 }
