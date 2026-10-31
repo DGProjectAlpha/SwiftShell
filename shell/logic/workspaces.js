@@ -1,4 +1,3 @@
-var DEFAULT_WORKSPACE_IDS = [4, 5, 6];
 var MAX_WORKSPACE_IDS = 12;
 
 function asWorkspaceId(value) {
@@ -34,18 +33,17 @@ function normalizeWorkspaceIds(ids) {
         cleaned.push(id);
     }
 
-    if (cleaned.length === 0)
-        return DEFAULT_WORKSPACE_IDS.slice();
-
     return cleaned;
 }
 
 function workspaceIdsValid(ids) {
     const source = asList(ids);
-    if (source.length === 0 || source.length > MAX_WORKSPACE_IDS)
+    if (source.length > MAX_WORKSPACE_IDS)
         return false;
     if (ids && typeof ids === "object" && typeof ids.length === "number" && source.length !== ids.length)
         return false;
+    if (source.length === 0)
+        return true;
 
     const seen = [];
     for (let i = 0; i < source.length; i++) {
@@ -102,8 +100,29 @@ function findWorkspace(liveWorkspaces, id, monitorName) {
     return fallback;
 }
 
-function buildWorkspaceItems(configuredIds, liveWorkspaces, monitorName) {
-    const ids = normalizeWorkspaceIds(configuredIds);
+function liveIndicatorIds(liveWorkspaces, monitorName) {
+    const live = Array.isArray(liveWorkspaces) ? liveWorkspaces : [];
+    const monitor = typeof monitorName === "string" ? monitorName : "";
+    if (monitor === "")
+        return [];
+
+    const ids = [];
+    for (let i = 0; i < live.length; i++) {
+        const workspace = live[i];
+        if (!workspace || typeof workspace.id !== "number" || !Number.isInteger(workspace.id))
+            continue;
+        const id = asWorkspaceId(workspace.id);
+        if (id == null || workspace.monitorName !== monitor || ids.indexOf(id) !== -1)
+            continue;
+        ids.push(id);
+    }
+    ids.sort(function (left, right) { return left - right; });
+    if (ids.length > MAX_WORKSPACE_IDS)
+        return ids.slice(0, MAX_WORKSPACE_IDS);
+    return ids;
+}
+
+function itemsForIds(ids, liveWorkspaces, monitorName) {
     const live = Array.isArray(liveWorkspaces) ? liveWorkspaces : [];
     const monitor = typeof monitorName === "string" ? monitorName : "";
 
@@ -128,14 +147,24 @@ function buildWorkspaceItems(configuredIds, liveWorkspaces, monitorName) {
     });
 }
 
+function buildWorkspaceItems(configuredIds, liveWorkspaces, monitorName) {
+    return itemsForIds(normalizeWorkspaceIds(configuredIds), liveWorkspaces, monitorName);
+}
+
+function indicatorItems(configuredIds, liveWorkspaces, monitorName) {
+    const explicit = normalizeWorkspaceIds(configuredIds);
+    const ids = explicit.length > 0 ? explicit : liveIndicatorIds(liveWorkspaces, monitorName);
+    return itemsForIds(ids, liveWorkspaces, monitorName);
+}
+
 var swiftshellWorkspaces = {
-    DEFAULT_WORKSPACE_IDS: DEFAULT_WORKSPACE_IDS,
     MAX_WORKSPACE_IDS: MAX_WORKSPACE_IDS,
     asWorkspaceId: asWorkspaceId,
     normalizeWorkspaceIds: normalizeWorkspaceIds,
     workspaceIdsValid: workspaceIdsValid,
     resolveDispatchMode: resolveDispatchMode,
     buildWorkspaceItems: buildWorkspaceItems,
+    indicatorItems: indicatorItems,
     dispatchWorkspaceCommand: dispatchWorkspaceCommand,
 };
 

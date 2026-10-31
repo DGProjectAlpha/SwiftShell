@@ -66,8 +66,8 @@ To try the installed copy instead of the checkout, run `./install.sh` again afte
 `tests/logic.test.js` exercises the plain JavaScript used by the QML:
 
 - 12-hour and 24-hour formatting, including midnight and an invalid date
-- connector matching for `HDMI-A-1`
-- workspace fallback to 4, 5, and 6
+- connector matching for `HDMI-A-1`, description matching, automatic focus, and fallback when a saved monitor is gone
+- empty workspace ids staying empty, live ids per monitor, and explicit ids that still include a missing workspace
 - active highlighting only when the workspace is on the bar's monitor
 - focused-title selection
 - settings validation, repair, and the defaults file
@@ -82,8 +82,11 @@ To try the installed copy instead of the checkout, run `./install.sh` again afte
 - one open popover id at a time
 - audio volume clamping, unmute behavior, output labels, and refusal to write a different or missing sink
 - the stored blur preference remaining a scrim, not an effect
+- centered Spotlight frames for 2560×1440, 1920×1080, and a 1280×720 logical size, including a list tall enough to clamp
+- launcher request tokens that ignore the first value, then open, close, and open again
+- search, theme-icon lookup, Tab-style selection, and a cleared keyboard grab after close
 
-`tests/static_check.py` checks that the QML files exist, local imports resolve, braces and parentheses balance, and the tree does not spawn `hyprctl`, a `Timer`, or a `Process`. It rejects a QML object nested directly in `QtObject`, which has no default property, including through a component whose root type is `QtObject`. Property values such as `property Item child: Item {}` are allowed. It rejects assignment to a read-only property on the Qt 6.4 types used here, including `implicitWidth` and `implicitHeight` on `Column`, `Row`, `Grid`, `Flow`, `Loader`, `Text`, `TextInput`, `TextEdit`, `Image`, `BorderImage`, and `AnimatedImage`, and the same properties when a project component's root type is one of those. It also rejects other read-only properties those types publish, such as `Loader.status`, `Text.contentWidth`, and `MouseArea.pressed`. Reading `implicitWidth` in another binding is allowed. Grouped writes such as `anchors.top` and `border.width`, and signal handlers such as `onImplicitWidthChanged`, are allowed. `Item`, `Rectangle`, `MouseArea`, `FocusScope`, and the layout types can still be given an implicit size. When `QtQuick/plugins.qmltypes` is installed, the check also requires that file to mark `QQuickImplicitSizeItem.implicitWidth` read-only and `QQuickItem.implicitWidth` writable. It also checks the transparent color, 28px token, HDMI-A-1 default, shell id, `Scope` bar host, `Singleton` service roots, the transparent popup surface, and that wallpaper sampling is not claimed. It fails when a shell file uses a project QML type that its imports do not provide. The fixture is `BarLabel` without `import "../components"`, which is the startup error `BarLabel is not a type`. Shell scripts are scanned for edits to Hyprland config, service units, and package installation outside the explicit Arch dependency path.
+`tests/static_check.py` checks that the QML files exist, local imports resolve, braces and parentheses balance, and the tree does not spawn `hyprctl`, a `Timer`, or a `Process`. It rejects a QML object nested directly in `QtObject`, which has no default property, including through a component whose root type is `QtObject`. Property values such as `property Item child: Item {}` are allowed. It rejects assignment to a read-only property on the Qt 6.4 types used here, including `implicitWidth` and `implicitHeight` on `Column`, `Row`, `Grid`, `Flow`, `Loader`, `Text`, `TextInput`, `TextEdit`, `Image`, `BorderImage`, and `AnimatedImage`, and the same properties when a project component's root type is one of those. It also rejects other read-only properties those types publish, such as `Loader.status`, `Text.contentWidth`, and `MouseArea.pressed`. Reading `implicitWidth` in another binding is allowed. Grouped writes such as `anchors.top` and `border.width`, and signal handlers such as `onImplicitWidthChanged`, are allowed. `Item`, `Rectangle`, `MouseArea`, `FocusScope`, and the layout types can still be given an implicit size. When `QtQuick/plugins.qmltypes` is installed, the check also requires that file to mark `QQuickImplicitSizeItem.implicitWidth` read-only and `QQuickItem.implicitWidth` writable. It also checks the transparent color, 28px token, empty monitor and workspace defaults, shell id, `Scope` bar host, `Singleton` service roots, the transparent popup surface, and that wallpaper sampling is not claimed. It fails when a shell file uses a project QML type that its imports do not provide. The fixture is `BarLabel` without `import "../components"`, which is the startup error `BarLabel is not a type`. Shell scripts are scanned for edits to Hyprland config, service units, and package installation outside the explicit Arch dependency path.
 
 `tests/qml/tst_implicit_size.qml` instantiates those Qt types with `qmltestrunner`. It expects the same read-only error Quickshell reported for the calendar column, the control-center column, and a `Loader`, and it checks that an `Item` wrapper keeps a 210px calendar-shaped panel and a 248×40 control-shaped panel.
 
@@ -145,6 +148,16 @@ scripts/check.sh
 ```
 
 Exit status 0. Static checks passed for 22 QML files, including the `BarLabel` import fixture. Logic tests passed, including a delayed empty desktop-entry model, Dolphin and Helium desktop text, search past the 12-row empty grid, icon-theme lookup, reservation toggling, and the launcher input plan. The run printed `launcher rank 400 apps: 2.45 ms`. Install tests passed, 15 cases. `qmltestrunner` 6.4.2 reported Totals: 6 passed for `tst_implicit_size.qml` and Totals: 7 passed for `tst_shell_load.qml`. The added shell-load case compiles `BarWindow.qml` and fails if the error text contains `BarLabel`. `QStandardPaths: XDG_RUNTIME_DIR not set` was printed. That warning is from the offscreen Qt platform. The shell-load suite uses Quickshell stubs. It did not start `qs`, execute a desktop entry, run `loginctl`, or show the launcher.
+
+## What was run for M3.2
+
+On 30 Oct 2026, at 8:31 PM America/New_York, in the cloud workspace, with no Hyprland session and no `qs` binary:
+
+```text
+scripts/check.sh
+```
+
+Exit status 0. Static checks passed for 22 QML files. Logic tests passed, including focused-monitor selection, a disconnected saved monitor, live workspace ids, explicit ids that still include a missing workspace, centered frames for 2560×1440, 1920×1080, and 1280×720, repeated launcher request tokens, Dolphin search, icon lookup, Tab-style selection, and a cleared keyboard grab. The run printed `launcher rank 400 apps: 2.33 ms`. Install tests passed, 15 cases, including a launcher request that leaves the temporary Hyprland binds file unchanged. `qmltestrunner` 6.4.2 reported Totals: 6 passed for `tst_implicit_size.qml` and Totals: 7 passed for `tst_shell_load.qml`. `QStandardPaths: XDG_RUNTIME_DIR not set` was printed. That warning is from the offscreen Qt platform. The shell-load suite uses Quickshell stubs. It did not start `qs`, show Spotlight, launch an application, or press Super+Space.
 
 ## What the CachyOS session already showed
 
@@ -214,7 +227,8 @@ Launcher, after the M2 checks above:
 7. Click Search on the bar. The field should take keys immediately. Type `dolphin` and `helium` and confirm both rows appear, with theme icons rather than only a letter, then press Enter on one and confirm that application starts. Press Escape and confirm the previously focused application has the keyboard. Click the dim area around the card and confirm that also closes it.
 8. Press Tab and Shift+Tab through a long result list and confirm the selected row stays on screen. Type ordinary letters, including j and k, and confirm they stay in the field. Alt+J and Alt+K may move the selection. Open and close the launcher several times, and unplug HDMI-A-1 while it is open if that is safe to try. It must not remain an invisible full-screen grab.
 9. With an empty field, confirm pinned ids from `launcher.pinnedIds` and, after one successful launch, that id on the next empty open. Settings should open the control center. Lock, Suspend, Restart, and Shut down should do nothing on the first Enter and should ask for confirmation on the second. Do not confirm a power action unless that is intended.
-10. Run `scripts/request-launcher.sh` while SwiftShell is running and confirm the launcher opens. Confirm Super+Space still does what it did before. The handoff is `docs/launcher-shortcut.md`. Do not apply it as part of this check unless you have made the backup described there.
+10. Run `scripts/request-launcher.sh` while SwiftShell is running and confirm the launcher opens. Run it again and confirm the launcher closes and the previously focused application has the keyboard. Confirm Super+Space still does what it did before. The handoff is `docs/launcher-shortcut.md`. Do not apply it as part of this check unless you have made the backup described there.
+11. Leave `~/.config/swiftshell/settings.json` in place. If it names `HDMI-A-1` and workspaces 4–6, the bar should stay on that output with those indicators. Focus a window on DP-1 and click Search. The card should be centered on DP-1. Focus HDMI-A-1 and request the launcher again. The card should be centered on HDMI-A-1. Scroll a long result list and confirm the search field stays on screen. Unplug a monitor only if that is safe, and confirm no full-screen grab remains.
 
 `scripts/check.sh` on CachyOS needs `qmltestrunner` from `qt6-declarative`. A passing run is not this checklist.
 
@@ -230,6 +244,7 @@ Launcher, after the M2 checks above:
 - `./install.sh --install-deps` on a real Arch account. The hermetic test now fails if `/usr/bin` is on that test's PATH. It still does not run real `pacman`.
 - Qt accepts `Scope`, `Singleton`, `PopupWindow`, and `HyprlandFocusGrab` as used here. The calendar and control center did open on CachyOS before this branch. This branch's focus-order change was not part of that launch.
 - The popup stays inside the HDMI-A-1 output at scale 1.5, and the scrim stays readable on the real wallpaper. Blur is unsupported on Quickshell 0.2.0 and was not observed.
+- Spotlight is centered on the focused monitor, the search field stays fixed while results scroll, and a second request closes it. The geometry is unit-tested in logical pixels. It was not shown on DP-1 or HDMI-A-1. Super+Space was not edited.
 - PipeWire reports the default sink and accepts volume and mute writes.
 - Escape and an outside click close the panel and return keyboard focus. The text-input diagnostic was seen. It is explained above and was not reproduced after the focus-order change.
 - The optional top gradient remains inside the bar and does not steal clicks from windows below it.

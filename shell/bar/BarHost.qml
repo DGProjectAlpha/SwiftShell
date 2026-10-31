@@ -6,10 +6,9 @@ import "../services"
 Scope {
     id: root
 
-    property bool warnedMissing: false
-    property bool announcedMatch: false
     property bool refreshingScreens: false
     property var targetScreens: []
+    property string announcedPlacement: ""
 
     function sameScreens(left, right) {
         const a = left || [];
@@ -23,44 +22,52 @@ Scope {
         return true;
     }
 
+    function screenRecords() {
+        const screens = Quickshell.screens;
+        const count = screens ? screens.length : 0;
+        const records = [];
+        for (let i = 0; i < count; i++) {
+            const screen = screens[i];
+            records.push(Monitors.describeScreen(
+                screen,
+                HyprlandModel.hyprlandNameForScreen(screen),
+                HyprlandModel.descriptionForScreen(screen)
+            ));
+        }
+        return records;
+    }
+
+    function announce(placement) {
+        const key = placement.mode + "\n" + (placement.label || "");
+        if (key === root.announcedPlacement)
+            return;
+        root.announcedPlacement = key;
+        if (placement.mode === "missing") {
+            console.warn("SwiftShell: no screen is available for the bar");
+            return;
+        }
+        if (placement.mode === "preference")
+            console.info("SwiftShell: bar placed on preferred monitor", placement.label);
+        else if (placement.mode === "focused")
+            console.info("SwiftShell: bar placed on focused monitor", placement.label);
+        else
+            console.info("SwiftShell: bar placed on fallback monitor", placement.label);
+    }
+
     function refreshTargetScreens() {
         if (root.refreshingScreens)
             return;
         root.refreshingScreens = true;
-
-        const matched = [];
-        const screens = Quickshell.screens;
-        const count = screens ? screens.length : 0;
-        for (let i = 0; i < count; i++) {
-            const screen = screens[i];
-            const hyprlandName = HyprlandModel.hyprlandNameForScreen(screen);
-            const screenName = screen && screen.name ? screen.name : "";
-            if (Monitors.matchesTarget(screenName, hyprlandName, SettingsStore.targetMonitor))
-                matched.push(screen);
-        }
-
+        const placement = Monitors.selectBarPlacement(
+            root.screenRecords(),
+            SettingsStore.targetMonitor,
+            HyprlandModel.readFocusedOutput()
+        );
+        const matched = placement.screen ? [placement.screen] : [];
         if (!root.sameScreens(root.targetScreens, matched))
             root.targetScreens = matched;
-
         root.refreshingScreens = false;
-        root.warnIfMissing();
-    }
-
-    function warnIfMissing() {
-        if (root.targetScreens.length === 0) {
-            if (!root.warnedMissing) {
-                const screens = Quickshell.screens;
-                const count = screens ? screens.length : 0;
-                console.warn("SwiftShell: no output matched the target monitor", SettingsStore.targetMonitor, "among", count, "screens");
-                root.warnedMissing = true;
-            }
-            return;
-        }
-
-        if (!root.announcedMatch || root.warnedMissing)
-            console.info("SwiftShell: bar placed on", SettingsStore.targetMonitor);
-        root.warnedMissing = false;
-        root.announcedMatch = true;
+        root.announce(placement);
     }
 
     Component.onCompleted: refreshTargetScreens()

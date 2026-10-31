@@ -4,6 +4,7 @@ import QtQuick
 
 QtObject {
     property string eventSocketPath: ""
+    property var focusedMonitor: null
     property QtObject workspaces: QtObject { property var values: [] }
     property QtObject monitors: QtObject { property var values: [] }
     property QtObject toplevels: QtObject { property var values: [] }

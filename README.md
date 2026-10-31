@@ -493,11 +493,13 @@ Acceptance: user explicitly opts in; Noctalia remains readily restorable.
 - [x] CachyOS workspace switching observed after the Lua dispatch fix
 - [x] M3 launcher opened on CachyOS and failed to find Dolphin and Helium; discovery now follows `applicationsChanged` and has not been relaunched
 - [ ] Bar reservation, theme icons, launcher focus return, and the refreshed catalog retested on CachyOS
+- [ ] M3.2 centered Spotlight on the focused monitor retested on CachyOS
+- [ ] Super+Space handoff applied by hand after that retest, using `docs/launcher-shortcut.md`
 - [ ] Local Quickshell and Hyprland versions recorded from `qs -V` and `Hyprland --version`
 - [ ] Visual rendering of the stabilization fixes verified
 - [ ] Any live desktop integration beyond the separate `qs --path` launch approved
 
-**Current claim:** The shell has run on the reference Hyprland session. The bar, calendar, and control center were visible with Noctalia stopped, and workspace switching works there. The launcher opened on that session and did not list Dolphin or Helium. The catalog now refreshes from Quickshell's `applicationsChanged` signal. That refresh, theme icons, and bar reservation have not been relaunched on the session. Cloud checks do not launch applications.
+**Current claim:** The shell has run on the reference Hyprland session. The bar, calendar, and control center were visible with Noctalia stopped, and workspace switching works there. The launcher opened on that session and did not list Dolphin or Helium. The catalog now refreshes from Quickshell's `applicationsChanged` signal. That refresh, theme icons, and bar reservation have not been relaunched on the session. M3.2 centers Spotlight and chooses the focused monitor in source. That placement has not been launched on the session. Cloud checks do not launch applications or edit Super+Space.
 
 ## 13. Running the M0/M1 prototype
 
@@ -511,7 +513,7 @@ scripts/launch.sh
 scripts/stop.sh
 ```
 
-`scripts/launch.sh` runs `qs --path` against `shell/` and does not edit Hyprland or Noctalia. `scripts/stop.sh` kills that path only. Noctalia is the `noctalia` executable. Do not stop it with a `qs` kill. The bar targets HDMI-A-1 and shows workspaces 4–6 and a clock. A new settings file reserves the bar. An existing `~/.config/swiftshell/settings.json` that still has `"reserveSpace": false` stays an overlay until that key is set to `true`. Leave it `false` while Noctalia is also drawing on that output. The clock opens the calendar. The mark at the right opens the control center. Search opens the launcher. None of those capture a global shortcut.
+`scripts/launch.sh` runs `qs --path` against `shell/` and does not edit Hyprland or Noctalia. `scripts/stop.sh` kills that path only. Noctalia is the `noctalia` executable. Do not stop it with a `qs` kill. A new settings file puts the bar on the focused monitor, or the first screen if focus cannot be read, and shows the workspaces Hyprland reports on that monitor. An existing `~/.config/swiftshell/settings.json` is not rewritten: a file that still names `HDMI-A-1` and workspaces 4–6 keeps that layout, and a file that still has `"reserveSpace": false` stays an overlay until that key is set to `true`. Leave `reserveSpace` `false` while Noctalia is also drawing on that output. The clock opens the calendar. The mark at the right opens the control center. Search opens Spotlight on the monitor focused at that moment. `scripts/request-launcher.sh` does the same through the existing request file and toggles it closed. None of those capture a global shortcut. Super+Space stays unchanged until `docs/launcher-shortcut.md` is applied by hand.
 
 If this checkout already has a local `import "../components"` in `shell/bar/BarWindow.qml`, that line is on `main`. See `docs/testing.md` before pulling so the local edit is not lost or duplicated.
 

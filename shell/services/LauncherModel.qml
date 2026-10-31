@@ -4,7 +4,9 @@ import QtQuick
 import QtCore
 import Quickshell
 import Quickshell.Io
+import Quickshell.Hyprland
 import "../logic/launcher.js" as Launcher
+import "../logic/monitors.js" as Monitors
 
 Singleton {
     id: root
@@ -79,15 +81,109 @@ Singleton {
         root.notice = "";
     }
 
+    function monitorObjectForScreen(screen) {
+        if (!screen)
+            return null;
+        try {
+            const direct = Hyprland.monitorFor(screen);
+            if (direct)
+                return direct;
+        } catch (error) {
+            // monitorFor is absent on a stub or an older build.
+        }
+        let monitors = [];
+        try {
+            monitors = Hyprland.monitors.values;
+        } catch (error) {
+            monitors = [];
+        }
+        if (screen.name) {
+            for (let i = 0; i < monitors.length; i++) {
+                if (monitors[i] && monitors[i].name === screen.name)
+                    return monitors[i];
+            }
+        }
+        return null;
+    }
+
+    function screenRecords() {
+        const screens = Quickshell.screens;
+        const count = screens ? screens.length : 0;
+        const records = [];
+        for (let i = 0; i < count; i++) {
+            const screen = screens[i];
+            const monitor = root.monitorObjectForScreen(screen);
+            let description = "";
+            try {
+                description = monitor && monitor.description ? String(monitor.description) : "";
+            } catch (error) {
+                description = "";
+            }
+            records.push(Monitors.describeScreen(
+                screen,
+                monitor && monitor.name ? monitor.name : "",
+                description
+            ));
+        }
+        return records;
+    }
+
+    function readFocusedOutput() {
+        let monitor = null;
+        try {
+            monitor = Hyprland.focusedMonitor;
+        } catch (error) {
+            return null;
+        }
+        if (!monitor)
+            return null;
+        let name = "";
+        let description = "";
+        try {
+            if (monitor.name)
+                name = String(monitor.name);
+        } catch (error) {
+            name = "";
+        }
+        try {
+            if (monitor.description)
+                description = String(monitor.description);
+        } catch (error) {
+            description = "";
+        }
+        if (name === "" && description === "")
+            return null;
+        return { name: name, description: description };
+    }
+
+    function placeLauncher() {
+        return Monitors.resolveLauncherScreen(root.screenRecords(), root.readFocusedOutput(), root.screen);
+    }
+
+    function screenIsLive(screen) {
+        return Monitors.screenListed(screen, Quickshell.screens);
+    }
+
+    function dropIfScreenGone() {
+        if (!root.open || root.screenIsLive(root.screen))
+            return;
+        console.info("SwiftShell: launcher closed because its screen disconnected");
+        root.closeLauncher();
+    }
+
     function openLauncher() {
-        if (!root.screen) {
+        const resolved = root.placeLauncher();
+        if (!resolved.screen || !root.screenIsLive(resolved.screen)) {
             if (!root.warnedScreen) {
                 console.warn("SwiftShell: launcher has no target screen");
                 root.warnedScreen = true;
             }
+            if (root.open)
+                root.closeLauncher();
             return;
         }
         root.warnedScreen = false;
+        root.screen = resolved.screen;
         root.indexApplications();
         root.query = "";
         root.selected = 0;
@@ -95,7 +191,7 @@ Singleton {
         root.notice = "";
         root.open = true;
         root.inputRequested();
-        console.info("SwiftShell: launcher opened");
+        console.info("SwiftShell: launcher opened on", resolved.mode, resolved.label);
     }
 
     function closeLauncher() {
@@ -206,16 +302,15 @@ Singleton {
     }
 
     function noteRequest(token) {
-        const next = typeof token === "string" ? token : "";
-        if (!root.requestReady) {
-            root.seenRequest = next;
-            root.requestReady = true;
-            return;
-        }
-        if (next !== "" && next !== root.seenRequest) {
-            root.seenRequest = next;
+        const step = Launcher.requestAction(root.open, token, root.seenRequest, root.requestReady);
+        root.seenRequest = step.seen;
+        root.requestReady = step.ready;
+        if (step.action === "open") {
             console.info("SwiftShell: launcher requested");
             root.openLauncher();
+        } else if (step.action === "close") {
+            console.info("SwiftShell: launcher dismissed by request");
+            root.closeLauncher();
         }
     }
 
@@ -224,6 +319,11 @@ Singleton {
     Connections {
         target: DesktopEntries
         function onApplicationsChanged() { root.indexApplications(); }
+    }
+
+    Connections {
+        target: Quickshell
+        function onScreensChanged() { root.dropIfScreenGone(); }
     }
 
     FileView {

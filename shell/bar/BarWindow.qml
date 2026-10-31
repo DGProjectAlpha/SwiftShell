@@ -35,7 +35,7 @@ PanelWindow {
     readonly property bool reserveSpace: SettingsStore.reserveSpace
     readonly property string hyprlandMonitorName: HyprlandModel.hyprlandNameForScreen(modelData)
     readonly property string monitorKey: hyprlandMonitorName !== "" ? hyprlandMonitorName : SettingsStore.targetMonitor
-    readonly property var workspaceItems: Workspaces.buildWorkspaceItems(SettingsStore.workspaceIds, HyprlandModel.liveWorkspaces, monitorKey)
+    readonly property var workspaceItems: Workspaces.indicatorItems(SettingsStore.workspaceIds, HyprlandModel.liveWorkspaces, monitorKey)
     readonly property int activeWorkspaceId: {
         for (let i = 0; i < workspaceItems.length; i++) {
             if (workspaceItems[i].active)
@@ -47,7 +47,6 @@ PanelWindow {
 
     function openLauncher() {
         popovers.close();
-        LauncherModel.screen = window.screen;
         LauncherModel.openLauncher();
     }
 
@@ -66,11 +65,7 @@ PanelWindow {
         console.info("SwiftShell: bar reserves no space on", monitorKey, "(overlay)");
     }
 
-    Component.onCompleted: {
-        LauncherModel.screen = window.screen;
-        syncExclusion();
-    }
-    onScreenChanged: LauncherModel.screen = window.screen
+    Component.onCompleted: syncExclusion()
     onReserveSpaceChanged: syncExclusion()
     onImplicitHeightChanged: syncExclusion()
 

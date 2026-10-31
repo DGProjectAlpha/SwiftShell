@@ -90,29 +90,79 @@ Singleton {
         };
     }
 
-    function hyprlandNameForScreen(screen) {
-        const monitors = Hyprland.monitors.values;
+    function monitorObjectForScreen(screen) {
         if (!screen)
-            return "";
+            return null;
 
-        let resolved = "";
         try {
             const direct = Hyprland.monitorFor(screen);
-            if (direct && direct.name)
-                resolved = direct.name;
+            if (direct)
+                return direct;
         } catch (error) {
-            resolved = "";
+            // monitorFor is absent on a stub or an older build.
         }
 
-        if (resolved === "" && screen.name) {
+        const monitors = Hyprland.monitors.values;
+        if (screen.name) {
             for (let i = 0; i < monitors.length; i++) {
                 if (monitors[i] && monitors[i].name === screen.name)
-                    return monitors[i].name;
+                    return monitors[i];
             }
         }
-
-        return resolved;
+        return null;
     }
+
+    function hyprlandNameForScreen(screen) {
+        const monitor = root.monitorObjectForScreen(screen);
+        return monitor && monitor.name ? monitor.name : "";
+    }
+
+    function descriptionForScreen(screen) {
+        const monitor = root.monitorObjectForScreen(screen);
+        try {
+            return monitor && monitor.description ? String(monitor.description) : "";
+        } catch (error) {
+            return "";
+        }
+    }
+
+    function readFocusedOutput() {
+        let monitor = null;
+        try {
+            monitor = Hyprland.focusedMonitor;
+        } catch (error) {
+            return null;
+        }
+        if (!monitor)
+            return null;
+
+        let name = "";
+        let description = "";
+        let id = -1;
+        try {
+            if (monitor.name)
+                name = String(monitor.name);
+        } catch (error) {
+            name = "";
+        }
+        try {
+            if (monitor.description)
+                description = String(monitor.description);
+        } catch (error) {
+            description = "";
+        }
+        try {
+            if (monitor.id !== undefined && monitor.id !== null)
+                id = monitor.id;
+        } catch (error) {
+            id = -1;
+        }
+        if (name === "" && description === "")
+            return null;
+        return { name: name, description: description, id: id };
+    }
+
+    readonly property var focusedOutput: readFocusedOutput()
 
     property int outputRevision: 0
     property bool warnedDispatchDown: false
@@ -169,6 +219,8 @@ Singleton {
         Hyprland.refreshToplevels();
         root.outputRevision += 1;
     }
+
+    onFocusedOutputChanged: root.outputRevision += 1
 
     onConnectedChanged: {
         if (connected) {

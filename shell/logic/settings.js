@@ -1,4 +1,3 @@
-var DEFAULT_WORKSPACE_IDS = [4, 5, 6];
 var MAX_WORKSPACE_IDS = 12;
 
 function asWorkspaceId(value) {
@@ -34,16 +33,15 @@ function normalizeWorkspaceIds(ids) {
         cleaned.push(id);
     }
 
-    if (cleaned.length === 0)
-        return DEFAULT_WORKSPACE_IDS.slice();
-
     return cleaned;
 }
 
 function workspaceIdsValid(ids) {
     const source = asList(ids);
-    if (source.length === 0 || source.length > MAX_WORKSPACE_IDS)
+    if (source.length > MAX_WORKSPACE_IDS)
         return false;
+    if (source.length === 0)
+        return true;
 
     const seen = [];
     for (let i = 0; i < source.length; i++) {
@@ -66,10 +64,10 @@ var DEFAULTS = {
         weekStart: "locale",
     },
     bar: {
-        targetMonitor: "HDMI-A-1",
+        targetMonitor: "",
         reserveSpace: true,
         showFocusedTitle: true,
-        workspaceIds: DEFAULT_WORKSPACE_IDS.slice(),
+        workspaceIds: [],
         workspaceDispatch: "auto",
     },
     appearance: {
@@ -198,10 +196,11 @@ function validateSettings(input) {
     let targetMonitor = DEFAULTS.bar.targetMonitor;
     if (bar.targetMonitor === undefined) {
         targetMonitor = DEFAULTS.bar.targetMonitor;
-    } else if (typeof bar.targetMonitor === "string" && bar.targetMonitor.trim() !== "") {
+    } else if (typeof bar.targetMonitor === "string") {
         targetMonitor = bar.targetMonitor.trim();
     } else {
         errors.push("bar.targetMonitor");
+        targetMonitor = DEFAULTS.bar.targetMonitor;
     }
 
     let reserveSpace = DEFAULTS.bar.reserveSpace;
