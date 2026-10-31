@@ -169,6 +169,16 @@ scripts/check.sh
 
 Exit status 0. Static checks passed for 27 QML files. Logic tests passed, including version 1 migration, a refused invalid file, unknown keys kept by `migrationDecision`, window size clamping, and a settings session that stays one instance. Blur stays unavailable. The run printed `launcher rank 400 apps: 3.15 ms`. Install tests passed, 15 cases. `qmltestrunner` 6.4.2 reported Totals: 6 passed for `tst_implicit_size.qml` and Totals: 8 passed for `tst_shell_load.qml`. The added case compiles the settings window and the Appearance page against the Quickshell stub and checks that the page names the translucent scrim. `QStandardPaths: XDG_RUNTIME_DIR not set` was printed. That warning is from the offscreen Qt platform. The shell-load suite did not start `qs`, show the settings window, move it, or resize it.
 
+## What was run for M4.1
+
+On 30 Oct 2026, at 9:02 PM America/New_York, in the cloud workspace, with no Hyprland session and no `qs` binary:
+
+```text
+scripts/check.sh
+```
+
+Exit status 0. Static checks passed for 27 QML files. Logic tests passed, including settings search, density rounding, appearance undo, and reset. The run printed `launcher rank 400 apps: 4.66 ms`. Install tests passed, 15 cases. `qmltestrunner` 6.4.2 reported Totals: 6 passed for `tst_implicit_size.qml` and Totals: 8 passed for `tst_shell_load.qml`. The settings page case checks that an opacity query shows the opacity row and hides the blur note. `QStandardPaths: XDG_RUNTIME_DIR not set` was printed. That warning is from the offscreen Qt platform. The run did not show the window or scroll it.
+
 ## Settings window hardware check
 
 After the M3.2 checks, and only with SwiftShell launched by `scripts/launch.sh`:
@@ -176,7 +186,7 @@ After the M3.2 checks, and only with SwiftShell launched by `scripts/launch.sh`:
 1. Copy `~/.config/swiftshell/settings.json` aside if it contains keys that are not in `docs/architecture.md`. A version 1 file is backed up to `settings.json.bak-swiftshell` and rewritten as version 2 on launch. `HDMI-A-1` and workspaces `[4, 5, 6]` are known keys.
 2. Open Spotlight, choose Settings, and confirm one normal window appears. Hyprland's own move bind should move it. Resize it from the compositor, close it, and open it again. The size should come back. Escape should close it.
 3. Open Settings again from the control center button, and once more from Spotlight while it is already open. There should still be one window.
-4. Change dark, light, reduced motion, the top gradient, panel opacity, and corner radius. The bar, Spotlight, and the settings window should follow. Restart with `scripts/stop.sh` and `scripts/launch.sh` and confirm the same values. There is no blur slider. The page should say blur is unavailable.
+4. Change dark, light, text size, text weight, density, panel opacity, corner radius, shadow, icon scale, motion scale, reduced motion, and the top gradient. The bar, Spotlight, and the settings window should follow without a restart. Restart with `scripts/stop.sh` and `scripts/launch.sh` and confirm the same values. Undo should restore the previous values. Reset should restore the appearance defaults. There is no blur slider. Wallpaper tint should say it is not sampled. Search should hide controls that do not match, and Escape in a filled search field should clear it before the next Escape closes the window.
 5. Confirm `~/.config/hypr` and the Noctalia config are unchanged.
 
 This checklist is not done in the cloud run.

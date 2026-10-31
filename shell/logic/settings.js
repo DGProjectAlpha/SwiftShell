@@ -469,6 +469,47 @@ function unitFromRadius(radius) {
     return Math.min(1, Math.max(0, (radius - 6) / 6));
 }
 
+function copyAppearance(value) {
+    return validateSettings({ appearance: value }).settings.appearance;
+}
+
+function initialHistory(present) {
+    return { past: [], present: copyAppearance(present) };
+}
+
+function reduceAppearanceHistory(state, action) {
+    const past = state && Array.isArray(state.past) ? state.past.slice() : [];
+    const present = state && state.present ? copyAppearance(state.present) : copyAppearance(undefined);
+    const type = action && action.type;
+    if (type === "replace")
+        return { past: [], present: copyAppearance(action.present) };
+    if (type === "edit") {
+        const next = copyAppearance(action.present);
+        if (JSON.stringify(next) === JSON.stringify(present))
+            return { past: past, present: present };
+        past.push(present);
+        if (past.length > 20)
+            past.shift();
+        return { past: past, present: next };
+    }
+    if (type === "undo") {
+        if (past.length === 0)
+            return { past: [], present: present };
+        const restored = past.pop();
+        return { past: past, present: copyAppearance(restored) };
+    }
+    if (type === "reset") {
+        const next = copyAppearance(DEFAULTS.appearance);
+        if (JSON.stringify(next) === JSON.stringify(present))
+            return { past: past, present: present };
+        past.push(present);
+        if (past.length > 20)
+            past.shift();
+        return { past: past, present: next };
+    }
+    return { past: past, present: present };
+}
+
 function serializeSettings(settings) {
     const validated = validateSettings(settings);
     return JSON.stringify(validated.settings, null, 2) + "\n";
@@ -484,6 +525,8 @@ var swiftshellSettings = {
     unitFromOpacity: unitFromOpacity,
     radiusFromUnit: radiusFromUnit,
     unitFromRadius: unitFromRadius,
+    initialHistory: initialHistory,
+    reduceAppearanceHistory: reduceAppearanceHistory,
     normalizeWorkspaceIds: normalizeWorkspaceIds,
     normalizePinnedIds: normalizePinnedIds,
 };

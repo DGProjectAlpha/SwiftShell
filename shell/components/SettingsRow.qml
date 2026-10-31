@@ -5,6 +5,8 @@ Item {
     id: row
 
     property string label: ""
+    property string controlId: ""
+    property bool marked: false
     default property alias extra: slot.data
 
     implicitWidth: 480
@@ -21,6 +23,7 @@ Item {
         color: Theme.panelText
         font.family: Theme.fontFamily
         font.pixelSize: Theme.fontSize
+        font.weight: row.marked ? Font.Medium : Font.Normal
         elide: Text.ElideRight
     }
 

@@ -5,6 +5,8 @@ MouseArea {
     id: control
 
     property string label: ""
+    property string controlId: ""
+    property bool marked: false
     property bool checked: false
     signal toggled(bool next)
 
@@ -52,6 +54,6 @@ MouseArea {
         color: Theme.panelText
         font.family: Theme.fontFamily
         font.pixelSize: Theme.fontSize
-        font.weight: Font.Normal
+        font.weight: control.marked ? Font.Medium : Font.Normal
     }
 }

@@ -15,6 +15,7 @@ const audio = require("../shell/logic/audio.js");
 const bar = require("../shell/logic/bar.js");
 const launcher = require("../shell/logic/launcher.js");
 const capabilities = require("../shell/logic/capabilities.js");
+const settingsNav = require("../shell/logic/settingsNav.js");
 
 let failed = 0;
 
@@ -273,6 +274,55 @@ test("settings window stays one instance and blur is not available", function ()
     assert.equal(session.reason, "The settings window could not be created");
     session = capabilities.reduceSettingsWindow({ open: true, instances: 1, focused: true, reason: "" }, "compositor-close");
     assert.equal(session.instances, 0);
+});
+
+test("settings search, density, and undo stay on real appearance fields", function () {
+    assert.equal(settingsNav.navigationLayout(719), "stacked");
+    assert.equal(settingsNav.navigationLayout(720), "columns");
+    assert.equal(settingsNav.categories().length, 1);
+    assert.equal(settingsNav.categories()[0].id, "appearance");
+    assert.equal(settingsNav.filterControls("").length, settingsNav.CONTROLS.length);
+    assert.equal(settingsNav.filterControls("not-a-setting").length, 0);
+    const opacity = settingsNav.filterControls("opacity").map(function (item) { return item.id; });
+    assert.ok(opacity.indexOf("panelOpacity") !== -1);
+    assert.ok(opacity.indexOf("wallpaperTint") === -1);
+    assert.equal(settingsNav.firstControlId("radius"), "radius");
+    assert.equal(settingsNav.moveSelection("radius", "radius", 1), "radius");
+    assert.equal(settingsNav.controlVisible("theme", "mode"), true);
+    assert.equal(settingsNav.controlVisible("theme", "backdropBlur"), false);
+    const density = settingsNav.densityFromUnit(settingsNav.unitFromDensity(12));
+    assert.equal(density.panelPadding, 12);
+    assert.equal(density.panelSpacing, 8);
+    assert.equal(settingsNav.fontSizeFromUnit(settingsNav.unitFromFontSize(12)), 12);
+    assert.equal(settingsNav.shadowOpacityFromUnit(settingsNav.unitFromShadowOpacity(0.16)), 0.16);
+    assert.equal(settingsNav.shadowSoftnessFromUnit(settingsNav.unitFromShadowSoftness(10)), 10);
+    assert.equal(settingsNav.iconScaleFromUnit(settingsNav.unitFromIconScale(1)), 1);
+    assert.equal(settingsNav.scrollTarget(100, 80, 40, 20), 40);
+    assert.equal(settingsNav.scrollTarget(0, 80, 90, 20), 30);
+    assert.equal(settingsNav.scrollTarget(10, 80, 20, 20), 10);
+    let history = settings.initialHistory(settings.DEFAULTS.appearance);
+    history = settings.reduceAppearanceHistory(history, {
+        type: "edit",
+        present: Object.assign({}, history.present, { mode: "light", fontSize: 16 }),
+    });
+    assert.equal(history.present.mode, "light");
+    assert.equal(history.present.fontSize, 16);
+    assert.equal(history.past.length, 1);
+    assert.equal(history.past[0].mode, "dark");
+    history = settings.reduceAppearanceHistory(history, { type: "undo" });
+    assert.equal(history.present.mode, "dark");
+    assert.equal(history.present.fontSize, 12);
+    assert.equal(history.past.length, 0);
+    history = settings.reduceAppearanceHistory(history, { type: "undo" });
+    assert.equal(history.present.mode, "dark");
+    history = settings.reduceAppearanceHistory(history, {
+        type: "edit",
+        present: Object.assign({}, history.present, { radius: 12 }),
+    });
+    history = settings.reduceAppearanceHistory(history, { type: "reset" });
+    assert.equal(history.present.radius, settings.DEFAULTS.appearance.radius);
+    assert.equal(history.past.length, 2);
+    assert.equal(history.past[1].radius, 12);
 });
 
 test("blank monitor text means automatic placement", function () {
