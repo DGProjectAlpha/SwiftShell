@@ -55,6 +55,8 @@ TestCase {
         "shell/settings/AppearancePage.qml",
         "shell/settings/BarPage.qml",
         "shell/settings/ImageDialog.qml",
+        "shell/settings/FolderPicker.qml",
+        "shell/settings/FolderScanner.qml",
         "shell/settings/DisplaysPage.qml",
         "shell/settings/ShortcutsPage.qml",
         "shell/settings/SettingsWindow.qml",
@@ -116,8 +118,11 @@ TestCase {
     }
 
     function expectedUnavailable(path, message) {
-        if (path === "shell/settings/ImageDialog.qml")
+        if (path === "shell/settings/ImageDialog.qml"
+                || path === "shell/settings/FolderPicker.qml")
             return message.indexOf('module "QtQuick.Dialogs" is not installed') !== -1
+        if (path === "shell/settings/FolderScanner.qml")
+            return message.indexOf('module "Qt.labs.folderlistmodel" is not installed') !== -1
         if (path === "shell/notifications/NotificationHost.qml")
             return message.indexOf('module "Quickshell.Services.Notifications" is not installed') !== -1
                 || expectedWlrFailure(message)

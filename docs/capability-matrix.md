@@ -18,8 +18,8 @@ Later source repairs were checked with `scripts/check.sh` through 11:05 PM Ameri
 | Spotlight search | NOT RUN | NOT RUN | Source ranks a catalog and shows 24 rows. Dolphin and Helium were missed on an earlier launch |
 | Settings floating window | NOT RUN | NOT RUN | Source uses one `FloatingWindow`. Move, resize, and focus were not shown |
 | Settings search and migration | PASS | NOT RUN | Temporary files kept the original backup bytes, unknown keys, and a malformed file |
-| Wallpaper choose image | NOT RUN | NOT RUN | Source crops, falls back to the crimson image, and caps the long edge at 3840 |
-| Wallpaper slideshow | PASS | NOT RUN | A second completion does not skip a slide. A failed slide returns to waiting. No folder dialog in this workspace |
+| Wallpaper choose image/folder | PASS | NOT RUN | Required Qt modules compile in provisioned CI; this workspace lacks them. Folder scans sort and cap supported files at 64, with path-entry fallback |
+| Wallpaper slideshow | PASS | NOT RUN | A second completion does not skip a slide. A failed slide returns to waiting. Native folder selection remains NOT RUN locally |
 | Adaptive color | NOT RUN | NOT RUN | Source samples the showing png path and ignores a stale response. Not shown on a display |
 | Real Gaussian blur | NOT RUN | NOT RUN | Expected result on a session is a scrim, not blur |
 | Displays drag and drop | NOT RUN | NOT RUN | Preview only. Apply stays disabled |

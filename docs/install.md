@@ -10,7 +10,7 @@ Automatic package installation is implemented for Arch-based systems that have `
 
 The Quickshell APIs used by the bar were written against the 0.2 and 0.3 documentation. The checker treats Quickshell older than 0.2.0 as too old. Hyprland older than 0.40.0 produces a warning. Those floors are assumptions until a real session confirms them.
 
-Qt 6 Quick and Quick Layouts are required. `QtQuick.Dialogs` is the supported native image-picker dependency; on Arch/CachyOS it is shipped by `qt6-declarative`. If that QML module is absent, SwiftShell keeps the explicitly tested path-entry fallback and `swiftshell doctor` reports the missing module.
+Qt 6 Quick and Quick Layouts are required. `QtQuick.Dialogs` and `Qt.labs.folderlistmodel` provide native wallpaper image/folder selection and slideshow enumeration; on Arch/CachyOS both are shipped by `qt6-declarative`. If either QML module is absent, SwiftShell keeps the explicitly tested individual path-entry fallback and `swiftshell doctor` reports the missing module.
 
 ## Install from GitHub
 

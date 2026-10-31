@@ -25,6 +25,8 @@ scripts/check.sh
 
 The mock QML gate now rejects every component error except a short path-specific list for unavailable C++ attached Quickshell types and optional modules. When `QtQuick.Dialogs` is installed, `tst_dialogs.qml` requires `ImageDialog.qml` to compile. When it is absent, the check prints an explicit diagnostic and exercises the path-entry fallback; it does not silently claim native image selection was compiled. GitHub CI installs the Qt Quick, Layouts, WorkerScript, Core, and Dialogs runtime modules explicitly.
 
+The folder-picker gate additionally requires `Qt.labs.folderlistmodel`; CI installs its runtime module and compiles both picker components. This workspace lacks Dialogs and folderlistmodel, so opening a native dialog, enumerating permissions, and reacting to removed files are **NOT RUN** here.
+
 ## Pull and test on CachyOS
 
 These commands use the checkout as the Quickshell config. They do not install over Noctalia, and they do not edit Hyprland.
