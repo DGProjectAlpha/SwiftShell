@@ -27,15 +27,12 @@ package() {
     install -m 0755 scripts/lib/deactivate.sh "$pkgdir/usr/share/swiftshell/lib/deactivate.sh"
     install -m 0755 scripts/lib/uninstall.sh "$pkgdir/usr/share/swiftshell/lib/uninstall.sh"
     install -m 0755 scripts/swiftshell "$pkgdir/usr/share/swiftshell/lib/swiftshell"
-    install -d "$pkgdir/usr/bin"
-    cat >"$pkgdir/usr/bin/swiftshell" <<'EOF'
-#!/bin/sh
-# swiftshell-managed-launcher
-set -eu
-if [ -x "${XDG_DATA_HOME:-$HOME/.local/share}/swiftshell/lib/swiftshell" ]; then
-    exec "${XDG_DATA_HOME:-$HOME/.local/share}/swiftshell/lib/swiftshell" "$@"
-fi
-exec /usr/share/swiftshell/lib/swiftshell "$@"
+    cat >"$pkgdir/usr/share/swiftshell/manifest" <<EOF
+product=swiftshell
+format=1
+git_commit=tag-v$pkgver
+install_type=package
 EOF
-    chmod 0755 "$pkgdir/usr/bin/swiftshell"
+    install -d "$pkgdir/usr/bin"
+    install -m 0755 packaging/swiftshell-system "$pkgdir/usr/bin/swiftshell"
 }

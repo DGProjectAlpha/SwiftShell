@@ -39,6 +39,17 @@ swiftshell_doctor() {
     swiftshell_report_dependencies || true
     swiftshell_say "blur: unavailable. Quickshell 0.2 has no BackgroundEffect. Surfaces use a translucent scrim."
     swiftshell_say "outputs: not measured. This command does not read a layout."
+    data=$(swiftshell_data_dir)
+    if swiftshell_is_our_install "$data" && [ -f "$(swiftshell_app_dir)/shell.qml" ]; then
+        swiftshell_say "runtime files: present"
+    else
+        swiftshell_say "runtime files: missing or foreign"
+    fi
+    if [ "${SWIFTSHELL_PACKAGE_INSTALL:-0}" = 1 ]; then
+        swiftshell_say "install type: system package"
+    else
+        swiftshell_say "install type: user"
+    fi
     config=$(swiftshell_config_dir)
     settings=$config/settings.json
     backup=$settings.bak-swiftshell

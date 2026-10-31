@@ -537,6 +537,39 @@ test_request_launcher() {
     ok "launcher request does not touch Hyprland"
 }
 
+test_system_package_runtime() {
+    new_home
+    system="$HOME/system"
+    root="$system/share/swiftshell"
+    command="$system/bin/swiftshell"
+    mkdir -p "$root/app" "$root/lib" "$system/bin"
+    cp -a "$ROOT/shell"/. "$root/app"/
+    cp "$ROOT/scripts/lib/"*.sh "$root/lib/"
+    cp "$ROOT/scripts/swiftshell" "$root/lib/swiftshell"
+    cp "$ROOT/packaging/swiftshell-system" "$command"
+    chmod +x "$root/lib/swiftshell" "$root/lib/"*.sh "$command"
+    printf '%s\n' 'product=swiftshell' 'format=1' 'install_type=package' >"$root/manifest"
+    SWIFTSHELL_SYSTEM_ROOT="$root" SWIFTSHELL_SYSTEM_COMMAND="$command" "$command" status >"$HOME/system-status.out"
+    grep -q 'install: present' "$HOME/system-status.out" || fail "system package was not detected"
+    SWIFTSHELL_SYSTEM_ROOT="$root" SWIFTSHELL_SYSTEM_COMMAND="$command" "$command" doctor >"$HOME/system-doctor.out"
+    grep -q 'install type: system package' "$HOME/system-doctor.out" || fail "doctor missed the package install type"
+    grep -q 'runtime files: present' "$HOME/system-doctor.out" || fail "doctor missed package runtime files"
+    SWIFTSHELL_SYSTEM_ROOT="$root" SWIFTSHELL_SYSTEM_COMMAND="$command" "$command" start >/dev/null
+    grep -q -- "--path $root/app" "$SWIFTSHELL_QS_LOG" || fail "system package start used the user data root"
+    SWIFTSHELL_SYSTEM_ROOT="$root" SWIFTSHELL_SYSTEM_COMMAND="$command" "$command" activate >/dev/null
+    grep -q "Exec=$command start" "$XDG_DATA_HOME/applications/swiftshell.desktop" || fail "system desktop entry used a missing user command"
+    SWIFTSHELL_SYSTEM_ROOT="$root" SWIFTSHELL_SYSTEM_COMMAND="$command" "$command" uninstall >"$HOME/system-uninstall.out"
+    [ -f "$root/app/shell.qml" ] || fail "system uninstall removed package-owned files"
+    [ ! -e "$XDG_CONFIG_HOME/quickshell/swiftshell" ] || fail "system uninstall left the activation link"
+    [ ! -e "$XDG_DATA_HOME/applications/swiftshell.desktop" ] || fail "system uninstall left the desktop entry"
+    grep -q 'owned by pacman' "$HOME/system-uninstall.out" || fail "system uninstall did not defer to the package manager"
+    printf '%s\n' '{"version":3}' >"$XDG_CONFIG_HOME/swiftshell/settings.json"
+    SWIFTSHELL_SYSTEM_ROOT="$root" SWIFTSHELL_SYSTEM_COMMAND="$command" "$command" uninstall --purge-settings >/dev/null
+    [ ! -e "$XDG_CONFIG_HOME/swiftshell" ] || fail "system package purge left user settings"
+    [ -f "$root/app/shell.qml" ] || fail "system package purge removed package files"
+    ok "system package uses its shared runtime root"
+}
+
 test_versions
 test_fresh_install
 test_activate_cycle
@@ -552,5 +585,6 @@ test_optional_deps_already_present
 test_optional_deps_sudo_failure
 test_request_launcher
 test_doctor_and_rollback
+test_system_package_runtime
 
 printf 'install tests passed (%s)\n' "$PASS"

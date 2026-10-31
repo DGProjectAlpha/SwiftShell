@@ -44,6 +44,10 @@ swiftshell_state_home() {
 }
 
 swiftshell_data_dir() {
+    if [ -n "${SWIFTSHELL_INSTALL_ROOT:-}" ]; then
+        printf '%s\n' "$SWIFTSHELL_INSTALL_ROOT"
+        return
+    fi
     printf '%s\n' "$(swiftshell_data_home)/swiftshell"
 }
 
@@ -75,6 +79,10 @@ swiftshell_request_launcher() {
 }
 
 swiftshell_bin_path() {
+    if [ -n "${SWIFTSHELL_COMMAND_PATH:-}" ]; then
+        printf '%s\n' "$SWIFTSHELL_COMMAND_PATH"
+        return
+    fi
     printf '%s\n' "$HOME/.local/bin/swiftshell"
 }
 

@@ -23,6 +23,8 @@ scripts/check.sh
 
 `scripts/check.sh` expects `node`, `python3`, and `qmltestrunner` (or `qml6testrunner`) on `PATH`. The runner is also found at `/usr/lib/qt6/bin/qmltestrunner`. Debian and Ubuntu package that binary in `qt6-declarative-dev-tools`. Arch and CachyOS package it in `qt6-declarative`. The script exits if the runner is missing. That run instantiates Qt objects. It does not start Quickshell.
 
+The installer suite also constructs a temporary system-package layout. It verifies that status, start, and activation use that shared app root, the desktop entry uses the system command, uninstall removes only per-user activation state, and settings purge cannot remove package-owned files. It does not run `makepkg`, pacman, or an installed Arch package.
+
 ## Pull and test on CachyOS
 
 These commands use the checkout as the Quickshell config. They do not install over Noctalia, and they do not edit Hyprland.

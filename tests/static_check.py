@@ -66,6 +66,7 @@ REQUIRED = [
     ROOT / "tests" / "stubs" / "Quickshell" / "Services" / "Pipewire" / "qmldir",
     ROOT / "tests" / "stubs" / "Quickshell" / "Wayland" / "qmldir",
     ROOT / "packaging" / "README.md",
+    ROOT / "packaging" / "swiftshell-system",
     ROOT / "packaging" / "aur" / "PKGBUILD",
 ]
 

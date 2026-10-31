@@ -1,0 +1,16 @@
+#!/bin/sh
+# swiftshell-managed-system-launcher
+set -eu
+
+USER_ROOT=${XDG_DATA_HOME:-"$HOME/.local/share"}/swiftshell
+if [ -x "$USER_ROOT/lib/swiftshell" ]; then
+    exec "$USER_ROOT/lib/swiftshell" "$@"
+fi
+
+ROOT=${SWIFTSHELL_SYSTEM_ROOT:-/usr/share/swiftshell}
+SWIFTSHELL_INSTALL_ROOT=$ROOT
+SWIFTSHELL_COMMAND_PATH=${SWIFTSHELL_SYSTEM_COMMAND:-/usr/bin/swiftshell}
+SWIFTSHELL_PACKAGE_INSTALL=1
+export SWIFTSHELL_INSTALL_ROOT SWIFTSHELL_COMMAND_PATH SWIFTSHELL_PACKAGE_INSTALL
+
+exec "$ROOT/lib/swiftshell" "$@"

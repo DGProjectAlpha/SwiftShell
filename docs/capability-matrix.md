@@ -48,5 +48,5 @@ Later source repairs were checked with `scripts/check.sh` through 11:05 PM Ameri
 | Settings backup | Original file text. An old `document` wrapper is unwrapped on rollback |
 | Bar screens | `focused` by default, or `primary`, or `all`. A named monitor wins |
 | High contrast | Saved text setting. Manual hex and automatic png text still win |
-| Package | Draft only. License is unchosen. `doctor.sh` and the real PNG are in the script |
+| Package | Draft only. Shared-root start/activate/uninstall behavior passes a hermetic package-layout test. License is unchosen and PKGBUILD is not built on Arch |
 | Product stability | Not claimed |
