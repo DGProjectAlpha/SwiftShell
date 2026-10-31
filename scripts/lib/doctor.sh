@@ -32,13 +32,44 @@ print(own if own in ("off", "on") else "unreadable")
 PY
 }
 
+swiftshell_qml_module_status() {
+    module=$1
+    relative=$(printf '%s' "$module" | tr . /)
+    roots=${QML_IMPORT_PATH:-}
+    roots=$roots:/usr/lib/qt6/qml:/usr/lib/x86_64-linux-gnu/qt6/qml
+    old_ifs=$IFS
+    IFS=:
+    for root in $roots; do
+        if [ -n "$root" ] && [ -f "$root/$relative/qmldir" ]; then
+            IFS=$old_ifs
+            printf '%s\n' "present"
+            return 0
+        fi
+    done
+    IFS=$old_ifs
+    printf '%s\n' "missing"
+}
+
 swiftshell_doctor() {
     swiftshell_need_home
     swiftshell_say "doctor"
     swiftshell_say "Hyprland and Noctalia files were not read or written."
     swiftshell_report_dependencies || true
+    swiftshell_say "QtQuick.Dialogs: $(swiftshell_qml_module_status QtQuick.Dialogs)"
+    swiftshell_say "Qt.labs.folderlistmodel: $(swiftshell_qml_module_status Qt.labs.folderlistmodel)"
     swiftshell_say "blur: unavailable. Quickshell 0.2 has no BackgroundEffect. Surfaces use a translucent scrim."
     swiftshell_say "outputs: not measured. This command does not read a layout."
+    data=$(swiftshell_data_dir)
+    if swiftshell_is_our_install "$data" && [ -f "$(swiftshell_app_dir)/shell.qml" ]; then
+        swiftshell_say "runtime files: present"
+    else
+        swiftshell_say "runtime files: missing or foreign"
+    fi
+    if [ "${SWIFTSHELL_PACKAGE_INSTALL:-0}" = 1 ]; then
+        swiftshell_say "install type: system package"
+    else
+        swiftshell_say "install type: user"
+    fi
     config=$(swiftshell_config_dir)
     settings=$config/settings.json
     backup=$settings.bak-swiftshell

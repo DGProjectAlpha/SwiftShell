@@ -116,19 +116,40 @@ function fixedDist() {
     return FIXED_DIST;
 }
 
-function copyBytes(out, distance, length) {
+function Output(maxOutput) {
+    this.limit = Number(maxOutput) > 0 ? Math.floor(Number(maxOutput)) : 0;
+    this.bytes = new Uint8Array(this.limit > 0 ? this.limit : 1024);
+    this.length = 0;
+}
+
+Output.prototype.append = function (value) {
+    if (this.limit > 0 && this.length >= this.limit)
+        throw new Error("output limit");
+    if (this.length >= this.bytes.length) {
+        var grown = new Uint8Array(this.bytes.length * 2);
+        grown.set(this.bytes);
+        this.bytes = grown;
+    }
+    this.bytes[this.length++] = value;
+};
+
+Output.prototype.result = function () {
+    return this.bytes.slice(0, this.length);
+};
+
+function copyBytes(out, distance, length, maxOutput) {
     if (distance <= 0 || distance > out.length)
         throw new Error("distance");
     var start = out.length - distance;
     for (var index = 0; index < length; index++)
-        out.push(out[start + index]);
+        out.append(out.bytes[start + index]);
 }
 
-function inflateBlock(reader, lit, dist, out) {
+function inflateBlock(reader, lit, dist, out, maxOutput) {
     for (;;) {
         var symbol = readSymbol(reader, lit);
         if (symbol < 256) {
-            out.push(symbol);
+            out.append(symbol);
             continue;
         }
         if (symbol === 256)
@@ -143,7 +164,7 @@ function inflateBlock(reader, lit, dist, out) {
             throw new Error("distance symbol");
         var distExtra = DIST_EXTRA[distSymbol];
         var distance = DIST_BASE[distSymbol] + (distExtra ? reader.bits(distExtra) : 0);
-        copyBytes(out, distance, length);
+        copyBytes(out, distance, length, maxOutput);
     }
 }
 
@@ -190,9 +211,9 @@ function dynamicTrees(reader) {
     };
 }
 
-function inflateRaw(data, offset) {
+function inflateRaw(data, offset, maxOutput) {
     var reader = new Reader(data, offset || 0);
-    var out = [];
+    var out = new Output(maxOutput);
     var finalBlock = 0;
     while (!finalBlock) {
         finalBlock = reader.bits(1);
@@ -209,17 +230,17 @@ function inflateRaw(data, offset) {
             if (reader.p + length > reader.data.length)
                 throw new Error("stored data");
             for (var index = 0; index < length; index++)
-                out.push(reader.data[reader.p++]);
+                out.append(reader.data[reader.p++]);
         } else if (type === 1) {
-            inflateBlock(reader, fixedLit(), fixedDist(), out);
+            inflateBlock(reader, fixedLit(), fixedDist(), out, maxOutput);
         } else if (type === 2) {
             var trees = dynamicTrees(reader);
-            inflateBlock(reader, trees.lit, trees.dist, out);
+            inflateBlock(reader, trees.lit, trees.dist, out, maxOutput);
         } else {
             throw new Error("block type");
         }
     }
-    return { bytes: Uint8Array.from(out), offset: reader.p };
+    return { bytes: out.result(), offset: reader.p };
 }
 
 function adler32(bytes) {
@@ -232,7 +253,7 @@ function adler32(bytes) {
     return ((b << 16) | a) >>> 0;
 }
 
-function inflateZlib(bytes) {
+function inflateZlib(bytes, maxOutput) {
     var input = toBytes(bytes);
     if (input.length < 6)
         throw new Error("short zlib");
@@ -244,7 +265,7 @@ function inflateZlib(bytes) {
         throw new Error("zlib header");
     if (flg & 32)
         throw new Error("zlib dictionary");
-    var raw = inflateRaw(input, 2);
+    var raw = inflateRaw(input, 2, maxOutput);
     if (raw.offset + 4 > input.length)
         throw new Error("zlib trailer");
     var checksum = ((input[raw.offset] << 24) | (input[raw.offset + 1] << 16) | (input[raw.offset + 2] << 8) | input[raw.offset + 3]) >>> 0;

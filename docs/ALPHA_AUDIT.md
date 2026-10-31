@@ -1,6 +1,6 @@
 # SwiftShell alpha audit
 
-Baseline: `38d05df` (`origin/main` after PR #26). No newer commit was on `origin/main` when this audit was written.
+Original audit baseline: `38d05df` (`origin/main` after PR #26). The release-candidate re-review starts from `416d835` and the repair branches assembled on `cursor/rc-release-915d`.
 
 This register is from reading the source, the Quickshell 0.2 FileView and Notification APIs, and the Qt modules installed in the cloud workspace. A QML file existing is not treated as the feature working. Nothing here was shown on a Hyprland session.
 
@@ -33,24 +33,33 @@ Severity is P0 (data loss, a dead control, or a false ownership claim), P1 (a ma
 | A14 | Hardware | P2 | Blur, scale 1.5, hotplug, exclusive zone, Super+Space, and real notification handoff are marked NOT RUN in `docs/capability-matrix.md`. | No Hyprland session is available in this workspace. Compositor blur would require a verified, optional, reversible rule file. That writer does not exist, and editing the user's Lua is not authorized. | Keep the scrim. Do not write Hyprland config. | The matrix does not change a hardware row to PASS. |
 | A15 | Confirmed | P2 | `tst_shell_load.qml` can pass while `Theme.text` is unbound, because those modules are not created. Install tests never round-trip a settings backup through the JSON the shell writes. | The gates do not encode A1–A3. | Extend the gates in the same changes as the fixes. Add a workflow that runs the same `scripts/check.sh` commands when the runner image has the tools. Do not report a CI result that was not produced. | The local `scripts/check.sh` output is quoted with a time. CI is described as added or not run, separately. |
 
+## Release-candidate addendum
+
+The independent follow-up found five root causes beyond this original table: invalid recoverable v3 settings were validated but not applied; invalid v1/v2 files could not migrate; the QML gate accepted unrelated compiler failures; routine slideshow settings reset playback; and contrast sampled the uncropped source globally. The release-candidate branches repair each in source and add regression coverage. System-package root resolution was also broken and is repaired.
+
+These are repository-side results. No Quickshell process, Hyprland compositor, Noctalia coexistence session, notification D-Bus owner, PipeWire device, Bluetooth adapter, backlight, DDC monitor, or NVIDIA render workload was exercised.
+
 ## What this audit will not call working
 
-Settings rollback, bar battery/media/tray colors, notification dismissal, wallpaper sampling, display apply, shortcut installation, network, brightness, blur, and any Hyprland pixel check.
+Display apply, shortcut installation, NetworkManager, hardware brightness, Bluetooth discovery/pairing confirmation, real blur, persistent notification history, notification sounds, and any Hyprland or hardware pixel check remain unavailable or unverified. Settings rollback, native notification lifecycle, and wallpaper sampling now pass repository-side tests but are not promoted to hardware PASS.
 
 ## Disposition
 
 | ID | State |
 |---|---|
-| A1 | Repaired in the settings-backup change. The backup text is the original file. Rollback unwraps an old `document` string. A malformed file is not rewritten. Not run inside Quickshell on a Hyprland session. |
+| A1 | Repaired. Recoverable v1/v2/v3 documents are normalized transactionally, original bytes are protected before repair, compatible unknown keys survive, queued writes keep the latest state, and malformed/future files remain protected. Temporary-filesystem tests pass. Not run inside Quickshell. |
 | A2 | Repaired. Bar modules use `textPrimary`. The static check rejects an unknown `Theme` name. Offscreen tests create the modules empty and populated. Not shown on a session. |
 | A6 | Partially repaired. `panelText` and `panelMuted` now follow the surface. Hover comes from the palette. Hardware contrast is not measured. |
-| A3 | Repaired in source. Dismiss and expire call the native object. The saved preference is separate from `serverState`. Not run against another notification owner. |
-| A4 | Partially repaired. Battery, media, and tray modules are instantiated empty and populated. The notification host is still not instantiated, because the Wayland attached type is not stubbed. |
-| A5 | Repaired in source for per-output paths, duplicate slideshow completion, failed-slide recovery, and the sample path. Folder picking and jpeg sampling stay unavailable here. Not shown on a session. |
+| A3 | Repaired in source. Policy routing happens before native tracking; replacements, dismiss, expire, close, actions, and release retain the native object only for live banners. Construction is `waiting`, and ownership becomes `running` only after traffic is observed. Actual D-Bus conflict/handoff is NOT RUN. |
+| A4 | Repaired. Supported documents must compile or match a narrow source-specific unavailable-API diagnostic. CI provisions required Qt modules. Real Quickshell attached APIs remain a separate integration gate. |
+| A5 | Repaired in source. Playback reconfiguration preserves valid current state; output generations gate preload/fade; two slots avoid clearing the displayed texture; failures recover; crop-aware contrast is per output; inflate allocations are bounded. Not shown on a compositor. |
 | A7 | Repaired in source. `bar.placement` is `focused`, `primary`, or `all`. Default remains `focused`. Not shown on a session. |
 | A8 | Repaired in source. Stream nodes are included in the tracker list. Tray menus use the clicked item's position. Not shown on a session. |
-| A12 | Repaired in the draft package file list. `doctor.sh` and the real PNG are installed. The license is still unchosen and the package was not built. |
-| A9–A11, A13–A15 | Still open. Display apply, shortcut install, network, brightness, folder scan, blur, and hardware checks stay gated. |
+| A11 | Partially repaired. Native image/folder pickers and sorted, bounded folder monitoring are implemented behind optional Qt module boundaries and compiled in provisioned CI. Dialog interaction and folder permissions are NOT RUN locally; JPEG/WebP contrast sampling remains unavailable. |
+| A12 | Repaired in source. Package commands resolve the shared runtime, install a manifest, preserve user-install precedence, and leave package files to pacman. A hermetic package-layout test passes. License, checksum, tag, and real `makepkg` validation remain open. |
+| A13 | Partially repaired. Banners follow the focused output with a first-screen fallback. History remains memory-only and sounds remain unavailable. |
+| A15 | Repaired for the confirmed blind spots. Compiler failures now fail the gate, filesystem settings behavior is tested, and required Qt runtime modules are explicit. A green mock run is still not a desktop startup. |
+| A9, A10, A14 | Open and intentionally gated. Display/shortcut writes need a reversible owned Hyprland integration; NetworkManager and brightness need packaged typed backends; blur and all hardware behavior need live validation. |
 
 ## Repair order
 

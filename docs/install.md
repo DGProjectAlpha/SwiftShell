@@ -10,6 +10,8 @@ Automatic package installation is implemented for Arch-based systems that have `
 
 The Quickshell APIs used by the bar were written against the 0.2 and 0.3 documentation. The checker treats Quickshell older than 0.2.0 as too old. Hyprland older than 0.40.0 produces a warning. Those floors are assumptions until a real session confirms them.
 
+Qt 6 Quick and Quick Layouts are required. `QtQuick.Dialogs` and `Qt.labs.folderlistmodel` provide native wallpaper image/folder selection and slideshow enumeration; on Arch/CachyOS both are shipped by `qt6-declarative`. If either QML module is absent, SwiftShell keeps the explicitly tested individual path-entry fallback and `swiftshell doctor` reports the missing module.
+
 ## Install from GitHub
 
 ```sh
@@ -72,7 +74,7 @@ This also removes `~/.config/swiftshell`. It does not remove other directories u
 
 Use this when you want to place the files yourself.
 
-1. Install `quickshell` and `hyprland` with the system package manager.
+1. Install `quickshell`, `hyprland`, `qt6-base`, and `qt6-declarative` with the system package manager.
 2. Copy `shell/` to `~/.local/share/swiftshell/app/`.
 3. Copy `shell/config/defaults.json` to `~/.config/swiftshell/settings.json` only if that file does not exist.
 4. Launch it without registering another config name:

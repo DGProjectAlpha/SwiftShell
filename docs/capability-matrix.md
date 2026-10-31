@@ -18,16 +18,16 @@ Later source repairs were checked with `scripts/check.sh` through 11:05 PM Ameri
 | Spotlight search | NOT RUN | NOT RUN | Source ranks a catalog and shows 24 rows. Dolphin and Helium were missed on an earlier launch |
 | Settings floating window | NOT RUN | NOT RUN | Source uses one `FloatingWindow`. Move, resize, and focus were not shown |
 | Settings search and migration | PASS | NOT RUN | Temporary files kept the original backup bytes, unknown keys, and a malformed file |
-| Wallpaper choose image | NOT RUN | NOT RUN | Source crops, falls back to the crimson image, and caps the long edge at 3840 |
-| Wallpaper slideshow | PASS | NOT RUN | A second completion does not skip a slide. A failed slide returns to waiting. No folder dialog in this workspace |
-| Adaptive color | NOT RUN | NOT RUN | Source samples the showing png path and ignores a stale response. Not shown on a display |
+| Wallpaper choose image/folder | PASS | NOT RUN | Required Qt modules compile in provisioned CI; this workspace lacks them. Folder scans sort and cap supported files at 64, with path-entry fallback |
+| Wallpaper slideshow | PASS | NOT RUN | Timing/list changes preserve the current item; output generations gate preload and finish; failed current images are skipped. Crossfade and hotplug remain unobserved on a compositor |
+| Adaptive color | PASS | NOT RUN | Cover/Contain crop sampling, per-output state, stale-response rejection, and PNG allocation limits are source-tested. Not shown on a display |
 | Real Gaussian blur | NOT RUN | NOT RUN | Expected result on a session is a scrim, not blur |
 | Displays drag and drop | NOT RUN | NOT RUN | Preview only. Apply stays disabled |
 | Shortcut recording | NOT RUN | NOT RUN | Source stores chords and does not install them |
 | Audio | NOT RUN | NOT RUN | Stream nodes are added to the tracker. No device volume was changed |
 | Network and Bluetooth | NOT RUN | NOT RUN | Network stays unavailable. Bluetooth does not start a scan |
 | Tray, MPRIS, brightness, and battery | NOT RUN | NOT RUN | Brightness stays unavailable. A tray menu uses the clicked position in source only |
-| Notifications | PASS | NOT RUN | Dismiss and expire call a stand-in object. Ownership stays off until a second confirmation |
+| Notifications | PASS | NOT RUN | Policy routing precedes native tracking; replacements, close, dismiss, expiration, and bounded history are covered in source/logic tests. D-Bus ownership and focused-output placement remain unverified |
 | Locked, fullscreen, or high GPU load | NOT RUN | NOT RUN | No CPU or GPU number is claimed |
 | Clean install, reinstall, update, and uninstall | PASS | NOT RUN | Temporary home passed, including doctor and settings rollback. The draft package was not built |
 
@@ -48,5 +48,5 @@ Later source repairs were checked with `scripts/check.sh` through 11:05 PM Ameri
 | Settings backup | Original file text. An old `document` wrapper is unwrapped on rollback |
 | Bar screens | `focused` by default, or `primary`, or `all`. A named monitor wins |
 | High contrast | Saved text setting. Manual hex and automatic png text still win |
-| Package | Draft only. License is unchosen. `doctor.sh` and the real PNG are in the script |
+| Package | Draft only. Shared-root start/activate/uninstall behavior passes a hermetic package-layout test. License is unchosen and PKGBUILD is not built on Arch |
 | Product stability | Not claimed |

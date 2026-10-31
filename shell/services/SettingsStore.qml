@@ -69,8 +69,26 @@ Singleton {
     property bool suppressReload: false
     property bool acceptWrites: false
     property bool protectFile: false
+    property bool writePending: false
+    property bool suppressAdapterWrite: false
+    property string persistenceState: "loading"
+    property string persistenceMessage: ""
     property var pendingPlan: null
     property string pendingRaw: ""
+
+    function writeLatest() {
+        if (!root.acceptWrites || root.protectFile || root.pendingPlan)
+            return
+        if (root.writing) {
+            root.writePending = true
+            return
+        }
+        root.writePending = false
+        root.writing = true
+        root.suppressReload = true
+        root.persistenceState = "saving"
+        settingsFile.writeAdapter()
+    }
 
     function applyDocument(settings) {
         var document = settings || {}
@@ -142,12 +160,18 @@ Singleton {
         root.pendingPlan = null
         root.pendingRaw = ""
         if (!Settings.commitMigration(plan, saved)) {
+            root.persistenceState = "error"
+            root.persistenceMessage = "Settings were left unchanged because the original file could not be backed up."
             console.warn("SwiftShell: settings were not migrated because the backup was not written")
             return
         }
         root.writing = true
         root.suppressReload = true
+        root.persistenceState = "saving"
+        root.persistenceMessage = ""
+        root.suppressAdapterWrite = true
         root.applyDocument(plan.decision.settings)
+        root.suppressAdapterWrite = false
         settingsFile.writeAdapter()
     }
 
@@ -543,22 +567,31 @@ Singleton {
                 reload();
         }
         onAdapterUpdated: {
-            if (!root.acceptWrites || root.protectFile || root.writing || root.pendingPlan)
+            if (!root.acceptWrites || root.protectFile || root.pendingPlan || root.suppressAdapterWrite)
                 return;
-            root.writing = true;
-            root.suppressReload = true;
-            writeAdapter();
+            root.writeLatest();
         }
         onSaved: {
             root.writing = false;
-            if (!root.protectFile)
+            root.persistenceState = "ready";
+            root.persistenceMessage = "";
+            if (!root.protectFile) {
                 root.acceptWrites = true;
+                if (root.writePending)
+                    Qt.callLater(root.writeLatest);
+            }
         }
         onSaveFailed: function (error) {
             root.writing = false;
+            root.persistenceState = "error";
+            root.persistenceMessage = "Settings could not be saved. Your latest changes are still active for this session.";
             console.warn("SwiftShell: settings were not saved", error);
         }
         onLoaded: {
+            root.acceptWrites = false;
+            root.protectFile = false;
+            root.persistenceState = "loading";
+            root.persistenceMessage = "";
             var raw = "";
             try {
                 raw = settingsFile.text();
@@ -568,21 +601,36 @@ Singleton {
             var decision = Settings.migrationFromText(raw);
             if (decision.reason === "malformed") {
                 root.protectFile = true;
+                root.persistenceState = "protected";
+                root.persistenceMessage = "Settings contain malformed JSON and were left unchanged. Restore the backup or replace the file before saving.";
                 console.warn("SwiftShell: settings file is not valid JSON and was left unchanged");
                 return;
             }
-            if (decision.action === "migrate") {
+            if (decision.reason === "unsupported-version") {
+                root.protectFile = true;
+                root.persistenceState = "protected";
+                root.persistenceMessage = "Settings use a newer unsupported schema and were left unchanged.";
+                console.warn("SwiftShell: settings use an unsupported schema version and were left unchanged");
+                return;
+            }
+            if (decision.action === "migrate" || decision.action === "repair") {
                 root.beginMigration(raw);
                 return;
             }
+            if (decision.settings)
+                root.applyDocument(decision.settings);
             if (decision.errors && decision.errors.length > 0)
                 console.warn("SwiftShell: settings need attention:", decision.errors.join(", "));
             else
                 console.info("SwiftShell: settings loaded");
+            root.persistenceState = "ready";
             root.acceptWrites = true;
         }
         onLoadFailed: function (error) {
             console.warn("SwiftShell: settings file is missing or unreadable; using built-in defaults", error);
+            root.persistenceState = "ready";
+            root.persistenceMessage = "Using built-in defaults. The settings file will be created when a value changes.";
+            root.acceptWrites = true;
         }
 
         JsonAdapter {

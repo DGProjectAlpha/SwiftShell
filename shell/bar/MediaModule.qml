@@ -9,6 +9,8 @@ Item {
     readonly property var player: Media.pickPlayer(Mpris.players)
     readonly property var controls: Media.mediaControls(player)
     readonly property string line: Media.mediaLine(player)
+    property color textPrimary: Theme.textPrimary
+    property color textMuted: Theme.textMuted
 
     implicitWidth: player === null ? 0 : Math.min(160, label.implicitWidth + (controls.toggle ? 36 : 8))
     implicitHeight: Theme.barHeight
@@ -20,7 +22,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         width: Math.min(120, implicitWidth)
         text: root.line
-        color: Theme.textPrimary
+        color: root.textPrimary
         font.family: Theme.fontFamily
         font.pixelSize: Theme.fontSize
         elide: Text.ElideRight
@@ -48,7 +50,7 @@ Item {
         Text {
             anchors.centerIn: parent
             text: root.controls.playing ? "Pause" : "Play"
-            color: Theme.textMuted
+            color: root.textMuted
             font.family: Theme.fontFamily
             font.pixelSize: Theme.fontSizeSmall
         }

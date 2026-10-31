@@ -55,6 +55,8 @@ TestCase {
         "shell/settings/AppearancePage.qml",
         "shell/settings/BarPage.qml",
         "shell/settings/ImageDialog.qml",
+        "shell/settings/FolderPicker.qml",
+        "shell/settings/FolderScanner.qml",
         "shell/settings/DisplaysPage.qml",
         "shell/settings/ShortcutsPage.qml",
         "shell/settings/SettingsWindow.qml",
@@ -115,6 +117,36 @@ TestCase {
         return component.errorString()
     }
 
+    function expectedUnavailable(path, message) {
+        if (path === "shell/settings/ImageDialog.qml"
+                || path === "shell/settings/FolderPicker.qml")
+            return message.indexOf('module "QtQuick.Dialogs" is not installed') !== -1
+        if (path === "shell/settings/FolderScanner.qml")
+            return message.indexOf('module "Qt.labs.folderlistmodel" is not installed') !== -1
+        if (path === "shell/notifications/NotificationHost.qml")
+            return message.indexOf('module "Quickshell.Services.Notifications" is not installed') !== -1
+                || expectedWlrFailure(message)
+        if (path === "shell/shell.qml"
+                || path === "shell/bar/BarHost.qml"
+                || path === "shell/bar/BarWindow.qml"
+                || path === "shell/launcher/LauncherWindow.qml"
+                || path === "shell/wallpaper/WallpaperHost.qml"
+                || path === "shell/wallpaper/WallpaperSurface.qml")
+            return expectedWlrFailure(message)
+        return false
+    }
+
+    function expectedWlrFailure(message) {
+        if (message.indexOf("WlrLayershell") !== -1)
+            return true
+        if (message.indexOf("Non-existent attached object") === -1)
+            return false
+        return message.indexOf("BarWindow.qml:32") !== -1
+            || message.indexOf("LauncherWindow.qml:19") !== -1
+            || message.indexOf("NotificationHost.qml:24") !== -1
+            || message.indexOf("WallpaperSurface.qml:25") !== -1
+    }
+
     function test_top_level_files_resolve_project_types() {
         var paths = [
             "shell/shell.qml",
@@ -135,9 +167,23 @@ TestCase {
     function test_documents_do_not_assign_readonly_properties() {
         for (var index = 0; index < shellFiles.length; index++) {
             var path = shellFiles[index]
-            var message = errorText(componentFor(path))
+            var component = componentFor(path)
+            var message = errorText(component)
             verify(message.indexOf("read-only property") === -1, path + "\n" + message)
+            verify(component.status === Component.Ready || expectedUnavailable(path, message),
+                   path + " failed for an unapproved reason:\n" + message)
         }
+    }
+
+    function test_image_dialog_dependency_is_explicit() {
+        var path = "shell/settings/ImageDialog.qml"
+        var component = componentFor(path)
+        var message = errorText(component)
+        if (component.status === Component.Ready) {
+            compare(message, "")
+            return
+        }
+        verify(expectedUnavailable(path, message), path + "\n" + message)
     }
 
     function test_panel_documents_instantiate() {

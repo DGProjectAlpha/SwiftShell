@@ -17,7 +17,7 @@ SwiftShell can be installed from a git checkout today. A distro package and a re
 
 `XDG_DATA_HOME`, `XDG_CONFIG_HOME`, and `XDG_STATE_HOME` replace the `~/.local` and `~/.config` prefixes when they are set.
 
-A user install wins over a future system copy. The draft `/usr/bin/swiftshell` runs the copy under the user data directory when that copy exists.
+A user install wins over a system copy. The draft `/usr/bin/swiftshell` runs the copy under the user data directory when that copy exists. Otherwise it exports the package root and runs `/usr/share/swiftshell/lib/swiftshell`; `start`, `activate`, `status`, and `doctor` therefore resolve the packaged app instead of incorrectly requiring `~/.local/share/swiftshell`.
 
 ## Operations
 
@@ -34,6 +34,8 @@ None of these write Hyprland config, keyboard shortcuts, or service units.
 ## Future AUR package
 
 `packaging/aur/PKGBUILD` is a draft. It installs shared files under `/usr/share/swiftshell` and a wrapper at `/usr/bin/swiftshell`. It does not run `install.sh`, does not touch a home directory, and does not enable a service.
+
+The package manifest marks the shared tree as SwiftShell. `swiftshell uninstall` removes only per-user activation artifacts and tells the user to remove package-owned files with the package manager; `--purge-settings` may additionally remove only the user's SwiftShell settings. A hermetic package-layout test exercises status, start, activation, uninstall handoff, and settings purge. The PKGBUILD itself is still unbuilt on Arch.
 
 Before anyone submits it:
 

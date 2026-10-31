@@ -272,7 +272,23 @@ test("version 1 settings migrate and unknown keys stay in the extension bag", fu
     assert.equal(missing.settings.clock.use24Hour, false);
     assert.equal(settings.migrationDecision({ version: 3 }).action, "keep");
     assert.equal(settings.migrationDecision("broken").action, "keep");
-    assert.equal(settings.migrationDecision({ version: 1, clock: { use24Hour: "yes" } }).action, "keep");
+    const repairedLegacy = settings.migrationDecision({ version: 1, clock: { use24Hour: "yes" } });
+    assert.equal(repairedLegacy.action, "migrate");
+    assert.equal(repairedLegacy.reason, "invalid-version");
+    assert.equal(repairedLegacy.settings.clock.use24Hour, true);
+    const repairedCurrent = settings.migrationDecision({ version: 3, bar: { height: 999 } });
+    assert.equal(repairedCurrent.action, "repair");
+    assert.equal(repairedCurrent.settings.bar.height, 52);
+    assert.equal(settings.migrationPlan('{"version":3,"bar":{"height":999}}', "").writeSettings, true);
+    assert.equal(settings.migrationDecision({ version: 4 }).reason, "unsupported-version");
+    const nestedExtension = settings.migrationDecision({
+        version: 1,
+        appearance: { mode: "dark", futureTintPolicy: { strength: 0.4 } }
+    });
+    assert.deepEqual(
+        JSON.parse(nestedExtension.settings.extensionsJson).__nested.appearance.futureTintPolicy,
+        { strength: 0.4 }
+    );
     assert.equal(settings.backupPath("/tmp/settings.json"), "/tmp/settings.json.bak-swiftshell");
     assert.equal(settings.backupPath(""), "");
     const sized = settings.validateSettings({
@@ -389,13 +405,19 @@ test("wallpaper source, crop, and per-output paths", function () {
     assert.ok(wallpaper.resolveSource("notes.txt").reason.length > 0);
     assert.equal(wallpaper.resolveSource("/tmp/photo.JPEG").source, "file");
     assert.equal(wallpaper.fileUrl("/tmp/my photo.png"), "file:///tmp/my%20photo.png");
+    assert.equal(wallpaper.fileUrl("/tmp/50% #1.png"), "file:///tmp/50%25%20%231.png");
     assert.equal(wallpaper.fileUrl("file:///tmp/a.png"), "file:///tmp/a.png");
+    assert.equal(wallpaper.pathFromFileUrl("file:///tmp/50%25%20%231.png"), "/tmp/50% #1.png");
+    assert.equal(wallpaper.pathFromFileUrl("file://remote/path.png"), "");
+    assert.equal(wallpaper.pathFromFileUrl("not-a-url"), "");
     const specific = wallpaper.sourceForOutput("HDMI-A-1", "/tmp/a.png", JSON.stringify({ "HDMI-A-1": "/tmp/b.jpg" }));
     assert.equal(specific.override, true);
     assert.equal(wallpaper.sourceForOutput("DP-1", "/tmp/a.png", "{}").override, false);
     assert.equal(specific.path, "/tmp/b.jpg");
     assert.equal(wallpaper.sourceForOutput("DP-1", "/tmp/a.png", "{}").path, "/tmp/a.png");
     assert.equal(wallpaper.sourceForOutput("DP-1", "/tmp/a.png", "nope").source, "file");
+    assert.equal(wallpaper.sourceForOutput("DP-1", "/tmp/a.png",
+        JSON.stringify({ "DP-1": "missing.txt" })).override, true);
     const cover = wallpaper.cropRect(2560, 1440, 1920, 1080, "cover");
     assert.equal(cover.width, 1920);
     assert.equal(cover.height, 1080);
@@ -521,8 +543,10 @@ test("slideshow and wallpaper contrast are deterministic", function () {
         intervalMinutes: 5,
     }, { resolveSource: resolve }), { type: "tick" });
     assert.equal(slideshow.reduceSlideshow(fast, { type: "loaded" }).state, "waiting");
-    assert.equal(slideshow.reduceSlideshow(fast, { type: "failed" }).state, "waiting");
-    assert.equal(slideshow.reduceSlideshow(fast, { type: "failed" }).shown, "/a.png");
+    const failedNext = slideshow.reduceSlideshow(fast, { type: "failed" });
+    assert.equal(failedNext.state, "waiting");
+    assert.equal(failedNext.shown, "/a.png");
+    assert.equal(failedNext.count, 1);
     const empty = slideshow.reduceSlideshow(null, {
         type: "scanned",
         enabled: true,
@@ -540,11 +564,64 @@ test("slideshow and wallpaper contrast are deterministic", function () {
         transitionMs: 0,
         intervalMinutes: 30,
     }, { resolveSource: resolve, random: function () { return 0; } });
-    assert.equal(shuffled.shown, "/b.png");
+    assert.equal(shuffled.shown, "/a.png");
     assert.equal(slideshow.reduceSlideshow(shuffled, { type: "pause" }).state, "paused");
     assert.equal(slideshow.reduceSlideshow(slideshow.reduceSlideshow(shuffled, { type: "pause" }), { type: "tick" }).state, "paused");
     assert.equal(slideshow.intervalMs(1), 60000);
     assert.equal(slideshow.intervalMs(30), 1800000);
+    assert.equal(slideshow.barrierComplete(["DP-1", "HDMI-A-1"], { "DP-1": 4 }, 4), false);
+    assert.equal(slideshow.barrierComplete(["DP-1", "HDMI-A-1"],
+        { "DP-1": 4, "HDMI-A-1": 3 }, 4), false);
+    assert.equal(slideshow.barrierComplete(["DP-1", "HDMI-A-1"],
+        { "DP-1": 4, "HDMI-A-1": 4 }, 4), true);
+    assert.equal(slideshow.barrierComplete([], {}, 4), true);
+    const retimed = slideshow.reduceSlideshow(shuffled, {
+        type: "updateTiming",
+        transitionMs: 900,
+        intervalMinutes: 12,
+    });
+    assert.equal(retimed.shown, "/a.png");
+    assert.equal(retimed.index, shuffled.index);
+    assert.equal(retimed.transitionMs, 900);
+    assert.equal(retimed.intervalMinutes, 12);
+    const reordered = slideshow.reduceSlideshow(retimed, {
+        type: "updateMode",
+        enabled: true,
+        paths: ["/a.png", "/b.png", "/c.png"],
+        mode: "sequential",
+    }, { resolveSource: resolve });
+    assert.equal(reordered.shown, "/a.png");
+    const retained = slideshow.reduceSlideshow(reordered, {
+        type: "updatePaths",
+        enabled: true,
+        paths: ["/c.png", "/a.png"],
+        mode: "sequential",
+    }, { resolveSource: resolve });
+    assert.equal(retained.shown, "/a.png");
+    const replaced = slideshow.reduceSlideshow(retained, {
+        type: "updatePaths",
+        enabled: true,
+        paths: ["/b.png", "/c.png"],
+        mode: "sequential",
+    }, { resolveSource: resolve });
+    assert.equal(replaced.shown, "/b.png");
+    const skipped = slideshow.reduceSlideshow(replaced, {
+        type: "shownFailed",
+        path: "/b.png",
+    });
+    assert.equal(skipped.shown, "/c.png");
+    assert.equal(skipped.error, "An unreadable slideshow image was skipped.");
+    const transitioning = slideshow.reduceSlideshow(
+        slideshow.reduceSlideshow(reordered, { type: "tick" }),
+        { type: "loaded" }
+    );
+    assert.equal(transitioning.state, "transitioning");
+    const motionDisabled = slideshow.reduceSlideshow(transitioning, {
+        type: "updateTiming",
+        transitionMs: 0,
+    });
+    assert.equal(motionDisabled.state, "waiting");
+    assert.equal(motionDisabled.shown, transitioning.incoming);
     assert.equal(contrast.chooseForeground({ r: 0, g: 0, b: 0 }, "").foreground, "light");
     assert.equal(contrast.chooseForeground({ r: 255, g: 255, b: 255 }, "light").foreground, "dark");
     assert.equal(contrast.chooseForeground({ r: 0, g: 0, b: 0 }, "light").foreground, "light");
@@ -605,6 +682,38 @@ test("slideshow and wallpaper contrast are deterministic", function () {
     assert.equal(decoded.pixels[0], 255);
     assert.equal(decoded.pixels[9], 255);
     assert.equal(png.decodePng(Buffer.from("nope")).ok, false);
+    assert.throws(function () {
+        inflate.inflateZlib(zlib.deflateSync(Buffer.alloc(100)), 10);
+    }, /output limit/);
+    const hugeHeader = Buffer.alloc(13);
+    hugeHeader.writeUInt32BE(4096, 0);
+    hugeHeader.writeUInt32BE(4096, 4);
+    hugeHeader[8] = 8;
+    hugeHeader[9] = 6;
+    const huge = Buffer.concat([
+        Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+        chunk("IHDR", hugeHeader),
+        chunk("IDAT", Buffer.alloc(0)),
+        chunk("IEND", Buffer.alloc(0)),
+    ]);
+    assert.equal(png.decodePng(huge).reason, "That png is too large to sample safely.");
+    const cropSample = {
+        ok: true,
+        width: 4,
+        height: 1,
+        bpp: 3,
+        pixels: Uint8Array.from([
+            255, 0, 0,
+            0, 255, 0,
+            0, 255, 0,
+            0, 0, 255,
+        ]),
+    };
+    const visibleCover = png.visibleBands(cropSample, 2, 2, "cover", 1, wallpaper.cropRect);
+    assert.ok(visibleCover.center.g > visibleCover.center.r);
+    assert.ok(visibleCover.center.g > visibleCover.center.b);
+    const visibleContain = png.visibleBands(cropSample, 2, 2, "contain", 0.5, wallpaper.cropRect);
+    assert.deepEqual(visibleContain.center, { r: 0, g: 0, b: 0 });
     const crimson = png.decodePng(fs.readFileSync(path.join(__dirname, "..", "assets", "wallpapers", "swiftshell-default-crimson.png")));
     assert.equal(crimson.ok, true);
     const top = png.topBands(crimson, 8);
@@ -1780,6 +1889,7 @@ test("notifications stay off until ownership is confirmed", function () {
         notification: { id: 7, appName: "Mail", summary: "Hello", body: "secret body", urgency: "normal" },
     });
     assert.equal(center.live.length, 1);
+    assert.deepEqual(center.lastRoute, { id: 7, disposition: "banner" });
     center = notifications.reduceNotifications(center, {
         type: "receive",
         notification: { id: 7, appName: "Mail", summary: "Replaced", body: "next", urgency: "normal" },
@@ -1793,6 +1903,7 @@ test("notifications stay off until ownership is confirmed", function () {
     });
     assert.equal(center.live.length, 1);
     assert.equal(center.history[0].summary, "Quiet");
+    assert.deepEqual(center.lastRoute, { id: 8, disposition: "history" });
     center = notifications.reduceNotifications(center, {
         type: "receive",
         notification: { id: 9, appName: "Power", summary: "Critical", body: "now", urgency: "critical" },
@@ -1820,6 +1931,7 @@ test("notifications stay off until ownership is confirmed", function () {
     });
     assert.equal(center.live.length, 0);
     assert.equal(center.history.length, 0);
+    assert.deepEqual(center.lastRoute, { id: 1, disposition: "drop" });
     center = notifications.reduceNotifications(center, {
         type: "receive",
         notification: { id: 2, appName: "Mail", desktopEntry: "org.example.Mail", summary: "Quiet mail", urgency: "normal" },
@@ -1848,6 +1960,39 @@ test("notifications stay off until ownership is confirmed", function () {
     assert.equal(burst.history.length, notifications.HISTORY_CAP);
     assert.ok(burst.live.length <= 4);
     assert.ok(burst.history.length <= 40);
+    assert.deepEqual(burst.lastRoute, { id: 100, disposition: "history" });
+    let replacement = notifications.reduceNotifications(notifications.emptyCenter(), {
+        type: "configure",
+        ownership: "on",
+        dnd: false,
+        policies: JSON.stringify({ "org.example.Hidden": "hide" }),
+    });
+    replacement = notifications.reduceNotifications(replacement, {
+        type: "receive",
+        notification: { id: 44, desktopEntry: "org.example.Visible", summary: "Visible" },
+    });
+    assert.equal(replacement.live.length, 1);
+    replacement = notifications.reduceNotifications(replacement, {
+        type: "receive",
+        notification: { id: 44, desktopEntry: "org.example.Hidden", summary: "Now hidden" },
+    });
+    assert.equal(replacement.live.length, 0);
+    assert.deepEqual(replacement.lastRoute, { id: 44, disposition: "drop" });
+    let quietReplacement = notifications.reduceNotifications(notifications.emptyCenter(), {
+        type: "configure",
+        ownership: "on",
+        dnd: true,
+    });
+    quietReplacement = notifications.reduceNotifications(quietReplacement, {
+        type: "receive",
+        notification: { id: 55, summary: "First" },
+    });
+    quietReplacement = notifications.reduceNotifications(quietReplacement, {
+        type: "receive",
+        notification: { id: 55, summary: "Updated" },
+    });
+    assert.equal(quietReplacement.history.length, 1);
+    assert.equal(quietReplacement.history[0].summary, "Updated");
     assert.equal(notifications.expireMs(0), 0);
     assert.equal(notifications.expireMs(-1), 5000);
     assert.equal(notifications.expireMs(2), 2000);

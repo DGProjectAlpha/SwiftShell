@@ -28,6 +28,16 @@ Item {
         page.highlightId = Nav.moveSelection(page.query, page.highlightId, delta)
     }
 
+    function ownershipDetail() {
+        if (SettingsStore.notificationOwnership !== "on")
+            return "Not SwiftShell"
+        if (NotificationsModel.serverState === "running")
+            return "Active; ownership observed from notification traffic"
+        if (NotificationsModel.serverState === "failed")
+            return "Server component failed"
+        return "Requested; ownership is not observable until traffic arrives"
+    }
+
     Column {
         id: column
         width: page.width
@@ -45,7 +55,7 @@ Item {
         Text {
             width: parent.width
             wrapMode: Text.WordWrap
-            text: "SwiftShell does not own notifications unless you confirm it. The default is off, so another program keeps the bus. Confirming tries to create a server. If that fails, the saved choice stays on and the status says the server is not running. The current owner is left alone."
+            text: "SwiftShell does not own notifications unless you confirm a request. The default is off, so another program keeps the bus. Quickshell 0.2 does not expose the D-Bus name result: SwiftShell reports ownership as observed only after notification traffic arrives. A current owner is not stopped or replaced."
             color: Theme.panelMuted
             font.family: Theme.fontFamily
             font.pixelSize: Theme.fontSizeSmall
@@ -53,7 +63,7 @@ Item {
 
         ServiceStatus {
             name: "Owner"
-            detail: SettingsStore.notificationOwnership !== "on" ? "Not SwiftShell" : (NotificationsModel.serverState === "running" ? "Server running" : "Saved, server not running")
+            detail: page.ownershipDetail()
         }
 
         FlatButton {

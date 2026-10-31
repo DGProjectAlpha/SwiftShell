@@ -36,6 +36,19 @@ Singleton {
         manualGradient: SettingsStore.manualGradient,
         analysis: ColorAnalysis.sample
     })
+    function surfaceForAnalysis(analysis) {
+        return Contrast.surfaceColors({
+            mode: SettingsStore.appearanceMode,
+            contrast: SettingsStore.textContrast,
+            automaticText: SettingsStore.automaticText,
+            automaticGradient: SettingsStore.automaticGradient,
+            manualText: SettingsStore.manualText,
+            manualMuted: SettingsStore.manualMuted,
+            manualPanel: SettingsStore.manualPanel,
+            manualGradient: SettingsStore.manualGradient,
+            analysis: analysis
+        })
+    }
     readonly property var motion: ThemeLogic.motionDurations(SettingsStore.reducedMotion, SettingsStore.motionScale)
 
     readonly property int fontSize: SettingsStore.fontSize

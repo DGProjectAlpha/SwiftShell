@@ -58,6 +58,7 @@ REQUIRED = [
     SCRIPTS / "lib" / "uninstall.sh",
     ROOT / "install.sh",
     ROOT / "docs" / "install.md",
+    ROOT / "docs" / "RELEASE_CANDIDATE.md",
     ROOT / "tests" / "qml" / "tst_implicit_size.qml",
     ROOT / "tests" / "qml" / "tst_shell_load.qml",
     ROOT / "tests" / "stubs" / "Quickshell" / "qmldir",
@@ -66,6 +67,7 @@ REQUIRED = [
     ROOT / "tests" / "stubs" / "Quickshell" / "Services" / "Pipewire" / "qmldir",
     ROOT / "tests" / "stubs" / "Quickshell" / "Wayland" / "qmldir",
     ROOT / "packaging" / "README.md",
+    ROOT / "packaging" / "swiftshell-system",
     ROOT / "packaging" / "aur" / "PKGBUILD",
 ]
 
@@ -818,16 +820,20 @@ def check_shell(path, errors):
 
 def theme_property_names(text):
     names = set()
-    pattern = re.compile(
+    property_pattern = re.compile(
         r"\bproperty\s+(?:[A-Za-z_][A-Za-z0-9_]*(?:<[^>\n]+>)?)\s+([A-Za-z_][A-Za-z0-9_]*)"
     )
+    function_pattern = re.compile(r"\bfunction\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(")
     for line in text.splitlines():
         stripped = line.strip()
         if stripped.startswith("//") or stripped.startswith("/*") or stripped.startswith("*"):
             continue
-        match = pattern.search(stripped)
-        if match:
-            names.add(match.group(1))
+        property_match = property_pattern.search(stripped)
+        function_match = function_pattern.search(stripped)
+        if property_match:
+            names.add(property_match.group(1))
+        if function_match:
+            names.add(function_match.group(1))
     return names
 
 
