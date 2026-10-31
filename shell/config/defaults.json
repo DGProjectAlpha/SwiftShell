@@ -19,7 +19,8 @@
       "clock",
       "control",
       "media",
-      "tray"
+      "tray",
+      "battery"
     ],
     "hiddenModules": []
   },

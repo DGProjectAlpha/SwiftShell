@@ -459,7 +459,7 @@ Singleton {
                 property list<int> workspaceIds: []
                 property string workspaceDispatch: "auto"
                 property int height: 28
-                property list<string> moduleOrder: ["workspaces", "title", "search", "clock", "control", "media", "tray"]
+                property list<string> moduleOrder: ["workspaces", "title", "search", "clock", "control", "media", "tray", "battery"]
                 property list<string> hiddenModules: []
             }
 

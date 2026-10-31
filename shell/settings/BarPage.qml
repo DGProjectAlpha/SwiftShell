@@ -57,6 +57,8 @@ Item {
             return "Media"
         if (id === "tray")
             return "Tray"
+        if (id === "battery")
+            return "Battery"
         return id
     }
 

@@ -4,3 +4,6 @@ WallpaperPage 1.0 WallpaperPage.qml
 DisplaysPage 1.0 DisplaysPage.qml
 ShortcutsPage 1.0 ShortcutsPage.qml
 AudioPage 1.0 AudioPage.qml
+NetworkPage 1.0 NetworkPage.qml
+BluetoothPage 1.0 BluetoothPage.qml
+PowerPage 1.0 PowerPage.qml

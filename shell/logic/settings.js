@@ -56,7 +56,7 @@ function workspaceIdsValid(ids) {
     return true;
 }
 
-var BAR_MODULES = ["workspaces", "title", "search", "clock", "control", "media", "tray"];
+var BAR_MODULES = ["workspaces", "title", "search", "clock", "control", "media", "tray", "battery"];
 
 function normalizeModuleOrder(order) {
     const source = asList(order);
@@ -116,7 +116,7 @@ var DEFAULTS = {
         workspaceIds: [],
         workspaceDispatch: "auto",
         height: 28,
-        moduleOrder: ["workspaces", "title", "search", "clock", "control", "media", "tray"],
+        moduleOrder: ["workspaces", "title", "search", "clock", "control", "media", "tray", "battery"],
         hiddenModules: [],
     },
     appearance: {
@@ -367,7 +367,7 @@ function validateSettings(input) {
         errors.push("settingsWindow");
     const settingsWindowWidth = pickInt(windowSource, "width", 640, 1600, DEFAULTS.settingsWindow.width, errors, "settingsWindow.width");
     const settingsWindowHeight = pickInt(windowSource, "height", 440, 1200, DEFAULTS.settingsWindow.height, errors, "settingsWindow.height");
-    const settingsWindowCategory = pickEnum(windowSource, "category", ["appearance", "bar", "wallpaper", "displays", "shortcuts", "audio"], DEFAULTS.settingsWindow.category, errors, "settingsWindow.category");
+    const settingsWindowCategory = pickEnum(windowSource, "category", ["appearance", "bar", "wallpaper", "displays", "shortcuts", "audio", "network", "bluetooth", "power"], DEFAULTS.settingsWindow.category, errors, "settingsWindow.category");
     const shortcutsJson = shortcutsValue(source.shortcutsJson, errors);
 
     let pinnedIds = DEFAULTS.launcher.pinnedIds.slice();

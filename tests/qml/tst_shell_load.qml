@@ -16,6 +16,7 @@ TestCase {
         "shell/bar/ControlIndicator.qml",
         "shell/bar/MediaModule.qml",
         "shell/bar/TrayModule.qml",
+        "shell/bar/BatteryModule.qml",
         "shell/components/BarLabel.qml",
         "shell/components/FlatButton.qml",
         "shell/components/CompactSlider.qml",
@@ -30,6 +31,9 @@ TestCase {
         "shell/popovers/AudioSection.qml",
         "shell/popovers/MediaSection.qml",
         "shell/popovers/TraySection.qml",
+        "shell/popovers/BluetoothSection.qml",
+        "shell/popovers/BatterySection.qml",
+        "shell/popovers/PowerSection.qml",
         "shell/themes/Theme.qml",
         "shell/services/SettingsStore.qml",
         "shell/services/HyprlandModel.qml",
@@ -39,6 +43,9 @@ TestCase {
         "shell/services/WallpaperModel.qml",
         "shell/launcher/LauncherWindow.qml",
         "shell/settings/AudioPage.qml",
+        "shell/settings/NetworkPage.qml",
+        "shell/settings/BluetoothPage.qml",
+        "shell/settings/PowerPage.qml",
         "shell/settings/AppearancePage.qml",
         "shell/settings/BarPage.qml",
         "shell/settings/ImageDialog.qml",
@@ -60,6 +67,7 @@ TestCase {
         "shell/bar/ControlIndicator.qml",
         "shell/bar/MediaModule.qml",
         "shell/bar/TrayModule.qml",
+        "shell/bar/BatteryModule.qml",
         "shell/components/BarLabel.qml",
         "shell/components/FlatButton.qml",
         "shell/components/CompactSlider.qml",
@@ -74,7 +82,13 @@ TestCase {
         "shell/popovers/AudioSection.qml",
         "shell/popovers/MediaSection.qml",
         "shell/popovers/TraySection.qml",
+        "shell/popovers/BluetoothSection.qml",
+        "shell/popovers/BatterySection.qml",
+        "shell/popovers/PowerSection.qml",
         "shell/settings/AudioPage.qml",
+        "shell/settings/NetworkPage.qml",
+        "shell/settings/BluetoothPage.qml",
+        "shell/settings/PowerPage.qml",
         "shell/settings/AppearancePage.qml",
         "shell/settings/BarPage.qml",
         "shell/settings/DisplaysPage.qml",
@@ -295,6 +309,16 @@ TestCase {
         audioPage.query = "microphone"
         verify(audioPage.shows("audioInput"))
         verify(!audioPage.shows("mediaPlayer"))
+        var network = componentFor("shell/settings/NetworkPage.qml").createObject(this)
+        verify(network !== null)
+        verify(findText(network, "does not store", 0))
+        verify(findText(network, "hardware brightness", 0))
+        var bluetoothPage = componentFor("shell/settings/BluetoothPage.qml").createObject(this)
+        verify(bluetoothPage !== null)
+        verify(findText(bluetoothPage, "does not start a scan", 0))
+        var powerPage = componentFor("shell/settings/PowerPage.qml").createObject(this)
+        verify(powerPage !== null)
+        verify(findText(powerPage, "ask once more", 0))
         wallpaper.query = "cover"
         verify(wallpaper.shows("wallpaperFit"))
         verify(!wallpaper.shows("wallpaperPath"))
@@ -306,5 +330,8 @@ TestCase {
         displays.destroy()
         shortcuts.destroy()
         audioPage.destroy()
+        network.destroy()
+        bluetoothPage.destroy()
+        powerPage.destroy()
     }
 }

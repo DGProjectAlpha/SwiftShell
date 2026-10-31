@@ -34,6 +34,11 @@ var CONTROLS = [
     { id: "audioStream", category: "audio", section: "Audio", label: "Application streams", keywords: ["stream", "app", "volume"] },
     { id: "mediaPlayer", category: "audio", section: "Media", label: "Player", keywords: ["mpris", "play", "pause", "music"] },
     { id: "trayItems", category: "audio", section: "Tray", label: "Tray", keywords: ["status", "notifier", "icon"] },
+    { id: "networkStatus", category: "network", section: "Network", label: "Network", keywords: ["wifi", "ethernet", "vpn"] },
+    { id: "brightnessStatus", category: "network", section: "Brightness", label: "Brightness", keywords: ["backlight", "display", "dim"] },
+    { id: "bluetoothDevices", category: "bluetooth", section: "Bluetooth", label: "Devices", keywords: ["adapter", "pair", "bluez"] },
+    { id: "battery", category: "power", section: "Battery", label: "Battery", keywords: ["upower", "charge", "ac"] },
+    { id: "sessionPower", category: "power", section: "Session", label: "Session", keywords: ["lock", "suspend", "restart", "shutdown"] },
 ];
 
 function clamp01(unit) {
@@ -108,6 +113,9 @@ function categories() {
         { id: "displays", label: "Displays" },
         { id: "shortcuts", label: "Shortcuts" },
         { id: "audio", label: "Audio" },
+        { id: "network", label: "Network" },
+        { id: "bluetooth", label: "Bluetooth" },
+        { id: "power", label: "Power" },
     ];
 }
 
