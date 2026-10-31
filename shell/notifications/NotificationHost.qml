@@ -52,8 +52,8 @@ PanelWindow {
     }
 
     function requestClose(id, kind) {
-        var native = take(id)
-        Notifications.nativeClose(native, kind)
+        var nativeNotification = take(id)
+        Notifications.nativeClose(nativeNotification, kind)
         if (kind === "expire")
             NotificationsModel.expire(id)
         else
@@ -66,15 +66,15 @@ PanelWindow {
     }
 
     function invokeAction(id, identifier) {
-        var native = null
+        var nativeNotification = null
         for (var index = 0; index < nativeList.length; index++) {
             if (nativeList[index] && nativeList[index].id === id)
-                native = nativeList[index]
+                nativeNotification = nativeList[index]
         }
-        if (!native || !native.actions)
+        if (!nativeNotification || !nativeNotification.actions)
             return
-        for (var actionIndex = 0; actionIndex < native.actions.length; actionIndex++) {
-            var action = native.actions[actionIndex]
+        for (var actionIndex = 0; actionIndex < nativeNotification.actions.length; actionIndex++) {
+            var action = nativeNotification.actions[actionIndex]
             if (action && action.identifier === identifier && action.invoke)
                 action.invoke()
         }
