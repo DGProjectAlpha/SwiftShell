@@ -116,6 +116,8 @@ PanelWindow {
             return mediaComponent
         if (id === "tray")
             return trayComponent
+        if (id === "battery")
+            return batteryComponent
         return null
     }
 
@@ -216,6 +218,21 @@ PanelWindow {
                     if (item)
                         item.hostWindow = window
                 }
+            }
+        }
+    }
+
+    Component {
+        id: batteryComponent
+
+        Item {
+            implicitWidth: batteryLoader.item ? batteryLoader.item.implicitWidth : 0
+            implicitHeight: Theme.barHeight
+
+            Loader {
+                id: batteryLoader
+                source: "BatteryModule.qml"
+                active: true
             }
         }
     }

@@ -1,4 +1,4 @@
-var BAR_MODULES = ["workspaces", "title", "search", "clock", "control", "media", "tray"];
+var BAR_MODULES = ["workspaces", "title", "search", "clock", "control", "media", "tray", "battery"];
 
 function clamp01(unit) {
     if (typeof unit !== "number" || !Number.isFinite(unit))

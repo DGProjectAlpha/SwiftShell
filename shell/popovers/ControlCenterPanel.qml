@@ -37,16 +37,41 @@ Item {
 
         ServiceStatus {
             name: "Network"
-            detail: "Not connected in this milestone"
+            detail: "Unavailable"
+        }
+
+        Text {
+            width: parent.width
+            wrapMode: Text.WordWrap
+            text: "Network and brightness are unavailable on this Quickshell floor. No scan is running, and the picture is not dimmed."
+            color: Theme.panelMuted
+            font.family: Theme.fontFamily
+            font.pixelSize: Theme.fontSizeSmall
+        }
+
+        Loader {
+            id: bluetoothLoader
+            width: parent.width
+            source: "BluetoothSection.qml"
+            visible: status === Loader.Ready
         }
 
         ServiceStatus {
+            visible: bluetoothLoader.status === Loader.Error
             name: "Bluetooth"
-            detail: "Not connected in this milestone"
+            detail: "Unavailable"
+        }
+
+        Loader {
+            id: batteryLoader
+            width: parent.width
+            source: "BatterySection.qml"
+            visible: status === Loader.Ready
         }
 
         ServiceStatus {
-            name: "Brightness"
+            visible: batteryLoader.status === Loader.Error
+            name: "Battery"
             detail: "Unavailable"
         }
 
@@ -136,9 +161,17 @@ Item {
             onActivated: SettingsModel.show()
         }
 
+        Loader {
+            id: powerLoader
+            width: parent.width
+            source: "PowerSection.qml"
+            visible: status === Loader.Ready
+        }
+
         ServiceStatus {
+            visible: powerLoader.status === Loader.Error
             name: "Power"
-            detail: "Not available in this milestone"
+            detail: "Unavailable"
         }
     }
 }

@@ -26,6 +26,9 @@ const displays = require("../shell/logic/displays.js");
 const shortcuts = require("../shell/logic/shortcuts.js");
 const media = require("../shell/logic/media.js");
 const tray = require("../shell/logic/tray.js");
+const link = require("../shell/logic/link.js");
+const bluetooth = require("../shell/logic/bluetooth.js");
+const power = require("../shell/logic/power.js");
 const zlib = require("node:zlib");
 
 let failed = 0;
@@ -299,13 +302,16 @@ test("settings window stays one instance and blur is not available", function ()
 test("settings search, density, and undo stay on real appearance fields", function () {
     assert.equal(settingsNav.navigationLayout(719), "stacked");
     assert.equal(settingsNav.navigationLayout(720), "columns");
-    assert.equal(settingsNav.categories().length, 6);
+    assert.equal(settingsNav.categories().length, 9);
     assert.equal(settingsNav.categories()[0].id, "appearance");
     assert.equal(settingsNav.categories()[1].id, "bar");
     assert.equal(settingsNav.categories()[2].id, "wallpaper");
     assert.equal(settingsNav.categories()[3].id, "displays");
     assert.equal(settingsNav.categories()[4].id, "shortcuts");
     assert.equal(settingsNav.categories()[5].id, "audio");
+    assert.equal(settingsNav.categories()[6].id, "network");
+    assert.equal(settingsNav.categories()[7].id, "bluetooth");
+    assert.equal(settingsNav.categories()[8].id, "power");
     assert.equal(settingsNav.categoryFor(settingsNav.firstControlId("cover")), "wallpaper");
     assert.equal(settingsNav.filterControls("").length, settingsNav.CONTROLS.length);
     assert.equal(settingsNav.filterControls("not-a-setting").length, 0);
@@ -1142,7 +1148,7 @@ test("bar exclusion can turn reservation on again and popup focus clears before 
     assert.equal(bar.barMetrics(80, 1).height, 52);
     assert.equal(bar.heightFromUnit(bar.unitFromHeight(28)), 28);
     assert.equal(bar.exclusionUpdate(true, tall.height, 28).zone, 52);
-    assert.deepEqual(bar.visibleModules(bar.BAR_MODULES, ["clock"]), ["workspaces", "title", "search", "control", "media", "tray"]);
+    assert.deepEqual(bar.visibleModules(bar.BAR_MODULES, ["clock"]), ["workspaces", "title", "search", "control", "media", "tray", "battery"]);
     const moved = bar.moveModule(bar.BAR_MODULES, "clock", -1);
     assert.equal(moved[2], "clock");
     assert.equal(moved[3], "search");
@@ -1637,6 +1643,29 @@ test("audio devices, players, and tray items stay actionable", function () {
     assert.equal(kept.ok, true);
     assert.ok(kept.settings.bar.moduleOrder.indexOf("tray") !== -1);
     assert.ok(kept.settings.bar.moduleOrder.indexOf("media") !== -1);
+});
+
+test("bluetooth, battery, and network stay inside the documented services", function () {
+    assert.ok(link.NETWORK_REASON.indexOf("does not store") !== -1);
+    assert.ok(link.BRIGHTNESS_REASON.indexOf("hardware brightness") !== -1);
+    assert.deepEqual(bluetooth.adapterSummary(null), { present: false, enabled: false, name: "" });
+    const rows = bluetooth.deviceRows([
+        { name: "Headphones", dbusPath: "/dev/1", connected: false, paired: false, pairing: false, batteryAvailable: true, battery: 0.5 },
+        { name: "Mouse", dbusPath: "/dev/2", connected: true, paired: true, pairing: false },
+    ]);
+    assert.equal(rows[0].battery, 50);
+    assert.equal(bluetooth.deviceCommand({ connected: false, paired: false, pairing: false }, "connect"), "connect");
+    assert.equal(bluetooth.deviceCommand({ connected: true, paired: true }, "pair"), "");
+    assert.equal(bluetooth.deviceCommand({ pairing: true, paired: false, connected: false }, "cancel"), "cancel");
+    assert.equal(power.batteryReport({ ready: false }, false).available, false);
+    const charging = power.batteryReport({ ready: true, percentage: 40, timeToFull: 5400, timeToEmpty: 0 }, false);
+    assert.equal(charging.text, "40%");
+    assert.ok(charging.detail.indexOf("to full") !== -1);
+    const draining = power.batteryReport({ ready: true, percentage: 80, timeToEmpty: 0, timeToFull: 900 }, true);
+    assert.equal(draining.detail, "On battery");
+    const kept = settings.validateSettings({ bar: { moduleOrder: ["workspaces", "title", "search", "clock", "control", "media", "tray"] } });
+    assert.equal(kept.ok, true);
+    assert.ok(kept.settings.bar.moduleOrder.indexOf("battery") !== -1);
 });
 
 if (failed > 0) {

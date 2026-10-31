@@ -75,6 +75,12 @@ FloatingWindow {
             return shortcutsPage
         if (SettingsStore.settingsWindowCategory === "audio")
             return audioPage
+        if (SettingsStore.settingsWindowCategory === "network")
+            return networkPage
+        if (SettingsStore.settingsWindowCategory === "bluetooth")
+            return bluetoothPage
+        if (SettingsStore.settingsWindowCategory === "power")
+            return powerPage
         return page
     }
 
@@ -308,6 +314,36 @@ FloatingWindow {
                             search.text = ""
                         }
                     }
+
+                    FlatButton {
+                        width: parent.width
+                        label: "Network"
+                        emphasized: SettingsStore.settingsWindowCategory === "network"
+                        onActivated: {
+                            SettingsStore.setSettingsCategory("network")
+                            search.text = ""
+                        }
+                    }
+
+                    FlatButton {
+                        width: parent.width
+                        label: "Bluetooth"
+                        emphasized: SettingsStore.settingsWindowCategory === "bluetooth"
+                        onActivated: {
+                            SettingsStore.setSettingsCategory("bluetooth")
+                            search.text = ""
+                        }
+                    }
+
+                    FlatButton {
+                        width: parent.width
+                        label: "Power"
+                        emphasized: SettingsStore.settingsWindowCategory === "power"
+                        onActivated: {
+                            SettingsStore.setSettingsCategory("power")
+                            search.text = ""
+                        }
+                    }
                 }
             }
 
@@ -396,6 +432,33 @@ FloatingWindow {
                     onRevealRequested: function (y, itemHeight) {
                         scroller.contentY = Nav.scrollTarget(scroller.contentY, scroller.height, y, itemHeight)
                     }
+                }
+
+                NetworkPage {
+                    id: networkPage
+                    y: 0
+                    width: scroller.width
+                    visible: SettingsStore.settingsWindowCategory === "network"
+                    height: visible ? implicitHeight : 0
+                    query: search.text
+                }
+
+                BluetoothPage {
+                    id: bluetoothPage
+                    y: 0
+                    width: scroller.width
+                    visible: SettingsStore.settingsWindowCategory === "bluetooth"
+                    height: visible ? implicitHeight : 0
+                    query: search.text
+                }
+
+                PowerPage {
+                    id: powerPage
+                    y: 0
+                    width: scroller.width
+                    visible: SettingsStore.settingsWindowCategory === "power"
+                    height: visible ? implicitHeight : 0
+                    query: search.text
                 }
             }
         }
