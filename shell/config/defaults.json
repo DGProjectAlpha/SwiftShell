@@ -40,6 +40,7 @@
     "fontWeight": "regular",
     "iconScale": 1,
     "topGradient": false,
+    "contrast": "standard",
     "automaticText": false,
     "automaticGradient": false,
     "manualText": "",

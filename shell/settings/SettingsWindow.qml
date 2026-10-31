@@ -34,6 +34,7 @@ FloatingWindow {
             fontWeight: SettingsStore.fontWeight,
             iconScale: SettingsStore.iconScale,
             topGradient: SettingsStore.topGradient,
+            contrast: SettingsStore.textContrast,
             automaticText: SettingsStore.automaticText,
             automaticGradient: SettingsStore.automaticGradient,
             manualText: SettingsStore.manualText,

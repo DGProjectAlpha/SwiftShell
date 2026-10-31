@@ -72,18 +72,23 @@ function composite(panel, opacity, behind) {
     };
 }
 
-function resolvePalette(mode, tint) {
+function resolvePalette(mode, tint, contrast) {
     const appearance = mode === "light" ? "light" : "dark";
     const base = appearance === "light" ? LIGHT : DARK;
+    const high = contrast === "high";
     const wallpaperRequested = tint === "wallpaper";
+    const text = high ? (appearance === "light" ? { r: 0, g: 0, b: 0 } : { r: 255, g: 255, b: 255 }) : base.text;
+    const muted = high ? (appearance === "light" ? { r: 20, g: 20, b: 20 } : { r: 230, g: 230, b: 230 }) : base.muted;
+    const hover = high ? text : base.hover;
     return {
         appearance: appearance,
         tint: wallpaperRequested ? "wallpaper" : "neutral",
+        contrast: high ? "high" : "standard",
         adaptive: false,
         adaptiveReason: wallpaperRequested ? "Wallpaper tint is not sampled yet." : "",
-        text: base.text,
-        muted: base.muted,
-        hover: base.hover,
+        text: text,
+        muted: muted,
+        hover: hover,
         panel: base.panel,
         scrim: base.scrim,
     };

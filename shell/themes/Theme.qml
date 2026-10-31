@@ -24,9 +24,10 @@ Singleton {
     readonly property int weekNumberWidth: 22
     readonly property int controlWidth: 248
 
-    readonly property var palette: Palette.resolvePalette(SettingsStore.appearanceMode, SettingsStore.appearanceTint)
+    readonly property var palette: Palette.resolvePalette(SettingsStore.appearanceMode, SettingsStore.appearanceTint, SettingsStore.textContrast)
     readonly property var surface: Contrast.surfaceColors({
         mode: SettingsStore.appearanceMode,
+        contrast: SettingsStore.textContrast,
         automaticText: SettingsStore.automaticText,
         automaticGradient: SettingsStore.automaticGradient,
         manualText: SettingsStore.manualText,

@@ -122,7 +122,8 @@ function surfaceColors(options) {
     var manualMuted = parseHex(input.manualMuted);
     var manualPanel = parseHex(input.manualPanel);
     var manualGradient = parseHex(input.manualGradient);
-    var text = manualText || (light ? DARK_TEXT : LIGHT_TEXT);
+    var high = input.contrast === "high";
+    var text = manualText || (high ? (light ? { r: 0, g: 0, b: 0 } : { r: 255, g: 255, b: 255 }) : (light ? DARK_TEXT : LIGHT_TEXT));
     var reason = "";
     if (input.automaticText) {
         if (analysis.available && !analysis.scrim)
@@ -142,7 +143,7 @@ function surfaceColors(options) {
     var warning = contrastRatio(text, panel) < 4.5 ? "Text contrast is below 4.5 against the panel." : "";
     return {
         text: text,
-        muted: manualMuted || (light ? LIGHT_MUTED : DARK_MUTED),
+        muted: manualMuted || (high ? (light ? { r: 20, g: 20, b: 20 } : { r: 230, g: 230, b: 230 }) : (light ? LIGHT_MUTED : DARK_MUTED)),
         panel: panel,
         gradient: gradient,
         gradientAlpha: gradientAlpha,

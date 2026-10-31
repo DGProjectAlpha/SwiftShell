@@ -1,6 +1,7 @@
 var MAX_PINS = 12;
 var MAX_RECENT = 8;
 var GRID_CAP = 12;
+var RESULT_CAP = 24;
 
 var POWER = [
     { id: "lock", label: "Lock", argv: ["loginctl", "lock-session"] },
@@ -383,7 +384,7 @@ function viewRows(apps, query, pinnedIds, recentIds) {
         for (let i = 0; i < grid.length; i++)
             rows.push(appRow(grid[i], "Applications"));
     } else {
-        const found = rank(unique, q);
+        const found = rank(unique, q).slice(0, RESULT_CAP);
         for (let i = 0; i < found.length; i++)
             rows.push(appRow(found[i], "Results"));
     }
@@ -656,6 +657,8 @@ function revealOffset(contentY, viewport, rowY, rowHeight) {
 var swiftshellLauncher = {
     MAX_PINS: MAX_PINS,
     MAX_RECENT: MAX_RECENT,
+    GRID_CAP: GRID_CAP,
+    RESULT_CAP: RESULT_CAP,
     POWER: POWER,
     desktopIdValid: desktopIdValid,
     normalizeIdList: normalizeIdList,
