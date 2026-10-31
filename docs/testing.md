@@ -25,6 +25,8 @@ scripts/check.sh
 
 The mock QML gate now rejects every component error except a short path-specific list for unavailable C++ attached Quickshell types and optional modules. When `QtQuick.Dialogs` is installed, `tst_dialogs.qml` requires `ImageDialog.qml` to compile. When it is absent, the check prints an explicit diagnostic and exercises the path-entry fallback; it does not silently claim native image selection was compiled. GitHub CI installs the Qt Quick, Layouts, WorkerScript, Core, and Dialogs runtime modules explicitly.
 
+The installer suite also constructs a temporary system-package layout. It verifies that status, start, and activation use that shared app root, the desktop entry uses the system command, uninstall removes only per-user activation state, and settings purge cannot remove package-owned files. It does not run `makepkg`, pacman, or an installed Arch package.
+
 ## Pull and test on CachyOS
 
 These commands use the checkout as the Quickshell config. They do not install over Noctalia, and they do not edit Hyprland.

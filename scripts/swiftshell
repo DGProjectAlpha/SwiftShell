@@ -5,6 +5,10 @@ set -eu
 
 HERE=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
 if [ -f "$HERE/common.sh" ]; then
+    if [ -d "$HERE/../app" ] && [ -z "${SWIFTSHELL_INSTALL_ROOT:-}" ]; then
+        SWIFTSHELL_INSTALL_ROOT=$(CDPATH= cd -- "$HERE/.." && pwd)
+        export SWIFTSHELL_INSTALL_ROOT
+    fi
     # shellcheck source=lib/common.sh
     . "$HERE/common.sh"
     # shellcheck source=lib/deps.sh
@@ -126,6 +130,28 @@ case $cmd in
             esac
             shift
         done
+        if [ "${SWIFTSHELL_PACKAGE_INSTALL:-0}" = 1 ]; then
+            swiftshell_stop_running || true
+            swiftshell_remove_quickshell_link
+            swiftshell_remove_desktop
+            state=$(swiftshell_state_dir)
+            swiftshell_assert_managed_path "$state"
+            rm -f "$state/active" "$state/launcher.request"
+            if [ "$purge" = 1 ]; then
+                swiftshell_need_home
+                config=$(swiftshell_config_dir)
+                swiftshell_assert_managed_path "$config"
+                if [ -L "$config" ]; then
+                    swiftshell_die "refusing to remove a settings path that is a symlink."
+                fi
+                if [ -d "$config" ]; then
+                    rm -rf "$config"
+                fi
+                swiftshell_say "removed user settings."
+            fi
+            swiftshell_say "system package files are owned by pacman; remove them with your package manager."
+            exit 0
+        fi
         lib=$(swiftshell_lib_dir)
         if [ ! -x "$lib/uninstall.sh" ]; then
             if [ "$purge" = 1 ]; then
