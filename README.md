@@ -497,11 +497,13 @@ Acceptance: user explicitly opts in; Noctalia remains readily restorable.
 - [ ] Super+Space handoff applied by hand after that retest, using `docs/launcher-shortcut.md`
 - [x] M4.0 settings window source: one `FloatingWindow`, Appearance controls that already persist, schema version 2 with a backup before migration
 - [ ] M4.0 settings window shown, moved, and resized on a Hyprland session
+- [x] M4.1 settings search and the remaining live appearance controls, in source
+- [ ] M4.1 search, undo, and appearance changes shown on a Hyprland session
 - [ ] Local Quickshell and Hyprland versions recorded from `qs -V` and `Hyprland --version`
 - [ ] Visual rendering of the stabilization fixes verified
 - [ ] Any live desktop integration beyond the separate `qs --path` launch approved
 
-**Current claim:** The shell has run on the reference Hyprland session. The bar, calendar, and control center were visible with Noctalia stopped, and workspace switching works there. The launcher opened on that session and did not list Dolphin or Helium. The catalog now refreshes from Quickshell's `applicationsChanged` signal. That refresh, theme icons, and bar reservation have not been relaunched on the session. M3.2 centers Spotlight and chooses the focused monitor in source. That placement has not been launched on the session. M4.0 adds a settings `FloatingWindow` and schema version 2 in source. That window has not been shown on a session. Cloud checks do not launch applications, move a toplevel, or edit Super+Space.
+**Current claim:** The shell has run on the reference Hyprland session. The bar, calendar, and control center were visible with Noctalia stopped, and workspace switching works there. The launcher opened on that session and did not list Dolphin or Helium. The catalog now refreshes from Quickshell's `applicationsChanged` signal. That refresh, theme icons, and bar reservation have not been relaunched on the session. M3.2 centers Spotlight and chooses the focused monitor in source. That placement has not been launched on the session. M4.0 adds a settings `FloatingWindow` and schema version 2 in source. M4.1 adds search, undo, and the appearance values the theme already uses. That window has not been shown on a session. Cloud checks do not launch applications, move a toplevel, or edit Super+Space.
 
 ## 13. Running the M0/M1 prototype
 

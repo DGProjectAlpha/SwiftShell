@@ -229,6 +229,14 @@ TestCase {
         verify(page !== null)
         verify(findText(page, "translucent scrim", 0))
         verify(!findText(page, "Gaussian", 0))
+        verify(page.shows("backdropBlur"))
+        verify(page.shows("panelOpacity"))
+        page.query = "opacity"
+        verify(page.shows("panelOpacity"))
+        verify(!page.shows("backdropBlur"))
+        verify(!page.shows("mode"))
+        page.query = "not-a-setting"
+        verify(!page.shows("panelOpacity"))
 
         var toggled = false
         var toggle = componentFor("shell/components/SettingsToggle.qml").createObject(this, { label: "Reduced motion", checked: false })

@@ -1,6 +1,9 @@
 import QtQuick
 import Quickshell
 import "."
+import "../components"
+import "../logic/settings.js" as Settings
+import "../logic/settingsNav.js" as Nav
 import "../services"
 import "../themes"
 
@@ -11,10 +14,55 @@ FloatingWindow {
     visible: SettingsModel.open
     minimumSize: Qt.size(640, 440)
 
+    property var history: Settings.initialHistory(window.currentAppearance())
+    readonly property bool canUndo: history && history.past && history.past.length > 0
+
+    function currentAppearance() {
+        return {
+            mode: SettingsStore.appearanceMode,
+            tint: SettingsStore.appearanceTint,
+            panelOpacity: SettingsStore.panelOpacity,
+            panelBlur: SettingsStore.panelBlur,
+            radius: SettingsStore.radius,
+            shadowOpacity: SettingsStore.shadowOpacity,
+            shadowSoftness: SettingsStore.shadowSoftness,
+            motionScale: SettingsStore.motionScale,
+            reducedMotion: SettingsStore.reducedMotion,
+            panelPadding: SettingsStore.panelPadding,
+            panelSpacing: SettingsStore.panelSpacing,
+            fontSize: SettingsStore.fontSize,
+            fontWeight: SettingsStore.fontWeight,
+            iconScale: SettingsStore.iconScale,
+            topGradient: SettingsStore.topGradient
+        }
+    }
+
+    function applyHistory(next) {
+        history = next
+        SettingsStore.setAppearance(history.present)
+    }
+
+    function commit(patch) {
+        var present = Settings.initialHistory(history.present).present
+        var keys = Object.keys(patch)
+        for (var index = 0; index < keys.length; index++)
+            present[keys[index]] = patch[keys[index]]
+        window.applyHistory(Settings.reduceAppearanceHistory(history, { type: "edit", present: present }))
+    }
+
+    function undo() {
+        window.applyHistory(Settings.reduceAppearanceHistory(history, { type: "undo" }))
+    }
+
+    function resetAppearance() {
+        window.applyHistory(Settings.reduceAppearanceHistory(history, { type: "reset" }))
+    }
+
     Component.onCompleted: {
+        history = Settings.initialHistory(window.currentAppearance())
         window.width = SettingsStore.settingsWindowWidth
         window.height = SettingsStore.settingsWindowHeight
-        content.forceActiveFocus()
+        search.forceActiveFocus()
     }
 
     function rememberSize() {
@@ -41,7 +89,7 @@ FloatingWindow {
             if (!SettingsModel.open)
                 return
             window.raiseWindow()
-            content.forceActiveFocus()
+            search.forceActiveFocus()
         }
     }
 
@@ -57,9 +105,155 @@ FloatingWindow {
             event.accepted = true
         }
 
-        AppearancePage {
+        Keys.onPressed: function (event) {
+            var alt = (event.modifiers & Qt.AltModifier) !== 0
+            if (!alt)
+                return
+            if (event.key === Qt.Key_U)
+                window.undo()
+            else if (event.key === Qt.Key_R)
+                window.resetAppearance()
+            else
+                return
+            event.accepted = true
+        }
+
+        Item {
+            id: frame
             anchors.fill: parent
             anchors.margins: Theme.panelPadding
+            readonly property bool stacked: Nav.navigationLayout(width) === "stacked"
+
+            Text {
+                anchors.left: search.left
+                anchors.right: search.right
+                anchors.verticalCenter: search.verticalCenter
+                visible: search.text === ""
+                text: "Search settings"
+                color: Theme.panelMuted
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.fontSize
+                elide: Text.ElideRight
+            }
+
+            TextInput {
+                id: search
+                width: parent.width
+                height: Theme.controlHeight
+                color: Theme.panelText
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.fontSize
+                selectByMouse: true
+                activeFocusOnTab: true
+                clip: true
+                Accessible.name: "Search settings"
+
+                Keys.onEscapePressed: function (event) {
+                    if (text !== "") {
+                        text = ""
+                        event.accepted = true
+                        return
+                    }
+                    window.rememberSize()
+                    SettingsModel.hide()
+                    event.accepted = true
+                }
+
+                Keys.onPressed: function (event) {
+                    var alt = (event.modifiers & Qt.AltModifier) !== 0
+                    if (alt && event.key === Qt.Key_J) {
+                        page.moveHighlight(1)
+                        event.accepted = true
+                        return
+                    }
+                    if (alt && event.key === Qt.Key_K) {
+                        page.moveHighlight(-1)
+                        event.accepted = true
+                        return
+                    }
+                    if (alt && event.key === Qt.Key_U) {
+                        window.undo()
+                        event.accepted = true
+                        return
+                    }
+                    if (alt && event.key === Qt.Key_R) {
+                        window.resetAppearance()
+                        event.accepted = true
+                        return
+                    }
+                    if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                        page.focusHighlight()
+                        event.accepted = true
+                    }
+                }
+            }
+
+            Rectangle {
+                id: searchLine
+                anchors.top: search.bottom
+                width: parent.width
+                height: 1
+                color: Theme.panelMuted
+            }
+
+            Item {
+                id: side
+                anchors.top: searchLine.bottom
+                anchors.left: parent.left
+                anchors.topMargin: Theme.panelSpacing
+                width: frame.stacked ? parent.width : 148
+                height: frame.stacked ? sideColumn.implicitHeight : parent.height - searchLine.y - searchLine.height - Theme.panelSpacing
+
+                Column {
+                    id: sideColumn
+                    width: parent.width
+                    spacing: Theme.panelSpacing
+
+                    FlatButton {
+                        width: parent.width
+                        label: "Undo"
+                        enabled: window.canUndo
+                        onActivated: window.undo()
+                    }
+
+                    FlatButton {
+                        width: parent.width
+                        label: "Reset"
+                        onActivated: window.resetAppearance()
+                    }
+
+                    FlatButton {
+                        width: parent.width
+                        label: "Appearance"
+                        emphasized: true
+                        onActivated: search.text = ""
+                    }
+                }
+            }
+
+            Flickable {
+                id: scroller
+                clip: true
+                boundsBehavior: Flickable.StopAtBounds
+                anchors.left: frame.stacked ? parent.left : side.right
+                anchors.leftMargin: frame.stacked ? 0 : Theme.panelSpacing
+                anchors.right: parent.right
+                anchors.top: frame.stacked ? side.bottom : searchLine.bottom
+                anchors.topMargin: Theme.panelSpacing
+                anchors.bottom: parent.bottom
+                contentWidth: width
+                contentHeight: page.implicitHeight
+
+                AppearancePage {
+                    id: page
+                    width: scroller.width
+                    query: search.text
+                    onEdited: function (patch) { window.commit(patch) }
+                    onRevealRequested: function (y, itemHeight) {
+                        scroller.contentY = Nav.scrollTarget(scroller.contentY, scroller.height, y, itemHeight)
+                    }
+                }
+            }
         }
     }
 }

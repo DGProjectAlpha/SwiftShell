@@ -104,6 +104,25 @@ Singleton {
         windowSettings.height = decision.settings.settingsWindow.height
     }
 
+    function setAppearance(next) {
+        const appearance = Settings.validateSettings({ appearance: next }).settings.appearance
+        appearanceSettings.mode = appearance.mode
+        appearanceSettings.tint = appearance.tint
+        appearanceSettings.panelOpacity = appearance.panelOpacity
+        appearanceSettings.panelBlur = appearance.panelBlur
+        appearanceSettings.radius = appearance.radius
+        appearanceSettings.shadowOpacity = appearance.shadowOpacity
+        appearanceSettings.shadowSoftness = appearance.shadowSoftness
+        appearanceSettings.motionScale = appearance.motionScale
+        appearanceSettings.reducedMotion = appearance.reducedMotion
+        appearanceSettings.panelPadding = appearance.panelPadding
+        appearanceSettings.panelSpacing = appearance.panelSpacing
+        appearanceSettings.fontSize = appearance.fontSize
+        appearanceSettings.fontWeight = appearance.fontWeight
+        appearanceSettings.iconScale = appearance.iconScale
+        appearanceSettings.topGradient = appearance.topGradient
+    }
+
     function setAppearanceMode(mode) {
         appearanceSettings.mode = mode === "light" ? "light" : "dark"
     }
