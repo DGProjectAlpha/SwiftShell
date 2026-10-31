@@ -56,4 +56,15 @@ Do not interpret README's long-term roadmap as permission to implement M2–M8 i
 
 ## Repository status
 
-M0/M1, M2, and the M3 launcher source live in `shell/`. On CachyOS, SwiftShell has loaded in a Hyprland session while Noctalia was stopped: the bar rendered, and the calendar and control center opened. That session also showed a Lua workspace-dispatch parse error, a `targetScreens` binding loop, a false `bar.workspaceIds` warning for `[4, 5, 6]`, bar overlap with windows while `reserveSpace` is false, and a Wayland text-input diagnostic while a popup was focused. Those paths are changed. The launcher is a separate window opened from the bar Search control or from `scripts/request-launcher.sh`. Super+Space is not changed by the repository. Do not mark workspace clicks, the exclusive zone, focus return, application launch, or launcher rendering as verified until the hardware checklist in `docs/testing.md` is run. Do not edit Noctalia, `binds.lua`, or autostart.
+M0/M1, M2, and the M3 launcher source live in `shell/`. The reference session is CachyOS, Lua-based Hyprland, and Noctalia as its own `noctalia` executable rather than a `qs` process. DP-1 is workspaces 1–3. HDMI-A-1 is workspaces 4–6. The monitors use mixed scale. On that session, with Noctalia stopped, SwiftShell has loaded, the bar has rendered, the calendar and control center have opened, and workspace switching works after the Lua dispatch fix. The same session showed a `targetScreens` binding loop, a false `bar.workspaceIds` warning for `[4, 5, 6]`, bar overlap while `reserveSpace` was false, a Wayland text-input diagnostic, a launcher that did not find Dolphin or Helium, monogram icons, and `BarLabel is not a type` until `shell/bar/BarWindow.qml` imported `../components`. Do not mark exclusive-zone behavior, focus return, application launch, theme icons, or the refreshed catalog as hardware-verified from cloud tests. The checklist is `docs/testing.md`. Do not edit Noctalia, `binds.lua`, or autostart.
+
+## Rules learned from the running session
+
+- Read the Quickshell type page for the supported version before using a property. `DesktopEntries.applications` is an `ObjectModel`, and its scan result arrives on `applicationsChanged`.
+- Do not send `workspace N` through Hyprland's Lua dispatcher. The working form is `hl.dsp.focus({ workspace = N })` unless `bar.workspaceDispatch` is `legacy`.
+- Do not use a project QML type without the import that provides it. `tests/static_check.py` fails the tree when that import is missing.
+- Add a regression for every defect. A stub that never loads the failing file does not count.
+- Do not hide a warning until its cause is known.
+- Do not change Noctalia, Hyprland, or existing keybinds. Super+Space stays where the user put it until they apply `docs/launcher-shortcut.md` themselves.
+- Keep each change reversible, and say what the cloud run did not execute.
+- A green `scripts/check.sh` is not a CachyOS pass.

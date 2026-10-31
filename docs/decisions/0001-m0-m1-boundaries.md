@@ -14,7 +14,7 @@ The first shell has to be launchable beside the working Noctalia session. The pr
 - The default output is HDMI-A-1. Other screens get no window.
 - The bar color is transparent and the height token is 28 logical pixels.
 - Workspace state comes from Quickshell's Hyprland object model. Activation uses the workspace object or one `dispatch` string. No `hyprctl` process is started.
-- `bar.reserveSpace` defaults to false. The window uses `ExclusionMode.Ignore` so Quickshell's automatic exclusive zone does not reserve the top edge while Noctalia is still responsible for that output. Set the flag to true before judging whether maximized windows avoid the bar.
+- `bar.reserveSpace` originally defaulted to false so the bar would not reserve the top edge while Noctalia was still responsible for that output. `0007-m3-stabilization.md` changes the default for a new settings file to true and keeps false as the overlay. An existing settings file is not rewritten.
 - Keyboard shortcuts are unchanged. The bar is not focusable.
 - Settings are a separate JSON file under the generic XDG config directory. A failed load does not rewrite an existing file.
 - Logic that does not need a compositor lives in `shell/logic` and has Node tests. QML is checked with a Python structure scan until `qmllint` is available.

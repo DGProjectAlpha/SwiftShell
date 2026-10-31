@@ -46,10 +46,10 @@ scripts/launch.sh
 
 ```text
 SwiftShell: M1 prototype started
-SwiftShell: calendar and control center panels are available
+SwiftShell: calendar, control center, and launcher are available
 ```
 
-Stop it with `scripts/stop.sh`. If that cannot see the instance, run `qs list --all` and then `qs kill --id` with the instance id whose config path is this checkout. Do not kill every `qs` process. Noctalia is one of them.
+Stop it with `scripts/stop.sh`. If that cannot see the instance, run `qs list --all` and then `qs kill --id` with the instance id whose config path is this checkout. Do not kill every `qs` process. Noctalia is the separate `noctalia` executable, not one of those `qs` instances. Do not stop it from this repository.
 
 The optional Qt check, which still does not start the shell:
 
@@ -83,11 +83,11 @@ To try the installed copy instead of the checkout, run `./install.sh` again afte
 - audio volume clamping, unmute behavior, output labels, and refusal to write a different or missing sink
 - the stored blur preference remaining a scrim, not an effect
 
-`tests/static_check.py` checks that the QML files exist, local imports resolve, braces and parentheses balance, and the tree does not spawn `hyprctl`, a `Timer`, or a `Process`. It rejects a QML object nested directly in `QtObject`, which has no default property, including through a component whose root type is `QtObject`. Property values such as `property Item child: Item {}` are allowed. It rejects assignment to a read-only property on the Qt 6.4 types used here, including `implicitWidth` and `implicitHeight` on `Column`, `Row`, `Grid`, `Flow`, `Loader`, `Text`, `TextInput`, `TextEdit`, `Image`, `BorderImage`, and `AnimatedImage`, and the same properties when a project component's root type is one of those. It also rejects other read-only properties those types publish, such as `Loader.status`, `Text.contentWidth`, and `MouseArea.pressed`. Reading `implicitWidth` in another binding is allowed. Grouped writes such as `anchors.top` and `border.width`, and signal handlers such as `onImplicitWidthChanged`, are allowed. `Item`, `Rectangle`, `MouseArea`, `FocusScope`, and the layout types can still be given an implicit size. When `QtQuick/plugins.qmltypes` is installed, the check also requires that file to mark `QQuickImplicitSizeItem.implicitWidth` read-only and `QQuickItem.implicitWidth` writable. It also checks the transparent color, 28px token, HDMI-A-1 default, shell id, `Scope` bar host, `Singleton` service roots, the transparent popup surface, and that wallpaper sampling is not claimed. Shell scripts are scanned for edits to Hyprland config, service units, and package installation outside the explicit Arch dependency path.
+`tests/static_check.py` checks that the QML files exist, local imports resolve, braces and parentheses balance, and the tree does not spawn `hyprctl`, a `Timer`, or a `Process`. It rejects a QML object nested directly in `QtObject`, which has no default property, including through a component whose root type is `QtObject`. Property values such as `property Item child: Item {}` are allowed. It rejects assignment to a read-only property on the Qt 6.4 types used here, including `implicitWidth` and `implicitHeight` on `Column`, `Row`, `Grid`, `Flow`, `Loader`, `Text`, `TextInput`, `TextEdit`, `Image`, `BorderImage`, and `AnimatedImage`, and the same properties when a project component's root type is one of those. It also rejects other read-only properties those types publish, such as `Loader.status`, `Text.contentWidth`, and `MouseArea.pressed`. Reading `implicitWidth` in another binding is allowed. Grouped writes such as `anchors.top` and `border.width`, and signal handlers such as `onImplicitWidthChanged`, are allowed. `Item`, `Rectangle`, `MouseArea`, `FocusScope`, and the layout types can still be given an implicit size. When `QtQuick/plugins.qmltypes` is installed, the check also requires that file to mark `QQuickImplicitSizeItem.implicitWidth` read-only and `QQuickItem.implicitWidth` writable. It also checks the transparent color, 28px token, HDMI-A-1 default, shell id, `Scope` bar host, `Singleton` service roots, the transparent popup surface, and that wallpaper sampling is not claimed. It fails when a shell file uses a project QML type that its imports do not provide. The fixture is `BarLabel` without `import "../components"`, which is the startup error `BarLabel is not a type`. Shell scripts are scanned for edits to Hyprland config, service units, and package installation outside the explicit Arch dependency path.
 
 `tests/qml/tst_implicit_size.qml` instantiates those Qt types with `qmltestrunner`. It expects the same read-only error Quickshell reported for the calendar column, the control-center column, and a `Loader`, and it checks that an `Item` wrapper keeps a 210px calendar-shaped panel and a 248×40 control-shaped panel.
 
-`tests/qml/tst_shell_load.qml` loads the shell documents with `tests/stubs/` standing in for Quickshell. The stubs are not Quickshell. Under that loader, the calendar, control center, audio section, popup host, and bar widgets instantiate. The calendar grid rows are 28px tall, the control center is 248px wide, and the volume slider inside a 248px column is 248×28. The popup host grows when the calendar opens and again when the control center replaces it. `shell.qml` still stops at `WlrLayershell.namespace` because that attached object is not something a QML file can imitate. The error from that line is not a read-only property assignment. This does not load Quickshell and it does not show a window on a monitor.
+`tests/qml/tst_shell_load.qml` loads the shell documents with `tests/stubs/` standing in for Quickshell. The stubs are not Quickshell. Under that loader, the calendar, control center, audio section, popup host, and bar widgets instantiate. The calendar grid rows are 28px tall, the control center is 248px wide, and the volume slider inside a 248px column is 248×28. The popup host grows when the calendar opens and again when the control center replaces it. `shell.qml`, `BarHost.qml`, `BarWindow.qml`, `LauncherWindow.qml`, and `LauncherModel.qml` are compiled too. The test fails if any of those error strings contain `BarLabel`. `shell.qml` and `BarWindow.qml` can still stop at `WlrLayershell.namespace` because that attached object is not something a QML file can imitate. This does not load Quickshell and it does not show a window on a monitor.
 
 `tests/install_flow.sh` runs `./install.sh`, activation, deactivation, and uninstallation in a temporary `HOME` with stub `qs` and `Hyprland` commands. It checks that a second install keeps settings, that occupied config names and foreign launchers are refused, and that Hyprland and other shell files in that temporary home stay unchanged. Stop is checked twice: a stub whose help lists `--any-display` must receive that flag, and a stub that matches Quickshell 0.2.0 must be stopped with `kill --path` alone. The `--install-deps --yes` case uses a PATH that contains only symlinked host tools plus stub `sudo` and `pacman`. It does not include `/usr/bin`, `/bin`, `qs`, `Hyprland`, or `hyprctl`. A decoy `qs` sits beside that PATH and must not run. A second case puts good `qs` and `Hyprland` stubs on that same isolated PATH and requires that `sudo` is not called. A sudo stub that exits 99 must stop a `--strict` install before files are written, and a non-strict install must keep the files and print the failure. The suite does not install packages and it does not open a Wayland session.
 
@@ -136,22 +136,64 @@ scripts/check.sh
 
 Exit status 0. Static checks passed for 22 QML files. Logic tests passed. The run printed `launcher rank 400 apps: 1.96 ms`. Install tests passed, 15 cases, including a launcher request that writes the state file and leaves the temporary Hyprland binds file unchanged. `qmltestrunner` 6.4.2 passed both QML suites, 6 tests each. The shell-load suite still uses Quickshell stubs. It is not a Quickshell integration test. No desktop entry was executed. `loginctl` was not executed. The launcher window was not shown.
 
+## What was run for M3 stabilization
+
+On 30 Oct 2026, at 8:08 PM America/New_York, in the cloud workspace, with no Hyprland session and no `qs` binary:
+
+```text
+scripts/check.sh
+```
+
+Exit status 0. Static checks passed for 22 QML files, including the `BarLabel` import fixture. Logic tests passed, including a delayed empty desktop-entry model, Dolphin and Helium desktop text, search past the 12-row empty grid, icon-theme lookup, reservation toggling, and the launcher input plan. The run printed `launcher rank 400 apps: 2.45 ms`. Install tests passed, 15 cases. `qmltestrunner` 6.4.2 reported Totals: 6 passed for `tst_implicit_size.qml` and Totals: 7 passed for `tst_shell_load.qml`. The added shell-load case compiles `BarWindow.qml` and fails if the error text contains `BarLabel`. `QStandardPaths: XDG_RUNTIME_DIR not set` was printed. That warning is from the offscreen Qt platform. The shell-load suite uses Quickshell stubs. It did not start `qs`, execute a desktop entry, run `loginctl`, or show the launcher.
+
 ## What the CachyOS session already showed
 
-These were observed before the fixes in this branch, with Noctalia stopped:
+With Noctalia stopped, Noctalia itself being the `noctalia` executable:
 
-- SwiftShell loaded and the bar rendered.
-- The calendar opened. The control center opened.
-- Clicking a workspace logged `Dispatch request "workspace 5" failed` and `return hl.dispatch(workspace 5)` / `')' expected near '5'`.
-- Startup logged `Binding loop detected for property "targetScreens"`.
-- Startup logged `SwiftShell: settings need attention: bar.workspaceIds` for `[4, 5, 6]`.
-- Windows overlapped the bar. `bar.reserveSpace` was false.
+- SwiftShell loaded and the bar rendered. The calendar and control center opened.
+- After the Lua dispatch change, workspace switching worked on the real session, including the click that used to log `return hl.dispatch(workspace 5)` / `')' expected near '5'`. That dispatcher is unchanged here.
+- Before that change, startup logged `Binding loop detected for property "targetScreens"` and `settings need attention: bar.workspaceIds` for `[4, 5, 6]`.
+- Windows overlapped the bar while `bar.reserveSpace` was false. Whether `true` keeps tiled and maximized windows below the bar is not yet confirmed on that session.
 - Popup interaction logged `qt.qpa.wayland.textinput: Trying to disable ... but 0x0 is focused`.
-- `tests/install_flow.sh` failed with `grep: .../sudo.log: No such file or directory` and `not ok - pacman was not requested` on a machine where `qs` and `Hyprland` were already on `PATH`.
+- The launcher opened and did not find installed applications, including Dolphin and Helium. Icons were monograms.
+- One startup failed with `BarWindow.qml[126:13]: BarLabel is not a type` because the Search label had no `import "../components"`. That import is on `main`. A local checkout may still have the same line as an uncommitted edit.
+- `tests/install_flow.sh` failed with `grep: .../sudo.log: No such file or directory` and `not ok - pacman was not requested` on a machine where `qs` and `Hyprland` were already on `PATH`. The hermetic test was rewritten after that. It has not been re-run on CachyOS.
+
+## Updating a checkout that already contains the BarLabel line
+
+From the SwiftShell checkout:
+
+```sh
+git status --short
+git diff -- shell/bar/BarWindow.qml
+```
+
+If the only local change in that file is `import "../components"`, `main` already has that line. Put the rest of the tree aside only if `git status` shows other edits, then fast-forward:
+
+```sh
+git stash push -u -m "local swiftshell edits"
+git pull --ff-only origin main
+git stash pop
+```
+
+When `BarWindow.qml` conflicts, keep a single `import "../components"` directly above `import "../popovers"`. Drop the stash afterward only if `git stash show -p` was that one import and the working tree already has it:
+
+```sh
+git stash drop
+```
+
+If `git status` was clean except that import, this is enough:
+
+```sh
+git checkout -- shell/bar/BarWindow.qml
+git pull --ff-only origin main
+```
+
+`git pull` does not rewrite `~/.config/swiftshell/settings.json`. A file created from the old defaults still has `"reserveSpace": false`. For standalone use, set that key to `true`. Leave it `false` while Noctalia is also drawing on HDMI-A-1. The running shell reloads the file.
 
 ## Hardware retest
 
-From this checkout, after `git pull`:
+From this checkout, after the update above:
 
 ```sh
 scripts/stop.sh
@@ -163,14 +205,14 @@ Leave the process in the foreground. Then:
 1. Click workspaces 4, 5, and 6, including one with no windows. The log must not contain `')' expected near`. The focused workspace on HDMI-A-1 should match the indicator. DP-1's workspaces 1–3 should stay on DP-1.
 2. Move a window to another HDMI-A-1 workspace and confirm the active mark follows it.
 3. Confirm startup does not log `Binding loop detected for property "targetScreens"` or `settings need attention: bar.workspaceIds`.
-4. With `reserveSpace` false, confirm the bar still draws and does not push windows down. Set `bar.reserveSpace` to true in `~/.config/swiftshell/settings.json` and confirm tiled and maximized windows stay below the 28px strip. Toggle a true fullscreen window and confirm it still covers the bar. Set the flag back to false.
+4. Confirm the log says `bar reserves 28 logical px` when `reserveSpace` is true. Tiled and maximized windows should sit below that strip. Toggle a true fullscreen window and confirm it still covers the bar. Set `reserveSpace` to false, confirm the log says `overlay`, and confirm windows can cover the bar again. Set it back to true without restarting and confirm the strip returns. New settings files default to true. An older file may still say false.
 5. Open the calendar, press Escape, open the control center, and click outside it. Confirm the grab is gone and the previously focused application receives the keyboard. Note whether the text-input line is still printed. Do not hide it with a logging rule.
 6. Stop with `scripts/stop.sh`. If the instance is not found, `qs list --all` and `qs kill --id` for this checkout only. Start Noctalia the way it was started before. Do not `pkill` Quickshell.
 
 Launcher, after the M2 checks above:
 
-7. Click Search on the bar. The field should take keys immediately. Type part of an installed application name, press Enter, and confirm that application starts. Press Escape and confirm the previously focused application has the keyboard.
-8. Press Tab and Shift+Tab through the results. Type ordinary letters, including j and k, and confirm they stay in the field. Alt+J and Alt+K may move the selection.
+7. Click Search on the bar. The field should take keys immediately. Type `dolphin` and `helium` and confirm both rows appear, with theme icons rather than only a letter, then press Enter on one and confirm that application starts. Press Escape and confirm the previously focused application has the keyboard. Click the dim area around the card and confirm that also closes it.
+8. Press Tab and Shift+Tab through a long result list and confirm the selected row stays on screen. Type ordinary letters, including j and k, and confirm they stay in the field. Alt+J and Alt+K may move the selection. Open and close the launcher several times, and unplug HDMI-A-1 while it is open if that is safe to try. It must not remain an invisible full-screen grab.
 9. With an empty field, confirm pinned ids from `launcher.pinnedIds` and, after one successful launch, that id on the next empty open. Settings should open the control center. Lock, Suspend, Restart, and Shut down should do nothing on the first Enter and should ask for confirmation on the second. Do not confirm a power action unless that is intended.
 10. Run `scripts/request-launcher.sh` while SwiftShell is running and confirm the launcher opens. Confirm Super+Space still does what it did before. The handoff is `docs/launcher-shortcut.md`. Do not apply it as part of this check unless you have made the backup described there.
 
@@ -181,9 +223,9 @@ Launcher, after the M2 checks above:
 - The bar is transparent on a real wallpaper.
 - Text remains readable at 1.0 and 1.5 scale.
 - `HDMI-A-1` matches the Qt screen name on the target machine.
-- Hyprland IPC accepts `hl.dsp.focus({ workspace = 4 })` through the installed Quickshell build. The old `workspace 4` string was rejected on the Lua session. The replacement is unit-tested and has not been clicked on that session again.
+- Hyprland IPC accepts `hl.dsp.focus({ workspace = 4 })` through the installed Quickshell build. The old `workspace 4` string was rejected. The replacement was clicked successfully on the CachyOS session after that fix. This tree does not change the expression. A cloud test is not that click.
 - Hotplug destroys and recreates the window without a `targetScreens` binding loop. The loop was observed before this change. The property is no longer a binding. Silence on startup is not yet rechecked.
-- `reserveSpace: false` leaves the output's exclusive zone unset, and `true` reserves 28 logical pixels without covering true fullscreen. The overlap was seen while the flag was false. The one-property update has not been watched on the outputs.
+- `reserveSpace: true` reserves 28 logical pixels, Quickshell scales that to native pixels, and toggling the setting updates the zone without a restart. Overlap was seen while the flag was false. The `Normal` write has not been watched on the outputs. True fullscreen covering a `Top` layer has not been rechecked.
 - The shell exits without taking Hyprland down.
 - `./install.sh --install-deps` on a real Arch account. The hermetic test now fails if `/usr/bin` is on that test's PATH. It still does not run real `pacman`.
 - Qt accepts `Scope`, `Singleton`, `PopupWindow`, and `HyprlandFocusGrab` as used here. The calendar and control center did open on CachyOS before this branch. This branch's focus-order change was not part of that launch.
@@ -193,7 +235,7 @@ Launcher, after the M2 checks above:
 - The optional top gradient remains inside the bar and does not steal clicks from windows below it.
 - `WlrLayershell.namespace`, `WlrLayer.Top`, and `WlrKeyboardFocus.None` parse on the installed Quickshell. The 0.2 page documents those members. The namespace line had already been passed on the CachyOS startup that reached the calendar.
 - `qs kill --help` on the installed binary matches the 0.2.0 parser or the later `--any-display` flag. The probe was tested with stubs only.
-- Quickshell loaded `shell.qml`. The instantiation test uses QML stand-ins. `WlrLayershell.namespace` still stops that stand-in at `BarWindow.qml` because an attached object cannot be declared in QML. On the CachyOS run, startup had already passed that line and failed later on read-only implicit size.
+- Quickshell loaded `shell.qml`. The instantiation test uses QML stand-ins. `WlrLayershell.namespace` still stops that stand-in at `BarWindow.qml` because an attached object cannot be declared in QML. The stand-in fails the file if its error text contains `BarLabel`. That is the missing-import regression. It is not a `qs` launch. On CachyOS, startup reached the bar before the `BarLabel` failure, and the manual import let it continue. Dolphin and Helium appearing in search, theme icons, and focus return have not been rechecked.
 
 Those need a Hyprland session on the target machine. Do not mark them passed from a cloud log.
 
@@ -217,7 +259,7 @@ qs kill --id <instance-id>
 
 Read the instance id from `qs list` before killing anything. A blanket process kill can stop the shell that was already running.
 
-To reserve space for maximized windows on HDMI-A-1, set `bar.reserveSpace` to `true` in the settings file and restart the prototype. Leave it `false` while another shell is also drawing on that output.
+A new settings file reserves the bar. If `~/.config/swiftshell/settings.json` still says `"reserveSpace": false`, set it to `true` for standalone use. The running shell reloads that file. Leave it `false` while Noctalia is also drawing on that output.
 
 Clock format is `clock.use24Hour` in the same file. `true` prints `09:04`. `false` prints `9:04 AM`.
 

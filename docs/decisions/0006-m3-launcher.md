@@ -1,5 +1,7 @@
 # M3 launcher
 
+Discovery, icons, and the empty-catalog snapshot described below were corrected in `0007-m3-stabilization.md` after the launcher was opened on CachyOS. This note is the original M3 decision.
+
 The launcher is a separate layer-shell window. It is not a second bar and it does not register Super+Space.
 
 Discovery uses Quickshell 0.2 `DesktopEntries.applications`, which already omits Hidden and NoDisplay application entries. The snapshot is taken when the launcher opens and released when it closes. Search runs on that snapshot. The Node check ranked 400 names in 1.96 ms. That number is not a frame time on the NVIDIA session.
