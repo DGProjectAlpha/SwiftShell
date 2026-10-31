@@ -20,4 +20,19 @@ ShellRoot {
 
     BarHost {}
     LauncherWindow {}
+
+    Connections {
+        target: LauncherModel
+        function onSettingsRequested() { SettingsModel.show() }
+    }
+
+    Loader {
+        id: settingsLoader
+        active: SettingsModel.open
+        source: "settings/SettingsWindow.qml"
+        onStatusChanged: {
+            if (status === Loader.Error)
+                SettingsModel.noteLoadFailed()
+        }
+    }
 }

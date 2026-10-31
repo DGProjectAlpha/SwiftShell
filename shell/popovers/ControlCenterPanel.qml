@@ -106,9 +106,9 @@ Item {
             text: "Session"
         }
 
-        ServiceStatus {
-            name: "Settings"
-            detail: "Edited in the settings file"
+        FlatButton {
+            label: "Settings"
+            onActivated: SettingsModel.show()
         }
 
         ServiceStatus {

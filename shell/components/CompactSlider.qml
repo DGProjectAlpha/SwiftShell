@@ -5,6 +5,7 @@ FocusScope {
     id: control
 
     property real value: 0
+    property string valueName: "Volume"
     property bool enabled: true
     property bool adjusting: false
     signal moved(real next)
@@ -13,7 +14,7 @@ FocusScope {
     implicitHeight: Theme.controlHeight
     activeFocusOnTab: true
     Accessible.role: Accessible.Slider
-    Accessible.name: "Volume " + Math.round(value * 100)
+    Accessible.name: valueName + " " + Math.round(value * 100)
 
     function setFromX(x) {
         if (!enabled || width <= 0)
@@ -38,6 +39,18 @@ FocusScope {
     Keys.onRightPressed: nudge(0.05)
     Keys.onDownPressed: nudge(-0.05)
     Keys.onUpPressed: nudge(0.05)
+    Keys.onPressed: function (event) {
+        const alt = (event.modifiers & Qt.AltModifier) !== 0
+        if (!alt)
+            return
+        if (event.key === Qt.Key_J || event.key === Qt.Key_L)
+            nudge(0.05)
+        else if (event.key === Qt.Key_K || event.key === Qt.Key_H)
+            nudge(-0.05)
+        else
+            return
+        event.accepted = true
+    }
 
     Rectangle {
         anchors.left: parent.left

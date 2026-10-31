@@ -57,7 +57,7 @@ function workspaceIdsValid(ids) {
 }
 
 var DEFAULTS = {
-    version: 1,
+    version: 2,
     clock: {
         use24Hour: true,
         showWeekNumbers: false,
@@ -90,6 +90,12 @@ var DEFAULTS = {
     launcher: {
         pinnedIds: [],
     },
+    settingsWindow: {
+        width: 900,
+        height: 620,
+        category: "appearance",
+    },
+    extensionsJson: "{}",
 };
 
 function pinnedIdValid(value) {
@@ -170,7 +176,7 @@ function validateSettings(input) {
     if (input != null && !isPlainObject(input))
         errors.push("settings");
 
-    if (source.version !== undefined && source.version !== 1)
+    if (source.version !== undefined && source.version !== 1 && source.version !== 2)
         errors.push("version");
 
     const clock = isPlainObject(source.clock) ? source.clock : {};
@@ -264,6 +270,13 @@ function validateSettings(input) {
     if (source.launcher !== undefined && !isPlainObject(source.launcher))
         errors.push("launcher");
 
+    const windowSource = isPlainObject(source.settingsWindow) ? source.settingsWindow : {};
+    if (source.settingsWindow !== undefined && !isPlainObject(source.settingsWindow))
+        errors.push("settingsWindow");
+    const settingsWindowWidth = pickInt(windowSource, "width", 640, 1600, DEFAULTS.settingsWindow.width, errors, "settingsWindow.width");
+    const settingsWindowHeight = pickInt(windowSource, "height", 440, 1200, DEFAULTS.settingsWindow.height, errors, "settingsWindow.height");
+    const settingsWindowCategory = pickEnum(windowSource, "category", ["appearance"], DEFAULTS.settingsWindow.category, errors, "settingsWindow.category");
+
     let pinnedIds = DEFAULTS.launcher.pinnedIds.slice();
     if (!isPlainObject(source.launcher) || launcher.pinnedIds === undefined) {
         pinnedIds = DEFAULTS.launcher.pinnedIds.slice();
@@ -273,6 +286,8 @@ function validateSettings(input) {
         errors.push("launcher.pinnedIds");
         pinnedIds = normalizePinnedIds(launcher.pinnedIds);
     }
+
+    const extensionsJson = extensionsText(source, errors);
 
     return {
         ok: errors.length === 0,
@@ -311,8 +326,147 @@ function validateSettings(input) {
             launcher: {
                 pinnedIds: pinnedIds,
             },
+            settingsWindow: {
+                width: settingsWindowWidth,
+                height: settingsWindowHeight,
+                category: settingsWindowCategory,
+            },
+            extensionsJson: extensionsJson,
         },
     };
+}
+
+function pickInt(source, key, min, max, fallback, errors, label) {
+    if (source[key] === undefined)
+        return fallback;
+    if (typeof source[key] === "number" && Number.isInteger(source[key]) && source[key] >= min && source[key] <= max)
+        return source[key];
+    errors.push(label);
+    if (typeof source[key] === "number" && Number.isFinite(source[key]))
+        return Math.max(min, Math.min(max, Math.round(source[key])));
+    return fallback;
+}
+
+function jsonSafe(value, depth) {
+    if (depth > 6)
+        return undefined;
+    if (value === null || typeof value === "boolean" || typeof value === "string")
+        return value;
+    if (typeof value === "number")
+        return Number.isFinite(value) ? value : undefined;
+    if (Array.isArray(value)) {
+        const out = [];
+        for (let i = 0; i < value.length; i++) {
+            const next = jsonSafe(value[i], depth + 1);
+            if (next !== undefined)
+                out.push(next);
+        }
+        return out;
+    }
+    if (isPlainObject(value)) {
+        const out = {};
+        const keys = Object.keys(value);
+        for (let i = 0; i < keys.length; i++) {
+            const next = jsonSafe(value[keys[i]], depth + 1);
+            if (next !== undefined)
+                out[keys[i]] = next;
+        }
+        return out;
+    }
+    return undefined;
+}
+
+function extensionsText(source, errors) {
+    const known = {
+        version: true,
+        clock: true,
+        bar: true,
+        appearance: true,
+        launcher: true,
+        settingsWindow: true,
+        extensionsJson: true,
+    };
+    const found = {};
+    if (isPlainObject(source)) {
+        const keys = Object.keys(source);
+        for (let i = 0; i < keys.length; i++) {
+            if (known[keys[i]])
+                continue;
+            const next = jsonSafe(source[keys[i]], 0);
+            if (next !== undefined)
+                found[keys[i]] = next;
+        }
+    }
+
+    let existing = {};
+    if (isPlainObject(source) && source.extensionsJson !== undefined) {
+        if (typeof source.extensionsJson !== "string") {
+            errors.push("extensionsJson");
+        } else {
+            try {
+                const parsed = JSON.parse(source.extensionsJson);
+                if (isPlainObject(parsed))
+                    existing = parsed;
+                else
+                    errors.push("extensionsJson");
+            } catch (error) {
+                errors.push("extensionsJson");
+            }
+        }
+    }
+
+    const merged = jsonSafe(Object.assign({}, existing, found), 0) || {};
+    const text = JSON.stringify(merged);
+    if (text.length > 4096) {
+        errors.push("extensionsJson");
+        return "{}";
+    }
+    return text;
+}
+
+function migrationDecision(input) {
+    if (!isPlainObject(input))
+        return { action: "keep", reason: "unreadable", errors: ["settings"] };
+    const validated = validateSettings(input);
+    if (!validated.ok)
+        return { action: "keep", reason: "invalid", errors: validated.errors, settings: validated.settings };
+    if (input.version === 2)
+        return { action: "keep", reason: "current", errors: [], settings: validated.settings };
+    return {
+        action: "migrate",
+        reason: "version",
+        errors: [],
+        backupText: JSON.stringify(input, null, 2) + "\n",
+        settings: validated.settings,
+    };
+}
+
+function backupPath(settingsPath) {
+    if (typeof settingsPath !== "string" || settingsPath.indexOf("\0") !== -1 || settingsPath === "")
+        return "";
+    return settingsPath + ".bak-swiftshell";
+}
+
+function opacityFromUnit(unit) {
+    const t = typeof unit === "number" && Number.isFinite(unit) ? Math.min(1, Math.max(0, unit)) : 0;
+    return Math.round((0.72 + t * 0.24) * 1000) / 1000;
+}
+
+function unitFromOpacity(opacity) {
+    if (typeof opacity !== "number" || !Number.isFinite(opacity))
+        return 0;
+    return Math.min(1, Math.max(0, (opacity - 0.72) / 0.24));
+}
+
+function radiusFromUnit(unit) {
+    const t = typeof unit === "number" && Number.isFinite(unit) ? Math.min(1, Math.max(0, unit)) : 0;
+    return Math.round(6 + t * 6);
+}
+
+function unitFromRadius(radius) {
+    if (typeof radius !== "number" || !Number.isFinite(radius))
+        return 0;
+    return Math.min(1, Math.max(0, (radius - 6) / 6));
 }
 
 function serializeSettings(settings) {
@@ -324,6 +478,12 @@ var swiftshellSettings = {
     DEFAULTS: DEFAULTS,
     validateSettings: validateSettings,
     serializeSettings: serializeSettings,
+    migrationDecision: migrationDecision,
+    backupPath: backupPath,
+    opacityFromUnit: opacityFromUnit,
+    unitFromOpacity: unitFromOpacity,
+    radiusFromUnit: radiusFromUnit,
+    unitFromRadius: unitFromRadius,
     normalizeWorkspaceIds: normalizeWorkspaceIds,
     normalizePinnedIds: normalizePinnedIds,
 };

@@ -159,6 +159,28 @@ scripts/check.sh
 
 Exit status 0. Static checks passed for 22 QML files. Logic tests passed, including focused-monitor selection, a disconnected saved monitor, live workspace ids, explicit ids that still include a missing workspace, centered frames for 2560×1440, 1920×1080, and 1280×720, repeated launcher request tokens, Dolphin search, icon lookup, Tab-style selection, and a cleared keyboard grab. The run printed `launcher rank 400 apps: 2.33 ms`. Install tests passed, 15 cases, including a launcher request that leaves the temporary Hyprland binds file unchanged. `qmltestrunner` 6.4.2 reported Totals: 6 passed for `tst_implicit_size.qml` and Totals: 7 passed for `tst_shell_load.qml`. `QStandardPaths: XDG_RUNTIME_DIR not set` was printed. That warning is from the offscreen Qt platform. The shell-load suite uses Quickshell stubs. It did not start `qs`, show Spotlight, launch an application, or press Super+Space.
 
+## What was run for M4.0
+
+On 30 Oct 2026, at 8:55 PM America/New_York, in the cloud workspace, with no Hyprland session and no `qs` binary:
+
+```text
+scripts/check.sh
+```
+
+Exit status 0. Static checks passed for 27 QML files. Logic tests passed, including version 1 migration, a refused invalid file, unknown keys kept by `migrationDecision`, window size clamping, and a settings session that stays one instance. Blur stays unavailable. The run printed `launcher rank 400 apps: 3.15 ms`. Install tests passed, 15 cases. `qmltestrunner` 6.4.2 reported Totals: 6 passed for `tst_implicit_size.qml` and Totals: 8 passed for `tst_shell_load.qml`. The added case compiles the settings window and the Appearance page against the Quickshell stub and checks that the page names the translucent scrim. `QStandardPaths: XDG_RUNTIME_DIR not set` was printed. That warning is from the offscreen Qt platform. The shell-load suite did not start `qs`, show the settings window, move it, or resize it.
+
+## Settings window hardware check
+
+After the M3.2 checks, and only with SwiftShell launched by `scripts/launch.sh`:
+
+1. Copy `~/.config/swiftshell/settings.json` aside if it contains keys that are not in `docs/architecture.md`. A version 1 file is backed up to `settings.json.bak-swiftshell` and rewritten as version 2 on launch. `HDMI-A-1` and workspaces `[4, 5, 6]` are known keys.
+2. Open Spotlight, choose Settings, and confirm one normal window appears. Hyprland's own move bind should move it. Resize it from the compositor, close it, and open it again. The size should come back. Escape should close it.
+3. Open Settings again from the control center button, and once more from Spotlight while it is already open. There should still be one window.
+4. Change dark, light, reduced motion, the top gradient, panel opacity, and corner radius. The bar, Spotlight, and the settings window should follow. Restart with `scripts/stop.sh` and `scripts/launch.sh` and confirm the same values. There is no blur slider. The page should say blur is unavailable.
+5. Confirm `~/.config/hypr` and the Noctalia config are unchanged.
+
+This checklist is not done in the cloud run.
+
 ## What the CachyOS session already showed
 
 With Noctalia stopped, Noctalia itself being the `noctalia` executable:
@@ -226,7 +248,7 @@ Launcher, after the M2 checks above:
 
 7. Click Search on the bar. The field should take keys immediately. Type `dolphin` and `helium` and confirm both rows appear, with theme icons rather than only a letter, then press Enter on one and confirm that application starts. Press Escape and confirm the previously focused application has the keyboard. Click the dim area around the card and confirm that also closes it.
 8. Press Tab and Shift+Tab through a long result list and confirm the selected row stays on screen. Type ordinary letters, including j and k, and confirm they stay in the field. Alt+J and Alt+K may move the selection. Open and close the launcher several times, and unplug HDMI-A-1 while it is open if that is safe to try. It must not remain an invisible full-screen grab.
-9. With an empty field, confirm pinned ids from `launcher.pinnedIds` and, after one successful launch, that id on the next empty open. Settings should open the control center. Lock, Suspend, Restart, and Shut down should do nothing on the first Enter and should ask for confirmation on the second. Do not confirm a power action unless that is intended.
+9. With an empty field, confirm pinned ids from `launcher.pinnedIds` and, after one successful launch, that id on the next empty open. Settings should close Spotlight and open one settings window, not the control center. Lock, Suspend, Restart, and Shut down should do nothing on the first Enter and should ask for confirmation on the second. Do not confirm a power action unless that is intended.
 10. Run `scripts/request-launcher.sh` while SwiftShell is running and confirm the launcher opens. Run it again and confirm the launcher closes and the previously focused application has the keyboard. Confirm Super+Space still does what it did before. The handoff is `docs/launcher-shortcut.md`. Do not apply it as part of this check unless you have made the backup described there.
 11. Leave `~/.config/swiftshell/settings.json` in place. If it names `HDMI-A-1` and workspaces 4–6, the bar should stay on that output with those indicators. Focus a window on DP-1 and click Search. The card should be centered on DP-1. Focus HDMI-A-1 and request the launcher again. The card should be centered on HDMI-A-1. Scroll a long result list and confirm the search field stays on screen. Unplug a monitor only if that is safe, and confirm no full-screen grab remains.
 

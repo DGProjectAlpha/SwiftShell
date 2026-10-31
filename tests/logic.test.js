@@ -14,6 +14,7 @@ const popover = require("../shell/logic/popover.js");
 const audio = require("../shell/logic/audio.js");
 const bar = require("../shell/logic/bar.js");
 const launcher = require("../shell/logic/launcher.js");
+const capabilities = require("../shell/logic/capabilities.js");
 
 let failed = 0;
 
@@ -188,7 +189,7 @@ test("empty settings validate to the documented defaults", function () {
 
 test("invalid settings are reported and repaired without accepting the bad value", function () {
     const result = settings.validateSettings({
-        version: 2,
+        version: 3,
         clock: { use24Hour: "yes" },
         bar: {
             targetMonitor: false,
@@ -206,11 +207,72 @@ test("invalid settings are reported and repaired without accepting the bad value
         "bar.showFocusedTitle",
         "bar.workspaceIds",
     ]);
-    assert.equal(result.settings.version, 1);
+    assert.equal(result.settings.version, 2);
     assert.equal(result.settings.clock.use24Hour, true);
     assert.equal(result.settings.bar.targetMonitor, "");
     assert.equal(result.settings.bar.reserveSpace, true);
     assert.deepEqual(result.settings.bar.workspaceIds, [4]);
+});
+
+test("version 1 settings migrate and unknown keys stay in the extension bag", function () {
+    const migrated = settings.migrationDecision({
+        version: 1,
+        bar: { targetMonitor: "HDMI-A-1", workspaceIds: [4, 5, 6] },
+        extra: { kept: true },
+    });
+    assert.equal(migrated.action, "migrate");
+    assert.equal(migrated.settings.version, 2);
+    assert.equal(migrated.settings.bar.targetMonitor, "HDMI-A-1");
+    assert.deepEqual(migrated.settings.bar.workspaceIds, [4, 5, 6]);
+    assert.equal(JSON.parse(migrated.settings.extensionsJson).extra.kept, true);
+    assert.ok(migrated.backupText.indexOf('"version": 1') !== -1);
+    assert.equal(settings.migrationDecision(settings.DEFAULTS).action, "keep");
+    assert.equal(settings.migrationDecision({ version: 2, clock: { use24Hour: false } }).action, "keep");
+    const missing = settings.migrationDecision({ clock: { use24Hour: false } });
+    assert.equal(missing.action, "migrate");
+    assert.equal(missing.settings.version, 2);
+    assert.equal(missing.settings.clock.use24Hour, false);
+    assert.equal(settings.migrationDecision({ version: 3 }).action, "keep");
+    assert.equal(settings.migrationDecision("broken").action, "keep");
+    assert.equal(settings.migrationDecision({ version: 1, clock: { use24Hour: "yes" } }).action, "keep");
+    assert.equal(settings.backupPath("/tmp/settings.json"), "/tmp/settings.json.bak-swiftshell");
+    assert.equal(settings.backupPath(""), "");
+    const sized = settings.validateSettings({
+        settingsWindow: { width: 10, height: 5000, category: "displays" },
+    }).settings.settingsWindow;
+    assert.deepEqual(sized, { width: 640, height: 1200, category: "appearance" });
+    assert.equal(settings.opacityFromUnit(0), 0.72);
+    assert.equal(settings.opacityFromUnit(1), 0.96);
+    assert.equal(settings.unitFromOpacity(0.92), (0.92 - 0.72) / 0.24);
+    assert.equal(settings.radiusFromUnit(0), 6);
+    assert.equal(settings.radiusFromUnit(1), 12);
+    assert.equal(settings.radiusFromUnit(settings.unitFromRadius(10)), 10);
+    const brokenBag = settings.validateSettings({ extensionsJson: "nope" });
+    assert.equal(brokenBag.ok, false);
+    assert.equal(brokenBag.settings.extensionsJson, "{}");
+});
+
+test("settings window stays one instance and blur is not available", function () {
+    const report = capabilities.capabilityReport();
+    assert.equal(report.settingsToplevel.available, true);
+    assert.equal(report.settingsToplevel.hardwareVerified, false);
+    assert.equal(report.settingsToplevel.clientMove, false);
+    assert.equal(report.backdropBlur.available, false);
+    assert.equal(report.backdropBlur.hardwareVerified, false);
+    let session = capabilities.reduceSettingsWindow(undefined, "launch");
+    session = capabilities.reduceSettingsWindow(session, "launch");
+    assert.equal(session.open, true);
+    assert.equal(session.instances, 1);
+    assert.equal(session.focused, true);
+    session = capabilities.reduceSettingsWindow(session, "close");
+    assert.equal(session.open, false);
+    assert.equal(session.instances, 0);
+    assert.equal(session.focused, false);
+    session = capabilities.reduceSettingsWindow(session, "load-failed");
+    assert.equal(session.open, false);
+    assert.equal(session.reason, "The settings window could not be created");
+    session = capabilities.reduceSettingsWindow({ open: true, instances: 1, focused: true, reason: "" }, "compositor-close");
+    assert.equal(session.instances, 0);
 });
 
 test("blank monitor text means automatic placement", function () {

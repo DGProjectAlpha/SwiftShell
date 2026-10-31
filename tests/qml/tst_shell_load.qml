@@ -19,6 +19,8 @@ TestCase {
         "shell/components/CompactSlider.qml",
         "shell/components/SectionHeader.qml",
         "shell/components/ServiceStatus.qml",
+        "shell/components/SettingsRow.qml",
+        "shell/components/SettingsToggle.qml",
         "shell/popovers/PopoverHost.qml",
         "shell/popovers/PopoverSurface.qml",
         "shell/popovers/CalendarPanel.qml",
@@ -28,7 +30,10 @@ TestCase {
         "shell/services/SettingsStore.qml",
         "shell/services/HyprlandModel.qml",
         "shell/services/LauncherModel.qml",
-        "shell/launcher/LauncherWindow.qml"
+        "shell/services/SettingsModel.qml",
+        "shell/launcher/LauncherWindow.qml",
+        "shell/settings/AppearancePage.qml",
+        "shell/settings/SettingsWindow.qml"
     ]
 
     // These compile with the Qt Quick stubs. shell.qml, BarHost, and BarWindow also
@@ -43,11 +48,15 @@ TestCase {
         "shell/components/CompactSlider.qml",
         "shell/components/SectionHeader.qml",
         "shell/components/ServiceStatus.qml",
+        "shell/components/SettingsRow.qml",
+        "shell/components/SettingsToggle.qml",
         "shell/popovers/PopoverHost.qml",
         "shell/popovers/PopoverSurface.qml",
         "shell/popovers/CalendarPanel.qml",
         "shell/popovers/ControlCenterPanel.qml",
-        "shell/popovers/AudioSection.qml"
+        "shell/popovers/AudioSection.qml",
+        "shell/settings/AppearancePage.qml",
+        "shell/settings/SettingsWindow.qml"
     ]
 
     function componentFor(path) {
@@ -196,5 +205,46 @@ TestCase {
         anchor.destroy()
         bar.screen.destroy()
         bar.destroy()
+    }
+
+    function findText(node, needle, depth) {
+        if (!node || depth > 24)
+            return false
+        if (node.text && String(node.text).indexOf(needle) !== -1)
+            return true
+        var kids = node.children
+        if (kids) {
+            for (var index = 0; index < kids.length; index++) {
+                if (findText(kids[index], needle, depth + 1))
+                    return true
+            }
+        }
+        if (node.item)
+            return findText(node.item, needle, depth + 1)
+        return false
+    }
+
+    function test_settings_page_names_the_blur_limit() {
+        var page = componentFor("shell/settings/AppearancePage.qml").createObject(this)
+        verify(page !== null)
+        verify(findText(page, "translucent scrim", 0))
+        verify(!findText(page, "Gaussian", 0))
+
+        var toggled = false
+        var toggle = componentFor("shell/components/SettingsToggle.qml").createObject(this, { label: "Reduced motion", checked: false })
+        verify(toggle !== null)
+        toggle.toggled.connect(function() { toggled = true })
+        toggle.flip()
+        verify(toggled)
+
+        var settings = componentFor("shell/settings/SettingsWindow.qml").createObject(this)
+        verify(settings !== null)
+        compare(settings.title, "SwiftShell Settings")
+        verify(settings.minimumSize.width === 640)
+        verify(settings.minimumSize.height === 440)
+
+        page.destroy()
+        toggle.destroy()
+        settings.destroy()
     }
 }

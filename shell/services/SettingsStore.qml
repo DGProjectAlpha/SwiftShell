@@ -35,9 +35,13 @@ Singleton {
     readonly property real iconScale: appearanceSettings.iconScale
     readonly property bool topGradient: appearanceSettings.topGradient
     readonly property var pinnedIds: Settings.normalizePinnedIds(launcherSettings.pinnedIds)
+    readonly property int settingsWindowWidth: windowSettings.width
+    readonly property int settingsWindowHeight: windowSettings.height
+    readonly property string settingsWindowCategory: windowSettings.category
 
     property bool writing: false
     property bool suppressReload: false
+    property bool migrating: false
 
     function snapshot() {
         return {
@@ -73,8 +77,31 @@ Singleton {
             },
             launcher: {
                 pinnedIds: launcherSettings.pinnedIds
-            }
+            },
+            settingsWindow: {
+                width: windowSettings.width,
+                height: windowSettings.height,
+                category: windowSettings.category
+            },
+            extensionsJson: adapter.extensionsJson
         };
+    }
+
+    function setPanelOpacity(value) {
+        const next = Settings.opacityFromUnit(Settings.unitFromOpacity(value))
+        appearanceSettings.panelOpacity = next
+    }
+
+    function setRadius(value) {
+        appearanceSettings.radius = Settings.radiusFromUnit(Settings.unitFromRadius(value))
+    }
+
+    function setSettingsWindowSize(width, height) {
+        const decision = Settings.validateSettings({
+            settingsWindow: { width: width, height: height, category: windowSettings.category }
+        })
+        windowSettings.width = decision.settings.settingsWindow.width
+        windowSettings.height = decision.settings.settingsWindow.height
     }
 
     function setAppearanceMode(mode) {
@@ -119,9 +146,15 @@ Singleton {
             console.warn("SwiftShell: settings were not saved", error);
         }
         onLoaded: {
-            const result = Settings.validateSettings(root.snapshot());
-            if (!result.ok)
-                console.warn("SwiftShell: settings need attention:", result.errors.join(", "));
+            const decision = Settings.migrationDecision(root.snapshot());
+            if (decision.action === "migrate") {
+                root.migrating = true;
+                backupAdapter.document = decision.backupText;
+                backupFile.writeAdapter();
+                return;
+            }
+            if (decision.errors && decision.errors.length > 0)
+                console.warn("SwiftShell: settings need attention:", decision.errors.join(", "));
             else
                 console.info("SwiftShell: settings loaded");
         }
@@ -131,7 +164,7 @@ Singleton {
 
         JsonAdapter {
             id: adapter
-            property int version: 1
+            property int version: 2
 
             property JsonObject clock: JsonObject {
                 id: clockSettings
@@ -172,6 +205,39 @@ Singleton {
                 id: launcherSettings
                 property list<string> pinnedIds: []
             }
+
+            property JsonObject settingsWindow: JsonObject {
+                id: windowSettings
+                property int width: 900
+                property int height: 620
+                property string category: "appearance"
+            }
+
+            property string extensionsJson: "{}"
+        }
+    }
+
+    FileView {
+        id: backupFile
+        path: Settings.backupPath(root.settingsPath)
+        atomicWrites: true
+        onSaved: {
+            if (!root.migrating)
+                return
+            adapter.version = 2
+            root.migrating = false
+            console.info("SwiftShell: settings migrated to version 2")
+        }
+        onSaveFailed: function (error) {
+            if (!root.migrating)
+                return
+            root.migrating = false
+            console.warn("SwiftShell: settings were not migrated because the backup was not written")
+        }
+
+        JsonAdapter {
+            id: backupAdapter
+            property string document: ""
         }
     }
 }

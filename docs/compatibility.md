@@ -88,7 +88,8 @@ Quickshell 0.2.0 accepts `--path` and `--no-duplicate` on the main command, and 
 | Network, Bluetooth, media, power menu beyond the launcher confirmations, file search | Not part of the verified launcher | Not implemented here | Deferred. The launcher does not invent those results |
 | Launcher window | `DesktopEntries`, `applicationsChanged`, `Quickshell.iconPath(icon, true)`, and `Hyprland.focusedMonitor` are on the 0.2 pages | The scan result is queued before `applicationsChanged`. `focusedMonitor` may be null | Implemented. The CachyOS session opened an earlier launcher and did not find Dolphin or Helium. The centered card and focused-monitor placement have not been launched with `qs` here |
 | Wallpaper sampling | Not implemented | Not implemented | Deferred. The stored tint does not change the palette |
+| `FloatingWindow` settings toplevel | Documented in 0.2.0 with `title`, `minimumSize`, and `maximumSize` only. `closed` is on `QsWindow`. Client move and resize methods are later | `startSystemMove` and `startSystemResize` appear after 0.2 | Loaded through a `Loader`. Size is assigned once. Not shown on a Wayland session in this run |
 
 ## Explicitly out of scope
 
-The settings GUI, tray, media controls, network management, Bluetooth, wallpaper sampling, and Hyprland decoration changes are later milestones. The launcher's power rows call `loginctl` only after a second confirmation. Panel blur is unsupported on the current compatibility floor rather than deferred behind a fake effect.
+Tray, media controls, network management, Bluetooth, wallpaper sampling, and Hyprland decoration changes are later milestones. The settings window is one Appearance page on a `FloatingWindow`. It does not edit Hyprland. The launcher's power rows call `loginctl` only after a second confirmation. Panel blur is unsupported on the current compatibility floor rather than deferred behind a fake effect.
