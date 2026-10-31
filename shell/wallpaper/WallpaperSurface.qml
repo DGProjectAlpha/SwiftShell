@@ -15,14 +15,6 @@ PanelWindow {
     property bool failed: false
     readonly property url packagedSource: Qt.resolvedUrl("../assets/wallpapers/swiftshell-default-crimson.png")
     readonly property int limitEdge: Wallpaper.MAX_EDGE
-    property int frontSlot: 0
-    property string slotAPath: ""
-    property string slotBPath: ""
-    property url slotASource: ""
-    property url slotBSource: ""
-    property string pendingPath: ""
-    property int pendingGeneration: 0
-    property var fadeTarget: null
 
     screen: modelData
     color: "black"
@@ -33,6 +25,15 @@ PanelWindow {
     WlrLayershell.namespace: "swiftshell-wallpaper"
     WlrLayershell.layer: WlrLayer.Background
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+
+    property int frontSlot: 0
+    property string slotAPath: ""
+    property string slotBPath: ""
+    property url slotASource: ""
+    property url slotBSource: ""
+    property string pendingPath: ""
+    property int pendingGeneration: 0
+    property var fadeTarget: null
 
     anchors {
         top: true
