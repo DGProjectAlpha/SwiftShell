@@ -69,6 +69,8 @@ FloatingWindow {
             return barPage
         if (SettingsStore.settingsWindowCategory === "wallpaper")
             return wallpaperPage
+        if (SettingsStore.settingsWindowCategory === "displays")
+            return displaysPage
         return page
     }
 
@@ -272,6 +274,16 @@ FloatingWindow {
                             search.text = ""
                         }
                     }
+
+                    FlatButton {
+                        width: parent.width
+                        label: "Displays"
+                        emphasized: SettingsStore.settingsWindowCategory === "displays"
+                        onActivated: {
+                            SettingsStore.setSettingsCategory("displays")
+                            search.text = ""
+                        }
+                    }
                 }
             }
 
@@ -292,7 +304,7 @@ FloatingWindow {
                     id: page
                     y: 0
                     width: scroller.width
-                    visible: SettingsStore.settingsWindowCategory !== "bar" && SettingsStore.settingsWindowCategory !== "wallpaper"
+                    visible: SettingsStore.settingsWindowCategory === "appearance"
                     height: visible ? implicitHeight : 0
                     query: search.text
                     onEdited: function (patch) { window.commit(patch) }
@@ -324,6 +336,18 @@ FloatingWindow {
                         scroller.contentY = Nav.scrollTarget(scroller.contentY, scroller.height, y, itemHeight)
                     }
                     onEdited: function (patch) { window.commit(patch) }
+                }
+
+                DisplaysPage {
+                    id: displaysPage
+                    y: 0
+                    width: scroller.width
+                    visible: SettingsStore.settingsWindowCategory === "displays"
+                    height: visible ? implicitHeight : 0
+                    query: search.text
+                    onRevealRequested: function (y, itemHeight) {
+                        scroller.contentY = Nav.scrollTarget(scroller.contentY, scroller.height, y, itemHeight)
+                    }
                 }
             }
         }

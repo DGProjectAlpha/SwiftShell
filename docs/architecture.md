@@ -140,6 +140,10 @@ Slideshow states are disabled, scanning, waiting, preloading, transitioning, pau
 
 Automatic text and the automatic fade read png pixels from the top of the image. The decoder is the shell's own inflate and png reader. It samples the left, center, and right of that edge. Light text is chosen on a dark edge and dark text on a light edge. A split edge, or a contrast below 4.5, turns on the bar fade instead of flipping the text. A small change keeps the previous text so a slideshow does not strobe. The accent mixed into the fade is pulled toward gray. Jpeg and webp still display, and the page says they are not sampled. Manual hex values are kept when automatic is turned off. Nothing here reads pixels from other windows.
 
+## Displays
+
+The Displays page draws one rectangle per connected screen. Dragging, or Alt+H/J/K/L while the diagram is focused, moves that rectangle in the preview. Edges within 40 logical pixels snap. Overlap is named. The last enabled output cannot be turned off in the preview. If every reported position is the origin, the preview lays the outputs in a row and says so. The current width, height, scale, and refresh are shown when the compositor reported them. Another mode, rotation, or HDR switch is not offered. Apply is disabled. The sentence on the page is the reason: this floor has no verified layout call, so nothing is sent. The preview is not written to Hyprland and is not kept as a display configuration.
+
 ## Launcher
 
 The Search control on the bar closes any open panel and asks `LauncherModel` to open `LauncherWindow`. `scripts/request-launcher.sh` and `swiftshell request-launcher` write a JSON token under the XDG state directory. The shell watches that file. The token already present at startup does not open the launcher. A later token opens it, and another token while it is open closes it. Neither command edits Hyprland or starts a second process. Super+Space is documented in `docs/launcher-shortcut.md` and is not changed by this repository.

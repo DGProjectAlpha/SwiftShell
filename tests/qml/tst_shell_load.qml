@@ -37,6 +37,7 @@ TestCase {
         "shell/settings/AppearancePage.qml",
         "shell/settings/BarPage.qml",
         "shell/settings/ImageDialog.qml",
+        "shell/settings/DisplaysPage.qml",
         "shell/settings/SettingsWindow.qml",
         "shell/settings/WallpaperPage.qml",
         "shell/wallpaper/SlideshowClock.qml",
@@ -65,6 +66,7 @@ TestCase {
         "shell/popovers/AudioSection.qml",
         "shell/settings/AppearancePage.qml",
         "shell/settings/BarPage.qml",
+        "shell/settings/DisplaysPage.qml",
         "shell/settings/SettingsWindow.qml",
         "shell/settings/WallpaperPage.qml",
         "shell/wallpaper/SlideshowClock.qml"
@@ -267,6 +269,10 @@ TestCase {
         verify(findText(wallpaper, "does not stop that program", 0))
         verify(findText(wallpaper, "No outputs are connected", 0))
         verify(wallpaper.shows("wallpaperPath"))
+        var displays = componentFor("shell/settings/DisplaysPage.qml").createObject(this)
+        verify(displays !== null)
+        verify(findText(displays, "not sent", 0))
+        verify(findText(displays, "No outputs are connected", 0))
         wallpaper.query = "cover"
         verify(wallpaper.shows("wallpaperFit"))
         verify(!wallpaper.shows("wallpaperPath"))
@@ -275,5 +281,6 @@ TestCase {
         toggle.destroy()
         settings.destroy()
         wallpaper.destroy()
+        displays.destroy()
     }
 }

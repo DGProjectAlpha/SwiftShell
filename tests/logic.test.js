@@ -22,6 +22,7 @@ const inflate = require("../shell/logic/inflate.js");
 const png = require("../shell/logic/png.js");
 const contrast = require("../shell/logic/contrast.js");
 const slideshow = require("../shell/logic/slideshow.js");
+const displays = require("../shell/logic/displays.js");
 const zlib = require("node:zlib");
 
 let failed = 0;
@@ -247,7 +248,7 @@ test("version 1 settings migrate and unknown keys stay in the extension bag", fu
     assert.equal(settings.backupPath("/tmp/settings.json"), "/tmp/settings.json.bak-swiftshell");
     assert.equal(settings.backupPath(""), "");
     const sized = settings.validateSettings({
-        settingsWindow: { width: 10, height: 5000, category: "displays" },
+        settingsWindow: { width: 10, height: 5000, category: "notifications" },
     }).settings.settingsWindow;
     assert.deepEqual(sized, { width: 640, height: 1200, category: "appearance" });
     assert.equal(settings.opacityFromUnit(0), 0.72);
@@ -295,10 +296,11 @@ test("settings window stays one instance and blur is not available", function ()
 test("settings search, density, and undo stay on real appearance fields", function () {
     assert.equal(settingsNav.navigationLayout(719), "stacked");
     assert.equal(settingsNav.navigationLayout(720), "columns");
-    assert.equal(settingsNav.categories().length, 3);
+    assert.equal(settingsNav.categories().length, 4);
     assert.equal(settingsNav.categories()[0].id, "appearance");
     assert.equal(settingsNav.categories()[1].id, "bar");
     assert.equal(settingsNav.categories()[2].id, "wallpaper");
+    assert.equal(settingsNav.categories()[3].id, "displays");
     assert.equal(settingsNav.categoryFor(settingsNav.firstControlId("cover")), "wallpaper");
     assert.equal(settingsNav.filterControls("").length, settingsNav.CONTROLS.length);
     assert.equal(settingsNav.filterControls("not-a-setting").length, 0);
@@ -566,6 +568,50 @@ test("slideshow and wallpaper contrast are deterministic", function () {
         right: { r: 250, g: 250, b: 250 },
     }, looked);
     assert.equal(pale.foreground, "dark");
+});
+
+test("display preview math keeps aspect and refuses the last output", function () {
+    const dual = displays.withFallbackRow([
+        displays.outputFrom({ id: "a", name: "DP-1", width: 2560, height: 1440, scale: 1, x: 0, y: 0 }),
+        displays.outputFrom({ id: "b", name: "HDMI-A-1", width: 1920, height: 1080, scale: 1.5, x: 2560, y: 0 }),
+    ]);
+    assert.equal(displays.needsRow(dual), false);
+    const box = displays.bounds(dual);
+    assert.equal(box.x, 0);
+    assert.equal(box.width, 2560 + 1920);
+    const fitted = displays.project(dual, 480, 270, 12);
+    assert.equal(fitted.length, 2);
+    assert.ok(fitted[0].width > 8 && fitted[1].width > 8);
+    assert.ok(fitted[0].x >= 12 && fitted[1].x > fitted[0].x);
+    const negative = displays.bounds([
+        displays.outputFrom({ id: "left", name: "eDP-1", x: -1920, y: 0, width: 1920, height: 1080 }),
+        displays.outputFrom({ id: "right", name: "DP-1", x: 0, y: 0, width: 2560, height: 1440 }),
+    ]);
+    assert.equal(negative.x, -1920);
+    const portrait = displays.project([
+        displays.outputFrom({ id: "p", name: "eDP-1", width: 1080, height: 1920, x: 0, y: 0 }),
+    ], 200, 300, 12);
+    assert.ok(portrait[0].height > portrait[0].width);
+    const nudged = displays.nudge(dual, "b", "left", 80);
+    assert.equal(nudged[1].x, 2560 - 80);
+    const near = displays.clone(dual);
+    near[1] = displays.outputFrom(Object.assign({}, near[1], { x: 2560 + 10 }));
+    const snapped = displays.snapEdges(near, "b", 40);
+    assert.equal(snapped[1].x, 2560);
+    const overlapped = displays.clone(dual);
+    overlapped[1] = displays.outputFrom(Object.assign({}, overlapped[1], { x: 2000 }));
+    assert.ok(displays.warnings(overlapped).length > 0);
+    const blocked = displays.setEnabled(dual, "a", false);
+    assert.equal(blocked.error, "");
+    const last = displays.setEnabled(blocked.outputs, "b", false);
+    assert.equal(last.error, "The last output stays on.");
+    assert.equal(last.outputs[1].enabled, true);
+    const row = displays.withFallbackRow([
+        displays.fromScreen({ name: "eDP-1", width: 1920, height: 1080 }, null),
+        displays.fromScreen({ name: "DP-1", width: 2560, height: 1440 }, null),
+    ]);
+    assert.equal(row[1].x, 1920);
+    assert.ok(displays.APPLY_REASON.indexOf("not sent") !== -1);
 });
 
 test("blank monitor text means automatic placement", function () {
