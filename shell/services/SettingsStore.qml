@@ -58,6 +58,7 @@ Singleton {
     readonly property string manualMuted: appearanceSettings.manualMuted
     readonly property string manualPanel: appearanceSettings.manualPanel
     readonly property string manualGradient: appearanceSettings.manualGradient
+    readonly property string shortcutsJson: adapter.shortcutsJson
 
     property bool writing: false
     property bool suppressReload: false
@@ -123,8 +124,35 @@ Singleton {
                 height: windowSettings.height,
                 category: windowSettings.category
             },
+            shortcutsJson: adapter.shortcutsJson,
             extensionsJson: adapter.extensionsJson
         };
+    }
+
+    function setShortcut(id, modifiers, key) {
+        var map = {}
+        try {
+            map = JSON.parse(adapter.shortcutsJson || "{}")
+        } catch (error) {
+            map = {}
+        }
+        if (!map || typeof map !== "object" || Array.isArray(map))
+            map = {}
+        map[id] = { modifiers: modifiers, key: key }
+        adapter.shortcutsJson = Settings.validateSettings({ shortcutsJson: JSON.stringify(map) }).settings.shortcutsJson
+    }
+
+    function clearShortcut(id) {
+        var map = {}
+        try {
+            map = JSON.parse(adapter.shortcutsJson || "{}")
+        } catch (error) {
+            map = {}
+        }
+        if (!map || typeof map !== "object" || Array.isArray(map))
+            map = {}
+        delete map[id]
+        adapter.shortcutsJson = Settings.validateSettings({ shortcutsJson: JSON.stringify(map) }).settings.shortcutsJson
     }
 
     function setPanelOpacity(value) {
@@ -485,6 +513,7 @@ Singleton {
                 property string category: "appearance"
             }
 
+            property string shortcutsJson: "{}"
             property string extensionsJson: "{}"
         }
     }

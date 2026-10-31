@@ -71,6 +71,8 @@ FloatingWindow {
             return wallpaperPage
         if (SettingsStore.settingsWindowCategory === "displays")
             return displaysPage
+        if (SettingsStore.settingsWindowCategory === "shortcuts")
+            return shortcutsPage
         return page
     }
 
@@ -284,6 +286,16 @@ FloatingWindow {
                             search.text = ""
                         }
                     }
+
+                    FlatButton {
+                        width: parent.width
+                        label: "Shortcuts"
+                        emphasized: SettingsStore.settingsWindowCategory === "shortcuts"
+                        onActivated: {
+                            SettingsStore.setSettingsCategory("shortcuts")
+                            search.text = ""
+                        }
+                    }
                 }
             }
 
@@ -343,6 +355,18 @@ FloatingWindow {
                     y: 0
                     width: scroller.width
                     visible: SettingsStore.settingsWindowCategory === "displays"
+                    height: visible ? implicitHeight : 0
+                    query: search.text
+                    onRevealRequested: function (y, itemHeight) {
+                        scroller.contentY = Nav.scrollTarget(scroller.contentY, scroller.height, y, itemHeight)
+                    }
+                }
+
+                ShortcutsPage {
+                    id: shortcutsPage
+                    y: 0
+                    width: scroller.width
+                    visible: SettingsStore.settingsWindowCategory === "shortcuts"
                     height: visible ? implicitHeight : 0
                     query: search.text
                     onRevealRequested: function (y, itemHeight) {

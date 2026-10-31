@@ -189,6 +189,16 @@ scripts/check.sh
 
 Exit status 0. Static checks passed for 28 QML files. Logic tests passed, including bar heights 22, 28, and 52, derived font and icon size, module hide, and reorder. The run printed `launcher rank 400 apps: 2.12 ms`. Install tests passed, 15 cases. `qmltestrunner` 6.4.2 reported Totals: 6 passed and Totals: 8 passed. `QStandardPaths: XDG_RUNTIME_DIR not set` was printed. The run did not draw the bar or measure the reserved strip.
 
+## What was run for M4.7
+
+On 30 Oct 2026, at 9:39 PM America/New_York, in the cloud workspace, with no Hyprland session and no `qs` binary:
+
+```text
+scripts/check.sh
+```
+
+Exit status 0. Static checks passed for 37 QML files. Logic tests passed, including Escape cancel, a refused confirm before a key, a duplicate named as already used by Spotlight, and a stored Super+Z that is not installed as a compositor bind. `launcher rank 400 apps: 1.29 ms`. Install tests passed, 15 cases. `qmltestrunner` 6.4.2 reported Totals: 6 passed and Totals: 8 passed. The shortcuts page case checks the sentence that saving does not install the chord. `QStandardPaths: XDG_RUNTIME_DIR not set` was printed. No bind file was read or written.
+
 ## What was run for M4.6
 
 On 30 Oct 2026, at 9:34 PM America/New_York, in the cloud workspace, with no Hyprland session and no `qs` binary:
@@ -236,6 +246,7 @@ After the M3.2 checks, and only with SwiftShell launched by `scripts/launch.sh`:
 7. Open Settings, Wallpaper. The preview should show the crimson image. Choose a png, or type its path, and confirm Cover crops and Contain shows the whole picture on each output. Point one output at a different file and restart. Remove that file and confirm the crimson image returns. Turn Draw wallpaper off and confirm another wallpaper program is still running. `~/.config/hypr` must stay unchanged.
 8. Add two png files to the slideshow, set the fade to 400, and confirm the pictures crossfade and the second one is not the same as the first when shuffle is on. Turn on automatic text on the crimson image and on a white png. Text should be light on the crimson image and dark on the white one. A black-and-white split should show the bar fade. Turn automatic text off and confirm a manual hex color remains. A jpeg should still display and should say it is not sampled.
 9. Open Settings, Displays. The rectangles should match the connected outputs, including a portrait or a negative position if one is connected. Dragging should move only the preview. Apply stays unavailable. `~/.config/hypr` must stay unchanged.
+10. Open Settings, Shortcuts. Record Super+Z for Settings, press Enter, and confirm the row shows Super+Z after a restart. Press Escape while listening and confirm nothing is stored. Record the same chord on Control center and confirm it is refused. The compositor's own binds, including Super+Space, must be unchanged.
 
 This checklist is not done in the cloud run.
 
