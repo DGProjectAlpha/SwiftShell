@@ -3,6 +3,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import "../logic/bar.js" as BarMetrics
+import "../logic/contrast.js" as Contrast
 import "../logic/palette.js" as Palette
 import "../logic/theme.js" as ThemeLogic
 import "../services"
@@ -24,21 +25,31 @@ Singleton {
     readonly property int controlWidth: 248
 
     readonly property var palette: Palette.resolvePalette(SettingsStore.appearanceMode, SettingsStore.appearanceTint)
+    readonly property var surface: Contrast.surfaceColors({
+        mode: SettingsStore.appearanceMode,
+        automaticText: SettingsStore.automaticText,
+        automaticGradient: SettingsStore.automaticGradient,
+        manualText: SettingsStore.manualText,
+        manualMuted: SettingsStore.manualMuted,
+        manualPanel: SettingsStore.manualPanel,
+        manualGradient: SettingsStore.manualGradient,
+        analysis: ColorAnalysis.sample
+    })
     readonly property var motion: ThemeLogic.motionDurations(SettingsStore.reducedMotion, SettingsStore.motionScale)
 
     readonly property int fontSize: SettingsStore.fontSize
     readonly property int fontSizeSmall: Math.max(11, fontSize - 1)
     readonly property int fontWeight: SettingsStore.fontWeight === "medium" ? Font.Medium : Font.Normal
     readonly property string fontFamily: ""
-    readonly property color textPrimary: palette.appearance === "light" ? "#1A1A1A" : "#F2F2F2"
-    readonly property color textMuted: palette.appearance === "light" ? "#525252" : "#A3A3A3"
+    readonly property color textPrimary: Qt.rgba(surface.text.r / 255, surface.text.g / 255, surface.text.b / 255, 1)
+    readonly property color textMuted: Qt.rgba(surface.muted.r / 255, surface.muted.g / 255, surface.muted.b / 255, 1)
     readonly property color textHover: palette.appearance === "light" ? "#2E2E2E" : "#D4D4D4"
     readonly property color transparent: Qt.rgba(0, 0, 0, 0)
     readonly property var panelTextUnits: Palette.colorUnits(palette.text, 1)
     readonly property var panelMutedUnits: Palette.colorUnits(palette.muted, 1)
     readonly property var panelHoverUnits: Palette.colorUnits(palette.hover, 1)
-    readonly property var panelUnits: Palette.colorUnits(palette.panel, SettingsStore.panelOpacity)
-    readonly property var gradientUnits: Palette.gradientUnits(palette.appearance)
+    readonly property var panelUnits: Palette.colorUnits(surface.panel, SettingsStore.panelOpacity)
+    readonly property var gradientUnits: Palette.colorUnits(surface.gradient, surface.gradientAlpha)
     readonly property color panelText: Qt.rgba(panelTextUnits.r, panelTextUnits.g, panelTextUnits.b, panelTextUnits.a)
     readonly property color panelMuted: Qt.rgba(panelMutedUnits.r, panelMutedUnits.g, panelMutedUnits.b, panelMutedUnits.a)
     readonly property color panelHover: Qt.rgba(panelHoverUnits.r, panelHoverUnits.g, panelHoverUnits.b, panelHoverUnits.a)
@@ -56,6 +67,9 @@ Singleton {
     readonly property int panelSpacing: SettingsStore.panelSpacing
     readonly property real iconScale: SettingsStore.iconScale
     readonly property bool topGradient: SettingsStore.topGradient
+    readonly property bool contrastScrim: surface.scrim
+    readonly property string contrastReason: surface.reason
+    readonly property string contrastWarning: surface.warning
     readonly property bool reducedMotion: SettingsStore.reducedMotion
     readonly property string adaptiveReason: palette.adaptiveReason
     readonly property int motionOpen: motion.open

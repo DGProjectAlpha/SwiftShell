@@ -47,6 +47,17 @@ Singleton {
     readonly property string wallpaperFit: wallpaperSettings.fit === "contain" ? "contain" : "cover"
     readonly property string wallpaperPath: wallpaperSettings.path
     readonly property string wallpaperOutputsJson: wallpaperSettings.outputsJson
+    readonly property bool slideshow: wallpaperSettings.slideshow
+    readonly property int intervalMinutes: wallpaperSettings.intervalMinutes
+    readonly property string slideshowOrder: wallpaperSettings.order === "shuffle" ? "shuffle" : "sequential"
+    readonly property int transitionMs: wallpaperSettings.transitionMs
+    readonly property string slidesJson: wallpaperSettings.slidesJson
+    readonly property bool automaticText: appearanceSettings.automaticText
+    readonly property bool automaticGradient: appearanceSettings.automaticGradient
+    readonly property string manualText: appearanceSettings.manualText
+    readonly property string manualMuted: appearanceSettings.manualMuted
+    readonly property string manualPanel: appearanceSettings.manualPanel
+    readonly property string manualGradient: appearanceSettings.manualGradient
 
     property bool writing: false
     property bool suppressReload: false
@@ -85,7 +96,13 @@ Singleton {
                 fontSize: appearanceSettings.fontSize,
                 fontWeight: appearanceSettings.fontWeight,
                 iconScale: appearanceSettings.iconScale,
-                topGradient: appearanceSettings.topGradient
+                topGradient: appearanceSettings.topGradient,
+                automaticText: appearanceSettings.automaticText,
+                automaticGradient: appearanceSettings.automaticGradient,
+                manualText: appearanceSettings.manualText,
+                manualMuted: appearanceSettings.manualMuted,
+                manualPanel: appearanceSettings.manualPanel,
+                manualGradient: appearanceSettings.manualGradient
             },
             launcher: {
                 pinnedIds: launcherSettings.pinnedIds
@@ -94,7 +111,12 @@ Singleton {
                 enabled: wallpaperSettings.enabled,
                 fit: wallpaperSettings.fit,
                 path: wallpaperSettings.path,
-                outputsJson: wallpaperSettings.outputsJson
+                outputsJson: wallpaperSettings.outputsJson,
+                slideshow: wallpaperSettings.slideshow,
+                intervalMinutes: wallpaperSettings.intervalMinutes,
+                order: wallpaperSettings.order,
+                transitionMs: wallpaperSettings.transitionMs,
+                slidesJson: wallpaperSettings.slidesJson
             },
             settingsWindow: {
                 width: windowSettings.width,
@@ -139,6 +161,12 @@ Singleton {
         appearanceSettings.fontWeight = appearance.fontWeight
         appearanceSettings.iconScale = appearance.iconScale
         appearanceSettings.topGradient = appearance.topGradient
+        appearanceSettings.automaticText = appearance.automaticText
+        appearanceSettings.automaticGradient = appearance.automaticGradient
+        appearanceSettings.manualText = appearance.manualText
+        appearanceSettings.manualMuted = appearance.manualMuted
+        appearanceSettings.manualPanel = appearance.manualPanel
+        appearanceSettings.manualGradient = appearance.manualGradient
     }
 
     function setAppearanceMode(mode) {
@@ -209,7 +237,12 @@ Singleton {
             enabled: wallpaperSettings.enabled,
             fit: wallpaperSettings.fit,
             path: wallpaperSettings.path,
-            outputsJson: wallpaperSettings.outputsJson
+            outputsJson: wallpaperSettings.outputsJson,
+            slideshow: wallpaperSettings.slideshow,
+            intervalMinutes: wallpaperSettings.intervalMinutes,
+            order: wallpaperSettings.order,
+            transitionMs: wallpaperSettings.transitionMs,
+            slidesJson: wallpaperSettings.slidesJson
         }
     }
 
@@ -219,6 +252,71 @@ Singleton {
         wallpaperSettings.fit = decision.fit
         wallpaperSettings.path = decision.path
         wallpaperSettings.outputsJson = decision.outputsJson
+        wallpaperSettings.slideshow = decision.slideshow
+        wallpaperSettings.intervalMinutes = decision.intervalMinutes
+        wallpaperSettings.order = decision.order
+        wallpaperSettings.transitionMs = decision.transitionMs
+        wallpaperSettings.slidesJson = decision.slidesJson
+    }
+
+    function setSlideshow(value) {
+        const next = currentWallpaper()
+        next.slideshow = value === true
+        writeWallpaper(next)
+    }
+
+    function setSlideshowOrder(order) {
+        const next = currentWallpaper()
+        next.order = order
+        writeWallpaper(next)
+    }
+
+    function setIntervalMinutes(minutes) {
+        const next = currentWallpaper()
+        next.intervalMinutes = minutes
+        writeWallpaper(next)
+    }
+
+    function setTransitionMs(ms) {
+        const next = currentWallpaper()
+        next.transitionMs = ms
+        writeWallpaper(next)
+    }
+
+    function setSlidesJson(text) {
+        const next = currentWallpaper()
+        next.slidesJson = text
+        writeWallpaper(next)
+    }
+
+    function addSlide(path) {
+        let list = []
+        try {
+            list = JSON.parse(wallpaperSettings.slidesJson || "[]")
+        } catch (error) {
+            list = []
+        }
+        if (!Array.isArray(list))
+            list = []
+        list.push(path)
+        setSlidesJson(JSON.stringify(list))
+    }
+
+    function removeSlide(path) {
+        let list = []
+        try {
+            list = JSON.parse(wallpaperSettings.slidesJson || "[]")
+        } catch (error) {
+            list = []
+        }
+        if (!Array.isArray(list))
+            list = []
+        const kept = []
+        for (let index = 0; index < list.length; index++) {
+            if (list[index] !== path)
+                kept.push(list[index])
+        }
+        setSlidesJson(JSON.stringify(kept))
     }
 
     function setWallpaperEnabled(value) {
@@ -354,6 +452,12 @@ Singleton {
                 property string fontWeight: "regular"
                 property real iconScale: 1
                 property bool topGradient: false
+                property bool automaticText: false
+                property bool automaticGradient: false
+                property string manualText: ""
+                property string manualMuted: ""
+                property string manualPanel: ""
+                property string manualGradient: ""
             }
 
             property JsonObject launcher: JsonObject {
@@ -367,6 +471,11 @@ Singleton {
                 property string fit: "cover"
                 property string path: ""
                 property string outputsJson: "{}"
+                property bool slideshow: false
+                property int intervalMinutes: 30
+                property string order: "sequential"
+                property int transitionMs: 400
+                property string slidesJson: "[]"
             }
 
             property JsonObject settingsWindow: JsonObject {

@@ -31,12 +31,15 @@ TestCase {
         "shell/services/HyprlandModel.qml",
         "shell/services/LauncherModel.qml",
         "shell/services/SettingsModel.qml",
+        "shell/services/ColorAnalysis.qml",
+        "shell/services/WallpaperModel.qml",
         "shell/launcher/LauncherWindow.qml",
         "shell/settings/AppearancePage.qml",
         "shell/settings/BarPage.qml",
         "shell/settings/ImageDialog.qml",
         "shell/settings/SettingsWindow.qml",
         "shell/settings/WallpaperPage.qml",
+        "shell/wallpaper/SlideshowClock.qml",
         "shell/wallpaper/WallpaperHost.qml",
         "shell/wallpaper/WallpaperSurface.qml"
     ]
@@ -63,7 +66,8 @@ TestCase {
         "shell/settings/AppearancePage.qml",
         "shell/settings/BarPage.qml",
         "shell/settings/SettingsWindow.qml",
-        "shell/settings/WallpaperPage.qml"
+        "shell/settings/WallpaperPage.qml",
+        "shell/wallpaper/SlideshowClock.qml"
     ]
 
     function componentFor(path) {

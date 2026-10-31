@@ -861,8 +861,11 @@ def main():
                 + str(paren)
                 + ")"
             )
-        if "Timer {" in text or "Process {" in text:
+        if "Process {" in text:
             errors.append(str(path.relative_to(ROOT)) + " polls or spawns a process")
+        if "Timer {" in text:
+            if path.name != "SlideshowClock.qml" or "Math.max(60000" not in text:
+                errors.append(str(path.relative_to(ROOT)) + " polls or spawns a process")
         errors.extend(nesting_errors(text, str(path.relative_to(ROOT)), component_roots))
         errors.extend(readonly_implicit_errors(text, str(path.relative_to(ROOT)), component_roots))
         for line in text.splitlines():

@@ -18,6 +18,11 @@ const capabilities = require("../shell/logic/capabilities.js");
 const material = require("../shell/logic/material.js");
 const settingsNav = require("../shell/logic/settingsNav.js");
 const wallpaper = require("../shell/logic/wallpaper.js");
+const inflate = require("../shell/logic/inflate.js");
+const png = require("../shell/logic/png.js");
+const contrast = require("../shell/logic/contrast.js");
+const slideshow = require("../shell/logic/slideshow.js");
+const zlib = require("node:zlib");
 
 let failed = 0;
 
@@ -395,6 +400,172 @@ test("wallpaper source, crop, and per-output paths", function () {
     assert.equal(accepted.settings.wallpaper.path, "/tmp/a.webp");
     assert.equal(JSON.parse(accepted.settings.wallpaper.outputsJson)["DP-1"], "/tmp/b.png");
     assert.equal(JSON.parse(accepted.settings.wallpaper.outputsJson).bad, undefined);
+    const slides = settings.validateSettings({
+        version: 3,
+        wallpaper: {
+            slideshow: true,
+            intervalMinutes: 1,
+            order: "shuffle",
+            transitionMs: 0,
+            slidesJson: JSON.stringify(["/tmp/a.png", "notes.txt", "../x.png"]),
+        },
+        appearance: { manualText: "#ABCDEF", manualPanel: "red" },
+    });
+    assert.equal(slides.ok, false);
+    assert.equal(slides.settings.appearance.manualText, "#abcdef");
+    assert.equal(slides.settings.appearance.manualPanel, "");
+    assert.deepEqual(JSON.parse(slides.settings.wallpaper.slidesJson), ["/tmp/a.png"]);
+    assert.equal(slides.settings.wallpaper.transitionMs, 0);
+});
+
+test("slideshow and wallpaper contrast are deterministic", function () {
+    png.bindInflate(inflate.inflateZlib);
+    const resolve = wallpaper.resolveSource;
+    let session = slideshow.reduceSlideshow(slideshow.emptySession(), { type: "scan" });
+    assert.equal(session.state, "scanning");
+    session = slideshow.reduceSlideshow(session, {
+        type: "scanned",
+        enabled: true,
+        paths: ["/a.png", "/b.png", "notes.txt"],
+        mode: "sequential",
+        transitionMs: 400,
+        intervalMinutes: 30,
+    }, { resolveSource: resolve });
+    assert.equal(session.state, "waiting");
+    assert.equal(session.count, 2);
+    assert.equal(session.unreadable, 1);
+    assert.equal(session.shown, "/a.png");
+    session = slideshow.reduceSlideshow(session, { type: "tick" });
+    assert.equal(session.state, "preloading");
+    assert.equal(session.incoming, "/b.png");
+    assert.equal(session.shown, "/a.png");
+    const during = slideshow.reduceSlideshow(session, { type: "tick" });
+    assert.equal(during.state, "preloading");
+    session = slideshow.reduceSlideshow(session, { type: "loaded" });
+    assert.equal(session.state, "transitioning");
+    assert.equal(session.outgoing, "/a.png");
+    session = slideshow.reduceSlideshow(session, { type: "finish" });
+    assert.equal(session.state, "waiting");
+    assert.equal(session.shown, "/b.png");
+    assert.equal(session.incoming, "");
+    const one = slideshow.reduceSlideshow(null, {
+        type: "scanned",
+        enabled: true,
+        paths: ["/a.png"],
+        mode: "sequential",
+        transitionMs: 0,
+        intervalMinutes: 1,
+    }, { resolveSource: resolve });
+    assert.equal(slideshow.reduceSlideshow(one, { type: "tick" }).shown, "/a.png");
+    const fast = slideshow.reduceSlideshow(slideshow.reduceSlideshow(null, {
+        type: "scanned",
+        enabled: true,
+        paths: ["/a.png", "/b.png"],
+        mode: "sequential",
+        transitionMs: 0,
+        intervalMinutes: 5,
+    }, { resolveSource: resolve }), { type: "tick" });
+    assert.equal(slideshow.reduceSlideshow(fast, { type: "loaded" }).state, "waiting");
+    assert.equal(slideshow.reduceSlideshow(fast, { type: "failed" }).state, "error");
+    assert.equal(slideshow.reduceSlideshow(fast, { type: "failed" }).shown, "/a.png");
+    const empty = slideshow.reduceSlideshow(null, {
+        type: "scanned",
+        enabled: true,
+        paths: [],
+        mode: "sequential",
+        transitionMs: 400,
+        intervalMinutes: 30,
+    }, { resolveSource: resolve });
+    assert.equal(empty.state, "error");
+    const shuffled = slideshow.reduceSlideshow({ shown: "/a.png" }, {
+        type: "scanned",
+        enabled: true,
+        paths: ["/a.png", "/b.png"],
+        mode: "shuffle",
+        transitionMs: 0,
+        intervalMinutes: 30,
+    }, { resolveSource: resolve, random: function () { return 0; } });
+    assert.equal(shuffled.shown, "/b.png");
+    assert.equal(slideshow.reduceSlideshow(shuffled, { type: "pause" }).state, "paused");
+    assert.equal(slideshow.reduceSlideshow(slideshow.reduceSlideshow(shuffled, { type: "pause" }), { type: "tick" }).state, "paused");
+    assert.equal(slideshow.intervalMs(1), 60000);
+    assert.equal(slideshow.intervalMs(30), 1800000);
+    assert.equal(contrast.chooseForeground({ r: 0, g: 0, b: 0 }, "").foreground, "light");
+    assert.equal(contrast.chooseForeground({ r: 255, g: 255, b: 255 }, "light").foreground, "dark");
+    assert.equal(contrast.chooseForeground({ r: 0, g: 0, b: 0 }, "light").foreground, "light");
+    const split = contrast.analyzeBands({
+        ok: true,
+        left: { r: 0, g: 0, b: 0 },
+        center: { r: 128, g: 128, b: 128 },
+        right: { r: 255, g: 255, b: 255 },
+    }, null);
+    assert.equal(split.available, true);
+    assert.equal(split.scrim, true);
+    const red = contrast.desaturate({ r: 200, g: 10, b: 10 });
+    assert.ok(Math.max(red.r, red.g, red.b) - Math.min(red.r, red.g, red.b) <= 28);
+    const manual = { manualText: "#112233" };
+    const colored = contrast.surfaceColors({
+        mode: "dark",
+        automaticText: false,
+        manualText: manual.manualText,
+        analysis: { available: true, foreground: "dark", scrim: false, accent: { r: 255, g: 0, b: 0 } },
+    });
+    assert.equal(colored.text.r, 0x11);
+    assert.equal(manual.manualText, "#112233");
+    const automatic = contrast.surfaceColors({
+        mode: "dark",
+        automaticText: true,
+        automaticGradient: true,
+        manualText: "#112233",
+        analysis: { available: true, foreground: "light", scrim: false, accent: { r: 180, g: 20, b: 20 } },
+    });
+    assert.equal(automatic.text.r, 242);
+    assert.ok(Math.max(automatic.gradient.r, automatic.gradient.g, automatic.gradient.b) - Math.min(automatic.gradient.r, automatic.gradient.g, automatic.gradient.b) <= 28);
+    function chunk(type, data) {
+        const body = Buffer.concat([Buffer.from(type), data]);
+        const crc = Buffer.alloc(4);
+        crc.writeUInt32BE(zlib.crc32(body) >>> 0);
+        const length = Buffer.alloc(4);
+        length.writeUInt32BE(data.length);
+        return Buffer.concat([length, body, crc]);
+    }
+    const raw = Buffer.from([
+        0, 255, 255, 255, 0, 0, 0,
+        0, 0, 0, 0, 255, 0, 0,
+    ]);
+    const ihdr = Buffer.alloc(13);
+    ihdr.writeUInt32BE(2, 0);
+    ihdr.writeUInt32BE(2, 4);
+    ihdr[8] = 8;
+    ihdr[9] = 2;
+    const file = Buffer.concat([
+        Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+        chunk("IHDR", ihdr),
+        chunk("IDAT", zlib.deflateSync(raw)),
+        chunk("IEND", Buffer.alloc(0)),
+    ]);
+    const decoded = png.decodePng(file);
+    assert.equal(decoded.ok, true);
+    assert.equal(decoded.width, 2);
+    assert.equal(decoded.pixels[0], 255);
+    assert.equal(decoded.pixels[9], 255);
+    assert.equal(png.decodePng(Buffer.from("nope")).ok, false);
+    const crimson = png.decodePng(fs.readFileSync(path.join(__dirname, "..", "assets", "wallpapers", "swiftshell-default-crimson.png")));
+    assert.equal(crimson.ok, true);
+    const top = png.topBands(crimson, 8);
+    assert.ok(top.left.r > top.left.g);
+    const looked = contrast.analyzeBands(top, null);
+    assert.equal(looked.available, true);
+    assert.equal(looked.foreground, "light");
+    const again = contrast.analyzeBands(top, looked);
+    assert.equal(again.foreground, "light");
+    const pale = contrast.analyzeBands({
+        ok: true,
+        left: { r: 250, g: 250, b: 250 },
+        center: { r: 250, g: 250, b: 250 },
+        right: { r: 250, g: 250, b: 250 },
+    }, looked);
+    assert.equal(pale.foreground, "dark");
 });
 
 test("blank monitor text means automatic placement", function () {

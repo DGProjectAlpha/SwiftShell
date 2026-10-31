@@ -135,6 +135,12 @@ var DEFAULTS = {
         fontWeight: "regular",
         iconScale: 1,
         topGradient: false,
+        automaticText: false,
+        automaticGradient: false,
+        manualText: "",
+        manualMuted: "",
+        manualPanel: "",
+        manualGradient: "",
     },
     launcher: {
         pinnedIds: [],
@@ -144,6 +150,11 @@ var DEFAULTS = {
         fit: "cover",
         path: "",
         outputsJson: "{}",
+        slideshow: false,
+        intervalMinutes: 30,
+        order: "sequential",
+        transitionMs: 400,
+        slidesJson: "[]",
     },
     settingsWindow: {
         width: 900,
@@ -339,6 +350,12 @@ function validateSettings(input) {
     const fontWeight = pickEnum(appearance, "fontWeight", ["regular", "medium"], DEFAULTS.appearance.fontWeight, errors, "appearance.fontWeight");
     const iconScale = pickNumber(appearance, "iconScale", 0.75, 1.5, DEFAULTS.appearance.iconScale, errors, "appearance.iconScale");
     const topGradient = pickBoolean(appearance, "topGradient", DEFAULTS.appearance.topGradient, errors, "appearance.topGradient");
+    const automaticText = pickBoolean(appearance, "automaticText", DEFAULTS.appearance.automaticText, errors, "appearance.automaticText");
+    const automaticGradient = pickBoolean(appearance, "automaticGradient", DEFAULTS.appearance.automaticGradient, errors, "appearance.automaticGradient");
+    const manualText = hexColor(appearance.manualText, errors, "appearance.manualText");
+    const manualMuted = hexColor(appearance.manualMuted, errors, "appearance.manualMuted");
+    const manualPanel = hexColor(appearance.manualPanel, errors, "appearance.manualPanel");
+    const manualGradient = hexColor(appearance.manualGradient, errors, "appearance.manualGradient");
 
     const launcher = isPlainObject(source.launcher) ? source.launcher : {};
     if (source.launcher !== undefined && !isPlainObject(source.launcher))
@@ -368,6 +385,11 @@ function validateSettings(input) {
     const wallpaperFit = pickEnum(wallpaper, "fit", ["cover", "contain"], DEFAULTS.wallpaper.fit, errors, "wallpaper.fit");
     const wallpaperPath = wallpaperPathValue(wallpaper.path, errors);
     const wallpaperOutputs = wallpaperOutputsValue(wallpaper.outputsJson, errors);
+    const slideshow = pickBoolean(wallpaper, "slideshow", DEFAULTS.wallpaper.slideshow, errors, "wallpaper.slideshow");
+    const intervalMinutes = pickInt(wallpaper, "intervalMinutes", 1, 720, DEFAULTS.wallpaper.intervalMinutes, errors, "wallpaper.intervalMinutes");
+    const wallpaperOrder = pickEnum(wallpaper, "order", ["sequential", "shuffle"], DEFAULTS.wallpaper.order, errors, "wallpaper.order");
+    const transitionMs = pickInt(wallpaper, "transitionMs", 0, 1000, DEFAULTS.wallpaper.transitionMs, errors, "wallpaper.transitionMs");
+    const slidesJson = slidesValue(wallpaper.slidesJson, errors);
 
     const extensionsJson = extensionsText(source, errors);
 
@@ -407,6 +429,12 @@ function validateSettings(input) {
                 fontWeight: fontWeight,
                 iconScale: iconScale,
                 topGradient: topGradient,
+                automaticText: automaticText,
+                automaticGradient: automaticGradient,
+                manualText: manualText,
+                manualMuted: manualMuted,
+                manualPanel: manualPanel,
+                manualGradient: manualGradient,
             },
             launcher: {
                 pinnedIds: pinnedIds,
@@ -416,6 +444,11 @@ function validateSettings(input) {
                 fit: wallpaperFit,
                 path: wallpaperPath,
                 outputsJson: wallpaperOutputs,
+                slideshow: slideshow,
+                intervalMinutes: intervalMinutes,
+                order: wallpaperOrder,
+                transitionMs: transitionMs,
+                slidesJson: slidesJson,
             },
             settingsWindow: {
                 width: settingsWindowWidth,
@@ -425,6 +458,47 @@ function validateSettings(input) {
             extensionsJson: extensionsJson,
         },
     };
+}
+
+function hexColor(value, errors, label) {
+    if (value === undefined || value === "")
+        return "";
+    if (typeof value !== "string" || !/^#[0-9A-Fa-f]{6}$/.test(value.trim())) {
+        errors.push(label);
+        return "";
+    }
+    return value.trim().toLowerCase();
+}
+
+function slidesValue(text, errors) {
+    if (text === undefined || text === "")
+        return "[]";
+    if (typeof text !== "string") {
+        errors.push("wallpaper.slidesJson");
+        return "[]";
+    }
+    try {
+        const parsed = JSON.parse(text);
+        if (!Array.isArray(parsed)) {
+            errors.push("wallpaper.slidesJson");
+            return "[]";
+        }
+        const out = [];
+        for (let i = 0; i < parsed.length && out.length < 64; i++) {
+            const cleaned = wallpaperPathValue(parsed[i], []);
+            if (cleaned !== "")
+                out.push(cleaned);
+        }
+        const encoded = JSON.stringify(out);
+        if (encoded.length > 8192) {
+            errors.push("wallpaper.slidesJson");
+            return "[]";
+        }
+        return encoded;
+    } catch (error) {
+        errors.push("wallpaper.slidesJson");
+        return "[]";
+    }
 }
 
 function wallpaperPathValue(path, errors) {

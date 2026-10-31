@@ -113,6 +113,17 @@ Schema version 3 is the current file. Versions 1 and 2 migrate. Version 3 is kep
 | `wallpaper.fit` | `cover` | `cover` crops to fill. `contain` shows the whole picture on black |
 | `wallpaper.path` | `""` | Empty uses the packaged crimson image. A png, jpeg, or webp path is used as written |
 | `wallpaper.outputsJson` | `{}` | JSON object of output name to image path. An empty path removes that output's override |
+| `wallpaper.slideshow` | `false` | When true, and at least one slide path is valid, the background advances through that list |
+| `wallpaper.intervalMinutes` | `30` | Minutes between slides, from 1 to 720. The scheduler waits at least one minute |
+| `wallpaper.order` | `sequential` | `sequential` or `shuffle`. Shuffle does not show the current image again while another remains |
+| `wallpaper.transitionMs` | `400` | Crossfade length, from 0 to 1000. Reduced motion uses 0 |
+| `wallpaper.slidesJson` | `[]` | JSON array of image paths, at most 64 |
+| `appearance.automaticText` | `false` | When true, a png's top edge chooses light or dark text. Jpeg and webp are not sampled |
+| `appearance.automaticGradient` | `false` | When true, a split or low-contrast top edge draws the bar fade |
+| `appearance.manualText` | `""` | `#rrggbb` used when automatic text is off. Empty keeps the theme text |
+| `appearance.manualMuted` | `""` | `#rrggbb` muted text. Empty keeps the theme |
+| `appearance.manualPanel` | `""` | `#rrggbb` panel. Empty keeps the theme |
+| `appearance.manualGradient` | `""` | `#rrggbb` fade color. Empty keeps the theme, or the sampled accent when automatic fade is on |
 | `extensionsJson` | `{}` | JSON object text for keys the validator does not own, capped at 4096 characters |
 
 `reserveSpace` defaults on for a new settings file. `PanelWindow` would otherwise use `ExclusionMode.Auto` and reserve space on its own. Overlay mode (`false`) assigns only `ExclusionMode.Ignore`. Quickshell's Wayland binding then publishes exclusive zone `-1`, which does not push windows. Reservation assigns the logical bar height and `ExclusionMode.Normal`. Quickshell converts that height to native pixels on commit, including on the 1.5 scale HDMI-A-1 output, so the shell does not multiply by scale itself. Writing `exclusiveZone` to the same number it already holds does not call the setter. After an overlay period the stored height is often unchanged, so the window also assigns `Normal` or the bar would stay an overlay. Tiled and maximized windows should then keep out of that strip. The layer stays `WlrLayer.Top`, which Hyprland draws under true fullscreen, so fullscreen clients still cover the bar. This tree does not change Hyprland's fullscreen rules. The zone is applied when the bar is created, when the height changes, and when the setting changes. An existing settings file that already says `false` is left as an overlay. Use that while Noctalia is also drawing on the output. The reserved strip has not been measured on the session yet.
@@ -123,7 +134,11 @@ Schema version 3 is the current file. Versions 1 and 2 migrate. Version 3 is kep
 
 An empty path, a rejected path, or a picture that fails to decode uses `shell/assets/wallpapers/swiftshell-default-crimson.png`. That file is a link to `assets/wallpapers/swiftshell-default-crimson.png` in a checkout. `install.sh` copies the real PNG into the installed tree and does not leave the link in place. The requested decode width is at most 3840 pixels. The height follows the picture. Cover and contain use the same crop math in `shell/logic/wallpaper.js` and in the `Image` fill mode. A per-output path is stored under the screen name. That name is the connector Quickshell reports, which can change when a cable moves.
 
-The settings page previews the shared image, offers Cover and Contain, a path field, and Choose image. Choose image loads `QtQuick.Dialogs.FileDialog` in its own `Loader`. If that module is missing, the page says so and the path field remains the way to set a file. This workspace's Qt build does not include `QtQuick.Dialogs`. The page has not been shown on a Hyprland session, so the crop on a real output is not measured.
+The settings page previews the shared image, offers Cover and Contain, a path field, and Choose image. Choose image loads `QtQuick.Dialogs.FileDialog` in its own `Loader`. If that module is missing, the page says so and the path field remains the way to set a file. This workspace's Qt build does not include `QtQuick.Dialogs`, and it has no folder listing. Slideshow images are added by path. The page has not been shown on a Hyprland session, so the crop on a real output is not measured.
+
+Slideshow states are disabled, scanning, waiting, preloading, transitioning, paused, and error. A minute timer fires only while the session is waiting. The fade is a `NumberAnimation` of at most one second. One image does not advance. A decode failure keeps the current image and stops the schedule. Turning the wallpaper off disables the slideshow. This does not read battery, lock, or fullscreen state, so there is no pause switch for those.
+
+Automatic text and the automatic fade read png pixels from the top of the image. The decoder is the shell's own inflate and png reader. It samples the left, center, and right of that edge. Light text is chosen on a dark edge and dark text on a light edge. A split edge, or a contrast below 4.5, turns on the bar fade instead of flipping the text. A small change keeps the previous text so a slideshow does not strobe. The accent mixed into the fade is pulled toward gray. Jpeg and webp still display, and the page says they are not sampled. Manual hex values are kept when automatic is turned off. Nothing here reads pixels from other windows.
 
 ## Launcher
 

@@ -189,6 +189,16 @@ scripts/check.sh
 
 Exit status 0. Static checks passed for 28 QML files. Logic tests passed, including bar heights 22, 28, and 52, derived font and icon size, module hide, and reorder. The run printed `launcher rank 400 apps: 2.12 ms`. Install tests passed, 15 cases. `qmltestrunner` 6.4.2 reported Totals: 6 passed and Totals: 8 passed. `QStandardPaths: XDG_RUNTIME_DIR not set` was printed. The run did not draw the bar or measure the reserved strip.
 
+## What was run for M4.5
+
+On 30 Oct 2026, at 9:30 PM America/New_York, in the cloud workspace, with no Hyprland session and no `qs` binary:
+
+```text
+scripts/check.sh
+```
+
+Exit status 0. Static checks passed for 35 QML files. Logic tests passed, including the slideshow states, a shuffle that does not repeat the current image, a png round-trip, the packaged crimson top edge, split-edge scrim, hysteresis from black to white, and a desaturated accent. `launcher rank 400 apps: 1.37 ms`. Install tests passed, 15 cases. `qmltestrunner` 6.4.2 reported Totals: 6 passed and Totals: 8 passed. `QStandardPaths: XDG_RUNTIME_DIR not set` was printed. The run did not start `qs`, play a crossfade, or sample a jpeg. This Qt build cannot list a folder.
+
 ## What was run for M4.4
 
 On 30 Oct 2026, at 9:21 PM America/New_York, in the cloud workspace, with no Hyprland session and no `qs` binary:
@@ -214,6 +224,7 @@ After the M3.2 checks, and only with SwiftShell launched by `scripts/launch.sh`:
 5. Confirm `~/.config/hypr` and the Noctalia config are unchanged.
 6. Open Settings, Top bar. Set the height to 22 and to 52. The text, workspace marks, and reserved strip should follow. Hide Clock and move Search earlier. Restart and confirm the order. Set the height back to 28.
 7. Open Settings, Wallpaper. The preview should show the crimson image. Choose a png, or type its path, and confirm Cover crops and Contain shows the whole picture on each output. Point one output at a different file and restart. Remove that file and confirm the crimson image returns. Turn Draw wallpaper off and confirm another wallpaper program is still running. `~/.config/hypr` must stay unchanged.
+8. Add two png files to the slideshow, set the fade to 400, and confirm the pictures crossfade and the second one is not the same as the first when shuffle is on. Turn on automatic text on the crimson image and on a white png. Text should be light on the crimson image and dark on the white one. A black-and-white split should show the bar fade. Turn automatic text off and confirm a manual hex color remains. A jpeg should still display and should say it is not sampled.
 
 This checklist is not done in the cloud run.
 

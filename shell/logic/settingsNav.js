@@ -24,6 +24,9 @@ var CONTROLS = [
     { id: "wallpaperFit", category: "wallpaper", section: "Image", label: "Fit", keywords: ["cover", "contain", "crop", "fill"] },
     { id: "wallpaperPath", category: "wallpaper", section: "Image", label: "Image", keywords: ["file", "choose", "path", "default", "crimson"] },
     { id: "wallpaperOutput", category: "wallpaper", section: "Outputs", label: "Per output", keywords: ["monitor", "display", "screen"] },
+    { id: "slideshow", category: "wallpaper", section: "Slideshow", label: "Slideshow", keywords: ["folder", "interval", "shuffle", "crossfade"] },
+    { id: "automaticText", category: "wallpaper", section: "Contrast", label: "Automatic text", keywords: ["contrast", "foreground", "readable"] },
+    { id: "manualText", category: "wallpaper", section: "Contrast", label: "Manual text", keywords: ["hex", "color", "foreground"] },
 ];
 
 function clamp01(unit) {
