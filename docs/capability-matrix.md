@@ -18,7 +18,7 @@ Later source repairs were checked with `scripts/check.sh` through 11:05 PM Ameri
 | Spotlight search | NOT RUN | NOT RUN | Source ranks a catalog and shows 24 rows. Dolphin and Helium were missed on an earlier launch |
 | Settings floating window | NOT RUN | NOT RUN | Source uses one `FloatingWindow`. Move, resize, and focus were not shown |
 | Settings search and migration | PASS | NOT RUN | Temporary files kept the original backup bytes, unknown keys, and a malformed file |
-| Wallpaper choose image | NOT RUN | NOT RUN | Source crops, falls back to the crimson image, and caps the long edge at 3840 |
+| Wallpaper choose image/folder | PASS | NOT RUN | Required Qt modules compile in provisioned CI; this workspace lacks them. Folder scans sort and cap supported files at 64, with path-entry fallback |
 | Wallpaper slideshow | PASS | NOT RUN | Timing/list changes preserve the current item; output generations gate preload and finish; failed current images are skipped. Crossfade and hotplug remain unobserved on a compositor |
 | Adaptive color | PASS | NOT RUN | Cover/Contain crop sampling, per-output state, stale-response rejection, and PNG allocation limits are source-tested. Not shown on a display |
 | Real Gaussian blur | NOT RUN | NOT RUN | Expected result on a session is a scrim, not blur |

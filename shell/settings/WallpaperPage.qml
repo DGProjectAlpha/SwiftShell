@@ -13,6 +13,8 @@ Item {
     property string query: ""
     property string highlightId: ""
     property string dialogReason: ""
+    property string folderReason: ""
+    property string selectedFolder: ""
     property string pathNote: ""
     property bool previewFailed: false
     signal revealRequested(real y, real itemHeight)
@@ -48,6 +50,21 @@ Item {
             SettingsStore.addSlide(choice.path)
             slideField.text = ""
         }
+    }
+
+    function scanFolder(path) {
+        page.selectedFolder = path
+        page.folderReason = ""
+        if (folderScanner.status === Loader.Ready && folderScanner.item)
+            folderScanner.item.scan(path)
+        else
+            folderScanner.active = true
+    }
+
+    function folderScanned(paths, error) {
+        page.folderReason = error
+        if (paths && paths.length > 0)
+            SettingsStore.setSlidesJson(JSON.stringify(paths))
     }
 
     function outputPath(name) {
@@ -89,6 +106,36 @@ Item {
             }
             if (status === Loader.Ready && item)
                 item.open()
+        }
+    }
+
+    Loader {
+        id: folderDialog
+        active: false
+        source: "FolderPicker.qml"
+        onStatusChanged: {
+            if (status === Loader.Error) {
+                page.folderReason = "The native folder dialog is not available in this Qt build."
+                active = false
+            } else if (status === Loader.Ready && item) {
+                item.folderSelected.connect(page.scanFolder)
+                item.open()
+            }
+        }
+    }
+
+    Loader {
+        id: folderScanner
+        active: false
+        source: "FolderScanner.qml"
+        onStatusChanged: {
+            if (status === Loader.Error) {
+                page.folderReason = "Folder enumeration is not available in this Qt build."
+                active = false
+            } else if (status === Loader.Ready && item) {
+                item.scanFinished.connect(page.folderScanned)
+                item.scan(page.selectedFolder)
+            }
         }
     }
 
@@ -366,8 +413,43 @@ Item {
             width: parent.width
             wrapMode: Text.WordWrap
             visible: page.shows("slideshow")
-            text: "This Qt build cannot list a folder. Add png, jpeg, or webp files. Shuffle does not repeat the current image when another file is listed. The fade is at most one second, and it is instant while reduced motion is on."
+            text: "Choose a folder when the Qt dialog and folder model are installed, or add png, jpeg, and webp files individually. A folder scan is capped at 64 sorted images. Shuffle does not repeat the current image when another file is listed."
             color: Theme.panelMuted
+            font.family: Theme.fontFamily
+            font.pixelSize: Theme.fontSizeSmall
+        }
+
+        Row {
+            visible: page.shows("slideshow")
+            spacing: Theme.panelSpacing
+
+            FlatButton {
+                label: "Choose folder"
+                onActivated: {
+                    page.folderReason = ""
+                    if (folderDialog.status === Loader.Ready && folderDialog.item)
+                        folderDialog.item.open()
+                    else
+                        folderDialog.active = true
+                }
+            }
+
+            Text {
+                width: 360
+                elide: Text.ElideMiddle
+                text: page.selectedFolder === "" ? "No folder selected" : page.selectedFolder
+                color: Theme.panelMuted
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.fontSizeSmall
+            }
+        }
+
+        Text {
+            visible: page.folderReason !== ""
+            width: parent.width
+            wrapMode: Text.WordWrap
+            text: page.folderReason
+            color: Theme.panelText
             font.family: Theme.fontFamily
             font.pixelSize: Theme.fontSizeSmall
         }
