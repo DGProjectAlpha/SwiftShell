@@ -161,6 +161,7 @@ var DEFAULTS = {
         height: 620,
         category: "appearance",
     },
+    shortcutsJson: "{}",
     extensionsJson: "{}",
 };
 
@@ -366,7 +367,8 @@ function validateSettings(input) {
         errors.push("settingsWindow");
     const settingsWindowWidth = pickInt(windowSource, "width", 640, 1600, DEFAULTS.settingsWindow.width, errors, "settingsWindow.width");
     const settingsWindowHeight = pickInt(windowSource, "height", 440, 1200, DEFAULTS.settingsWindow.height, errors, "settingsWindow.height");
-    const settingsWindowCategory = pickEnum(windowSource, "category", ["appearance", "bar", "wallpaper", "displays"], DEFAULTS.settingsWindow.category, errors, "settingsWindow.category");
+    const settingsWindowCategory = pickEnum(windowSource, "category", ["appearance", "bar", "wallpaper", "displays", "shortcuts"], DEFAULTS.settingsWindow.category, errors, "settingsWindow.category");
+    const shortcutsJson = shortcutsValue(source.shortcutsJson, errors);
 
     let pinnedIds = DEFAULTS.launcher.pinnedIds.slice();
     if (!isPlainObject(source.launcher) || launcher.pinnedIds === undefined) {
@@ -455,9 +457,66 @@ function validateSettings(input) {
                 height: settingsWindowHeight,
                 category: settingsWindowCategory,
             },
+            shortcutsJson: shortcutsJson,
             extensionsJson: extensionsJson,
         },
     };
+}
+
+function shortcutsValue(text, errors) {
+    if (text === undefined || text === "")
+        return "{}";
+    if (typeof text !== "string") {
+        errors.push("shortcutsJson");
+        return "{}";
+    }
+    try {
+        const parsed = JSON.parse(text);
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+            errors.push("shortcutsJson");
+            return "{}";
+        }
+        const ids = ["spotlight", "settings", "control"];
+        const allowed = { alt: true, ctrl: true, shift: true, super: true };
+        const out = {};
+        for (let i = 0; i < ids.length; i++) {
+            const item = parsed[ids[i]];
+            if (item === undefined)
+                continue;
+            if (!item || typeof item !== "object" || !Array.isArray(item.modifiers) || typeof item.key !== "string") {
+                errors.push("shortcutsJson");
+                continue;
+            }
+            const modifiers = [];
+            for (let m = 0; m < item.modifiers.length; m++) {
+                if (allowed[item.modifiers[m]] && modifiers.indexOf(item.modifiers[m]) === -1)
+                    modifiers.push(item.modifiers[m]);
+            }
+            modifiers.sort();
+            const raw = item.key.trim();
+            let key = raw.length === 1 ? raw.toUpperCase() : raw;
+            if (/^space$/i.test(key))
+                key = "Space";
+            else if (/^return$/i.test(key))
+                key = "Return";
+            else if (/^tab$/i.test(key))
+                key = "Tab";
+            if (!/^[A-Za-z0-9]{1,8}$/.test(key) && key !== "Space" && key !== "Return" && key !== "Tab") {
+                errors.push("shortcutsJson");
+                continue;
+            }
+            out[ids[i]] = { modifiers: modifiers, key: key };
+        }
+        const encoded = JSON.stringify(out);
+        if (encoded.length > 1024) {
+            errors.push("shortcutsJson");
+            return "{}";
+        }
+        return encoded;
+    } catch (error) {
+        errors.push("shortcutsJson");
+        return "{}";
+    }
 }
 
 function hexColor(value, errors, label) {
@@ -601,6 +660,7 @@ function extensionsText(source, errors) {
         launcher: true,
         wallpaper: true,
         settingsWindow: true,
+        shortcutsJson: true,
         extensionsJson: true,
     };
     const found = {};

@@ -28,6 +28,7 @@ var CONTROLS = [
     { id: "automaticText", category: "wallpaper", section: "Contrast", label: "Automatic text", keywords: ["contrast", "foreground", "readable"] },
     { id: "manualText", category: "wallpaper", section: "Contrast", label: "Manual text", keywords: ["hex", "color", "foreground"] },
     { id: "displayLayout", category: "displays", section: "Arrangement", label: "Arrangement", keywords: ["monitor", "display", "scale", "preview"] },
+    { id: "preferredChord", category: "shortcuts", section: "Chords", label: "Preferred chord", keywords: ["shortcut", "record", "spotlight", "super"] },
 ];
 
 function clamp01(unit) {
@@ -100,6 +101,7 @@ function categories() {
         { id: "bar", label: "Top bar" },
         { id: "wallpaper", label: "Wallpaper" },
         { id: "displays", label: "Displays" },
+        { id: "shortcuts", label: "Shortcuts" },
     ];
 }
 

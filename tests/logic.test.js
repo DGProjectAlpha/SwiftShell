@@ -23,6 +23,7 @@ const png = require("../shell/logic/png.js");
 const contrast = require("../shell/logic/contrast.js");
 const slideshow = require("../shell/logic/slideshow.js");
 const displays = require("../shell/logic/displays.js");
+const shortcuts = require("../shell/logic/shortcuts.js");
 const zlib = require("node:zlib");
 
 let failed = 0;
@@ -296,11 +297,12 @@ test("settings window stays one instance and blur is not available", function ()
 test("settings search, density, and undo stay on real appearance fields", function () {
     assert.equal(settingsNav.navigationLayout(719), "stacked");
     assert.equal(settingsNav.navigationLayout(720), "columns");
-    assert.equal(settingsNav.categories().length, 4);
+    assert.equal(settingsNav.categories().length, 5);
     assert.equal(settingsNav.categories()[0].id, "appearance");
     assert.equal(settingsNav.categories()[1].id, "bar");
     assert.equal(settingsNav.categories()[2].id, "wallpaper");
     assert.equal(settingsNav.categories()[3].id, "displays");
+    assert.equal(settingsNav.categories()[4].id, "shortcuts");
     assert.equal(settingsNav.categoryFor(settingsNav.firstControlId("cover")), "wallpaper");
     assert.equal(settingsNav.filterControls("").length, settingsNav.CONTROLS.length);
     assert.equal(settingsNav.filterControls("not-a-setting").length, 0);
@@ -1556,6 +1558,42 @@ test("launcher requests toggle and keyboard focus is released", function () {
     assert.equal(launcher.inputPlan(false, false).focusField, false);
     assert.equal(launcher.inputPlan(true, false).dismiss, true);
     assert.equal(launcher.inputPlan(true, false).keyboard, "none");
+});
+
+test("shortcut recording cancels, conflicts, and does not invent a bind", function () {
+    assert.equal(shortcuts.normalizeChord(["super"], "Escape"), null);
+    let recorder = shortcuts.reduceRecorder(shortcuts.emptyRecorder(), { type: "start", id: "settings" });
+    recorder = shortcuts.reduceRecorder(recorder, { type: "key", key: "Escape", modifiers: [], map: {} });
+    assert.equal(recorder.phase, "idle");
+    recorder = shortcuts.reduceRecorder(shortcuts.emptyRecorder(), { type: "start", id: "settings" });
+    recorder = shortcuts.reduceRecorder(recorder, { type: "confirm" });
+    assert.equal(recorder.error, "Press a key first.");
+    recorder = shortcuts.reduceRecorder(recorder, {
+        type: "key",
+        key: "z",
+        modifiers: ["super"],
+        map: { spotlight: { modifiers: ["super"], key: "Z" } },
+    });
+    assert.equal(recorder.error, "Already used by spotlight.");
+    recorder = shortcuts.reduceRecorder(shortcuts.emptyRecorder(), { type: "start", id: "settings" });
+    recorder = shortcuts.reduceRecorder(recorder, { type: "key", key: "z", modifiers: ["super", "super"], map: {} });
+    const saved = shortcuts.reduceRecorder(recorder, { type: "confirm" });
+    assert.equal(saved.saved.id, "settings");
+    assert.deepEqual(saved.saved.modifiers, ["super"]);
+    assert.equal(saved.saved.key, "Z");
+    assert.equal(shortcuts.chordText(saved.saved), "Super+Z");
+    const kept = settings.validateSettings({
+        shortcutsJson: JSON.stringify({
+            spotlight: { modifiers: ["super", "bogus"], key: "space" },
+            settings: { modifiers: ["alt"], key: "not a chord" },
+            extra: { modifiers: ["ctrl"], key: "Q" },
+        }),
+    });
+    const parsed = JSON.parse(kept.settings.shortcutsJson);
+    assert.deepEqual(parsed.spotlight, { modifiers: ["super"], key: "Space" });
+    assert.equal(parsed.settings, undefined);
+    assert.equal(parsed.extra, undefined);
+    assert.ok(kept.errors.indexOf("shortcutsJson") !== -1);
 });
 
 if (failed > 0) {

@@ -38,6 +38,7 @@ TestCase {
         "shell/settings/BarPage.qml",
         "shell/settings/ImageDialog.qml",
         "shell/settings/DisplaysPage.qml",
+        "shell/settings/ShortcutsPage.qml",
         "shell/settings/SettingsWindow.qml",
         "shell/settings/WallpaperPage.qml",
         "shell/wallpaper/SlideshowClock.qml",
@@ -67,6 +68,7 @@ TestCase {
         "shell/settings/AppearancePage.qml",
         "shell/settings/BarPage.qml",
         "shell/settings/DisplaysPage.qml",
+        "shell/settings/ShortcutsPage.qml",
         "shell/settings/SettingsWindow.qml",
         "shell/settings/WallpaperPage.qml",
         "shell/wallpaper/SlideshowClock.qml"
@@ -273,6 +275,9 @@ TestCase {
         verify(displays !== null)
         verify(findText(displays, "not sent", 0))
         verify(findText(displays, "No outputs are connected", 0))
+        var shortcuts = componentFor("shell/settings/ShortcutsPage.qml").createObject(this)
+        verify(shortcuts !== null)
+        verify(findText(shortcuts, "does not install", 0))
         wallpaper.query = "cover"
         verify(wallpaper.shows("wallpaperFit"))
         verify(!wallpaper.shows("wallpaperPath"))
@@ -282,5 +287,6 @@ TestCase {
         settings.destroy()
         wallpaper.destroy()
         displays.destroy()
+        shortcuts.destroy()
     }
 }
