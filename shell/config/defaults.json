@@ -11,6 +11,7 @@
     "showFocusedTitle": true,
     "workspaceIds": [],
     "workspaceDispatch": "auto",
+    "placement": "focused",
     "height": 28,
     "moduleOrder": [
       "workspaces",

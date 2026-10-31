@@ -189,6 +189,16 @@ scripts/check.sh
 
 Exit status 0. Static checks passed for 28 QML files. Logic tests passed, including bar heights 22, 28, and 52, derived font and icon size, module hide, and reorder. The run printed `launcher rank 400 apps: 2.12 ms`. Install tests passed, 15 cases. `qmltestrunner` 6.4.2 reported Totals: 6 passed and Totals: 8 passed. `QStandardPaths: XDG_RUNTIME_DIR not set` was printed. The run did not draw the bar or measure the reserved strip.
 
+## What was run for bar screens, audio tracking, and the package file list
+
+On 30 Oct 2026, at 11:05 PM America/New_York, in the cloud workspace, with no Hyprland session and no `qs` binary:
+
+```text
+scripts/check.sh
+```
+
+Exit status 0. Static checks passed for 52 QML files, including the package file list. Logic tests passed for `focused`, `primary`, and `all` bar placement, and for a tray menu point. `qmltestrunner` 6.4.2 reported Totals: 6 passed and Totals: 8 passed. No bar moved between monitors, no stream volume was written, and the package was not built.
+
 ## What was run for notification lifetime
 
 On 30 Oct 2026, at 11:00 PM America/New_York, in the cloud workspace, with no Hyprland session and no `qs` binary:

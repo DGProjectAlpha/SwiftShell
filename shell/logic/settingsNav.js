@@ -17,6 +17,7 @@ var CONTROLS = [
     { id: "backdropBlur", category: "appearance", section: "Limits", label: "Backdrop blur", keywords: ["blur", "frost", "material"] },
     { id: "barHeight", category: "bar", section: "Size", label: "Bar height", keywords: ["height", "scale", "size"] },
     { id: "reserveSpace", category: "bar", section: "Placement", label: "Reserve space", keywords: ["exclusive", "overlay", "zone"] },
+    { id: "barPlacement", category: "bar", section: "Placement", label: "Bar screens", keywords: ["monitor", "focus", "all", "primary"] },
     { id: "targetMonitor", category: "bar", section: "Placement", label: "Monitor", keywords: ["screen", "output", "display"] },
     { id: "showTitle", category: "bar", section: "Modules", label: "Focused title", keywords: ["window", "title", "app"] },
     { id: "clock24", category: "bar", section: "Modules", label: "24-hour clock", keywords: ["clock", "time", "hour"] },

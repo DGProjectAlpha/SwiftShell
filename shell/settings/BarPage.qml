@@ -148,6 +148,36 @@ Item {
         }
 
         SettingsRow {
+            controlId: "barPlacement"
+            visible: page.shows("barPlacement")
+            marked: page.marked("barPlacement")
+            width: parent.width
+            label: "Screens"
+
+            Row {
+                spacing: Theme.panelSpacing
+
+                FlatButton {
+                    label: "Focused"
+                    emphasized: SettingsStore.barPlacement === "focused"
+                    onActivated: SettingsStore.setBarPlacement("focused")
+                }
+
+                FlatButton {
+                    label: "Primary"
+                    emphasized: SettingsStore.barPlacement === "primary"
+                    onActivated: SettingsStore.setBarPlacement("primary")
+                }
+
+                FlatButton {
+                    label: "All"
+                    emphasized: SettingsStore.barPlacement === "all"
+                    onActivated: SettingsStore.setBarPlacement("all")
+                }
+            }
+        }
+
+        SettingsRow {
             controlId: "targetMonitor"
             visible: page.shows("targetMonitor")
             marked: page.marked("targetMonitor")

@@ -28,13 +28,15 @@ Column {
         return null
     }
 
-    function invoke(row) {
+    function invoke(row, local) {
         var item = itemAt(row.id)
         if (!item)
             return
         try {
-            if (row.action === "menu" && item.hasMenu === true && root.hostWindow)
-                item.display(root.hostWindow, 0, 0)
+            if (row.action === "menu" && item.hasMenu === true && root.hostWindow) {
+                var menu = Tray.menuPoint(local ? local.x : 0, local ? local.y : 0)
+                item.display(root.hostWindow, menu.x, menu.y)
+            }
             else if (row.action === "activate" && item.onlyMenu !== true)
                 item.activate()
         } catch (error) {
@@ -60,7 +62,7 @@ Column {
             required property var modelData
             width: parent.width
             label: modelData.title
-            onActivated: root.invoke(modelData)
+            onActivated: root.invoke(modelData, mapToItem(root.hostWindow ? root.hostWindow.contentItem : null, width / 2, height))
         }
     }
 

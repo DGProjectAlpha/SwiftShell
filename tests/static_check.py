@@ -939,6 +939,13 @@ def main():
         errors.append("FlatButton does not elide a long label")
     if "elide: Text.ElideRight" not in toggle:
         errors.append("SettingsToggle does not elide a long label")
+    package = (ROOT / "packaging" / "aur" / "PKGBUILD").read_text(encoding="utf-8")
+    if "doctor.sh" not in package:
+        errors.append("PKGBUILD does not install doctor.sh")
+    if "assets/wallpapers/swiftshell-default-crimson.png" not in package:
+        errors.append("PKGBUILD does not install the wallpaper file")
+    if "LicenseRef-None" not in package:
+        errors.append("PKGBUILD license changed without an owner decision")
     theme_names = theme_property_names((SHELL / "themes" / "Theme.qml").read_text(encoding="utf-8"))
     if "textPrimary" not in theme_names or "text" in theme_names:
         errors.append("Theme foreground token is missing")

@@ -79,29 +79,40 @@ function matchFocused(records, focused) {
     return null;
 }
 
-function selectBarPlacement(records, preference, focused) {
+function selectBarPlacement(records, preference, focused, placement) {
     const list = recordList(records);
     if (list.length === 0)
-        return { mode: "missing", screen: null, label: "" };
+        return { mode: "missing", screen: null, screens: [], label: "" };
 
     const pref = asText(preference);
     if (pref !== "") {
         for (let i = 0; i < list.length; i++) {
             if (recordMatches(list[i], pref))
-                return { mode: "preference", screen: list[i].screen, label: labelOf(list[i]) };
+                return { mode: "preference", screen: list[i].screen, screens: [list[i].screen], label: labelOf(list[i]) };
         }
     }
+
+    const policy = placement === "all" || placement === "primary" ? placement : "focused";
+    if (pref === "" && policy === "all") {
+        const screens = [];
+        for (let i = 0; i < list.length; i++)
+            screens.push(list[i].screen);
+        return { mode: "all", screen: list[0].screen, screens: screens, label: labelOf(list[0]) };
+    }
+    if (pref === "" && policy === "primary")
+        return { mode: "primary", screen: list[0].screen, screens: [list[0].screen], label: labelOf(list[0]) };
 
     const focusedRecord = matchFocused(list, focused);
     if (focusedRecord) {
         return {
             mode: pref === "" ? "focused" : "fallback",
             screen: focusedRecord.screen,
+            screens: [focusedRecord.screen],
             label: labelOf(focusedRecord),
         };
     }
 
-    return { mode: "fallback", screen: list[0].screen, label: labelOf(list[0]) };
+    return { mode: "fallback", screen: list[0].screen, screens: [list[0].screen], label: labelOf(list[0]) };
 }
 
 function resolveLauncherScreen(records, focused, lastScreen) {
