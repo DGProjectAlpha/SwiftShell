@@ -31,6 +31,10 @@ The installer suite also constructs a temporary system-package layout. It verifi
 
 `scripts/check.sh` passed after the slideshow and contrast repair. The logic suite changes interval, transition duration, ordering, and image lists without replacing a still-valid current item; disables motion during a transition; skips a failed current image; verifies URL encoding; applies Cover and Contain sampling to synthetic pixels; rejects an oversized PNG before inflate; and stops a compressed-output expansion at its declared budget. The QML gate compiled the changed documents with stubs. A real crossfade, mixed-refresh outputs, hotplug during a fade, Qt texture reuse, and automatic contrast on DP-1/HDMI-A-1 are **NOT RUN**.
 
+## Release-candidate notification checks
+
+`scripts/check.sh` passed after the native-lifecycle repair. Logic coverage includes banner/history/drop dispositions, in-place id replacement, a replacement becoming hidden, de-duplicated quiet history, DND with critical bypass, bounded bursts, and native dismiss/expire stand-ins. The strict QML gate compiles the host up to its intentionally unstubbed layer-shell attachment. Claiming `org.freedesktop.Notifications`, observing native replacement signals, action delivery, release behavior, and focused-output placement are **NOT RUN** because this workspace has no Quickshell session or user D-Bus notification traffic.
+
 ## Pull and test on CachyOS
 
 These commands use the checkout as the Quickshell config. They do not install over Noctalia, and they do not edit Hyprland.

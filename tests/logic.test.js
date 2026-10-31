@@ -1889,6 +1889,7 @@ test("notifications stay off until ownership is confirmed", function () {
         notification: { id: 7, appName: "Mail", summary: "Hello", body: "secret body", urgency: "normal" },
     });
     assert.equal(center.live.length, 1);
+    assert.deepEqual(center.lastRoute, { id: 7, disposition: "banner" });
     center = notifications.reduceNotifications(center, {
         type: "receive",
         notification: { id: 7, appName: "Mail", summary: "Replaced", body: "next", urgency: "normal" },
@@ -1902,6 +1903,7 @@ test("notifications stay off until ownership is confirmed", function () {
     });
     assert.equal(center.live.length, 1);
     assert.equal(center.history[0].summary, "Quiet");
+    assert.deepEqual(center.lastRoute, { id: 8, disposition: "history" });
     center = notifications.reduceNotifications(center, {
         type: "receive",
         notification: { id: 9, appName: "Power", summary: "Critical", body: "now", urgency: "critical" },
@@ -1929,6 +1931,7 @@ test("notifications stay off until ownership is confirmed", function () {
     });
     assert.equal(center.live.length, 0);
     assert.equal(center.history.length, 0);
+    assert.deepEqual(center.lastRoute, { id: 1, disposition: "drop" });
     center = notifications.reduceNotifications(center, {
         type: "receive",
         notification: { id: 2, appName: "Mail", desktopEntry: "org.example.Mail", summary: "Quiet mail", urgency: "normal" },
@@ -1957,6 +1960,39 @@ test("notifications stay off until ownership is confirmed", function () {
     assert.equal(burst.history.length, notifications.HISTORY_CAP);
     assert.ok(burst.live.length <= 4);
     assert.ok(burst.history.length <= 40);
+    assert.deepEqual(burst.lastRoute, { id: 100, disposition: "history" });
+    let replacement = notifications.reduceNotifications(notifications.emptyCenter(), {
+        type: "configure",
+        ownership: "on",
+        dnd: false,
+        policies: JSON.stringify({ "org.example.Hidden": "hide" }),
+    });
+    replacement = notifications.reduceNotifications(replacement, {
+        type: "receive",
+        notification: { id: 44, desktopEntry: "org.example.Visible", summary: "Visible" },
+    });
+    assert.equal(replacement.live.length, 1);
+    replacement = notifications.reduceNotifications(replacement, {
+        type: "receive",
+        notification: { id: 44, desktopEntry: "org.example.Hidden", summary: "Now hidden" },
+    });
+    assert.equal(replacement.live.length, 0);
+    assert.deepEqual(replacement.lastRoute, { id: 44, disposition: "drop" });
+    let quietReplacement = notifications.reduceNotifications(notifications.emptyCenter(), {
+        type: "configure",
+        ownership: "on",
+        dnd: true,
+    });
+    quietReplacement = notifications.reduceNotifications(quietReplacement, {
+        type: "receive",
+        notification: { id: 55, summary: "First" },
+    });
+    quietReplacement = notifications.reduceNotifications(quietReplacement, {
+        type: "receive",
+        notification: { id: 55, summary: "Updated" },
+    });
+    assert.equal(quietReplacement.history.length, 1);
+    assert.equal(quietReplacement.history[0].summary, "Updated");
     assert.equal(notifications.expireMs(0), 0);
     assert.equal(notifications.expireMs(-1), 5000);
     assert.equal(notifications.expireMs(2), 2000);
