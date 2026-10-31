@@ -816,6 +816,35 @@ def check_shell(path, errors):
             errors.append(relative + " contains sudo")
 
 
+def theme_property_names(text):
+    names = set()
+    pattern = re.compile(
+        r"\bproperty\s+(?:[A-Za-z_][A-Za-z0-9_]*(?:<[^>\n]+>)?)\s+([A-Za-z_][A-Za-z0-9_]*)"
+    )
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("//") or stripped.startswith("/*") or stripped.startswith("*"):
+            continue
+        match = pattern.search(stripped)
+        if match:
+            names.add(match.group(1))
+    return names
+
+
+def theme_reference_errors(theme_names):
+    errors = []
+    pattern = re.compile(r"\bTheme\.([A-Za-z_][A-Za-z0-9_]*)")
+    for path in SHELL.rglob("*.qml"):
+        if path.name == "Theme.qml":
+            continue
+        text = path.read_text(encoding="utf-8")
+        for match in pattern.finditer(text):
+            name = match.group(1)
+            if name not in theme_names:
+                errors.append(str(path.relative_to(ROOT)) + " reads missing Theme." + name)
+    return errors
+
+
 def main():
     errors = []
     errors.extend(check_nesting_fixtures())
@@ -908,6 +937,10 @@ def main():
         errors.append("FlatButton does not elide a long label")
     if "elide: Text.ElideRight" not in toggle:
         errors.append("SettingsToggle does not elide a long label")
+    theme_names = theme_property_names((SHELL / "themes" / "Theme.qml").read_text(encoding="utf-8"))
+    if "textPrimary" not in theme_names or "text" in theme_names:
+        errors.append("Theme foreground token is missing")
+    errors.extend(theme_reference_errors(theme_names))
 
     for path in shell_files:
         check_shell(path, errors)

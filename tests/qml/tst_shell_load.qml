@@ -1,5 +1,8 @@
 import QtQuick
 import QtTest
+import Quickshell.Services.Mpris
+import Quickshell.Services.SystemTray
+import Quickshell.Services.UPower
 
 TestCase {
     name: "ShellLoad"
@@ -331,6 +334,58 @@ TestCase {
         verify(findText(notes, "does not own notifications", 0))
         verify(findText(notes, "Not SwiftShell", 0))
         verify(findText(notes, "sounds are not played", 0))
+        UPower.displayDevice.ready = false
+        var emptyBattery = componentFor("shell/bar/BatteryModule.qml").createObject(this)
+        verify(emptyBattery !== null)
+        verify(emptyBattery.implicitWidth === 0)
+        UPower.displayDevice.ready = true
+        UPower.displayDevice.percentage = 42
+        var battery = componentFor("shell/bar/BatteryModule.qml").createObject(this)
+        verify(battery !== null)
+        verify(battery.implicitWidth > 0)
+        compare(battery.report.text, "42%")
+
+        Mpris.players.values = []
+        var emptyMedia = componentFor("shell/bar/MediaModule.qml").createObject(this)
+        verify(emptyMedia !== null)
+        verify(emptyMedia.implicitWidth === 0)
+        Mpris.players.values = [{
+            isPlaying: true,
+            trackTitle: "Song",
+            trackArtist: "Band",
+            canTogglePlaying: true
+        }]
+        var media = componentFor("shell/bar/MediaModule.qml").createObject(this)
+        verify(media !== null)
+        verify(media.implicitWidth > 0)
+        verify(media.line.indexOf("Song") !== -1)
+
+        SystemTray.items.values = []
+        var emptyTray = componentFor("shell/bar/TrayModule.qml").createObject(this)
+        verify(emptyTray !== null)
+        verify(emptyTray.implicitWidth === 0)
+        SystemTray.items.values = [{
+            id: "net",
+            title: "Network",
+            onlyMenu: false,
+            hasMenu: true,
+            icon: ""
+        }]
+        var tray = componentFor("shell/bar/TrayModule.qml").createObject(this)
+        verify(tray !== null)
+        verify(tray.implicitWidth > 0)
+        verify(tray.rows.length === 1)
+
+        emptyBattery.destroy()
+        battery.destroy()
+        emptyMedia.destroy()
+        media.destroy()
+        emptyTray.destroy()
+        tray.destroy()
+        Mpris.players.values = []
+        SystemTray.items.values = []
+        UPower.displayDevice.ready = false
+
         wallpaper.query = "cover"
         verify(wallpaper.shows("wallpaperFit"))
         verify(!wallpaper.shows("wallpaperPath"))

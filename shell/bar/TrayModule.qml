@@ -67,7 +67,7 @@ Item {
                     anchors.centerIn: parent
                     visible: modelData.icon === ""
                     text: modelData.title.length > 0 ? modelData.title.charAt(0) : ""
-                    color: Theme.text
+                    color: Theme.textPrimary
                     font.family: Theme.fontFamily
                     font.pixelSize: Theme.fontSizeSmall
                 }

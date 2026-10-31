@@ -20,7 +20,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         width: Math.min(120, implicitWidth)
         text: root.line
-        color: Theme.text
+        color: Theme.textPrimary
         font.family: Theme.fontFamily
         font.pixelSize: Theme.fontSize
         elide: Text.ElideRight
