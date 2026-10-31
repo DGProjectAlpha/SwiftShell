@@ -15,6 +15,7 @@ const audio = require("../shell/logic/audio.js");
 const bar = require("../shell/logic/bar.js");
 const launcher = require("../shell/logic/launcher.js");
 const capabilities = require("../shell/logic/capabilities.js");
+const material = require("../shell/logic/material.js");
 const settingsNav = require("../shell/logic/settingsNav.js");
 
 let failed = 0;
@@ -261,6 +262,14 @@ test("settings window stays one instance and blur is not available", function ()
     assert.equal(report.settingsToplevel.clientMove, false);
     assert.equal(report.backdropBlur.available, false);
     assert.equal(report.backdropBlur.hardwareVerified, false);
+    const surface = material.materialReport().backdropBlur;
+    assert.equal(surface.available, false);
+    assert.equal(surface.fallback, "scrim");
+    assert.equal(surface.hardwareVerified, false);
+    assert.equal(surface.reason, material.BLUR_REASON);
+    assert.equal(report.backdropBlur.reason, material.BLUR_REASON);
+    assert.ok(surface.surfaces.indexOf("bar") !== -1);
+    assert.ok(surface.surfaces.indexOf("settings") !== -1);
     let session = capabilities.reduceSettingsWindow(undefined, "launch");
     session = capabilities.reduceSettingsWindow(session, "launch");
     assert.equal(session.open, true);

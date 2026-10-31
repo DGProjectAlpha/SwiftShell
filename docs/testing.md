@@ -189,6 +189,10 @@ scripts/check.sh
 
 Exit status 0. Static checks passed for 28 QML files. Logic tests passed, including bar heights 22, 28, and 52, derived font and icon size, module hide, and reorder. The run printed `launcher rank 400 apps: 2.12 ms`. Install tests passed, 15 cases. `qmltestrunner` 6.4.2 reported Totals: 6 passed and Totals: 8 passed. `QStandardPaths: XDG_RUNTIME_DIR not set` was printed. The run did not draw the bar or measure the reserved strip.
 
+## What was run for M4.3
+
+On 30 Oct 2026, at 9:12 PM America/New_York, `scripts/check.sh` exited 0. Static checks passed for 28 QML files. Logic tests passed, including the material report: blur unavailable, fallback scrim, not hardware-verified. `launcher rank 400 apps: 2.08 ms`. Install tests passed, 15 cases. `qmltestrunner` 6.4.2 reported Totals: 6 passed and Totals: 8 passed. No checkerboard screenshot was taken. Hyprland blur rules were not read or written.
+
 ## Settings window hardware check
 
 After the M3.2 checks, and only with SwiftShell launched by `scripts/launch.sh`:

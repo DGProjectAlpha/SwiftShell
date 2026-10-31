@@ -1,6 +1,6 @@
 import QtQuick
 import "../components"
-import "../logic/capabilities.js" as Capabilities
+import "../logic/material.js" as Material
 import "../logic/settings.js" as Settings
 import "../logic/settingsNav.js" as Nav
 import "../services"
@@ -367,7 +367,7 @@ Item {
                 id: blurText
                 width: parent.width
                 wrapMode: Text.WordWrap
-                text: Capabilities.capabilityReport().backdropBlur.reason
+                text: Material.materialReport().backdropBlur.reason
                 color: page.marked("backdropBlur") ? Theme.panelText : Theme.panelMuted
                 font.family: Theme.fontFamily
                 font.pixelSize: Theme.fontSizeSmall
