@@ -54,12 +54,15 @@ QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/t
 QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_shell_load.qml" -platform offscreen
 
 DIALOGS_AVAILABLE=0
+FOLDER_MODEL_AVAILABLE=0
 OLD_IFS=$IFS
 IFS=:
 for import_root in $IMPORTS; do
     if [ -f "$import_root/QtQuick/Dialogs/qmldir" ]; then
         DIALOGS_AVAILABLE=1
-        break
+    fi
+    if [ -f "$import_root/Qt/labs/folderlistmodel/qmldir" ]; then
+        FOLDER_MODEL_AVAILABLE=1
     fi
 done
 IFS=$OLD_IFS
@@ -68,4 +71,10 @@ if [ "$DIALOGS_AVAILABLE" = 1 ]; then
     QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_dialogs.qml" -platform offscreen
 else
     echo "SwiftShell: QtQuick.Dialogs is unavailable; the explicit path-entry fallback was tested, but native image selection was not compiled." >&2
+fi
+
+if [ "$DIALOGS_AVAILABLE" = 1 ] && [ "$FOLDER_MODEL_AVAILABLE" = 1 ]; then
+    QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_wallpaper_picker.qml" -platform offscreen
+else
+    echo "SwiftShell: native slideshow folder selection was not compiled because QtQuick.Dialogs or Qt.labs.folderlistmodel is unavailable." >&2
 fi
