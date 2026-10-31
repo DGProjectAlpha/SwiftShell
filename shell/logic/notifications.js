@@ -2,7 +2,7 @@ var HISTORY_CAP = 40;
 var BANNER_CAP = 4;
 
 function emptyCenter() {
-    return { ownership: "off", dnd: false, live: [], history: [], sequence: 1 };
+    return { ownership: "off", dnd: false, policies: {}, live: [], history: [], sequence: 1 };
 }
 
 function clip(value, max) {
@@ -48,6 +48,7 @@ function clone(state) {
     return {
         ownership: current.ownership === "on" ? "on" : "off",
         dnd: current.dnd === true,
+        policies: current.policies && typeof current.policies === "object" ? current.policies : {},
         live: current.live.slice(),
         history: current.history.slice(),
         sequence: typeof current.sequence === "number" ? current.sequence : 1,
@@ -60,10 +61,71 @@ function remember(next, item) {
     next.history = [item].concat(next.history).slice(0, HISTORY_CAP);
 }
 
-function showBanner(next, item) {
-    if (next.dnd === true && item.urgency !== "critical")
-        return false;
-    return true;
+function parsePolicies(text) {
+    if (typeof text !== "string" || text.trim() === "")
+        return {};
+    try {
+        const parsed = JSON.parse(text);
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
+            return {};
+        const out = {};
+        const keys = Object.keys(parsed);
+        for (let i = 0; i < keys.length; i++) {
+            if (parsed[keys[i]] === "quiet" || parsed[keys[i]] === "hide" || parsed[keys[i]] === "show")
+                out[keys[i]] = parsed[keys[i]];
+        }
+        return out;
+    } catch (error) {
+        return {};
+    }
+}
+
+function policyFor(policies, desktopEntry) {
+    const key = typeof desktopEntry === "string" ? desktopEntry : "";
+    const value = policies && policies[key];
+    if (value === "quiet" || value === "hide")
+        return value;
+    return "show";
+}
+
+function placement(next, item) {
+    const policy = policyFor(next.policies, item.desktopEntry);
+    if (policy === "hide")
+        return "drop";
+    if (item.urgency === "critical" || (policy === "show" && !(next.dnd === true)))
+        return "banner";
+    return "history";
+}
+
+function policyRows(text) {
+    const policies = parsePolicies(text);
+    const keys = Object.keys(policies);
+    const out = [];
+    for (let i = 0; i < keys.length; i++)
+        out.push({ id: keys[i], value: policies[keys[i]] });
+    return out;
+}
+
+function groupHistory(history) {
+    const source = Array.isArray(history) ? history : [];
+    const groups = [];
+    for (let i = 0; i < source.length; i++) {
+        const item = source[i];
+        const app = item && item.appName ? item.appName : "Application";
+        let group = null;
+        for (let g = 0; g < groups.length; g++) {
+            if (groups[g].app === app) {
+                group = groups[g];
+                break;
+            }
+        }
+        if (!group) {
+            group = { app: app, items: [] };
+            groups.push(group);
+        }
+        group.items.push(item);
+    }
+    return groups;
 }
 
 function reduceNotifications(state, action) {
@@ -73,6 +135,8 @@ function reduceNotifications(state, action) {
         const was = next.ownership;
         next.ownership = action.ownership === "on" ? "on" : "off";
         next.dnd = action.dnd === true;
+        if (action.policies !== undefined)
+            next.policies = parsePolicies(typeof action.policies === "string" ? action.policies : JSON.stringify(action.policies));
         if (next.ownership !== "on" && was === "on") {
             for (let i = 0; i < next.live.length; i++)
                 remember(next, next.live[i]);
@@ -99,9 +163,22 @@ function reduceNotifications(state, action) {
                 }
             }
         }
-        if (index !== -1)
-            next.live[index] = item;
-        else if (showBanner(next, item) && next.live.length < BANNER_CAP)
+        const place = placement(next, item);
+        if (place === "drop")
+            return next;
+        if (index !== -1) {
+            if (place === "banner")
+                next.live[index] = item;
+            else {
+                const kept = [];
+                for (let i = 0; i < next.live.length; i++) {
+                    if (i !== index)
+                        kept.push(next.live[i]);
+                }
+                next.live = kept;
+                remember(next, item);
+            }
+        } else if (place === "banner" && next.live.length < BANNER_CAP)
             next.live = next.live.concat([item]);
         else
             remember(next, item);
@@ -131,6 +208,10 @@ var swiftshellNotifications = {
     emptyCenter: emptyCenter,
     reduceNotifications: reduceNotifications,
     shouldTrack: shouldTrack,
+    parsePolicies: parsePolicies,
+    policyFor: policyFor,
+    groupHistory: groupHistory,
+    policyRows: policyRows,
 };
 
 if (typeof module !== "undefined" && module.exports)

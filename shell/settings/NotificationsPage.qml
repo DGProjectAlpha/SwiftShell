@@ -64,7 +64,7 @@ Item {
                 if (SettingsStore.notificationOwnership === "on") {
                     page.arm = ""
                     SettingsStore.setNotificationOwnership("off")
-                    NotificationsModel.configure("off", SettingsStore.notificationDnd)
+                    NotificationsModel.configure("off", SettingsStore.notificationDnd, SettingsStore.notificationPoliciesJson)
                     return
                 }
                 if (page.arm !== "own") {
@@ -73,7 +73,7 @@ Item {
                 }
                 page.arm = ""
                 SettingsStore.setNotificationOwnership("on")
-                NotificationsModel.configure("on", SettingsStore.notificationDnd)
+                NotificationsModel.configure("on", SettingsStore.notificationDnd, SettingsStore.notificationPoliciesJson)
             }
         }
 
@@ -83,7 +83,7 @@ Item {
             checked: SettingsStore.notificationDnd
             onToggled: function (next) {
                 SettingsStore.setNotificationDnd(next)
-                NotificationsModel.configure(SettingsStore.notificationOwnership, next)
+                NotificationsModel.configure(SettingsStore.notificationOwnership, next, SettingsStore.notificationPoliciesJson)
             }
         }
 
@@ -150,17 +150,103 @@ Item {
             font.pixelSize: Theme.fontSizeSmall
         }
 
+        Text {
+            width: parent.width
+            wrapMode: Text.WordWrap
+            text: "Notification sounds are not played. This shell has no sound trigger for them."
+            color: Theme.panelMuted
+            font.family: Theme.fontFamily
+            font.pixelSize: Theme.fontSizeSmall
+        }
+
+        Text {
+            width: parent.width
+            text: "Per application"
+            color: Theme.panelText
+            font.family: Theme.fontFamily
+            font.pixelSize: Theme.fontSize
+        }
+
+        TextInput {
+            id: policyId
+            width: parent.width
+            height: Theme.controlHeight
+            color: Theme.panelText
+            font.family: Theme.fontFamily
+            font.pixelSize: Theme.fontSize
+            selectByMouse: true
+            clip: true
+            Accessible.name: "Desktop id"
+        }
+
+        Row {
+            spacing: Theme.panelSpacing
+
+            FlatButton {
+                label: "Show"
+                onActivated: SettingsStore.setNotificationPolicy(policyId.text, "show")
+            }
+
+            FlatButton {
+                label: "Quiet"
+                onActivated: SettingsStore.setNotificationPolicy(policyId.text, "quiet")
+            }
+
+            FlatButton {
+                label: "Hide"
+                onActivated: SettingsStore.setNotificationPolicy(policyId.text, "hide")
+            }
+
+            FlatButton {
+                label: "Clear rule"
+                onActivated: SettingsStore.setNotificationPolicy(policyId.text, "")
+            }
+        }
+
         Repeater {
-            model: NotificationsModel.center.history
+            model: Notifications.policyRows(SettingsStore.notificationPoliciesJson)
 
             delegate: Text {
                 required property var modelData
                 width: column.width
-                text: (modelData.preview === true ? "Preview. " : "") + modelData.appName + ": " + modelData.summary
+                text: modelData.id + " " + modelData.value
                 color: Theme.panelText
                 font.family: Theme.fontFamily
                 font.pixelSize: Theme.fontSizeSmall
                 elide: Text.ElideRight
+            }
+        }
+
+        Repeater {
+            model: Notifications.groupHistory(NotificationsModel.center.history)
+
+            delegate: Column {
+                required property var modelData
+                width: column.width
+                spacing: 2
+
+                Text {
+                    width: parent.width
+                    text: modelData.app
+                    color: Theme.panelText
+                    font.family: Theme.fontFamily
+                    font.pixelSize: Theme.fontSize
+                    elide: Text.ElideRight
+                }
+
+                Repeater {
+                    model: modelData.items
+
+                    delegate: Text {
+                        required property var modelData
+                        width: column.width
+                        text: modelData.summary
+                        color: Theme.panelMuted
+                        font.family: Theme.fontFamily
+                        font.pixelSize: Theme.fontSizeSmall
+                        elide: Text.ElideRight
+                    }
+                }
             }
         }
 

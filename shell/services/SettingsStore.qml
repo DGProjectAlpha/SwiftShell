@@ -61,6 +61,7 @@ Singleton {
     readonly property string shortcutsJson: adapter.shortcutsJson
     readonly property string notificationOwnership: notificationSettings.ownership === "on" ? "on" : "off"
     readonly property bool notificationDnd: notificationSettings.dnd === true
+    readonly property string notificationPoliciesJson: notificationSettings.policiesJson
 
     property bool writing: false
     property bool suppressReload: false
@@ -129,7 +130,8 @@ Singleton {
             shortcutsJson: adapter.shortcutsJson,
             notifications: {
                 ownership: notificationSettings.ownership,
-                dnd: notificationSettings.dnd
+                dnd: notificationSettings.dnd,
+                policiesJson: notificationSettings.policiesJson
             },
             extensionsJson: adapter.extensionsJson
         };
@@ -401,6 +403,24 @@ Singleton {
         notificationSettings.dnd = value === true
     }
 
+    function setNotificationPolicy(id, value) {
+        var map = {}
+        try {
+            map = JSON.parse(notificationSettings.policiesJson || "{}")
+        } catch (error) {
+            map = {}
+        }
+        if (!map || typeof map !== "object")
+            map = {}
+        if (value === "")
+            delete map[id]
+        else
+            map[id] = value
+        notificationSettings.policiesJson = Settings.validateSettings({
+            notifications: { policiesJson: JSON.stringify(map) }
+        }).settings.notifications.policiesJson
+    }
+
     function setSettingsCategory(category) {
         const decision = Settings.validateSettings({
             settingsWindow: {
@@ -533,6 +553,7 @@ Singleton {
                 id: notificationSettings
                 property string ownership: "off"
                 property bool dnd: false
+                property string policiesJson: "{}"
             }
 
             property string extensionsJson: "{}"

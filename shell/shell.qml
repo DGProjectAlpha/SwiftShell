@@ -10,7 +10,7 @@ ShellRoot {
     id: root
 
     Component.onCompleted: {
-        NotificationsModel.configure(SettingsStore.notificationOwnership, SettingsStore.notificationDnd)
+        NotificationsModel.configure(SettingsStore.notificationOwnership, SettingsStore.notificationDnd, SettingsStore.notificationPoliciesJson)
         console.info("SwiftShell: M1 prototype started");
         console.info("SwiftShell: calendar, control center, and launcher are available");
         console.info("SwiftShell: bar monitor preference", SettingsStore.targetMonitor === "" ? "automatic" : SettingsStore.targetMonitor);
@@ -40,10 +40,13 @@ ShellRoot {
     Connections {
         target: SettingsStore
         function onNotificationOwnershipChanged() {
-            NotificationsModel.configure(SettingsStore.notificationOwnership, SettingsStore.notificationDnd)
+            NotificationsModel.configure(SettingsStore.notificationOwnership, SettingsStore.notificationDnd, SettingsStore.notificationPoliciesJson)
         }
         function onNotificationDndChanged() {
-            NotificationsModel.configure(SettingsStore.notificationOwnership, SettingsStore.notificationDnd)
+            NotificationsModel.configure(SettingsStore.notificationOwnership, SettingsStore.notificationDnd, SettingsStore.notificationPoliciesJson)
+        }
+        function onNotificationPoliciesJsonChanged() {
+            NotificationsModel.configure(SettingsStore.notificationOwnership, SettingsStore.notificationDnd, SettingsStore.notificationPoliciesJson)
         }
     }
 
