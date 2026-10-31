@@ -33,7 +33,13 @@ FloatingWindow {
             fontSize: SettingsStore.fontSize,
             fontWeight: SettingsStore.fontWeight,
             iconScale: SettingsStore.iconScale,
-            topGradient: SettingsStore.topGradient
+            topGradient: SettingsStore.topGradient,
+            automaticText: SettingsStore.automaticText,
+            automaticGradient: SettingsStore.automaticGradient,
+            manualText: SettingsStore.manualText,
+            manualMuted: SettingsStore.manualMuted,
+            manualPanel: SettingsStore.manualPanel,
+            manualGradient: SettingsStore.manualGradient
         }
     }
 
@@ -317,6 +323,7 @@ FloatingWindow {
                     onRevealRequested: function (y, itemHeight) {
                         scroller.contentY = Nav.scrollTarget(scroller.contentY, scroller.height, y, itemHeight)
                     }
+                    onEdited: function (patch) { window.commit(patch) }
                 }
             }
         }

@@ -36,7 +36,13 @@
     "fontSize": 12,
     "fontWeight": "regular",
     "iconScale": 1,
-    "topGradient": false
+    "topGradient": false,
+    "automaticText": false,
+    "automaticGradient": false,
+    "manualText": "",
+    "manualMuted": "",
+    "manualPanel": "",
+    "manualGradient": ""
   },
   "launcher": {
     "pinnedIds": []
@@ -45,7 +51,12 @@
     "enabled": true,
     "fit": "cover",
     "path": "",
-    "outputsJson": "{}"
+    "outputsJson": "{}",
+    "slideshow": false,
+    "intervalMinutes": 30,
+    "order": "sequential",
+    "transitionMs": 400,
+    "slidesJson": "[]"
   },
   "settingsWindow": {
     "width": 900,

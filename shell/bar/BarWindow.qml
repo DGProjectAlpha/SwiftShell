@@ -72,7 +72,7 @@ PanelWindow {
 
     Rectangle {
         z: -1
-        visible: Theme.topGradient
+        visible: Theme.topGradient || Theme.contrastScrim
         anchors.fill: parent
         color: Theme.transparent
         gradient: Gradient {

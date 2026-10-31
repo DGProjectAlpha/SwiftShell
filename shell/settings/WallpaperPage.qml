@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import "../components"
 import "../logic/settingsNav.js" as Nav
+import "../logic/slideshow.js" as Slideshow
 import "../logic/wallpaper.js" as Wallpaper
 import "../services"
 import "../themes"
@@ -15,6 +16,7 @@ Item {
     property string pathNote: ""
     property bool previewFailed: false
     signal revealRequested(real y, real itemHeight)
+    signal edited(var patch)
 
     implicitWidth: 560
     implicitHeight: column.implicitHeight
@@ -37,6 +39,15 @@ Item {
 
     function focusHighlight() {
         pathField.forceActiveFocus()
+    }
+
+    function addSlide(text) {
+        var choice = Wallpaper.resolveSource(text)
+        page.pathNote = choice.reason
+        if (choice.source === "file") {
+            SettingsStore.addSlide(choice.path)
+            slideField.text = ""
+        }
     }
 
     function outputPath(name) {
@@ -339,6 +350,215 @@ Item {
                         }
                     }
                 }
+            }
+        }
+
+        SettingsToggle {
+            controlId: "slideshow"
+            visible: page.shows("slideshow")
+            marked: page.marked("slideshow")
+            label: "Slideshow"
+            checked: SettingsStore.slideshow
+            onToggled: function (next) { SettingsStore.setSlideshow(next) }
+        }
+
+        Text {
+            width: parent.width
+            wrapMode: Text.WordWrap
+            visible: page.shows("slideshow")
+            text: "This Qt build cannot list a folder. Add png, jpeg, or webp files. Shuffle does not repeat the current image when another file is listed. The fade is at most one second, and it is instant while reduced motion is on."
+            color: Theme.panelMuted
+            font.family: Theme.fontFamily
+            font.pixelSize: Theme.fontSizeSmall
+        }
+
+        SettingsRow {
+            visible: page.shows("slideshow")
+            width: parent.width
+            label: "Every"
+
+            TextInput {
+                width: 80
+                height: Theme.controlHeight
+                text: String(SettingsStore.intervalMinutes)
+                color: Theme.panelText
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.fontSizeSmall
+                selectByMouse: true
+                activeFocusOnTab: true
+                Accessible.name: "Slideshow minutes"
+                onEditingFinished: SettingsStore.setIntervalMinutes(parseInt(text, 10))
+            }
+        }
+
+        SettingsRow {
+            visible: page.shows("slideshow")
+            width: parent.width
+            label: "Order"
+
+            Row {
+                spacing: Theme.panelSpacing
+
+                FlatButton {
+                    label: "In order"
+                    emphasized: SettingsStore.slideshowOrder !== "shuffle"
+                    onActivated: SettingsStore.setSlideshowOrder("sequential")
+                }
+
+                FlatButton {
+                    label: "Shuffle"
+                    emphasized: SettingsStore.slideshowOrder === "shuffle"
+                    onActivated: SettingsStore.setSlideshowOrder("shuffle")
+                }
+            }
+        }
+
+        SettingsRow {
+            visible: page.shows("slideshow")
+            width: parent.width
+            label: "Fade"
+
+            TextInput {
+                width: 80
+                height: Theme.controlHeight
+                text: String(SettingsStore.transitionMs)
+                color: Theme.panelText
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.fontSizeSmall
+                selectByMouse: true
+                activeFocusOnTab: true
+                Accessible.name: "Fade milliseconds"
+                onEditingFinished: SettingsStore.setTransitionMs(parseInt(text, 10))
+            }
+        }
+
+        SettingsRow {
+            visible: page.shows("slideshow")
+            width: parent.width
+            label: "Add image"
+
+            Row {
+                spacing: Theme.panelSpacing
+
+                TextInput {
+                    id: slideField
+                    width: 220
+                    height: Theme.controlHeight
+                    color: Theme.panelText
+                    font.family: Theme.fontFamily
+                    font.pixelSize: Theme.fontSizeSmall
+                    selectByMouse: true
+                    activeFocusOnTab: true
+                    Accessible.name: "Slideshow image"
+                    onEditingFinished: page.addSlide(text)
+                }
+
+                FlatButton {
+                    label: "Add"
+                    onActivated: page.addSlide(slideField.text)
+                }
+            }
+        }
+
+        Text {
+            width: parent.width
+            wrapMode: Text.WordWrap
+            visible: page.shows("slideshow")
+            text: WallpaperModel.slideError !== "" ? WallpaperModel.slideError : (WallpaperModel.slideCount + " images, " + WallpaperModel.unreadable + " skipped")
+            color: Theme.panelMuted
+            font.family: Theme.fontFamily
+            font.pixelSize: Theme.fontSizeSmall
+        }
+
+        Repeater {
+            model: Slideshow.parseList(SettingsStore.slidesJson)
+            visible: page.shows("slideshow")
+
+            delegate: SettingsRow {
+                required property string modelData
+                width: column.width
+                label: modelData
+
+                FlatButton {
+                    label: "Remove"
+                    onActivated: SettingsStore.removeSlide(modelData)
+                }
+            }
+        }
+
+        SettingsToggle {
+            controlId: "automaticText"
+            visible: page.shows("automaticText")
+            marked: page.marked("automaticText")
+            label: "Automatic text"
+            checked: SettingsStore.automaticText
+            onToggled: function (next) { page.edited({ automaticText: next }) }
+        }
+
+        SettingsToggle {
+            visible: page.shows("automaticText")
+            label: "Automatic fade"
+            checked: SettingsStore.automaticGradient
+            onToggled: function (next) { page.edited({ automaticGradient: next }) }
+        }
+
+        Text {
+            width: parent.width
+            wrapMode: Text.WordWrap
+            visible: page.shows("automaticText")
+            text: Theme.contrastReason !== "" ? Theme.contrastReason : "Automatic text reads the top of a png. Jpeg and webp still display. Manual colors stay stored when automatic is off."
+            color: Theme.panelMuted
+            font.family: Theme.fontFamily
+            font.pixelSize: Theme.fontSizeSmall
+        }
+
+        Text {
+            width: parent.width
+            wrapMode: Text.WordWrap
+            visible: page.shows("manualText") && Theme.contrastWarning !== ""
+            text: Theme.contrastWarning
+            color: Theme.panelText
+            font.family: Theme.fontFamily
+            font.pixelSize: Theme.fontSizeSmall
+        }
+
+        SettingsRow {
+            controlId: "manualText"
+            visible: page.shows("manualText")
+            marked: page.marked("manualText")
+            width: parent.width
+            label: "Text"
+
+            TextInput {
+                width: 120
+                height: Theme.controlHeight
+                text: SettingsStore.manualText
+                color: Theme.panelText
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.fontSizeSmall
+                selectByMouse: true
+                activeFocusOnTab: true
+                Accessible.name: "Manual text color"
+                onEditingFinished: page.edited({ manualText: text })
+            }
+        }
+
+        SettingsRow {
+            visible: page.shows("manualText")
+            width: parent.width
+            label: "Panel"
+
+            TextInput {
+                width: 120
+                height: Theme.controlHeight
+                text: SettingsStore.manualPanel
+                color: Theme.panelText
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.fontSizeSmall
+                selectByMouse: true
+                activeFocusOnTab: true
+                Accessible.name: "Manual panel color"
+                onEditingFinished: page.edited({ manualPanel: text })
             }
         }
     }
