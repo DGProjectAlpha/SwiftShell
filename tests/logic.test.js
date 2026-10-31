@@ -190,7 +190,7 @@ test("empty settings validate to the documented defaults", function () {
 
 test("invalid settings are reported and repaired without accepting the bad value", function () {
     const result = settings.validateSettings({
-        version: 3,
+        version: 4,
         clock: { use24Hour: "yes" },
         bar: {
             targetMonitor: false,
@@ -208,7 +208,7 @@ test("invalid settings are reported and repaired without accepting the bad value
         "bar.showFocusedTitle",
         "bar.workspaceIds",
     ]);
-    assert.equal(result.settings.version, 2);
+    assert.equal(result.settings.version, 3);
     assert.equal(result.settings.clock.use24Hour, true);
     assert.equal(result.settings.bar.targetMonitor, "");
     assert.equal(result.settings.bar.reserveSpace, true);
@@ -222,16 +222,17 @@ test("version 1 settings migrate and unknown keys stay in the extension bag", fu
         extra: { kept: true },
     });
     assert.equal(migrated.action, "migrate");
-    assert.equal(migrated.settings.version, 2);
+    assert.equal(migrated.settings.version, 3);
     assert.equal(migrated.settings.bar.targetMonitor, "HDMI-A-1");
     assert.deepEqual(migrated.settings.bar.workspaceIds, [4, 5, 6]);
     assert.equal(JSON.parse(migrated.settings.extensionsJson).extra.kept, true);
     assert.ok(migrated.backupText.indexOf('"version": 1') !== -1);
     assert.equal(settings.migrationDecision(settings.DEFAULTS).action, "keep");
-    assert.equal(settings.migrationDecision({ version: 2, clock: { use24Hour: false } }).action, "keep");
+    assert.equal(settings.migrationDecision({ version: 3, clock: { use24Hour: false } }).action, "keep");
+    assert.equal(settings.migrationDecision({ version: 2, clock: { use24Hour: false } }).action, "migrate");
     const missing = settings.migrationDecision({ clock: { use24Hour: false } });
     assert.equal(missing.action, "migrate");
-    assert.equal(missing.settings.version, 2);
+    assert.equal(missing.settings.version, 3);
     assert.equal(missing.settings.clock.use24Hour, false);
     assert.equal(settings.migrationDecision({ version: 3 }).action, "keep");
     assert.equal(settings.migrationDecision("broken").action, "keep");
@@ -279,8 +280,9 @@ test("settings window stays one instance and blur is not available", function ()
 test("settings search, density, and undo stay on real appearance fields", function () {
     assert.equal(settingsNav.navigationLayout(719), "stacked");
     assert.equal(settingsNav.navigationLayout(720), "columns");
-    assert.equal(settingsNav.categories().length, 1);
+    assert.equal(settingsNav.categories().length, 2);
     assert.equal(settingsNav.categories()[0].id, "appearance");
+    assert.equal(settingsNav.categories()[1].id, "bar");
     assert.equal(settingsNav.filterControls("").length, settingsNav.CONTROLS.length);
     assert.equal(settingsNav.filterControls("not-a-setting").length, 0);
     const opacity = settingsNav.filterControls("opacity").map(function (item) { return item.id; });
@@ -833,6 +835,33 @@ test("bar exclusion can turn reservation on again and popup focus clears before 
     assert.deepEqual(overlay, { mode: "ignore", zone: null, writeZone: false });
     assert.deepEqual(bar.exclusionUpdate(true, 0, 28), { mode: "ignore", zone: null, writeZone: false });
     assert.equal(bar.layerForBar(), "top");
+    const normal = bar.barMetrics(28, 1);
+    assert.equal(normal.height, 28);
+    assert.equal(normal.font, 12);
+    assert.equal(normal.icon, 16);
+    assert.equal(normal.marginH, 10);
+    assert.equal(normal.moduleSpacing, 12);
+    assert.equal(normal.hit, 28);
+    const tall = bar.barMetrics(52, 1);
+    assert.equal(tall.height, 52);
+    assert.equal(tall.font, 22);
+    assert.ok(tall.icon <= 30);
+    assert.equal(bar.barMetrics(10, 1).height, 22);
+    assert.equal(bar.barMetrics(80, 1).height, 52);
+    assert.equal(bar.heightFromUnit(bar.unitFromHeight(28)), 28);
+    assert.equal(bar.exclusionUpdate(true, tall.height, 28).zone, 52);
+    assert.deepEqual(bar.visibleModules(bar.BAR_MODULES, ["clock"]), ["workspaces", "title", "search", "control"]);
+    const moved = bar.moveModule(bar.BAR_MODULES, "clock", -1);
+    assert.equal(moved[2], "clock");
+    assert.equal(moved[3], "search");
+    assert.deepEqual(bar.toggleHidden(["clock"], "clock"), []);
+    assert.deepEqual(bar.toggleHidden([], "clock"), ["clock"]);
+    const repaired = settings.validateSettings({ bar: { height: 9, moduleOrder: ["clock", "nope"], hiddenModules: ["search", "search"] } });
+    assert.equal(repaired.ok, false);
+    assert.equal(repaired.settings.bar.height, 22);
+    assert.deepEqual(repaired.settings.bar.moduleOrder, bar.normalizeModuleOrder(["clock"]));
+    assert.deepEqual(repaired.settings.bar.hiddenModules, ["search"]);
+    assert.equal(repaired.settings.bar.targetMonitor, "");
 
     const open = popover.reducePopup(popover.popupModel(), { type: "open", id: "calendar" }, { instantOpen: true });
     const entering = popover.focusTransition(popover.popupModel(), open);

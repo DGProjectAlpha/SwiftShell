@@ -4,6 +4,7 @@ import QtQuick
 import QtCore
 import Quickshell
 import Quickshell.Io
+import "../logic/bar.js" as Bar
 import "../logic/settings.js" as Settings
 
 Singleton {
@@ -19,6 +20,10 @@ Singleton {
     readonly property bool showFocusedTitle: barSettings.showFocusedTitle
     readonly property var workspaceIds: Settings.normalizeWorkspaceIds(barSettings.workspaceIds)
     readonly property string workspaceDispatch: barSettings.workspaceDispatch === "lua" || barSettings.workspaceDispatch === "legacy" ? barSettings.workspaceDispatch : "auto"
+    readonly property int barHeight: barSettings.height
+    readonly property var moduleOrder: barSettings.moduleOrder
+    readonly property var hiddenModules: barSettings.hiddenModules
+    readonly property var visibleModules: Bar.visibleModules(barSettings.moduleOrder, barSettings.hiddenModules)
     readonly property string appearanceMode: appearanceSettings.mode
     readonly property string appearanceTint: appearanceSettings.tint
     readonly property real panelOpacity: appearanceSettings.panelOpacity
@@ -56,7 +61,10 @@ Singleton {
                 reserveSpace: barSettings.reserveSpace,
                 showFocusedTitle: barSettings.showFocusedTitle,
                 workspaceIds: barSettings.workspaceIds,
-                workspaceDispatch: barSettings.workspaceDispatch
+                workspaceDispatch: barSettings.workspaceDispatch,
+                height: barSettings.height,
+                moduleOrder: barSettings.moduleOrder,
+                hiddenModules: barSettings.hiddenModules
             },
             appearance: {
                 mode: appearanceSettings.mode,
@@ -139,6 +147,64 @@ Singleton {
         clockSettings.showWeekNumbers = value === true
     }
 
+    function currentBar() {
+        return {
+            targetMonitor: barSettings.targetMonitor,
+            reserveSpace: barSettings.reserveSpace,
+            showFocusedTitle: barSettings.showFocusedTitle,
+            workspaceIds: barSettings.workspaceIds,
+            workspaceDispatch: barSettings.workspaceDispatch,
+            height: barSettings.height,
+            moduleOrder: barSettings.moduleOrder,
+            hiddenModules: barSettings.hiddenModules
+        }
+    }
+
+    function setUse24Hour(value) {
+        clockSettings.use24Hour = value === true
+    }
+
+    function setTargetMonitor(value) {
+        barSettings.targetMonitor = typeof value === "string" ? value.trim() : ""
+    }
+
+    function setReserveSpace(value) {
+        barSettings.reserveSpace = value === true
+    }
+
+    function setShowFocusedTitle(value) {
+        barSettings.showFocusedTitle = value === true
+    }
+
+    function setBarHeight(value) {
+        const next = currentBar()
+        next.height = value
+        barSettings.height = Settings.validateSettings({ bar: next }).settings.bar.height
+    }
+
+    function setModuleOrder(order) {
+        const next = currentBar()
+        next.moduleOrder = order
+        barSettings.moduleOrder = Settings.validateSettings({ bar: next }).settings.bar.moduleOrder
+    }
+
+    function setHiddenModules(hidden) {
+        const next = currentBar()
+        next.hiddenModules = hidden
+        barSettings.hiddenModules = Settings.validateSettings({ bar: next }).settings.bar.hiddenModules
+    }
+
+    function setSettingsCategory(category) {
+        const decision = Settings.validateSettings({
+            settingsWindow: {
+                width: windowSettings.width,
+                height: windowSettings.height,
+                category: category
+            }
+        })
+        windowSettings.category = decision.settings.settingsWindow.category
+    }
+
     FileView {
         id: settingsFile
         path: root.settingsPath
@@ -183,7 +249,7 @@ Singleton {
 
         JsonAdapter {
             id: adapter
-            property int version: 2
+            property int version: 3
 
             property JsonObject clock: JsonObject {
                 id: clockSettings
@@ -199,6 +265,9 @@ Singleton {
                 property bool showFocusedTitle: true
                 property list<int> workspaceIds: []
                 property string workspaceDispatch: "auto"
+                property int height: 28
+                property list<string> moduleOrder: ["workspaces", "title", "search", "clock", "control"]
+                property list<string> hiddenModules: []
             }
 
             property JsonObject appearance: JsonObject {
@@ -243,9 +312,9 @@ Singleton {
         onSaved: {
             if (!root.migrating)
                 return
-            adapter.version = 2
+            adapter.version = 3
             root.migrating = false
-            console.info("SwiftShell: settings migrated to version 2")
+            console.info("SwiftShell: settings migrated to version 3")
         }
         onSaveFailed: function (error) {
             if (!root.migrating)

@@ -900,7 +900,7 @@ def main():
         "launcher rereads desktop entries": "onApplicationsChanged" in (SHELL / "services" / "LauncherModel.qml").read_text(encoding="utf-8"),
         "launcher icon theme": "Quickshell.iconPath" in (SHELL / "launcher" / "LauncherWindow.qml").read_text(encoding="utf-8"),
         "launcher releases focus when hidden": "WlrKeyboardFocus.None" in (SHELL / "launcher" / "LauncherWindow.qml").read_text(encoding="utf-8") and "inputPlan" in (SHELL / "launcher" / "LauncherWindow.qml").read_text(encoding="utf-8"),
-        "bar height": "barHeight: 28" in theme,
+        "bar height follows settings": "barMetrics.height" in theme and "height: 28" in store,
         "target monitor": 'targetMonitor: ""' in store,
         "clock default": "use24Hour: true" in store,
         "reserve default": "reserveSpace: true" in store,

@@ -14,6 +14,12 @@ var CONTROLS = [
     { id: "topGradient", category: "appearance", section: "Surface", label: "Top edge gradient", keywords: ["gradient", "bar", "fade"] },
     { id: "wallpaperTint", category: "appearance", section: "Limits", label: "Wallpaper tint", keywords: ["tint", "wallpaper", "adaptive"] },
     { id: "backdropBlur", category: "appearance", section: "Limits", label: "Backdrop blur", keywords: ["blur", "frost", "material"] },
+    { id: "barHeight", category: "bar", section: "Size", label: "Bar height", keywords: ["height", "scale", "size"] },
+    { id: "reserveSpace", category: "bar", section: "Placement", label: "Reserve space", keywords: ["exclusive", "overlay", "zone"] },
+    { id: "targetMonitor", category: "bar", section: "Placement", label: "Monitor", keywords: ["screen", "output", "display"] },
+    { id: "showTitle", category: "bar", section: "Modules", label: "Focused title", keywords: ["window", "title", "app"] },
+    { id: "clock24", category: "bar", section: "Modules", label: "24-hour clock", keywords: ["clock", "time", "hour"] },
+    { id: "moduleOrder", category: "bar", section: "Modules", label: "Module order", keywords: ["reorder", "hide", "workspaces", "search"] },
 ];
 
 function clamp01(unit) {
@@ -47,6 +53,14 @@ function controlVisible(query, id) {
     return false;
 }
 
+function categoryFor(id) {
+    for (let i = 0; i < CONTROLS.length; i++) {
+        if (CONTROLS[i].id === id)
+            return CONTROLS[i].category;
+    }
+    return "";
+}
+
 function firstControlId(query) {
     const rows = filterControls(query);
     return rows.length > 0 ? rows[0].id : "";
@@ -73,7 +87,10 @@ function moveSelection(query, currentId, delta) {
 }
 
 function categories() {
-    return [{ id: "appearance", label: "Appearance" }];
+    return [
+        { id: "appearance", label: "Appearance" },
+        { id: "bar", label: "Top bar" },
+    ];
 }
 
 function navigationLayout(width) {
@@ -151,6 +168,7 @@ var swiftshellSettingsNav = {
     categories: categories,
     filterControls: filterControls,
     controlVisible: controlVisible,
+    categoryFor: categoryFor,
     firstControlId: firstControlId,
     moveSelection: moveSelection,
     navigationLayout: navigationLayout,

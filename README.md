@@ -498,6 +498,8 @@ Acceptance: user explicitly opts in; Noctalia remains readily restorable.
 - [x] M4.0 settings window source: one `FloatingWindow`, Appearance controls that already persist, schema version 2 with a backup before migration
 - [ ] M4.0 settings window shown, moved, and resized on a Hyprland session
 - [x] M4.1 settings search and the remaining live appearance controls, in source
+- [x] M4.2 bar height, derived metrics, and module order, in source
+- [ ] M4.2 bar height and reserved strip measured on a Hyprland session
 - [ ] M4.1 search, undo, and appearance changes shown on a Hyprland session
 - [ ] Local Quickshell and Hyprland versions recorded from `qs -V` and `Hyprland --version`
 - [ ] Visual rendering of the stabilization fixes verified

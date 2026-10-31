@@ -6,7 +6,7 @@ MouseArea {
 
     signal activated()
 
-    implicitWidth: Math.round(16 * Theme.iconScale)
+    implicitWidth: Theme.barIcon
     implicitHeight: Theme.barHeight
     width: implicitWidth
     height: implicitHeight
