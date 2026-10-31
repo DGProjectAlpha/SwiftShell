@@ -27,6 +27,7 @@ var CONTROLS = [
     { id: "slideshow", category: "wallpaper", section: "Slideshow", label: "Slideshow", keywords: ["folder", "interval", "shuffle", "crossfade"] },
     { id: "automaticText", category: "wallpaper", section: "Contrast", label: "Automatic text", keywords: ["contrast", "foreground", "readable"] },
     { id: "manualText", category: "wallpaper", section: "Contrast", label: "Manual text", keywords: ["hex", "color", "foreground"] },
+    { id: "displayLayout", category: "displays", section: "Arrangement", label: "Arrangement", keywords: ["monitor", "display", "scale", "preview"] },
 ];
 
 function clamp01(unit) {
@@ -98,6 +99,7 @@ function categories() {
         { id: "appearance", label: "Appearance" },
         { id: "bar", label: "Top bar" },
         { id: "wallpaper", label: "Wallpaper" },
+        { id: "displays", label: "Displays" },
     ];
 }
 

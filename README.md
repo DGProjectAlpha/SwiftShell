@@ -506,12 +506,14 @@ Acceptance: user explicitly opts in; Noctalia remains readily restorable.
 - [ ] M4.4 wallpaper shown on a Hyprland session, including crop and a missing file
 - [x] M4.5 slideshow state machine, png top-edge contrast, and manual colors, in source
 - [ ] M4.5 slideshow and contrast shown on a Hyprland session
+- [x] M4.6 display arrangement preview, in source, with apply disabled
+- [ ] M4.6 diagram compared with a real Hyprland layout
 - [ ] M4.1 search, undo, and appearance changes shown on a Hyprland session
 - [ ] Local Quickshell and Hyprland versions recorded from `qs -V` and `Hyprland --version`
 - [ ] Visual rendering of the stabilization fixes verified
 - [ ] Any live desktop integration beyond the separate `qs --path` launch approved
 
-**Current claim:** The shell has run on the reference Hyprland session. The bar, calendar, and control center were visible with Noctalia stopped, and workspace switching works there. The launcher opened on that session and did not list Dolphin or Helium. The catalog now refreshes from Quickshell's `applicationsChanged` signal. That refresh, theme icons, and bar reservation have not been relaunched on the session. M3.2 centers Spotlight and chooses the focused monitor in source. That placement has not been launched on the session. M4.0 adds a settings `FloatingWindow`. The schema is version 3. M4.1 adds search, undo, and the appearance values the theme already uses. M4.3 reports backdrop blur as unavailable. M4.4 draws one background layer per output from the packaged crimson image or a chosen png, jpeg, or webp file. M4.5 adds a slideshow and samples png pixels along the top edge for text and the bar fade. Jpeg and webp are not sampled. That window, that layer, and that fade have not been shown on a session. Cloud checks do not launch applications, move a toplevel, or edit Super+Space.
+**Current claim:** The shell has run on the reference Hyprland session. The bar, calendar, and control center were visible with Noctalia stopped, and workspace switching works there. The launcher opened on that session and did not list Dolphin or Helium. The catalog now refreshes from Quickshell's `applicationsChanged` signal. That refresh, theme icons, and bar reservation have not been relaunched on the session. M3.2 centers Spotlight and chooses the focused monitor in source. That placement has not been launched on the session. M4.0 adds a settings `FloatingWindow`. The schema is version 3. M4.1 adds search, undo, and the appearance values the theme already uses. M4.3 reports backdrop blur as unavailable. M4.4 draws one background layer per output from the packaged crimson image or a chosen png, jpeg, or webp file. M4.5 adds a slideshow and samples png pixels along the top edge for text and the bar fade. Jpeg and webp are not sampled. M4.6 draws a display preview and does not send layout changes. That window, that layer, that fade, and that diagram have not been shown on a session. Cloud checks do not launch applications, move a toplevel, or edit Super+Space.
 
 ## 13. Running the M0/M1 prototype
 
