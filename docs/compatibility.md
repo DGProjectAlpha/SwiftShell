@@ -66,7 +66,7 @@ Quickshell 0.2.0 accepts `--path` and `--no-duplicate` on the main command, and 
 - Shell screen name and Hyprland monitor name for HDMI-A-1 may differ. The matcher accepts either. If both differ from `HDMI-A-1`, the bar is not created and the log says no output matched.
 - Focused title reads `title`, `activated`, `monitor`, and `workspace` on the toplevel object, then the attached `HyprlandToplevel` when those fields are empty. A Quickshell build that exposes neither will load and will show no title.
 - `WlrLayershell.namespace` must be set before the layer surface connects. The bar also sets `layer` to `WlrLayer.Top` and `keyboardFocus` to `WlrKeyboardFocus.None`. Both are on the Quickshell 0.2.0 `WlrLayershell` page. `Top` is documented as above normal windows and below fullscreen windows. `Overlay` is not used. If the local module rejects the attached property, the shell will fail at load. The fallback is to remove the `Quickshell.Wayland` import and the attached lines from `shell/bar/BarWindow.qml`. The bar can still run; its layer name and keyboard focus will be Quickshell's defaults, which are the same `Top` and `None`.
-- `exclusiveZone` writes force exclusion mode to normal inside Quickshell. `bar.reserveSpace: false` assigns only `ExclusionMode.Ignore`. `true` assigns only `exclusiveZone` to the logical bar height. The two are not written together. True fullscreen still covers a `Top` layer. Hyprland's fullscreen rules are not edited.
+- `exclusiveZone` writes force exclusion mode to normal inside Quickshell, and a write of the same value does not call the setter. `bar.reserveSpace: false` assigns only `ExclusionMode.Ignore` (Wayland zone `-1`). `true` assigns the logical bar height when it changed and always assigns `ExclusionMode.Normal`. Quickshell scales the logical height to native pixels. True fullscreen still covers a `Top` layer. Hyprland's fullscreen rules are not edited.
 - Light wallpaper can wash out `#F2F2F2` text. M1 does not add a scrim, because a scrim would be a bar background. Contrast on a light wallpaper is unverified.
 - One notification daemon and the current global shortcuts stay with the existing session. This prototype does not register a notification service or a global bind.
 
@@ -86,9 +86,9 @@ Quickshell 0.2.0 accepts `--path` and `--no-duplicate` on the main command, and 
 | PipeWire default sink | `Pipewire.defaultAudioSink`, `PwObjectTracker`, `PwNodeAudio.volume` / `muted` | Same family | Implemented, not runtime-tested. A missing module stays inside the audio `Loader` |
 | `SystemClock`, `Variants`, `FileView`, `WlrLayershell.namespace` | Documented | Documented | Implemented, not runtime-tested |
 | Network, Bluetooth, media, power menu beyond the launcher confirmations, file search | Not part of the verified launcher | Not implemented here | Deferred. The launcher does not invent those results |
-| Launcher window | `DesktopEntries` and `PanelWindow` are documented on the 0.2 pages | Same | Implemented. Ranking of 400 names measured 1.96 ms in Node. The window was not opened with `qs` |
+| Launcher window | `DesktopEntries`, `applicationsChanged`, and `Quickshell.iconPath(icon, true)` are on the 0.2 pages | The scan result is queued before `applicationsChanged` | Implemented. The CachyOS session opened the launcher and did not find Dolphin or Helium before this refresh. Not relaunched with `qs` here |
 | Wallpaper sampling | Not implemented | Not implemented | Deferred. The stored tint does not change the palette |
 
 ## Explicitly out of scope
 
-The launcher, settings GUI, tray, media controls, network management, Bluetooth, power actions, wallpaper sampling, and Hyprland decoration changes are later milestones. Panel blur is unsupported on the current compatibility floor rather than deferred behind a fake effect.
+The settings GUI, tray, media controls, network management, Bluetooth, wallpaper sampling, and Hyprland decoration changes are later milestones. The launcher's power rows call `loginctl` only after a second confirmation. Panel blur is unsupported on the current compatibility floor rather than deferred behind a fake effect.

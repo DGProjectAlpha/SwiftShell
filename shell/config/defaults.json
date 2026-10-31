@@ -7,7 +7,7 @@
   },
   "bar": {
     "targetMonitor": "HDMI-A-1",
-    "reserveSpace": false,
+    "reserveSpace": true,
     "showFocusedTitle": true,
     "workspaceIds": [
       4,

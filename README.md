@@ -1,6 +1,6 @@
 # SwiftShell
 
-> **Status:** M2 and the M3 launcher are in `shell/`. On the CachyOS Hyprland session, with Noctalia stopped, SwiftShell loaded, the bar rendered, and the calendar and control center opened. That was before the M2 runtime fixes. The launcher has not been opened on that session. Cloud checks do not show pixels and do not launch applications.
+> **Status:** M2 and the M3 launcher are in `shell/`. On the CachyOS Hyprland session, with Noctalia stopped, SwiftShell has loaded and the bar has rendered. Workspace switching works after the Lua dispatch fix. The launcher has opened and did not find Dolphin or Helium; that discovery path is changed and has not been relaunched. Cloud checks do not show pixels and do not launch applications. Noctalia is its own `noctalia` executable, not a `qs` process.
 >
 > **Purpose:** A clean, understated, keyboard-first, fully integrated desktop shell built with **Quickshell + Qt 6/QML** for **Hyprland on Arch-based systems**. The reference workstation is CachyOS; the installer is not limited to that one machine.
 >
@@ -65,7 +65,7 @@ The following details come from earlier configuration work. **Treat them as refe
 |---|---|
 | Distribution | CachyOS, Arch-based |
 | Session | Wayland / Hyprland, Lua-based configuration |
-| Existing shell | Noctalia, itself Quickshell-based |
+| Existing shell | Noctalia, started as the `noctalia` executable. It is Quickshell-based and is not a `qs` process to kill |
 | GPU | NVIDIA RTX 4070 |
 | Primary | DP-1, 2560×1440, approx. 164.83 Hz, historically scale 1.0 |
 | Secondary | HDMI-A-1, 1920×1080, 60 Hz, historically scale 1.5 |
@@ -490,13 +490,14 @@ Acceptance: user explicitly opts in; Noctalia remains readily restorable.
 - [x] Install, activate, deactivate, and uninstall scripts added (not verified on Hyprland)
 - [x] M2 theme tokens, popover host, calendar, and control-center foundation added
 - [x] CachyOS launch observed: bar rendered with Noctalia stopped; calendar and control center opened
-- [x] M3 launcher source added: application search, pinned ids, recent ids, and a Search control. Not opened on Hyprland from this environment
-- [ ] Workspace clicks, binding-loop silence, settings warning, bar reservation, and the launcher retested on CachyOS
+- [x] CachyOS workspace switching observed after the Lua dispatch fix
+- [x] M3 launcher opened on CachyOS and failed to find Dolphin and Helium; discovery now follows `applicationsChanged` and has not been relaunched
+- [ ] Bar reservation, theme icons, launcher focus return, and the refreshed catalog retested on CachyOS
 - [ ] Local Quickshell and Hyprland versions recorded from `qs -V` and `Hyprland --version`
 - [ ] Visual rendering of the stabilization fixes verified
 - [ ] Any live desktop integration beyond the separate `qs --path` launch approved
 
-**Current claim:** The shell has run on the reference Hyprland session. The bar, calendar, and control center were visible with Noctalia stopped. The M2 fixes and the M3 launcher are in the tree. Node measured a 400-entry search at 1.96 ms during `scripts/check.sh`. No application was launched here, and the launcher window was not shown on a monitor.
+**Current claim:** The shell has run on the reference Hyprland session. The bar, calendar, and control center were visible with Noctalia stopped, and workspace switching works there. The launcher opened on that session and did not list Dolphin or Helium. The catalog now refreshes from Quickshell's `applicationsChanged` signal. That refresh, theme icons, and bar reservation have not been relaunched on the session. Cloud checks do not launch applications.
 
 ## 13. Running the M0/M1 prototype
 
@@ -510,7 +511,9 @@ scripts/launch.sh
 scripts/stop.sh
 ```
 
-`scripts/launch.sh` runs `qs --path` against `shell/` and does not edit Hyprland or Noctalia. `scripts/stop.sh` kills that path only. The bar targets HDMI-A-1, shows workspaces 4–6 and a clock, and does not reserve screen space unless `bar.reserveSpace` is set to `true` in `~/.config/swiftshell/settings.json`. The clock opens the calendar. The mark at the right opens the control center. Neither capture takes a global shortcut.
+`scripts/launch.sh` runs `qs --path` against `shell/` and does not edit Hyprland or Noctalia. `scripts/stop.sh` kills that path only. Noctalia is the `noctalia` executable. Do not stop it with a `qs` kill. The bar targets HDMI-A-1 and shows workspaces 4–6 and a clock. A new settings file reserves the bar. An existing `~/.config/swiftshell/settings.json` that still has `"reserveSpace": false` stays an overlay until that key is set to `true`. Leave it `false` while Noctalia is also drawing on that output. The clock opens the calendar. The mark at the right opens the control center. Search opens the launcher. None of those capture a global shortcut.
+
+If this checkout already has a local `import "../components"` in `shell/bar/BarWindow.qml`, that line is on `main`. See `docs/testing.md` before pulling so the local edit is not lost or duplicated.
 
 ## 14. Install and remove
 

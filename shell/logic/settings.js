@@ -67,7 +67,7 @@ var DEFAULTS = {
     },
     bar: {
         targetMonitor: "HDMI-A-1",
-        reserveSpace: false,
+        reserveSpace: true,
         showFocusedTitle: true,
         workspaceIds: DEFAULT_WORKSPACE_IDS.slice(),
         workspaceDispatch: "auto",
