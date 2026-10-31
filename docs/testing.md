@@ -21,9 +21,9 @@ Or all of the above, including the shell-load test:
 scripts/check.sh
 ```
 
-`scripts/check.sh` expects `node`, `python3`, and `qmltestrunner` (or `qml6testrunner`) on `PATH`. The runner is also found at `/usr/lib/qt6/bin/qmltestrunner`. Debian and Ubuntu package that binary in `qt6-declarative-dev-tools`. Arch and CachyOS package it in `qt6-declarative`. The script exits if the runner is missing. That run instantiates Qt objects. It does not start Quickshell.
+`scripts/check.sh` expects `node`, `python3`, and `qmltestrunner` (or `qml6testrunner`) on `PATH`, plus the QtTest QML module imported by the test documents. The runner is also found at `/usr/lib/qt6/bin/qmltestrunner`. Debian and Ubuntu package the binary in `qt6-declarative-dev-tools` and the QML module in `qml6-module-qttest`. Arch and CachyOS package both in `qt6-declarative`. The script exits if the runner or required test module is missing. That run instantiates Qt objects. It does not start Quickshell.
 
-The mock QML gate now rejects every component error except a short path-specific list for unavailable C++ attached Quickshell types and optional modules. When `QtQuick.Dialogs` is installed, `tst_dialogs.qml` requires `ImageDialog.qml` to compile. When it is absent, the check prints an explicit diagnostic and exercises the path-entry fallback; it does not silently claim native image selection was compiled. GitHub CI installs the Qt Quick, Layouts, WorkerScript, Core, and Dialogs runtime modules explicitly.
+The mock QML gate now rejects every component error except a short path-specific list for unavailable C++ attached Quickshell types and optional modules. When `QtQuick.Dialogs` is installed, `tst_dialogs.qml` requires `ImageDialog.qml` to compile. When it is absent, the check prints an explicit diagnostic and exercises the path-entry fallback; it does not silently claim native image selection was compiled. GitHub CI installs the Qt Quick, Layouts, WorkerScript, Core, Dialogs, and QtTest runtime modules explicitly.
 
 The folder-picker gate additionally requires `Qt.labs.folderlistmodel`; CI installs its runtime module and compiles both picker components. This workspace lacks Dialogs and folderlistmodel, so opening a native dialog, enumerating permissions, and reacting to removed files are **NOT RUN** here.
 
