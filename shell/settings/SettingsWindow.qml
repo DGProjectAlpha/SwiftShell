@@ -59,7 +59,11 @@ FloatingWindow {
     }
 
     function activePage() {
-        return SettingsStore.settingsWindowCategory === "bar" ? barPage : page
+        if (SettingsStore.settingsWindowCategory === "bar")
+            return barPage
+        if (SettingsStore.settingsWindowCategory === "wallpaper")
+            return wallpaperPage
+        return page
     }
 
     Component.onCompleted: {
@@ -236,7 +240,7 @@ FloatingWindow {
                     FlatButton {
                         width: parent.width
                         label: "Appearance"
-                        emphasized: SettingsStore.settingsWindowCategory !== "bar"
+                        emphasized: SettingsStore.settingsWindowCategory === "appearance"
                         onActivated: {
                             SettingsStore.setSettingsCategory("appearance")
                             search.text = ""
@@ -249,6 +253,16 @@ FloatingWindow {
                         emphasized: SettingsStore.settingsWindowCategory === "bar"
                         onActivated: {
                             SettingsStore.setSettingsCategory("bar")
+                            search.text = ""
+                        }
+                    }
+
+                    FlatButton {
+                        width: parent.width
+                        label: "Wallpaper"
+                        emphasized: SettingsStore.settingsWindowCategory === "wallpaper"
+                        onActivated: {
+                            SettingsStore.setSettingsCategory("wallpaper")
                             search.text = ""
                         }
                     }
@@ -272,7 +286,7 @@ FloatingWindow {
                     id: page
                     y: 0
                     width: scroller.width
-                    visible: SettingsStore.settingsWindowCategory !== "bar"
+                    visible: SettingsStore.settingsWindowCategory !== "bar" && SettingsStore.settingsWindowCategory !== "wallpaper"
                     height: visible ? implicitHeight : 0
                     query: search.text
                     onEdited: function (patch) { window.commit(patch) }
@@ -286,6 +300,18 @@ FloatingWindow {
                     y: 0
                     width: scroller.width
                     visible: SettingsStore.settingsWindowCategory === "bar"
+                    height: visible ? implicitHeight : 0
+                    query: search.text
+                    onRevealRequested: function (y, itemHeight) {
+                        scroller.contentY = Nav.scrollTarget(scroller.contentY, scroller.height, y, itemHeight)
+                    }
+                }
+
+                WallpaperPage {
+                    id: wallpaperPage
+                    y: 0
+                    width: scroller.width
+                    visible: SettingsStore.settingsWindowCategory === "wallpaper"
                     height: visible ? implicitHeight : 0
                     query: search.text
                     onRevealRequested: function (y, itemHeight) {

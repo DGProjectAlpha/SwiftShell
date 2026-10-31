@@ -926,6 +926,7 @@ def main():
         "settings window is not a panel": "PanelWindow" not in (SHELL / "settings" / "SettingsWindow.qml").read_text(encoding="utf-8"),
         "settings window loads on demand": 'source: "settings/SettingsWindow.qml"' in shell_qml and "Loader" in shell_qml,
         "settings blur is reported unavailable": 'available: false' in (SHELL / "logic" / "capabilities.js").read_text(encoding="utf-8") and "BackgroundEffect" in (SHELL / "logic" / "capabilities.js").read_text(encoding="utf-8"),
+        "wallpaper is a background layer": "WlrLayer.Background" in (SHELL / "wallpaper" / "WallpaperSurface.qml").read_text(encoding="utf-8") and "WlrKeyboardFocus.None" in (SHELL / "wallpaper" / "WallpaperSurface.qml").read_text(encoding="utf-8") and "ExclusionMode.Ignore" in (SHELL / "wallpaper" / "WallpaperSurface.qml").read_text(encoding="utf-8") and 'source: "wallpaper/WallpaperHost.qml"' in shell_qml,
         "spotlight settings opens the window": "settingsRequested" in (SHELL / "services" / "LauncherModel.qml").read_text(encoding="utf-8"),
     }
     for name, ok in checks.items():

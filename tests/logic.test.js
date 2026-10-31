@@ -17,6 +17,7 @@ const launcher = require("../shell/logic/launcher.js");
 const capabilities = require("../shell/logic/capabilities.js");
 const material = require("../shell/logic/material.js");
 const settingsNav = require("../shell/logic/settingsNav.js");
+const wallpaper = require("../shell/logic/wallpaper.js");
 
 let failed = 0;
 
@@ -289,9 +290,11 @@ test("settings window stays one instance and blur is not available", function ()
 test("settings search, density, and undo stay on real appearance fields", function () {
     assert.equal(settingsNav.navigationLayout(719), "stacked");
     assert.equal(settingsNav.navigationLayout(720), "columns");
-    assert.equal(settingsNav.categories().length, 2);
+    assert.equal(settingsNav.categories().length, 3);
     assert.equal(settingsNav.categories()[0].id, "appearance");
     assert.equal(settingsNav.categories()[1].id, "bar");
+    assert.equal(settingsNav.categories()[2].id, "wallpaper");
+    assert.equal(settingsNav.categoryFor(settingsNav.firstControlId("cover")), "wallpaper");
     assert.equal(settingsNav.filterControls("").length, settingsNav.CONTROLS.length);
     assert.equal(settingsNav.filterControls("not-a-setting").length, 0);
     const opacity = settingsNav.filterControls("opacity").map(function (item) { return item.id; });
@@ -334,6 +337,64 @@ test("settings search, density, and undo stay on real appearance fields", functi
     assert.equal(history.present.radius, settings.DEFAULTS.appearance.radius);
     assert.equal(history.past.length, 2);
     assert.equal(history.past[1].radius, 12);
+});
+
+test("wallpaper source, crop, and per-output paths", function () {
+    assert.equal(wallpaper.resolveSource("").source, "packaged");
+    assert.equal(wallpaper.resolveSource("default").reason, "");
+    assert.equal(wallpaper.resolveSource("../secret.png").source, "packaged");
+    assert.ok(wallpaper.resolveSource("notes.txt").reason.length > 0);
+    assert.equal(wallpaper.resolveSource("/tmp/photo.JPEG").source, "file");
+    assert.equal(wallpaper.fileUrl("/tmp/my photo.png"), "file:///tmp/my%20photo.png");
+    assert.equal(wallpaper.fileUrl("file:///tmp/a.png"), "file:///tmp/a.png");
+    const specific = wallpaper.sourceForOutput("HDMI-A-1", "/tmp/a.png", JSON.stringify({ "HDMI-A-1": "/tmp/b.jpg" }));
+    assert.equal(specific.path, "/tmp/b.jpg");
+    assert.equal(wallpaper.sourceForOutput("DP-1", "/tmp/a.png", "{}").path, "/tmp/a.png");
+    assert.equal(wallpaper.sourceForOutput("DP-1", "/tmp/a.png", "nope").source, "file");
+    const cover = wallpaper.cropRect(2560, 1440, 1920, 1080, "cover");
+    assert.equal(cover.width, 1920);
+    assert.equal(cover.height, 1080);
+    assert.equal(cover.x, 0);
+    assert.equal(cover.y, 0);
+    const wide = wallpaper.cropRect(2000, 1000, 1000, 1000, "cover");
+    assert.equal(wide.x, -500);
+    assert.equal(wide.width, 2000);
+    assert.equal(wide.y, 0);
+    const contained = wallpaper.cropRect(2000, 1000, 1000, 1000, "contain");
+    assert.equal(contained.width, 1000);
+    assert.equal(contained.height, 500);
+    assert.equal(contained.y, 250);
+    const portrait = wallpaper.cropRect(1000, 2000, 1920, 1080, "cover");
+    assert.equal(portrait.width, 1920);
+    assert.ok(portrait.height > 1080);
+    assert.ok(portrait.y < 0);
+    assert.deepEqual(wallpaper.cropRect(0, 10, 10, 10, "cover"), { x: 0, y: 0, width: 0, height: 0 });
+    assert.deepEqual(wallpaper.decodeLimit(8000, 2000), { width: 3840, height: 960 });
+    assert.deepEqual(wallpaper.decodeLimit(100, 50), { width: 100, height: 50 });
+    assert.equal(fs.existsSync(path.join(__dirname, "..", "shell", "assets", "wallpapers", "swiftshell-default-crimson.png")), true);
+    const rejected = settings.validateSettings({
+        version: 3,
+        wallpaper: { path: "../secret.png", fit: "stretch", outputsJson: "[]", enabled: "yes" },
+    });
+    assert.equal(rejected.ok, false);
+    assert.equal(rejected.settings.wallpaper.enabled, true);
+    assert.equal(rejected.settings.wallpaper.path, "");
+    assert.equal(rejected.settings.wallpaper.fit, "cover");
+    assert.equal(rejected.settings.wallpaper.outputsJson, "{}");
+    const accepted = settings.validateSettings({
+        version: 3,
+        wallpaper: {
+            enabled: false,
+            fit: "contain",
+            path: "/tmp/a.webp",
+            outputsJson: JSON.stringify({ "DP-1": "/tmp/b.png", bad: "nope.txt" }),
+        },
+    });
+    assert.equal(accepted.ok, true);
+    assert.equal(accepted.settings.wallpaper.enabled, false);
+    assert.equal(accepted.settings.wallpaper.path, "/tmp/a.webp");
+    assert.equal(JSON.parse(accepted.settings.wallpaper.outputsJson)["DP-1"], "/tmp/b.png");
+    assert.equal(JSON.parse(accepted.settings.wallpaper.outputsJson).bad, undefined);
 });
 
 test("blank monitor text means automatic placement", function () {

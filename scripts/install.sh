@@ -82,6 +82,11 @@ fi
 
 mkdir -p "$data"
 swiftshell_replace_tree "$ROOT/shell" "$data/app"
+# The checkout keeps a symlink under shell/assets. Copy the real PNG so the
+# installed tree does not follow that link out of the data directory.
+rm -f "$data/app/assets/wallpapers/swiftshell-default-crimson.png"
+mkdir -p "$data/app/assets/wallpapers"
+cp "$ROOT/assets/wallpapers/swiftshell-default-crimson.png" "$data/app/assets/wallpapers/swiftshell-default-crimson.png"
 
 lib_stage=$(mktemp -d)
 cp "$ROOT/scripts/lib/common.sh" "$lib_stage/common.sh"

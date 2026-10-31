@@ -139,6 +139,12 @@ var DEFAULTS = {
     launcher: {
         pinnedIds: [],
     },
+    wallpaper: {
+        enabled: true,
+        fit: "cover",
+        path: "",
+        outputsJson: "{}",
+    },
     settingsWindow: {
         width: 900,
         height: 620,
@@ -343,7 +349,7 @@ function validateSettings(input) {
         errors.push("settingsWindow");
     const settingsWindowWidth = pickInt(windowSource, "width", 640, 1600, DEFAULTS.settingsWindow.width, errors, "settingsWindow.width");
     const settingsWindowHeight = pickInt(windowSource, "height", 440, 1200, DEFAULTS.settingsWindow.height, errors, "settingsWindow.height");
-    const settingsWindowCategory = pickEnum(windowSource, "category", ["appearance", "bar"], DEFAULTS.settingsWindow.category, errors, "settingsWindow.category");
+    const settingsWindowCategory = pickEnum(windowSource, "category", ["appearance", "bar", "wallpaper"], DEFAULTS.settingsWindow.category, errors, "settingsWindow.category");
 
     let pinnedIds = DEFAULTS.launcher.pinnedIds.slice();
     if (!isPlainObject(source.launcher) || launcher.pinnedIds === undefined) {
@@ -354,6 +360,14 @@ function validateSettings(input) {
         errors.push("launcher.pinnedIds");
         pinnedIds = normalizePinnedIds(launcher.pinnedIds);
     }
+
+    const wallpaper = isPlainObject(source.wallpaper) ? source.wallpaper : {};
+    if (source.wallpaper !== undefined && !isPlainObject(source.wallpaper))
+        errors.push("wallpaper");
+    const wallpaperEnabled = pickBoolean(wallpaper, "enabled", DEFAULTS.wallpaper.enabled, errors, "wallpaper.enabled");
+    const wallpaperFit = pickEnum(wallpaper, "fit", ["cover", "contain"], DEFAULTS.wallpaper.fit, errors, "wallpaper.fit");
+    const wallpaperPath = wallpaperPathValue(wallpaper.path, errors);
+    const wallpaperOutputs = wallpaperOutputsValue(wallpaper.outputsJson, errors);
 
     const extensionsJson = extensionsText(source, errors);
 
@@ -397,6 +411,12 @@ function validateSettings(input) {
             launcher: {
                 pinnedIds: pinnedIds,
             },
+            wallpaper: {
+                enabled: wallpaperEnabled,
+                fit: wallpaperFit,
+                path: wallpaperPath,
+                outputsJson: wallpaperOutputs,
+            },
             settingsWindow: {
                 width: settingsWindowWidth,
                 height: settingsWindowHeight,
@@ -405,6 +425,57 @@ function validateSettings(input) {
             extensionsJson: extensionsJson,
         },
     };
+}
+
+function wallpaperPathValue(path, errors) {
+    if (path === undefined || path === "")
+        return "";
+    if (typeof path !== "string") {
+        errors.push("wallpaper.path");
+        return "";
+    }
+    const trimmed = path.trim();
+    if (trimmed === "")
+        return "";
+    if (trimmed.indexOf("\0") !== -1 || trimmed.indexOf("..") !== -1 || !/\.(png|jpe?g|webp)$/i.test(trimmed)) {
+        errors.push("wallpaper.path");
+        return "";
+    }
+    return trimmed;
+}
+
+function wallpaperOutputsValue(text, errors) {
+    if (text === undefined || text === "")
+        return "{}";
+    if (typeof text !== "string") {
+        errors.push("wallpaper.outputsJson");
+        return "{}";
+    }
+    try {
+        const parsed = JSON.parse(text);
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+            errors.push("wallpaper.outputsJson");
+            return "{}";
+        }
+        const out = {};
+        const keys = Object.keys(parsed);
+        for (let i = 0; i < keys.length; i++) {
+            if (typeof parsed[keys[i]] !== "string" || keys[i].indexOf("\0") !== -1)
+                continue;
+            const cleaned = wallpaperPathValue(parsed[keys[i]], []);
+            if (cleaned !== "")
+                out[keys[i]] = cleaned;
+        }
+        const encoded = JSON.stringify(out);
+        if (encoded.length > 4096) {
+            errors.push("wallpaper.outputsJson");
+            return "{}";
+        }
+        return encoded;
+    } catch (error) {
+        errors.push("wallpaper.outputsJson");
+        return "{}";
+    }
 }
 
 function pickInt(source, key, min, max, fallback, errors, label) {
@@ -454,6 +525,7 @@ function extensionsText(source, errors) {
         bar: true,
         appearance: true,
         launcher: true,
+        wallpaper: true,
         settingsWindow: true,
         extensionsJson: true,
     };

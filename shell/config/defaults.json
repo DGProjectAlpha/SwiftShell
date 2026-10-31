@@ -41,6 +41,12 @@
   "launcher": {
     "pinnedIds": []
   },
+  "wallpaper": {
+    "enabled": true,
+    "fit": "cover",
+    "path": "",
+    "outputsJson": "{}"
+  },
   "settingsWindow": {
     "width": 900,
     "height": 620,
