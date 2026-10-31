@@ -67,5 +67,9 @@
     "category": "appearance"
   },
   "shortcutsJson": "{}",
+  "notifications": {
+    "ownership": "off",
+    "dnd": false
+  },
   "extensionsJson": "{}"
 }

@@ -10,6 +10,7 @@ ShellRoot {
     id: root
 
     Component.onCompleted: {
+        NotificationsModel.configure(SettingsStore.notificationOwnership, SettingsStore.notificationDnd)
         console.info("SwiftShell: M1 prototype started");
         console.info("SwiftShell: calendar, control center, and launcher are available");
         console.info("SwiftShell: bar monitor preference", SettingsStore.targetMonitor === "" ? "automatic" : SettingsStore.targetMonitor);
@@ -33,6 +34,26 @@ ShellRoot {
         onStatusChanged: {
             if (status === Loader.Error)
                 console.warn("SwiftShell: the wallpaper surface did not load")
+        }
+    }
+
+    Connections {
+        target: SettingsStore
+        function onNotificationOwnershipChanged() {
+            NotificationsModel.configure(SettingsStore.notificationOwnership, SettingsStore.notificationDnd)
+        }
+        function onNotificationDndChanged() {
+            NotificationsModel.configure(SettingsStore.notificationOwnership, SettingsStore.notificationDnd)
+        }
+    }
+
+    Loader {
+        id: notificationLoader
+        active: SettingsStore.notificationOwnership === "on"
+        source: "notifications/NotificationHost.qml"
+        onStatusChanged: {
+            if (status === Loader.Error)
+                console.warn("SwiftShell: the notification server was not created. Another owner was left in place.")
         }
     }
 

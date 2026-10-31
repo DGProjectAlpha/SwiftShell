@@ -189,6 +189,16 @@ scripts/check.sh
 
 Exit status 0. Static checks passed for 28 QML files. Logic tests passed, including bar heights 22, 28, and 52, derived font and icon size, module hide, and reorder. The run printed `launcher rank 400 apps: 2.12 ms`. Install tests passed, 15 cases. `qmltestrunner` 6.4.2 reported Totals: 6 passed and Totals: 8 passed. `QStandardPaths: XDG_RUNTIME_DIR not set` was printed. The run did not draw the bar or measure the reserved strip.
 
+## What was run for M6.1
+
+On 30 Oct 2026, at 9:51 PM America/New_York, in the cloud workspace, with no Hyprland session and no `qs` binary:
+
+```text
+scripts/check.sh
+```
+
+Exit status 0. Static checks passed for 52 QML files. Logic tests passed, including a notification dropped while ownership is off, a replaced id, a non-critical banner held in history while do not disturb is on, a critical banner that still shows, and a refused ownership value. `launcher rank 400 apps: 1.14 ms`. Install tests passed, 15 cases. `qmltestrunner` 6.4.2 reported Totals: 6 passed and Totals: 8 passed. The notifications page case checks that SwiftShell is not the owner. `QStandardPaths: XDG_RUNTIME_DIR not set` was printed. The notification server object was not created. No bus name was claimed.
+
 ## What was run for M5.2
 
 On 30 Oct 2026, at 9:46 PM America/New_York, in the cloud workspace, with no Hyprland session and no `qs` binary:
@@ -269,6 +279,7 @@ After the M3.2 checks, and only with SwiftShell launched by `scripts/launch.sh`:
 10. Open Settings, Shortcuts. Record Super+Z for Settings, press Enter, and confirm the row shows Super+Z after a restart. Press Escape while listening and confirm nothing is stored. Record the same chord on Control center and confirm it is refused. The compositor's own binds, including Super+Space, must be unchanged.
 11. Play audio. The control center slider should move the default sink, unmute when raised above zero, and list the microphone when PipeWire has a default source. Start a player and confirm Play, Pause, Next, and Previous match what that player allows. A tray icon should activate on click. With no player and no tray icons, the bar should not grow. `~/.config/hypr` must stay unchanged.
 12. Open Settings, Network. It should say the shell does not store Wi-Fi secrets and does not call software dimming hardware brightness. There should be no scan button. Open Bluetooth. Known devices can connect or disconnect. Closing the page must not leave a scan running, because this shell does not start one. On a laptop, the battery percent should match the session. Confirm Lock once and confirm it does not lock; confirm it a second time and it should lock. A desktop with no battery should show Unavailable and the bar should not grow.
+13. Open Settings, Notifications. It should say SwiftShell is not the owner. Show preview should show a card labeled Preview and should not post a desktop notification. Own notifications should ask again before anything changes. After the second confirmation, if another program already owns notifications, SwiftShell should say the server was not created and that program should keep receiving them. Release should return ownership. Do not disturb should hide an ordinary banner and still show a critical one. `~/.config/hypr` must stay unchanged.
 
 This checklist is not done in the cloud run.
 

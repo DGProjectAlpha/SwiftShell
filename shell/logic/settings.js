@@ -162,6 +162,10 @@ var DEFAULTS = {
         category: "appearance",
     },
     shortcutsJson: "{}",
+    notifications: {
+        ownership: "off",
+        dnd: false,
+    },
     extensionsJson: "{}",
 };
 
@@ -367,7 +371,12 @@ function validateSettings(input) {
         errors.push("settingsWindow");
     const settingsWindowWidth = pickInt(windowSource, "width", 640, 1600, DEFAULTS.settingsWindow.width, errors, "settingsWindow.width");
     const settingsWindowHeight = pickInt(windowSource, "height", 440, 1200, DEFAULTS.settingsWindow.height, errors, "settingsWindow.height");
-    const settingsWindowCategory = pickEnum(windowSource, "category", ["appearance", "bar", "wallpaper", "displays", "shortcuts", "audio", "network", "bluetooth", "power"], DEFAULTS.settingsWindow.category, errors, "settingsWindow.category");
+    const settingsWindowCategory = pickEnum(windowSource, "category", ["appearance", "bar", "wallpaper", "displays", "shortcuts", "audio", "network", "bluetooth", "power", "notifications"], DEFAULTS.settingsWindow.category, errors, "settingsWindow.category");
+    const noteSource = isPlainObject(source.notifications) ? source.notifications : {};
+    if (source.notifications !== undefined && !isPlainObject(source.notifications))
+        errors.push("notifications");
+    const notificationOwnership = pickEnum(noteSource, "ownership", ["off", "on"], DEFAULTS.notifications.ownership, errors, "notifications.ownership");
+    const notificationDnd = pickBoolean(noteSource, "dnd", DEFAULTS.notifications.dnd, errors, "notifications.dnd");
     const shortcutsJson = shortcutsValue(source.shortcutsJson, errors);
 
     let pinnedIds = DEFAULTS.launcher.pinnedIds.slice();
@@ -458,6 +467,10 @@ function validateSettings(input) {
                 category: settingsWindowCategory,
             },
             shortcutsJson: shortcutsJson,
+            notifications: {
+                ownership: notificationOwnership,
+                dnd: notificationDnd,
+            },
             extensionsJson: extensionsJson,
         },
     };
@@ -661,6 +674,7 @@ function extensionsText(source, errors) {
         wallpaper: true,
         settingsWindow: true,
         shortcutsJson: true,
+        notifications: true,
         extensionsJson: true,
     };
     const found = {};

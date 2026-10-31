@@ -4,3 +4,4 @@ singleton LauncherModel 1.0 LauncherModel.qml
 singleton SettingsModel 1.0 SettingsModel.qml
 singleton ColorAnalysis 1.0 ColorAnalysis.qml
 singleton WallpaperModel 1.0 WallpaperModel.qml
+singleton NotificationsModel 1.0 NotificationsModel.qml

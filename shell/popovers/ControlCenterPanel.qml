@@ -105,9 +105,19 @@ Item {
             detail: "Unavailable"
         }
 
-        ServiceStatus {
-            name: "Do Not Disturb"
-            detail: "Not connected in this milestone"
+        SettingsToggle {
+            label: "Do not disturb"
+            checked: SettingsStore.notificationDnd
+            onToggled: function (next) { SettingsStore.setNotificationDnd(next) }
+        }
+
+        Text {
+            width: parent.width
+            wrapMode: Text.WordWrap
+            text: SettingsStore.notificationOwnership === "on" ? "Critical banners still show." : "Saved for when SwiftShell owns notifications. It does not own them now."
+            color: Theme.panelMuted
+            font.family: Theme.fontFamily
+            font.pixelSize: Theme.fontSizeSmall
         }
 
         SectionHeader {

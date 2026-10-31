@@ -81,6 +81,8 @@ FloatingWindow {
             return bluetoothPage
         if (SettingsStore.settingsWindowCategory === "power")
             return powerPage
+        if (SettingsStore.settingsWindowCategory === "notifications")
+            return notificationsPage
         return page
     }
 
@@ -344,6 +346,16 @@ FloatingWindow {
                             search.text = ""
                         }
                     }
+
+                    FlatButton {
+                        width: parent.width
+                        label: "Notifications"
+                        emphasized: SettingsStore.settingsWindowCategory === "notifications"
+                        onActivated: {
+                            SettingsStore.setSettingsCategory("notifications")
+                            search.text = ""
+                        }
+                    }
                 }
             }
 
@@ -457,6 +469,15 @@ FloatingWindow {
                     y: 0
                     width: scroller.width
                     visible: SettingsStore.settingsWindowCategory === "power"
+                    height: visible ? implicitHeight : 0
+                    query: search.text
+                }
+
+                NotificationsPage {
+                    id: notificationsPage
+                    y: 0
+                    width: scroller.width
+                    visible: SettingsStore.settingsWindowCategory === "notifications"
                     height: visible ? implicitHeight : 0
                     query: search.text
                 }

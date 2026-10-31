@@ -29,6 +29,7 @@ const tray = require("../shell/logic/tray.js");
 const link = require("../shell/logic/link.js");
 const bluetooth = require("../shell/logic/bluetooth.js");
 const power = require("../shell/logic/power.js");
+const notifications = require("../shell/logic/notifications.js");
 const zlib = require("node:zlib");
 
 let failed = 0;
@@ -254,7 +255,7 @@ test("version 1 settings migrate and unknown keys stay in the extension bag", fu
     assert.equal(settings.backupPath("/tmp/settings.json"), "/tmp/settings.json.bak-swiftshell");
     assert.equal(settings.backupPath(""), "");
     const sized = settings.validateSettings({
-        settingsWindow: { width: 10, height: 5000, category: "notifications" },
+        settingsWindow: { width: 10, height: 5000, category: "widgets" },
     }).settings.settingsWindow;
     assert.deepEqual(sized, { width: 640, height: 1200, category: "appearance" });
     assert.equal(settings.opacityFromUnit(0), 0.72);
@@ -302,7 +303,7 @@ test("settings window stays one instance and blur is not available", function ()
 test("settings search, density, and undo stay on real appearance fields", function () {
     assert.equal(settingsNav.navigationLayout(719), "stacked");
     assert.equal(settingsNav.navigationLayout(720), "columns");
-    assert.equal(settingsNav.categories().length, 9);
+    assert.equal(settingsNav.categories().length, 10);
     assert.equal(settingsNav.categories()[0].id, "appearance");
     assert.equal(settingsNav.categories()[1].id, "bar");
     assert.equal(settingsNav.categories()[2].id, "wallpaper");
@@ -312,6 +313,7 @@ test("settings search, density, and undo stay on real appearance fields", functi
     assert.equal(settingsNav.categories()[6].id, "network");
     assert.equal(settingsNav.categories()[7].id, "bluetooth");
     assert.equal(settingsNav.categories()[8].id, "power");
+    assert.equal(settingsNav.categories()[9].id, "notifications");
     assert.equal(settingsNav.categoryFor(settingsNav.firstControlId("cover")), "wallpaper");
     assert.equal(settingsNav.filterControls("").length, settingsNav.CONTROLS.length);
     assert.equal(settingsNav.filterControls("not-a-setting").length, 0);
@@ -1666,6 +1668,50 @@ test("bluetooth, battery, and network stay inside the documented services", func
     const kept = settings.validateSettings({ bar: { moduleOrder: ["workspaces", "title", "search", "clock", "control", "media", "tray"] } });
     assert.equal(kept.ok, true);
     assert.ok(kept.settings.bar.moduleOrder.indexOf("battery") !== -1);
+});
+
+test("notifications stay off until ownership is confirmed", function () {
+    let center = notifications.emptyCenter();
+    center = notifications.reduceNotifications(center, {
+        type: "receive",
+        notification: { id: 7, appName: "Mail", summary: "Hello", body: "secret body", urgency: "normal" },
+    });
+    assert.equal(center.live.length, 0);
+    assert.equal(notifications.shouldTrack(center), false);
+    center = notifications.reduceNotifications(center, { type: "configure", ownership: "on", dnd: false });
+    center = notifications.reduceNotifications(center, {
+        type: "receive",
+        notification: { id: 7, appName: "Mail", summary: "Hello", body: "secret body", urgency: "normal" },
+    });
+    assert.equal(center.live.length, 1);
+    center = notifications.reduceNotifications(center, {
+        type: "receive",
+        notification: { id: 7, appName: "Mail", summary: "Replaced", body: "next", urgency: "normal" },
+    });
+    assert.equal(center.live.length, 1);
+    assert.equal(center.live[0].summary, "Replaced");
+    center = notifications.reduceNotifications(center, { type: "configure", ownership: "on", dnd: true });
+    center = notifications.reduceNotifications(center, {
+        type: "receive",
+        notification: { id: 8, appName: "Chat", summary: "Quiet", body: "hidden", urgency: "normal" },
+    });
+    assert.equal(center.live.length, 1);
+    assert.equal(center.history[0].summary, "Quiet");
+    center = notifications.reduceNotifications(center, {
+        type: "receive",
+        notification: { id: 9, appName: "Power", summary: "Critical", body: "now", urgency: "critical" },
+    });
+    assert.equal(center.live[center.live.length - 1].summary, "Critical");
+    center = notifications.reduceNotifications(center, { type: "dismiss", id: 7 });
+    assert.equal(center.live.some(function (row) { return row.id === 7; }), false);
+    center = notifications.reduceNotifications(center, { type: "configure", ownership: "off", dnd: true });
+    assert.equal(center.live.length, 0);
+    assert.equal(center.ownership, "off");
+    const stored = settings.validateSettings({ notifications: { ownership: "on", dnd: false } });
+    assert.equal(stored.settings.notifications.ownership, "on");
+    const rejected = settings.validateSettings({ notifications: { ownership: "steal" } });
+    assert.equal(rejected.settings.notifications.ownership, "off");
+    assert.ok(rejected.errors.indexOf("notifications.ownership") !== -1);
 });
 
 if (failed > 0) {
