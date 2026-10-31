@@ -50,9 +50,34 @@ Item {
             detail: "Unavailable"
         }
 
+        Loader {
+            id: mediaLoader
+            width: parent.width
+            source: "MediaSection.qml"
+            visible: status === Loader.Ready
+        }
+
         ServiceStatus {
+            visible: mediaLoader.status === Loader.Error
             name: "Media"
-            detail: "Not connected in this milestone"
+            detail: "Unavailable"
+        }
+
+        Loader {
+            id: trayLoader
+            width: parent.width
+            source: "TraySection.qml"
+            visible: status === Loader.Ready
+            onLoaded: {
+                if (item)
+                    item.hostWindow = Window.window
+            }
+        }
+
+        ServiceStatus {
+            visible: trayLoader.status === Loader.Error
+            name: "Tray"
+            detail: "Unavailable"
         }
 
         ServiceStatus {

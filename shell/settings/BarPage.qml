@@ -53,6 +53,10 @@ Item {
             return "Clock"
         if (id === "control")
             return "Control center"
+        if (id === "media")
+            return "Media"
+        if (id === "tray")
+            return "Tray"
         return id
     }
 
@@ -230,7 +234,7 @@ Item {
 
                     FlatButton {
                         label: "Later"
-                        enabled: index < 4
+                        enabled: index < SettingsStore.moduleOrder.length - 1
                         onActivated: SettingsStore.setModuleOrder(Bar.moveModule(SettingsStore.moduleOrder, modelData, 1))
                     }
                 }

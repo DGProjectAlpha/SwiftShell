@@ -56,7 +56,7 @@ function workspaceIdsValid(ids) {
     return true;
 }
 
-var BAR_MODULES = ["workspaces", "title", "search", "clock", "control"];
+var BAR_MODULES = ["workspaces", "title", "search", "clock", "control", "media", "tray"];
 
 function normalizeModuleOrder(order) {
     const source = asList(order);
@@ -75,7 +75,7 @@ function normalizeModuleOrder(order) {
 
 function moduleOrderValid(order) {
     const source = asList(order);
-    if (source.length !== BAR_MODULES.length)
+    if (source.length === 0 || source.length > BAR_MODULES.length)
         return false;
     const seen = [];
     for (let i = 0; i < source.length; i++) {
@@ -83,7 +83,7 @@ function moduleOrderValid(order) {
             return false;
         seen.push(source[i]);
     }
-    return seen.length === BAR_MODULES.length;
+    return true;
 }
 
 function normalizeHiddenModules(hidden) {
@@ -116,7 +116,7 @@ var DEFAULTS = {
         workspaceIds: [],
         workspaceDispatch: "auto",
         height: 28,
-        moduleOrder: ["workspaces", "title", "search", "clock", "control"],
+        moduleOrder: ["workspaces", "title", "search", "clock", "control", "media", "tray"],
         hiddenModules: [],
     },
     appearance: {
@@ -367,7 +367,7 @@ function validateSettings(input) {
         errors.push("settingsWindow");
     const settingsWindowWidth = pickInt(windowSource, "width", 640, 1600, DEFAULTS.settingsWindow.width, errors, "settingsWindow.width");
     const settingsWindowHeight = pickInt(windowSource, "height", 440, 1200, DEFAULTS.settingsWindow.height, errors, "settingsWindow.height");
-    const settingsWindowCategory = pickEnum(windowSource, "category", ["appearance", "bar", "wallpaper", "displays", "shortcuts"], DEFAULTS.settingsWindow.category, errors, "settingsWindow.category");
+    const settingsWindowCategory = pickEnum(windowSource, "category", ["appearance", "bar", "wallpaper", "displays", "shortcuts", "audio"], DEFAULTS.settingsWindow.category, errors, "settingsWindow.category");
     const shortcutsJson = shortcutsValue(source.shortcutsJson, errors);
 
     let pinnedIds = DEFAULTS.launcher.pinnedIds.slice();

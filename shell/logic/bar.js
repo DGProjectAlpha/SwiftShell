@@ -1,4 +1,4 @@
-var BAR_MODULES = ["workspaces", "title", "search", "clock", "control"];
+var BAR_MODULES = ["workspaces", "title", "search", "clock", "control", "media", "tray"];
 
 function clamp01(unit) {
     if (typeof unit !== "number" || !Number.isFinite(unit))
@@ -61,7 +61,7 @@ function normalizeModuleOrder(order) {
 
 function moduleOrderValid(order) {
     const source = asModuleList(order);
-    if (source.length !== BAR_MODULES.length)
+    if (source.length === 0 || source.length > BAR_MODULES.length)
         return false;
     const seen = [];
     for (let i = 0; i < source.length; i++) {
@@ -69,7 +69,7 @@ function moduleOrderValid(order) {
             return false;
         seen.push(source[i]);
     }
-    return seen.length === BAR_MODULES.length;
+    return true;
 }
 
 function normalizeHiddenModules(hidden) {

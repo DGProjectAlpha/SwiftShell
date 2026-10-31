@@ -12,9 +12,68 @@ Column {
     width: parent ? parent.width : Theme.controlWidth
 
     readonly property var sink: Pipewire.defaultAudioSink
+    readonly property var sourceNode: Pipewire.defaultAudioSource
     readonly property bool ready: sink !== null && sink.audio
+    readonly property bool sourceReady: sourceNode !== null && sourceNode.audio
+    readonly property bool pipeReady: Pipewire.ready === true
     property var gestureSink: null
     property string gestureSinkId: ""
+
+    function listedNodes() {
+        try {
+            return Audio.objectValues(Pipewire.nodes)
+        } catch (error) {
+            return []
+        }
+    }
+
+    function nodeById(id) {
+        var list = listedNodes()
+        for (var index = 0; index < list.length; index++) {
+            if (Audio.sinkIdentity(list[index] ? list[index].id : null) === id)
+                return list[index]
+        }
+        return null
+    }
+
+    function applyStream(id, next) {
+        var node = nodeById(id)
+        var command = Audio.volumeWrite({
+            ready: node !== null && node.audio,
+            gestureSinkId: id,
+            currentSinkId: Audio.sinkIdentity(node ? node.id : null),
+            muted: node !== null && node.audio && node.audio.muted === true,
+            requested: next
+        })
+        if (!command)
+            return
+        try {
+            node.audio.volume = command.volume
+            node.audio.muted = command.muted
+        } catch (error) {
+            console.warn("SwiftShell: the application volume was not changed")
+        }
+    }
+
+    function chooseDefault(node, role) {
+        var command = Audio.selectDefault({
+            ready: pipeReady,
+            requestedId: node ? node.id : null,
+            currentId: role === "source" ? (sourceNode ? sourceNode.id : null) : (sink ? sink.id : null),
+            devices: role === "source" ? Audio.audioDevices(listedNodes(), "source") : Audio.audioDevices(listedNodes(), "sink"),
+            role: role
+        })
+        if (!command)
+            return
+        try {
+            if (role === "source")
+                Pipewire.preferredDefaultAudioSource = node
+            else
+                Pipewire.preferredDefaultAudioSink = node
+        } catch (error) {
+            console.warn("SwiftShell: the audio device was not changed")
+        }
+    }
 
     function percentText() {
         if (volumeSlider && volumeSlider.adjusting)
@@ -64,7 +123,7 @@ Column {
     }
 
     PwObjectTracker {
-        objects: [root.sink]
+        objects: [root.sink, root.sourceNode]
     }
 
     SectionHeader {
@@ -134,6 +193,106 @@ Column {
                 root.gestureSinkId = ""
             }
             onMoved: function (next) { root.applyVolume(next) }
+        }
+    }
+
+    ServiceStatus {
+        visible: !root.sourceReady
+        name: "Input"
+        detail: "Unavailable"
+    }
+
+    Column {
+        visible: root.sourceReady
+        width: parent.width
+        spacing: Theme.panelSpacing
+
+        Text {
+            width: parent.width
+            text: Audio.nodeName(root.sourceNode)
+            color: Theme.panelText
+            font.family: Theme.fontFamily
+            font.pixelSize: Theme.fontSize
+            elide: Text.ElideRight
+        }
+
+        CompactSlider {
+            id: sourceSlider
+            width: parent.width
+            enabled: root.sourceReady
+            valueName: "Input"
+
+            Binding {
+                target: sourceSlider
+                property: "value"
+                when: !sourceSlider.adjusting
+                value: root.sourceReady ? root.sourceNode.audio.volume : 0
+            }
+
+            onMoved: function (next) {
+                var command = Audio.volumeWrite({
+                    ready: root.sourceReady,
+                    gestureSinkId: Audio.sinkIdentity(root.sourceNode.id),
+                    currentSinkId: Audio.sinkIdentity(root.sourceNode.id),
+                    muted: root.sourceNode.audio.muted === true,
+                    requested: next
+                })
+                if (!command)
+                    return
+                try {
+                    root.sourceNode.audio.volume = command.volume
+                    root.sourceNode.audio.muted = command.muted
+                } catch (error) {
+                    console.warn("SwiftShell: input volume was not changed")
+                }
+            }
+        }
+    }
+
+    Repeater {
+        model: Audio.audioDevices(root.listedNodes(), "sink")
+
+        delegate: FlatButton {
+            required property var modelData
+            visible: Audio.audioDevices(root.listedNodes(), "sink").length > 1
+            label: modelData.label
+            emphasized: Audio.sinkIdentity(root.sink ? root.sink.id : null) === modelData.id
+            onActivated: root.chooseDefault(root.nodeById(modelData.id), "sink")
+        }
+    }
+
+    Repeater {
+        model: Audio.audioStreams(root.listedNodes())
+
+        delegate: Row {
+            required property var modelData
+            width: parent.width
+            spacing: Theme.panelSpacing
+
+            Text {
+                width: 120
+                anchors.verticalCenter: parent.verticalCenter
+                text: modelData.label
+                color: Theme.panelText
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.fontSizeSmall
+                elide: Text.ElideRight
+            }
+
+            CompactSlider {
+                id: streamSlider
+                width: Math.max(80, parent.width - 128)
+                valueName: modelData.label
+
+                Binding {
+                    target: streamSlider
+                    property: "value"
+                    when: !streamSlider.adjusting
+                    value: modelData.volume == null ? 0 : modelData.volume
+                }
+
+                onMoved: function (next) { root.applyStream(modelData.id, next) }
+            }
         }
     }
 }
