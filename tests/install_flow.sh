@@ -462,6 +462,39 @@ EOF
     ok "sudo failure is contained"
 }
 
+test_doctor_and_rollback() {
+    new_home
+    binds_sum=$(checksum "$HOME/.config/hypr/config/binds.lua")
+    noctalia_sum=$(checksum "$HOME/.config/quickshell/noctalia/shell.qml")
+    run_install >/dev/null
+    printf '%s\n' '{"notifications":{"ownership":"on","body":"secret-token-xyz"}}' >"$XDG_CONFIG_HOME/swiftshell/settings.json"
+    printf '%s\n' 'previous-settings' >"$XDG_CONFIG_HOME/swiftshell/settings.json.bak-swiftshell"
+    decoy=$(mktemp -d)
+    write_decoy_commands "$decoy"
+    PATH="$STUBS:$decoy:$BASE_PATH" "$HOME/.local/bin/swiftshell" doctor >"$HOME/doctor.out" 2>"$HOME/doctor.err"
+    grep -q 'blur: unavailable' "$HOME/doctor.out" || fail "doctor did not report blur"
+    grep -q 'notification ownership: on' "$HOME/doctor.out" || fail "doctor did not report ownership"
+    grep -q 'settings backup: present' "$HOME/doctor.out" || fail "doctor missed the backup"
+    grep -q 'were not read or written' "$HOME/doctor.out" || fail "doctor did not state the file boundary"
+    if grep -q 'secret-token-xyz' "$HOME/doctor.out" "$HOME/doctor.err"; then
+        fail "doctor printed a settings body"
+    fi
+    [ ! -s "$SWIFTSHELL_DECOY_LOG" ] || fail "doctor ran a decoy compositor command"
+    [ "$(checksum "$HOME/.config/hypr/config/binds.lua")" = "$binds_sum" ] || fail "doctor changed hypr config"
+    [ "$(checksum "$HOME/.config/quickshell/noctalia/shell.qml")" = "$noctalia_sum" ] || fail "doctor changed another shell"
+    printf '%s\n' 'secret-token-xyz not json' >"$XDG_CONFIG_HOME/swiftshell/settings.json"
+    PATH="$STUBS:$BASE_PATH" "$HOME/.local/bin/swiftshell" doctor >"$HOME/doctor-bad.out"
+    grep -q 'notification ownership: unreadable' "$HOME/doctor-bad.out" || fail "bad settings were not marked unreadable"
+    if grep -q 'secret-token-xyz' "$HOME/doctor-bad.out"; then
+        fail "doctor printed an unreadable settings file"
+    fi
+    PATH="$STUBS:$BASE_PATH" "$HOME/.local/bin/swiftshell" rollback-settings >"$HOME/rollback.out"
+    [ "$(cat "$XDG_CONFIG_HOME/swiftshell/settings.json")" = "previous-settings" ] || fail "rollback did not restore the backup"
+    [ "$(checksum "$HOME/.config/hypr/config/binds.lua")" = "$binds_sum" ] || fail "rollback changed hypr config"
+    [ "$(checksum "$HOME/.config/quickshell/noctalia/shell.qml")" = "$noctalia_sum" ] || fail "rollback changed another shell"
+    ok "doctor and settings rollback stay inside SwiftShell"
+}
+
 test_request_launcher() {
     new_home
     binds_sum=$(checksum "$HOME/.config/hypr/config/binds.lua")
@@ -487,5 +520,6 @@ test_optional_deps
 test_optional_deps_already_present
 test_optional_deps_sudo_failure
 test_request_launcher
+test_doctor_and_rollback
 
 printf 'install tests passed (%s)\n' "$PASS"

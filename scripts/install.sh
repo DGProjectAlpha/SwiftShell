@@ -91,6 +91,7 @@ cp "$ROOT/assets/wallpapers/swiftshell-default-crimson.png" "$data/app/assets/wa
 lib_stage=$(mktemp -d)
 cp "$ROOT/scripts/lib/common.sh" "$lib_stage/common.sh"
 cp "$ROOT/scripts/lib/deps.sh" "$lib_stage/deps.sh"
+cp "$ROOT/scripts/lib/doctor.sh" "$lib_stage/doctor.sh"
 cp "$ROOT/scripts/lib/activate.sh" "$lib_stage/activate.sh"
 cp "$ROOT/scripts/lib/deactivate.sh" "$lib_stage/deactivate.sh"
 cp "$ROOT/scripts/lib/uninstall.sh" "$lib_stage/uninstall.sh"
