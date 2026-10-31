@@ -29,6 +29,7 @@ Singleton {
     property string notice: ""
 
     signal controlRequested()
+    signal settingsRequested()
     signal inputRequested()
 
     function indexApplications() {
@@ -290,7 +291,7 @@ Singleton {
             return;
         if (row.kind === "settings") {
             root.closeLauncher();
-            root.controlRequested();
+            root.settingsRequested();
             return;
         }
         if (row.kind === "power") {

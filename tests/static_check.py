@@ -922,6 +922,11 @@ def main():
         "audio binding": "PwObjectTracker" in (SHELL / "popovers" / "AudioSection.qml").read_text(encoding="utf-8"),
         "wallpaper sampling is not claimed": "Wallpaper tint is not sampled yet." in (SHELL / "logic" / "palette.js").read_text(encoding="utf-8"),
         "focus grab dismissal": "HyprlandFocusGrab" in (SHELL / "popovers" / "PopoverHost.qml").read_text(encoding="utf-8"),
+        "settings window is a floating toplevel": qml_root_type((SHELL / "settings" / "SettingsWindow.qml").read_text(encoding="utf-8")) == "FloatingWindow",
+        "settings window is not a panel": "PanelWindow" not in (SHELL / "settings" / "SettingsWindow.qml").read_text(encoding="utf-8"),
+        "settings window loads on demand": 'source: "settings/SettingsWindow.qml"' in shell_qml and "Loader" in shell_qml,
+        "settings blur is reported unavailable": 'available: false' in (SHELL / "logic" / "capabilities.js").read_text(encoding="utf-8") and "BackgroundEffect" in (SHELL / "logic" / "capabilities.js").read_text(encoding="utf-8"),
+        "spotlight settings opens the window": "settingsRequested" in (SHELL / "services" / "LauncherModel.qml").read_text(encoding="utf-8"),
     }
     for name, ok in checks.items():
         if not ok:

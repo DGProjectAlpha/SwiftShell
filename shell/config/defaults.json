@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "clock": {
     "use24Hour": true,
     "showWeekNumbers": false,
@@ -31,5 +31,11 @@
   },
   "launcher": {
     "pinnedIds": []
-  }
+  },
+  "settingsWindow": {
+    "width": 900,
+    "height": 620,
+    "category": "appearance"
+  },
+  "extensionsJson": "{}"
 }

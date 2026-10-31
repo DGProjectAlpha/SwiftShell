@@ -387,7 +387,7 @@ function viewRows(apps, query, pinnedIds, recentIds) {
         for (let i = 0; i < found.length; i++)
             rows.push(appRow(found[i], "Results"));
     }
-    rows.push({ kind: "settings", id: "settings", name: "Settings", detail: "Control center", icon: "", section: "Session" });
+    rows.push({ kind: "settings", id: "settings", name: "Settings", detail: "Settings", icon: "", section: "Session" });
     for (let i = 0; i < POWER.length; i++) {
         rows.push({
             kind: "power",
