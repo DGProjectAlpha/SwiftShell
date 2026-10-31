@@ -21,7 +21,7 @@ Singleton {
     readonly property var workspaceIds: Settings.normalizeWorkspaceIds(barSettings.workspaceIds)
     readonly property string workspaceDispatch: barSettings.workspaceDispatch === "lua" || barSettings.workspaceDispatch === "legacy" ? barSettings.workspaceDispatch : "auto"
     readonly property int barHeight: barSettings.height
-    readonly property var moduleOrder: barSettings.moduleOrder
+    readonly property var moduleOrder: Bar.normalizeModuleOrder(barSettings.moduleOrder)
     readonly property var hiddenModules: barSettings.hiddenModules
     readonly property var visibleModules: Bar.visibleModules(barSettings.moduleOrder, barSettings.hiddenModules)
     readonly property string appearanceMode: appearanceSettings.mode
@@ -459,7 +459,7 @@ Singleton {
                 property list<int> workspaceIds: []
                 property string workspaceDispatch: "auto"
                 property int height: 28
-                property list<string> moduleOrder: ["workspaces", "title", "search", "clock", "control"]
+                property list<string> moduleOrder: ["workspaces", "title", "search", "clock", "control", "media", "tray"]
                 property list<string> hiddenModules: []
             }
 

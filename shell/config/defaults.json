@@ -17,7 +17,9 @@
       "title",
       "search",
       "clock",
-      "control"
+      "control",
+      "media",
+      "tray"
     ],
     "hiddenModules": []
   },

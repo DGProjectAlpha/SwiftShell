@@ -112,6 +112,10 @@ PanelWindow {
             return clockComponent
         if (id === "control")
             return controlComponent
+        if (id === "media")
+            return mediaComponent
+        if (id === "tray")
+            return trayComponent
         return null
     }
 
@@ -178,6 +182,40 @@ PanelWindow {
             onActivated: {
                 LauncherModel.closeLauncher()
                 popovers.toggle("calendar", clockModule)
+            }
+        }
+    }
+
+    Component {
+        id: mediaComponent
+
+        Item {
+            implicitWidth: mediaLoader.item ? mediaLoader.item.implicitWidth : 0
+            implicitHeight: Theme.barHeight
+
+            Loader {
+                id: mediaLoader
+                source: "MediaModule.qml"
+                active: true
+            }
+        }
+    }
+
+    Component {
+        id: trayComponent
+
+        Item {
+            implicitWidth: trayLoader.item ? trayLoader.item.implicitWidth : 0
+            implicitHeight: Theme.barHeight
+
+            Loader {
+                id: trayLoader
+                source: "TrayModule.qml"
+                active: true
+                onLoaded: {
+                    if (item)
+                        item.hostWindow = window
+                }
             }
         }
     }

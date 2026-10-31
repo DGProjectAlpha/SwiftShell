@@ -73,6 +73,8 @@ FloatingWindow {
             return displaysPage
         if (SettingsStore.settingsWindowCategory === "shortcuts")
             return shortcutsPage
+        if (SettingsStore.settingsWindowCategory === "audio")
+            return audioPage
         return page
     }
 
@@ -296,6 +298,16 @@ FloatingWindow {
                             search.text = ""
                         }
                     }
+
+                    FlatButton {
+                        width: parent.width
+                        label: "Audio"
+                        emphasized: SettingsStore.settingsWindowCategory === "audio"
+                        onActivated: {
+                            SettingsStore.setSettingsCategory("audio")
+                            search.text = ""
+                        }
+                    }
                 }
             }
 
@@ -367,6 +379,18 @@ FloatingWindow {
                     y: 0
                     width: scroller.width
                     visible: SettingsStore.settingsWindowCategory === "shortcuts"
+                    height: visible ? implicitHeight : 0
+                    query: search.text
+                    onRevealRequested: function (y, itemHeight) {
+                        scroller.contentY = Nav.scrollTarget(scroller.contentY, scroller.height, y, itemHeight)
+                    }
+                }
+
+                AudioPage {
+                    id: audioPage
+                    y: 0
+                    width: scroller.width
+                    visible: SettingsStore.settingsWindowCategory === "audio"
                     height: visible ? implicitHeight : 0
                     query: search.text
                     onRevealRequested: function (y, itemHeight) {

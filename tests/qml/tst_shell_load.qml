@@ -14,6 +14,8 @@ TestCase {
         "shell/bar/ClockModule.qml",
         "shell/bar/FocusedTitle.qml",
         "shell/bar/ControlIndicator.qml",
+        "shell/bar/MediaModule.qml",
+        "shell/bar/TrayModule.qml",
         "shell/components/BarLabel.qml",
         "shell/components/FlatButton.qml",
         "shell/components/CompactSlider.qml",
@@ -26,6 +28,8 @@ TestCase {
         "shell/popovers/CalendarPanel.qml",
         "shell/popovers/ControlCenterPanel.qml",
         "shell/popovers/AudioSection.qml",
+        "shell/popovers/MediaSection.qml",
+        "shell/popovers/TraySection.qml",
         "shell/themes/Theme.qml",
         "shell/services/SettingsStore.qml",
         "shell/services/HyprlandModel.qml",
@@ -34,6 +38,7 @@ TestCase {
         "shell/services/ColorAnalysis.qml",
         "shell/services/WallpaperModel.qml",
         "shell/launcher/LauncherWindow.qml",
+        "shell/settings/AudioPage.qml",
         "shell/settings/AppearancePage.qml",
         "shell/settings/BarPage.qml",
         "shell/settings/ImageDialog.qml",
@@ -53,6 +58,8 @@ TestCase {
         "shell/bar/ClockModule.qml",
         "shell/bar/FocusedTitle.qml",
         "shell/bar/ControlIndicator.qml",
+        "shell/bar/MediaModule.qml",
+        "shell/bar/TrayModule.qml",
         "shell/components/BarLabel.qml",
         "shell/components/FlatButton.qml",
         "shell/components/CompactSlider.qml",
@@ -65,6 +72,9 @@ TestCase {
         "shell/popovers/CalendarPanel.qml",
         "shell/popovers/ControlCenterPanel.qml",
         "shell/popovers/AudioSection.qml",
+        "shell/popovers/MediaSection.qml",
+        "shell/popovers/TraySection.qml",
+        "shell/settings/AudioPage.qml",
         "shell/settings/AppearancePage.qml",
         "shell/settings/BarPage.qml",
         "shell/settings/DisplaysPage.qml",
@@ -278,6 +288,13 @@ TestCase {
         var shortcuts = componentFor("shell/settings/ShortcutsPage.qml").createObject(this)
         verify(shortcuts !== null)
         verify(findText(shortcuts, "does not install", 0))
+        var audioPage = componentFor("shell/settings/AudioPage.qml").createObject(this)
+        verify(audioPage !== null)
+        verify(findText(audioPage, "follow PipeWire", 0))
+        verify(audioPage.shows("mediaPlayer"))
+        audioPage.query = "microphone"
+        verify(audioPage.shows("audioInput"))
+        verify(!audioPage.shows("mediaPlayer"))
         wallpaper.query = "cover"
         verify(wallpaper.shows("wallpaperFit"))
         verify(!wallpaper.shows("wallpaperPath"))
@@ -288,5 +305,6 @@ TestCase {
         wallpaper.destroy()
         displays.destroy()
         shortcuts.destroy()
+        audioPage.destroy()
     }
 }

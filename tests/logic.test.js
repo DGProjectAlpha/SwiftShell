@@ -24,6 +24,8 @@ const contrast = require("../shell/logic/contrast.js");
 const slideshow = require("../shell/logic/slideshow.js");
 const displays = require("../shell/logic/displays.js");
 const shortcuts = require("../shell/logic/shortcuts.js");
+const media = require("../shell/logic/media.js");
+const tray = require("../shell/logic/tray.js");
 const zlib = require("node:zlib");
 
 let failed = 0;
@@ -297,12 +299,13 @@ test("settings window stays one instance and blur is not available", function ()
 test("settings search, density, and undo stay on real appearance fields", function () {
     assert.equal(settingsNav.navigationLayout(719), "stacked");
     assert.equal(settingsNav.navigationLayout(720), "columns");
-    assert.equal(settingsNav.categories().length, 5);
+    assert.equal(settingsNav.categories().length, 6);
     assert.equal(settingsNav.categories()[0].id, "appearance");
     assert.equal(settingsNav.categories()[1].id, "bar");
     assert.equal(settingsNav.categories()[2].id, "wallpaper");
     assert.equal(settingsNav.categories()[3].id, "displays");
     assert.equal(settingsNav.categories()[4].id, "shortcuts");
+    assert.equal(settingsNav.categories()[5].id, "audio");
     assert.equal(settingsNav.categoryFor(settingsNav.firstControlId("cover")), "wallpaper");
     assert.equal(settingsNav.filterControls("").length, settingsNav.CONTROLS.length);
     assert.equal(settingsNav.filterControls("not-a-setting").length, 0);
@@ -1139,7 +1142,7 @@ test("bar exclusion can turn reservation on again and popup focus clears before 
     assert.equal(bar.barMetrics(80, 1).height, 52);
     assert.equal(bar.heightFromUnit(bar.unitFromHeight(28)), 28);
     assert.equal(bar.exclusionUpdate(true, tall.height, 28).zone, 52);
-    assert.deepEqual(bar.visibleModules(bar.BAR_MODULES, ["clock"]), ["workspaces", "title", "search", "control"]);
+    assert.deepEqual(bar.visibleModules(bar.BAR_MODULES, ["clock"]), ["workspaces", "title", "search", "control", "media", "tray"]);
     const moved = bar.moveModule(bar.BAR_MODULES, "clock", -1);
     assert.equal(moved[2], "clock");
     assert.equal(moved[3], "search");
@@ -1594,6 +1597,46 @@ test("shortcut recording cancels, conflicts, and does not invent a bind", functi
     assert.equal(parsed.settings, undefined);
     assert.equal(parsed.extra, undefined);
     assert.ok(kept.errors.indexOf("shortcutsJson") !== -1);
+});
+
+test("audio devices, players, and tray items stay actionable", function () {
+    const nodes = [
+        { id: 4, isSink: true, isStream: false, audio: { volume: 0.5, muted: false }, description: "Speakers" },
+        { id: 5, isSink: false, isStream: false, audio: { volume: 0.2, muted: false }, description: "Microphone" },
+        { id: 9, isSink: false, isStream: true, audio: { volume: 0.8, muted: false }, properties: { "application.name": "Helium" } },
+        { id: "bad/id", isSink: true, isStream: false, audio: { volume: 1, muted: false }, description: "Rejected" },
+    ];
+    assert.deepEqual(audio.audioDevices(nodes, "sink"), [{ id: "4", label: "Speakers" }]);
+    assert.equal(audio.audioDevices(nodes, "source")[0].label, "Microphone");
+    assert.equal(audio.audioStreams(nodes)[0].label, "Helium");
+    assert.equal(audio.selectDefault({ ready: false, requestedId: 4, currentId: 5, devices: audio.audioDevices(nodes, "sink"), role: "sink" }), null);
+    assert.deepEqual(audio.selectDefault({
+        ready: true,
+        requestedId: 4,
+        currentId: 5,
+        devices: audio.audioDevices(nodes, "sink"),
+        role: "sink",
+    }), { id: "4", role: "sink" });
+    const players = [
+        { identity: "Paused", isPlaying: false, trackTitle: "", trackArtist: "", canTogglePlaying: true, canGoNext: false, canGoPrevious: false },
+        { identity: "Playing", isPlaying: true, trackTitle: "Song", trackArtist: "Artist", canTogglePlaying: true, canGoNext: true, canGoPrevious: false, trackArtUrl: "file:///art.png" },
+    ];
+    assert.equal(media.mediaLine(media.pickPlayer(players)), "Song — Artist");
+    assert.equal(media.mediaControls(media.pickPlayer(players)).next, true);
+    assert.equal(media.mediaControls(null).toggle, false);
+    const items = [
+        { id: "net", title: "Network", onlyMenu: false, hasMenu: false, icon: "network" },
+        { id: "menu-only", title: "Menu", onlyMenu: true, hasMenu: false, icon: "" },
+        { id: "real-menu", title: "Menu", onlyMenu: true, hasMenu: true, icon: "" },
+    ];
+    assert.equal(tray.trayRows(items, 4).length, 2);
+    assert.equal(tray.trayRows(items, 4)[0].action, "activate");
+    assert.equal(tray.trayRows(items, 4)[1].action, "menu");
+    assert.equal(tray.trayOverflow(items, 1), 1);
+    const kept = settings.validateSettings({ bar: { moduleOrder: ["workspaces", "title", "search", "clock", "control"] } });
+    assert.equal(kept.ok, true);
+    assert.ok(kept.settings.bar.moduleOrder.indexOf("tray") !== -1);
+    assert.ok(kept.settings.bar.moduleOrder.indexOf("media") !== -1);
 });
 
 if (failed > 0) {

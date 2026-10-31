@@ -189,6 +189,16 @@ scripts/check.sh
 
 Exit status 0. Static checks passed for 28 QML files. Logic tests passed, including bar heights 22, 28, and 52, derived font and icon size, module hide, and reorder. The run printed `launcher rank 400 apps: 2.12 ms`. Install tests passed, 15 cases. `qmltestrunner` 6.4.2 reported Totals: 6 passed and Totals: 8 passed. `QStandardPaths: XDG_RUNTIME_DIR not set` was printed. The run did not draw the bar or measure the reserved strip.
 
+## What was run for M5.1
+
+On 30 Oct 2026, at 9:44 PM America/New_York, in the cloud workspace, with no Hyprland session and no `qs` binary:
+
+```text
+scripts/check.sh
+```
+
+Exit status 0. Static checks passed for 42 QML files. Logic tests passed, including sink and source filtering, a rejected node id, an application stream name, a playing MPRIS player, a tray item that cannot be activated, and an older five-module bar order that gains Media and Tray without an error. `launcher rank 400 apps: 1.17 ms`. Install tests passed, 15 cases. `qmltestrunner` 6.4.2 reported Totals: 6 passed and Totals: 8 passed. The audio page case checks the PipeWire sentence and that a microphone query hides the player row. `QStandardPaths: XDG_RUNTIME_DIR not set` was printed. No audio device, player, or tray icon was changed. PipeWire, MPRIS, and the tray were the test stubs.
+
 ## What was run for M4.7
 
 On 30 Oct 2026, at 9:39 PM America/New_York, in the cloud workspace, with no Hyprland session and no `qs` binary:
@@ -247,6 +257,7 @@ After the M3.2 checks, and only with SwiftShell launched by `scripts/launch.sh`:
 8. Add two png files to the slideshow, set the fade to 400, and confirm the pictures crossfade and the second one is not the same as the first when shuffle is on. Turn on automatic text on the crimson image and on a white png. Text should be light on the crimson image and dark on the white one. A black-and-white split should show the bar fade. Turn automatic text off and confirm a manual hex color remains. A jpeg should still display and should say it is not sampled.
 9. Open Settings, Displays. The rectangles should match the connected outputs, including a portrait or a negative position if one is connected. Dragging should move only the preview. Apply stays unavailable. `~/.config/hypr` must stay unchanged.
 10. Open Settings, Shortcuts. Record Super+Z for Settings, press Enter, and confirm the row shows Super+Z after a restart. Press Escape while listening and confirm nothing is stored. Record the same chord on Control center and confirm it is refused. The compositor's own binds, including Super+Space, must be unchanged.
+11. Play audio. The control center slider should move the default sink, unmute when raised above zero, and list the microphone when PipeWire has a default source. Start a player and confirm Play, Pause, Next, and Previous match what that player allows. A tray icon should activate on click. With no player and no tray icons, the bar should not grow. `~/.config/hypr` must stay unchanged.
 
 This checklist is not done in the cloud run.
 

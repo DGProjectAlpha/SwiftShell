@@ -29,6 +29,11 @@ var CONTROLS = [
     { id: "manualText", category: "wallpaper", section: "Contrast", label: "Manual text", keywords: ["hex", "color", "foreground"] },
     { id: "displayLayout", category: "displays", section: "Arrangement", label: "Arrangement", keywords: ["monitor", "display", "scale", "preview"] },
     { id: "preferredChord", category: "shortcuts", section: "Chords", label: "Preferred chord", keywords: ["shortcut", "record", "spotlight", "super"] },
+    { id: "audioOutput", category: "audio", section: "Audio", label: "Output", keywords: ["volume", "sink", "pipewire", "mute"] },
+    { id: "audioInput", category: "audio", section: "Audio", label: "Input", keywords: ["microphone", "source", "input"] },
+    { id: "audioStream", category: "audio", section: "Audio", label: "Application streams", keywords: ["stream", "app", "volume"] },
+    { id: "mediaPlayer", category: "audio", section: "Media", label: "Player", keywords: ["mpris", "play", "pause", "music"] },
+    { id: "trayItems", category: "audio", section: "Tray", label: "Tray", keywords: ["status", "notifier", "icon"] },
 ];
 
 function clamp01(unit) {
@@ -102,6 +107,7 @@ function categories() {
         { id: "wallpaper", label: "Wallpaper" },
         { id: "displays", label: "Displays" },
         { id: "shortcuts", label: "Shortcuts" },
+        { id: "audio", label: "Audio" },
     ];
 }
 
