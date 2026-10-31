@@ -245,6 +245,16 @@ FloatingWindow {
                     width: parent.width
                     spacing: Theme.panelSpacing
 
+                    Text {
+                        visible: SettingsStore.persistenceState === "error" || SettingsStore.persistenceState === "protected"
+                        width: parent.width
+                        wrapMode: Text.WordWrap
+                        text: SettingsStore.persistenceMessage
+                        color: Theme.panelText
+                        font.family: Theme.fontFamily
+                        font.pixelSize: Theme.fontSizeSmall
+                    }
+
                     FlatButton {
                         width: parent.width
                         label: "Undo"

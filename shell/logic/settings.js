@@ -731,6 +731,38 @@ function extensionsText(source, errors) {
         }
     }
 
+    const domainKeys = {
+        clock: { use24Hour: true, showWeekNumbers: true, weekStart: true },
+        bar: { targetMonitor: true, reserveSpace: true, showFocusedTitle: true, workspaceIds: true, workspaceDispatch: true, placement: true, height: true, moduleOrder: true, hiddenModules: true },
+        appearance: { mode: true, tint: true, panelOpacity: true, panelBlur: true, radius: true, shadowOpacity: true, shadowSoftness: true, motionScale: true, reducedMotion: true, panelPadding: true, panelSpacing: true, fontSize: true, fontWeight: true, iconScale: true, topGradient: true, contrast: true, automaticText: true, automaticGradient: true, manualText: true, manualMuted: true, manualPanel: true, manualGradient: true },
+        launcher: { pinnedIds: true },
+        wallpaper: { enabled: true, fit: true, path: true, outputsJson: true, slideshow: true, intervalMinutes: true, order: true, transitionMs: true, slidesJson: true },
+        settingsWindow: { width: true, height: true, category: true },
+        notifications: { ownership: true, dnd: true, policiesJson: true },
+    };
+    const nested = {};
+    const domains = Object.keys(domainKeys);
+    for (let domainIndex = 0; domainIndex < domains.length; domainIndex++) {
+        const domain = domains[domainIndex];
+        const object = source && source[domain];
+        if (!isPlainObject(object))
+            continue;
+        const extras = {};
+        const objectKeys = Object.keys(object);
+        for (let keyIndex = 0; keyIndex < objectKeys.length; keyIndex++) {
+            const key = objectKeys[keyIndex];
+            if (domainKeys[domain][key])
+                continue;
+            const next = jsonSafe(object[key], 0);
+            if (next !== undefined)
+                extras[key] = next;
+        }
+        if (Object.keys(extras).length > 0)
+            nested[domain] = extras;
+    }
+    if (Object.keys(nested).length > 0)
+        found.__nested = nested;
+
     let existing = {};
     if (isPlainObject(source) && source.extensionsJson !== undefined) {
         if (typeof source.extensionsJson !== "string") {
@@ -748,7 +780,20 @@ function extensionsText(source, errors) {
         }
     }
 
-    const merged = jsonSafe(Object.assign({}, existing, found), 0) || {};
+    const mergedInput = Object.assign({}, existing, found);
+    if (isPlainObject(existing.__nested) && isPlainObject(found.__nested)) {
+        mergedInput.__nested = Object.assign({}, existing.__nested);
+        const nestedDomains = Object.keys(found.__nested);
+        for (let index = 0; index < nestedDomains.length; index++) {
+            const domain = nestedDomains[index];
+            mergedInput.__nested[domain] = Object.assign(
+                {},
+                isPlainObject(existing.__nested[domain]) ? existing.__nested[domain] : {},
+                found.__nested[domain]
+            );
+        }
+    }
+    const merged = jsonSafe(mergedInput, 0) || {};
     const text = JSON.stringify(merged);
     if (text.length > 4096) {
         errors.push("extensionsJson");
@@ -761,14 +806,22 @@ function migrationDecision(input) {
     if (!isPlainObject(input))
         return { action: "keep", reason: "unreadable", errors: ["settings"] };
     const validated = validateSettings(input);
-    if (!validated.ok)
-        return { action: "keep", reason: "invalid", errors: validated.errors, settings: validated.settings };
-    if (input.version === 3)
+    if (input.version !== undefined && input.version !== 1 && input.version !== 2 && input.version !== 3)
+        return { action: "keep", reason: "unsupported-version", errors: ["version"], settings: null };
+    if (input.version === 3 && validated.ok)
         return { action: "keep", reason: "current", errors: [], settings: validated.settings };
+    if (input.version === 3)
+        return {
+            action: "repair",
+            reason: "invalid",
+            errors: validated.errors,
+            backupText: JSON.stringify(input, null, 2) + "\n",
+            settings: validated.settings,
+        };
     return {
         action: "migrate",
-        reason: "version",
-        errors: [],
+        reason: validated.ok ? "version" : "invalid-version",
+        errors: validated.errors,
         backupText: JSON.stringify(input, null, 2) + "\n",
         settings: validated.settings,
     };
@@ -836,7 +889,7 @@ function migrationFromText(raw) {
 
 function migrationPlan(raw, existingBackup) {
     const decision = migrationFromText(raw);
-    const writeSettings = decision.action === "migrate";
+    const writeSettings = decision.action === "migrate" || decision.action === "repair";
     return {
         decision: decision,
         writeBackup: writeSettings && shouldWriteBackup(existingBackup),
