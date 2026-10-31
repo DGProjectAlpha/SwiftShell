@@ -27,6 +27,10 @@ The mock QML gate now rejects every component error except a short path-specific
 
 The installer suite also constructs a temporary system-package layout. It verifies that status, start, and activation use that shared app root, the desktop entry uses the system command, uninstall removes only per-user activation state, and settings purge cannot remove package-owned files. It does not run `makepkg`, pacman, or an installed Arch package.
 
+## Release-candidate wallpaper checks
+
+`scripts/check.sh` passed after the slideshow and contrast repair. The logic suite changes interval, transition duration, ordering, and image lists without replacing a still-valid current item; disables motion during a transition; skips a failed current image; verifies URL encoding; applies Cover and Contain sampling to synthetic pixels; rejects an oversized PNG before inflate; and stops a compressed-output expansion at its declared budget. The QML gate compiled the changed documents with stubs. A real crossfade, mixed-refresh outputs, hotplug during a fade, Qt texture reuse, and automatic contrast on DP-1/HDMI-A-1 are **NOT RUN**.
+
 ## Pull and test on CachyOS
 
 These commands use the checkout as the Quickshell config. They do not install over Noctalia, and they do not edit Hyprland.

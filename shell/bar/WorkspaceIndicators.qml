@@ -7,6 +7,9 @@ Row {
     id: root
 
     required property var workspaces
+    property color textPrimary: Theme.textPrimary
+    property color textMuted: Theme.textMuted
+    property color textHover: Theme.textHover
     spacing: Theme.workspaceGap
 
     Repeater {
@@ -33,10 +36,10 @@ Row {
                 font.weight: modelData.active ? Font.Medium : Font.Normal
                 color: {
                     if (modelData.active || modelData.urgent)
-                        return Theme.textPrimary;
+                        return root.textPrimary;
                     if (button.containsMouse)
-                        return Theme.textHover;
-                    return Theme.textMuted;
+                        return root.textHover;
+                    return root.textMuted;
                 }
             }
 
@@ -47,7 +50,7 @@ Row {
                 anchors.horizontalCenter: parent.horizontalCenter
                 width: label.implicitWidth
                 height: 1
-                color: Theme.textPrimary
+                color: root.textPrimary
             }
         }
     }

@@ -103,6 +103,16 @@ function nextIndex(session) {
     return index;
 }
 
+function indexForPath(session, path) {
+    if (!session || !session.order || !session.paths)
+        return -1;
+    for (var index = 0; index < session.order.length; index++) {
+        if (session.paths[session.order[index]] === path)
+            return index;
+    }
+    return -1;
+}
+
 function intervalMs(minutes) {
     var value = Number(minutes);
     if (!Number.isFinite(value))
@@ -110,55 +120,110 @@ function intervalMs(minutes) {
     return Math.max(60000, Math.round(value) * 60000);
 }
 
+function barrierComplete(expected, reports, generation) {
+    var outputs = expected || [];
+    var values = reports || {};
+    if (outputs.length === 0)
+        return true;
+    for (var index = 0; index < outputs.length; index++) {
+        if (values[outputs[index]] !== generation)
+            return false;
+    }
+    return true;
+}
+
+function applyTiming(current, action) {
+    if (action.transitionMs !== undefined)
+        current.transitionMs = Number(action.transitionMs) > 0 ? Math.round(action.transitionMs) : 0;
+    if (action.intervalMinutes !== undefined)
+        current.intervalMinutes = Number(action.intervalMinutes) > 0 ? Math.round(action.intervalMinutes) : 30;
+    if (current.state === "transitioning" && current.transitionMs === 0) {
+        current.shown = current.incoming || current.shown;
+        current.incoming = "";
+        current.outgoing = "";
+        current.state = "waiting";
+    }
+    return current;
+}
+
+function applyPaths(current, action, tools) {
+    var resolveSource = tools.resolveSource || function () { return { source: "packaged" }; };
+    var filtered = filterPaths(action.paths, resolveSource);
+    var enabled = action.enabled === true;
+    var previousState = current.state;
+    var previousShown = current.shown;
+    var previousIncoming = current.incoming;
+    if (action.transitionMs !== undefined || action.intervalMinutes !== undefined)
+        applyTiming(current, action);
+    current.mode = action.mode === "shuffle" ? "shuffle" : "sequential";
+    current.unreadable = filtered.unreadable;
+    if (!enabled) {
+        current.state = "disabled";
+        current.paths = [];
+        current.order = [];
+        current.index = 0;
+        current.shown = "";
+        current.incoming = "";
+        current.outgoing = "";
+        current.count = 0;
+        current.error = "";
+        return current;
+    }
+    if (filtered.good.length === 0) {
+        current.state = "error";
+        current.paths = [];
+        current.order = [];
+        current.index = 0;
+        current.shown = "";
+        current.incoming = "";
+        current.outgoing = "";
+        current.count = 0;
+        current.error = "Add at least one png, jpeg, or webp file.";
+        return current;
+    }
+    current.paths = filtered.good;
+    current.count = filtered.good.length;
+    current.order = buildOrder(filtered.good.length, current.mode, previousShown, filtered.good, tools.random);
+    var shownIndex = indexForPath(current, previousShown);
+    if (shownIndex === -1) {
+        current.index = 0;
+        current.shown = filtered.good[current.order[0]];
+        current.incoming = "";
+        current.outgoing = "";
+        current.state = "waiting";
+    } else {
+        current.shown = previousShown;
+        current.index = shownIndex;
+        var incomingIndex = indexForPath(current, previousIncoming);
+        if ((previousState === "preloading" || previousState === "transitioning") && incomingIndex !== -1) {
+            current.index = incomingIndex;
+            current.incoming = previousIncoming;
+            current.outgoing = previousState === "transitioning" ? previousShown : "";
+            current.state = previousState;
+        } else {
+            current.incoming = "";
+            current.outgoing = "";
+            current.state = previousState === "paused" ? "paused" : "waiting";
+        }
+    }
+    current.error = "";
+    return current;
+}
+
 function reduceSlideshow(session, action, deps) {
     var current = copySession(session);
     var type = action && action.type;
     var tools = deps || {};
-    var resolveSource = tools.resolveSource;
     if (type === "scan") {
         current.state = "scanning";
         current.error = "";
         current.incoming = "";
         return current;
     }
-    if (type === "scanned" || type === "configure") {
-        var filtered = filterPaths(action.paths, resolveSource || function () { return { source: "packaged" }; });
-        var enabled = action.enabled === true;
-        current.transitionMs = Number(action.transitionMs) > 0 ? Math.round(action.transitionMs) : 0;
-        current.intervalMinutes = Number(action.intervalMinutes) > 0 ? Math.round(action.intervalMinutes) : 30;
-        current.mode = action.mode === "shuffle" ? "shuffle" : "sequential";
-        current.unreadable = filtered.unreadable;
-        current.incoming = "";
-        current.outgoing = "";
-        if (!enabled) {
-            current.state = "disabled";
-            current.paths = [];
-            current.order = [];
-            current.index = 0;
-            current.shown = "";
-            current.count = 0;
-            current.error = "";
-            return current;
-        }
-        if (filtered.good.length === 0) {
-            current.state = "error";
-            current.paths = [];
-            current.order = [];
-            current.index = 0;
-            current.shown = "";
-            current.count = 0;
-            current.error = "Add at least one png, jpeg, or webp file.";
-            return current;
-        }
-        current.paths = filtered.good;
-        current.count = filtered.good.length;
-        current.order = buildOrder(filtered.good.length, current.mode, current.shown, filtered.good, tools.random);
-        current.index = 0;
-        current.shown = filtered.good[current.order[0]];
-        current.state = "waiting";
-        current.error = "";
-        return current;
-    }
+    if (type === "scanned" || type === "configure" || type === "updatePaths" || type === "updateMode")
+        return applyPaths(current, action, tools);
+    if (type === "updateTiming")
+        return applyTiming(current, action);
     if (type === "tick") {
         if (current.state !== "waiting" && current.state !== "ready")
             return current;
@@ -200,10 +265,51 @@ function reduceSlideshow(session, action, deps) {
     if (type === "failed") {
         if (current.state !== "preloading" && current.state !== "transitioning")
             return current;
+        var failedPath = current.incoming;
+        var kept = [];
+        for (var failedIndex = 0; failedIndex < current.paths.length; failedIndex++) {
+            if (current.paths[failedIndex] !== failedPath)
+                kept.push(current.paths[failedIndex]);
+        }
+        current.paths = kept;
+        current.count = kept.length;
+        current.order = buildOrder(kept.length, current.mode, current.shown, kept, tools.random);
+        current.index = Math.max(0, indexForPath(current, current.shown));
+        current.unreadable += 1;
         current.incoming = "";
         current.outgoing = "";
         current.state = "waiting";
-        current.error = "The next image could not be decoded. The current image stays.";
+        current.error = "An unreadable next image was removed. The current image stays.";
+        return current;
+    }
+    if (type === "shownFailed") {
+        if (!current.shown || action.path !== current.shown)
+            return current;
+        var remaining = [];
+        for (var pathIndex = 0; pathIndex < current.paths.length; pathIndex++) {
+            if (current.paths[pathIndex] !== current.shown)
+                remaining.push(current.paths[pathIndex]);
+        }
+        current.unreadable += 1;
+        current.incoming = "";
+        current.outgoing = "";
+        if (remaining.length === 0) {
+            current.paths = [];
+            current.order = [];
+            current.index = 0;
+            current.shown = "";
+            current.count = 0;
+            current.state = "error";
+            current.error = "No slideshow image could be decoded.";
+            return current;
+        }
+        current.paths = remaining;
+        current.count = remaining.length;
+        current.order = buildOrder(remaining.length, current.mode, "", remaining, tools.random);
+        current.index = 0;
+        current.shown = remaining[current.order[0]];
+        current.state = "waiting";
+        current.error = "An unreadable slideshow image was skipped.";
         return current;
     }
     if (type === "pause") {
@@ -225,6 +331,7 @@ var swiftshellSlideshow = {
     emptySession: emptySession,
     parseList: parseList,
     intervalMs: intervalMs,
+    barrierComplete: barrierComplete,
     reduceSlideshow: reduceSlideshow,
 };
 
