@@ -16,7 +16,7 @@ Item {
         id: label
         anchors.verticalCenter: parent.verticalCenter
         text: root.report.text
-        color: Theme.text
+        color: Theme.textPrimary
         font.family: Theme.fontFamily
         font.pixelSize: Theme.fontSize
     }

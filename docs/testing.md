@@ -189,6 +189,16 @@ scripts/check.sh
 
 Exit status 0. Static checks passed for 28 QML files. Logic tests passed, including bar heights 22, 28, and 52, derived font and icon size, module hide, and reorder. The run printed `launcher rank 400 apps: 2.12 ms`. Install tests passed, 15 cases. `qmltestrunner` 6.4.2 reported Totals: 6 passed and Totals: 8 passed. `QStandardPaths: XDG_RUNTIME_DIR not set` was printed. The run did not draw the bar or measure the reserved strip.
 
+## What was run for the theme token repair
+
+On 30 Oct 2026, at 10:57 PM America/New_York, in the cloud workspace, with no Hyprland session and no `qs` binary:
+
+```text
+scripts/check.sh
+```
+
+Exit status 0. Static checks passed for 52 QML files and rejected unknown `Theme` names. `qmltestrunner` 6.4.2 reported Totals: 6 passed and Totals: 8 passed. The shell-load case creates the battery, media, and tray modules with empty services and again with a 42% battery, a playing player, and one tray item. `QStandardPaths: XDG_RUNTIME_DIR not set` was printed. The modules were not drawn on a monitor.
+
 ## What was run for the settings backup repair
 
 On 30 Oct 2026, at 10:55 PM America/New_York, in the cloud workspace, with no Hyprland session and no `qs` binary:

@@ -44,16 +44,15 @@ Singleton {
     readonly property string fontFamily: ""
     readonly property color textPrimary: Qt.rgba(surface.text.r / 255, surface.text.g / 255, surface.text.b / 255, 1)
     readonly property color textMuted: Qt.rgba(surface.muted.r / 255, surface.muted.g / 255, surface.muted.b / 255, 1)
-    readonly property color textHover: palette.appearance === "light" ? "#2E2E2E" : "#D4D4D4"
     readonly property color transparent: Qt.rgba(0, 0, 0, 0)
-    readonly property var panelTextUnits: Palette.colorUnits(palette.text, 1)
-    readonly property var panelMutedUnits: Palette.colorUnits(palette.muted, 1)
     readonly property var panelHoverUnits: Palette.colorUnits(palette.hover, 1)
     readonly property var panelUnits: Palette.colorUnits(surface.panel, SettingsStore.panelOpacity)
     readonly property var gradientUnits: Palette.colorUnits(surface.gradient, surface.gradientAlpha)
-    readonly property color panelText: Qt.rgba(panelTextUnits.r, panelTextUnits.g, panelTextUnits.b, panelTextUnits.a)
-    readonly property color panelMuted: Qt.rgba(panelMutedUnits.r, panelMutedUnits.g, panelMutedUnits.b, panelMutedUnits.a)
+    // Foreground follows the surface, so a manual hex and automatic png text reach the bar and the panels.
+    readonly property color panelText: textPrimary
+    readonly property color panelMuted: textMuted
     readonly property color panelHover: Qt.rgba(panelHoverUnits.r, panelHoverUnits.g, panelHoverUnits.b, panelHoverUnits.a)
+    readonly property color textHover: panelHover
     readonly property color panelColor: Qt.rgba(panelUnits.r, panelUnits.g, panelUnits.b, panelUnits.a)
     readonly property color shadowColor: Qt.rgba(0, 0, 0, 1)
     readonly property color gradientTop: Qt.rgba(gradientUnits.r, gradientUnits.g, gradientUnits.b, gradientUnits.a)
