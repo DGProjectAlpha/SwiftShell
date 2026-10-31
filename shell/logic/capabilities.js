@@ -11,7 +11,7 @@ function capabilityReport() {
         backdropBlur: {
             available: false,
             hardwareVerified: false,
-            reason: "Quickshell 0.2 has no BackgroundEffect. This shell does not change Hyprland blur rules. The settings surface is a translucent scrim.",
+            reason: "Quickshell 0.2 has no BackgroundEffect. This shell does not change Hyprland blur rules. Surfaces use a translucent scrim.",
         },
     };
 }
