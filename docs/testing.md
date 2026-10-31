@@ -189,6 +189,16 @@ scripts/check.sh
 
 Exit status 0. Static checks passed for 28 QML files. Logic tests passed, including bar heights 22, 28, and 52, derived font and icon size, module hide, and reorder. The run printed `launcher rank 400 apps: 2.12 ms`. Install tests passed, 15 cases. `qmltestrunner` 6.4.2 reported Totals: 6 passed and Totals: 8 passed. `QStandardPaths: XDG_RUNTIME_DIR not set` was printed. The run did not draw the bar or measure the reserved strip.
 
+## What was run for M8.2
+
+On 30 Oct 2026, at 10:26 PM America/New_York, in the cloud workspace, with no Hyprland session and no `qs` binary:
+
+```text
+scripts/check.sh
+```
+
+Exit status 0. Static checks passed for 52 QML files. Logic tests passed. `launcher rank 400 apps: 1.12 ms`. `launcher rank 1000 apps: 1.55 ms`. Install tests passed, 16 cases. `qmltestrunner` 6.4.2 reported Totals: 6 passed and Totals: 8 passed. `QStandardPaths: XDG_RUNTIME_DIR not set` was printed. This pass adds the alpha notes. It does not mark any hardware row as passed. The product is not stable.
+
 ## What was run for M8.1
 
 On 30 Oct 2026, at 10:25 PM America/New_York, in the cloud workspace, with no Hyprland session and no `qs` binary:
