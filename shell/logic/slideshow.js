@@ -200,8 +200,9 @@ function reduceSlideshow(session, action, deps) {
     if (type === "failed") {
         if (current.state !== "preloading" && current.state !== "transitioning")
             return current;
-        current.state = "error";
         current.incoming = "";
+        current.outgoing = "";
+        current.state = "waiting";
         current.error = "The next image could not be decoded. The current image stays.";
         return current;
     }

@@ -52,8 +52,28 @@ function outputMap(text) {
 
 function sourceForOutput(name, path, outputsText) {
     const map = outputMap(outputsText);
-    const specific = typeof name === "string" && map[name] !== undefined ? map[name] : path;
-    return resolveSource(specific);
+    const named = typeof name === "string" && Object.prototype.hasOwnProperty.call(map, name);
+    const specific = named ? map[name] : path;
+    const resolved = resolveSource(specific);
+    resolved.override = named && resolved.source === "file";
+    return resolved;
+}
+
+function sourceRequest(width, height) {
+    const w = Number(width);
+    const h = Number(height);
+    if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0)
+        return { width: MAX_EDGE, height: 0 };
+    const limited = decodeLimit(w, h);
+    if (h > w)
+        return { width: 0, height: limited.height };
+    return { width: limited.width, height: 0 };
+}
+
+function samplePath(slideshowOn, shownPath, wallpaperPath) {
+    if (slideshowOn === true && typeof shownPath === "string" && shownPath !== "")
+        return shownPath;
+    return typeof wallpaperPath === "string" ? wallpaperPath : "";
 }
 
 function cropRect(imageWidth, imageHeight, viewWidth, viewHeight, mode) {
@@ -98,6 +118,8 @@ var swiftshellWallpaper = {
     fitMode: fitMode,
     outputMap: outputMap,
     sourceForOutput: sourceForOutput,
+    sourceRequest: sourceRequest,
+    samplePath: samplePath,
     cropRect: cropRect,
     decodeLimit: decodeLimit,
 };
