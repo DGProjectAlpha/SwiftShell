@@ -66,7 +66,94 @@ Singleton {
 
     property bool writing: false
     property bool suppressReload: false
-    property bool migrating: false
+    property bool acceptWrites: false
+    property bool protectFile: false
+    property var pendingPlan: null
+    property string pendingRaw: ""
+
+    function applyDocument(settings) {
+        var document = settings || {}
+        var clock = document.clock || {}
+        var bar = document.bar || {}
+        var appearance = document.appearance || {}
+        var launcher = document.launcher || {}
+        var wallpaper = document.wallpaper || {}
+        var window = document.settingsWindow || {}
+        var notes = document.notifications || {}
+        adapter.version = document.version
+        clockSettings.use24Hour = clock.use24Hour === true
+        clockSettings.showWeekNumbers = clock.showWeekNumbers === true
+        clockSettings.weekStart = clock.weekStart || "locale"
+        barSettings.targetMonitor = bar.targetMonitor || ""
+        barSettings.reserveSpace = bar.reserveSpace !== false
+        barSettings.showFocusedTitle = bar.showFocusedTitle !== false
+        barSettings.workspaceIds = bar.workspaceIds || []
+        barSettings.workspaceDispatch = bar.workspaceDispatch || "auto"
+        barSettings.height = bar.height
+        barSettings.moduleOrder = bar.moduleOrder || []
+        barSettings.hiddenModules = bar.hiddenModules || []
+        appearanceSettings.mode = appearance.mode || "dark"
+        appearanceSettings.tint = appearance.tint || "neutral"
+        appearanceSettings.panelOpacity = appearance.panelOpacity
+        appearanceSettings.panelBlur = appearance.panelBlur
+        appearanceSettings.radius = appearance.radius
+        appearanceSettings.shadowOpacity = appearance.shadowOpacity
+        appearanceSettings.shadowSoftness = appearance.shadowSoftness
+        appearanceSettings.motionScale = appearance.motionScale
+        appearanceSettings.reducedMotion = appearance.reducedMotion === true
+        appearanceSettings.panelPadding = appearance.panelPadding
+        appearanceSettings.panelSpacing = appearance.panelSpacing
+        appearanceSettings.fontSize = appearance.fontSize
+        appearanceSettings.fontWeight = appearance.fontWeight || "regular"
+        appearanceSettings.iconScale = appearance.iconScale
+        appearanceSettings.topGradient = appearance.topGradient === true
+        appearanceSettings.contrast = appearance.contrast === "high" ? "high" : "standard"
+        appearanceSettings.automaticText = appearance.automaticText === true
+        appearanceSettings.automaticGradient = appearance.automaticGradient === true
+        appearanceSettings.manualText = appearance.manualText || ""
+        appearanceSettings.manualMuted = appearance.manualMuted || ""
+        appearanceSettings.manualPanel = appearance.manualPanel || ""
+        appearanceSettings.manualGradient = appearance.manualGradient || ""
+        launcherSettings.pinnedIds = launcher.pinnedIds || []
+        wallpaperSettings.enabled = wallpaper.enabled !== false
+        wallpaperSettings.fit = wallpaper.fit || "cover"
+        wallpaperSettings.path = wallpaper.path || ""
+        wallpaperSettings.outputsJson = wallpaper.outputsJson || "{}"
+        wallpaperSettings.slideshow = wallpaper.slideshow === true
+        wallpaperSettings.intervalMinutes = wallpaper.intervalMinutes
+        wallpaperSettings.order = wallpaper.order || "sequential"
+        wallpaperSettings.transitionMs = wallpaper.transitionMs
+        wallpaperSettings.slidesJson = wallpaper.slidesJson || "[]"
+        windowSettings.width = window.width
+        windowSettings.height = window.height
+        windowSettings.category = window.category || "appearance"
+        adapter.shortcutsJson = document.shortcutsJson || "{}"
+        notificationSettings.ownership = notes.ownership === "on" ? "on" : "off"
+        notificationSettings.dnd = notes.dnd === true
+        notificationSettings.policiesJson = notes.policiesJson || "{}"
+        adapter.extensionsJson = document.extensionsJson || "{}"
+    }
+
+    function finishMigration(backupSaved) {
+        var plan = root.pendingPlan
+        var saved = backupSaved === true
+        root.pendingPlan = null
+        root.pendingRaw = ""
+        if (!Settings.commitMigration(plan, saved)) {
+            console.warn("SwiftShell: settings were not migrated because the backup was not written")
+            return
+        }
+        root.writing = true
+        root.suppressReload = true
+        root.applyDocument(plan.decision.settings)
+        settingsFile.writeAdapter()
+    }
+
+    function beginMigration(raw) {
+        root.pendingRaw = raw
+        root.pendingPlan = Settings.migrationPlan(raw, "")
+        backupFile.reload()
+    }
 
     function snapshot() {
         return {
@@ -449,29 +536,43 @@ Singleton {
                 reload();
         }
         onAdapterUpdated: {
-            if (root.writing)
+            if (!root.acceptWrites || root.protectFile || root.writing || root.pendingPlan)
                 return;
             root.writing = true;
             root.suppressReload = true;
             writeAdapter();
         }
-        onSaved: root.writing = false
+        onSaved: {
+            root.writing = false;
+            if (!root.protectFile)
+                root.acceptWrites = true;
+        }
         onSaveFailed: function (error) {
             root.writing = false;
             console.warn("SwiftShell: settings were not saved", error);
         }
         onLoaded: {
-            const decision = Settings.migrationDecision(root.snapshot());
+            var raw = "";
+            try {
+                raw = settingsFile.text();
+            } catch (error) {
+                raw = "";
+            }
+            var decision = Settings.migrationFromText(raw);
+            if (decision.reason === "malformed") {
+                root.protectFile = true;
+                console.warn("SwiftShell: settings file is not valid JSON and was left unchanged");
+                return;
+            }
             if (decision.action === "migrate") {
-                root.migrating = true;
-                backupAdapter.document = decision.backupText;
-                backupFile.writeAdapter();
+                root.beginMigration(raw);
                 return;
             }
             if (decision.errors && decision.errors.length > 0)
                 console.warn("SwiftShell: settings need attention:", decision.errors.join(", "));
             else
                 console.info("SwiftShell: settings loaded");
+            root.acceptWrites = true;
         }
         onLoadFailed: function (error) {
             console.warn("SwiftShell: settings file is missing or unreadable; using built-in defaults", error);
@@ -568,23 +669,41 @@ Singleton {
         id: backupFile
         path: Settings.backupPath(root.settingsPath)
         atomicWrites: true
-        onSaved: {
-            if (!root.migrating)
-                return
-            adapter.version = 3
-            root.migrating = false
-            console.info("SwiftShell: settings migrated to version 3")
-        }
-        onSaveFailed: function (error) {
-            if (!root.migrating)
-                return
-            root.migrating = false
-            console.warn("SwiftShell: settings were not migrated because the backup was not written")
+
+        function existingText() {
+            try {
+                return backupFile.text();
+            } catch (error) {
+                return "";
+            }
         }
 
-        JsonAdapter {
-            id: backupAdapter
-            property string document: ""
+        function considerBackup() {
+            if (root.pendingRaw === "")
+                return;
+            var plan = Settings.migrationPlan(root.pendingRaw, existingText());
+            root.pendingPlan = plan;
+            if (!plan.writeSettings) {
+                root.pendingPlan = null;
+                root.pendingRaw = "";
+                root.acceptWrites = true;
+                return;
+            }
+            if (plan.writeBackup)
+                backupFile.setText(root.pendingRaw);
+            else
+                root.finishMigration(true);
+        }
+
+        onLoaded: considerBackup()
+        onLoadFailed: considerBackup()
+        onSaved: {
+            if (root.pendingPlan && root.pendingPlan.writeBackup)
+                root.finishMigration(true);
+        }
+        onSaveFailed: function (error) {
+            if (root.pendingPlan)
+                root.finishMigration(false);
         }
     }
 }

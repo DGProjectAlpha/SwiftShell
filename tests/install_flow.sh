@@ -468,7 +468,7 @@ test_doctor_and_rollback() {
     noctalia_sum=$(checksum "$HOME/.config/quickshell/noctalia/shell.qml")
     run_install >/dev/null
     printf '%s\n' '{"notifications":{"ownership":"on","body":"secret-token-xyz"}}' >"$XDG_CONFIG_HOME/swiftshell/settings.json"
-    printf '%s\n' 'previous-settings' >"$XDG_CONFIG_HOME/swiftshell/settings.json.bak-swiftshell"
+    printf '%s\n' '{"version":1,"clock":{"use24Hour":false},"marker":"kept-value"}' >"$XDG_CONFIG_HOME/swiftshell/settings.json.bak-swiftshell"
     decoy=$(mktemp -d)
     write_decoy_commands "$decoy"
     PATH="$STUBS:$decoy:$BASE_PATH" "$HOME/.local/bin/swiftshell" doctor >"$HOME/doctor.out" 2>"$HOME/doctor.err"
@@ -489,7 +489,38 @@ test_doctor_and_rollback() {
         fail "doctor printed an unreadable settings file"
     fi
     PATH="$STUBS:$BASE_PATH" "$HOME/.local/bin/swiftshell" rollback-settings >"$HOME/rollback.out"
-    [ "$(cat "$XDG_CONFIG_HOME/swiftshell/settings.json")" = "previous-settings" ] || fail "rollback did not restore the backup"
+    grep -q 'kept-value' "$XDG_CONFIG_HOME/swiftshell/settings.json" || fail "rollback did not restore the backup"
+    python3 - "$XDG_CONFIG_HOME/swiftshell/settings.json" <<'PY' || fail "rollback did not restore settings JSON"
+import json, sys
+data = json.load(open(sys.argv[1], encoding="utf-8"))
+if data.get("marker") != "kept-value":
+    raise SystemExit(1)
+PY
+    printf '%s\n' '{"version":3,"clock":{"use24Hour":true}}' >"$XDG_CONFIG_HOME/swiftshell/settings.json"
+    python3 - "$XDG_CONFIG_HOME/swiftshell/settings.json.bak-swiftshell" <<'PY'
+import json, sys
+inner = json.dumps({"version": 1, "bar": {"targetMonitor": "kept-output"}, "secretNote": "secret-token-xyz"})
+with open(sys.argv[1], "w", encoding="utf-8") as handle:
+    json.dump({"document": inner}, handle)
+PY
+    PATH="$STUBS:$BASE_PATH" "$HOME/.local/bin/swiftshell" rollback-settings >"$HOME/unwrap.out" 2>"$HOME/unwrap.err"
+    python3 - "$XDG_CONFIG_HOME/swiftshell/settings.json" <<'PY' || fail "wrapped backup was not unwrapped"
+import json, sys
+data = json.load(open(sys.argv[1], encoding="utf-8"))
+if data.get("version") != 1 or data.get("bar", {}).get("targetMonitor") != "kept-output":
+    raise SystemExit(1)
+if "document" in data:
+    raise SystemExit(1)
+PY
+    if grep -q 'secret-token-xyz' "$HOME/unwrap.out" "$HOME/unwrap.err"; then
+        fail "rollback printed a backup body"
+    fi
+    printf '%s\n' '{"version":3}' >"$XDG_CONFIG_HOME/swiftshell/settings.json"
+    printf '%s\n' 'not-json' >"$XDG_CONFIG_HOME/swiftshell/settings.json.bak-swiftshell"
+    if PATH="$STUBS:$BASE_PATH" "$HOME/.local/bin/swiftshell" rollback-settings >"$HOME/bad-rollback.out" 2>"$HOME/bad-rollback.err"; then
+        fail "an unusable backup replaced settings"
+    fi
+    grep -q '"version": 3' "$XDG_CONFIG_HOME/swiftshell/settings.json" || grep -q '"version":3' "$XDG_CONFIG_HOME/swiftshell/settings.json" || fail "failed rollback changed settings"
     [ "$(checksum "$HOME/.config/hypr/config/binds.lua")" = "$binds_sum" ] || fail "rollback changed hypr config"
     [ "$(checksum "$HOME/.config/quickshell/noctalia/shell.qml")" = "$noctalia_sum" ] || fail "rollback changed another shell"
     ok "doctor and settings rollback stay inside SwiftShell"

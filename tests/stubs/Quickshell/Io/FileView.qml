@@ -13,6 +13,17 @@ QtObject {
     signal loaded()
     signal loadFailed(var reason)
 
+    property string storedText: ""
+
+    function text() {
+        return storedText
+    }
+
+    function setText(value) {
+        storedText = value
+        saved()
+    }
+
     function reload() {}
     function writeAdapter() {}
 }

@@ -777,6 +777,79 @@ function backupPath(settingsPath) {
     return settingsPath + ".bak-swiftshell";
 }
 
+function looksLikeSettings(value) {
+    return isPlainObject(value) && (
+        typeof value.version === "number" ||
+        isPlainObject(value.clock) ||
+        isPlainObject(value.bar)
+    );
+}
+
+function restoreBackup(text) {
+    if (typeof text !== "string" || text.trim() === "")
+        return { ok: false, reason: "absent", text: "" };
+    let parsed;
+    try {
+        parsed = JSON.parse(text);
+    } catch (error) {
+        return { ok: false, reason: "malformed", text: "" };
+    }
+    if (looksLikeSettings(parsed))
+        return { ok: true, reason: "settings", text: text };
+    if (isPlainObject(parsed) && typeof parsed.document === "string") {
+        let inner;
+        try {
+            inner = JSON.parse(parsed.document);
+        } catch (error) {
+            return { ok: false, reason: "malformed", text: "" };
+        }
+        if (looksLikeSettings(inner))
+            return { ok: true, reason: "unwrapped", text: parsed.document };
+    }
+    return { ok: false, reason: "unusable", text: "" };
+}
+
+function backupIsUsable(text) {
+    return restoreBackup(text).ok === true;
+}
+
+function shouldWriteBackup(existingText) {
+    return !backupIsUsable(existingText);
+}
+
+function migrationFromText(raw) {
+    if (typeof raw !== "string" || raw.trim() === "")
+        return { action: "keep", reason: "absent", errors: [], backupText: "", settings: null };
+    let parsed;
+    try {
+        parsed = JSON.parse(raw);
+    } catch (error) {
+        return { action: "keep", reason: "malformed", errors: ["settings"], backupText: raw, settings: null };
+    }
+    const decision = migrationDecision(parsed);
+    decision.backupText = raw;
+    return decision;
+}
+
+function migrationPlan(raw, existingBackup) {
+    const decision = migrationFromText(raw);
+    const writeSettings = decision.action === "migrate";
+    return {
+        decision: decision,
+        writeBackup: writeSettings && shouldWriteBackup(existingBackup),
+        writeSettings: writeSettings,
+        backupText: typeof raw === "string" ? raw : "",
+    };
+}
+
+function commitMigration(plan, backupSaved) {
+    if (!plan || plan.writeSettings !== true)
+        return false;
+    if (plan.writeBackup && backupSaved !== true)
+        return false;
+    return true;
+}
+
 function opacityFromUnit(unit) {
     const t = typeof unit === "number" && Number.isFinite(unit) ? Math.min(1, Math.max(0, unit)) : 0;
     return Math.round((0.72 + t * 0.24) * 1000) / 1000;
@@ -850,6 +923,12 @@ var swiftshellSettings = {
     validateSettings: validateSettings,
     serializeSettings: serializeSettings,
     migrationDecision: migrationDecision,
+    migrationFromText: migrationFromText,
+    migrationPlan: migrationPlan,
+    commitMigration: commitMigration,
+    restoreBackup: restoreBackup,
+    backupIsUsable: backupIsUsable,
+    shouldWriteBackup: shouldWriteBackup,
     backupPath: backupPath,
     opacityFromUnit: opacityFromUnit,
     unitFromOpacity: unitFromOpacity,

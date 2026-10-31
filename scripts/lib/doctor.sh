@@ -63,6 +63,50 @@ swiftshell_doctor() {
     esac
 }
 
+swiftshell_restore_backup_text() {
+    file=$1
+    if ! command -v python3 >/dev/null 2>&1; then
+        swiftshell_die "python3 is required to restore a settings backup."
+    fi
+    python3 - "$file" <<'PY'
+import json
+import sys
+
+path = sys.argv[1]
+with open(path, "r", encoding="utf-8") as handle:
+    text = handle.read()
+
+def looks(value):
+    return isinstance(value, dict) and (
+        isinstance(value.get("version"), int)
+        or isinstance(value.get("clock"), dict)
+        or isinstance(value.get("bar"), dict)
+    )
+
+try:
+    parsed = json.loads(text)
+except Exception:
+    raise SystemExit(1)
+
+restored = None
+if looks(parsed):
+    restored = text
+elif isinstance(parsed, dict) and isinstance(parsed.get("document"), str):
+    try:
+        inner = json.loads(parsed["document"])
+    except Exception:
+        inner = None
+    if looks(inner):
+        restored = parsed["document"]
+
+if restored is None:
+    raise SystemExit(1)
+sys.stdout.write(restored)
+if not restored.endswith("\n"):
+    sys.stdout.write("\n")
+PY
+}
+
 swiftshell_rollback_settings() {
     swiftshell_need_home
     config=$(swiftshell_config_dir)
@@ -76,9 +120,13 @@ swiftshell_rollback_settings() {
         swiftshell_die "no settings backup to restore."
     fi
     tmp=$(mktemp "$config/settings.json.XXXXXX")
-    if ! cp "$backup" "$tmp"; then
+    if ! swiftshell_restore_backup_text "$backup" >"$tmp"; then
         rm -f "$tmp"
-        swiftshell_die "the settings backup could not be copied."
+        swiftshell_die "the settings backup is not a SwiftShell settings file."
+    fi
+    if [ ! -s "$tmp" ]; then
+        rm -f "$tmp"
+        swiftshell_die "the settings backup is not a SwiftShell settings file."
     fi
     mv "$tmp" "$settings"
     swiftshell_say "restored settings from the SwiftShell backup."
