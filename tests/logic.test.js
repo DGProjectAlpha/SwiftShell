@@ -698,6 +698,24 @@ test("theme defaults stay readable on black and white", function () {
     assert.equal(sampled.adaptive, false);
     assert.equal(sampled.adaptiveReason, "Wallpaper tint is not sampled yet.");
     assert.deepEqual(sampled.panel, palette.resolvePalette("dark", "neutral").panel);
+    const high = palette.resolvePalette("dark", "neutral", "high");
+    assert.deepEqual(high.text, { r: 255, g: 255, b: 255 });
+    assert.equal(palette.contrastRatio(high.text, high.panel) > palette.contrastRatio(sampled.text, sampled.panel), true);
+    const manualHigh = contrast.surfaceColors({ mode: "dark", contrast: "high", manualText: "#112233" });
+    assert.deepEqual(manualHigh.text, { r: 0x11, g: 0x22, b: 0x33 });
+    const automaticHigh = contrast.surfaceColors({
+        mode: "dark",
+        contrast: "high",
+        automaticText: true,
+        analysis: { available: true, scrim: false, foreground: "dark" },
+    });
+    assert.deepEqual(automaticHigh.text, contrast.DARK_TEXT);
+    const storedContrast = settings.validateSettings({ appearance: { contrast: "high" } });
+    assert.equal(storedContrast.ok, true);
+    assert.equal(storedContrast.settings.appearance.contrast, "high");
+    const rejectedContrast = settings.validateSettings({ appearance: { contrast: "max" } });
+    assert.equal(rejectedContrast.settings.appearance.contrast, "standard");
+    assert.ok(rejectedContrast.errors.indexOf("appearance.contrast") !== -1);
 });
 
 test("motion defaults sit inside the restrained ranges", function () {
@@ -1311,6 +1329,28 @@ test("launcher ranking is stable and ignores the query as a command", function (
     console.log("launcher rank 400 apps: " + elapsed.toFixed(2) + " ms");
     assert.equal(ranked[0].id, "app12.desktop");
     assert.ok(elapsed < 50, "rank took " + elapsed + " ms");
+
+    const thousand = [];
+    for (let i = 0; i < 1000; i++) {
+        thousand.push({
+            id: "wide" + i + ".desktop",
+            name: "Application " + i,
+            genericName: "",
+            comment: "",
+            categories: [],
+            keywords: [],
+        });
+    }
+    const wideStarted = process.hrtime.bigint();
+    const wideRanked = launcher.rank(thousand, "application");
+    const wideElapsed = Number(process.hrtime.bigint() - wideStarted) / 1e6;
+    console.log("launcher rank 1000 apps: " + wideElapsed.toFixed(2) + " ms");
+    assert.equal(wideRanked.length, 1000);
+    assert.ok(wideElapsed < 50, "rank 1000 took " + wideElapsed + " ms");
+    const wideRows = launcher.viewRows(thousand, "application", [], []);
+    const wideApps = wideRows.filter(function (row) { return row.kind === "application"; });
+    assert.equal(wideApps.length, launcher.RESULT_CAP);
+    assert.equal(wideApps.length, 24);
 });
 
 test("desktop discovery waits for the model and searches past the empty grid", function () {
@@ -1743,6 +1783,17 @@ test("notifications stay off until ownership is confirmed", function () {
         notifications: { policiesJson: JSON.stringify({ "org.example.Chat": "hide", "../x": "hide", bad: "nope" }) },
     });
     assert.deepEqual(JSON.parse(rules.settings.notifications.policiesJson), { "org.example.Chat": "hide" });
+    let burst = notifications.reduceNotifications(notifications.emptyCenter(), { type: "configure", ownership: "on", dnd: false });
+    for (let i = 0; i < 100; i++) {
+        burst = notifications.reduceNotifications(burst, {
+            type: "receive",
+            notification: { id: i + 1, appName: "Burst", summary: "Item " + i, body: "not-logged", urgency: "normal" },
+        });
+    }
+    assert.equal(burst.live.length, notifications.BANNER_CAP);
+    assert.equal(burst.history.length, notifications.HISTORY_CAP);
+    assert.ok(burst.live.length <= 4);
+    assert.ok(burst.history.length <= 40);
 });
 
 if (failed > 0) {

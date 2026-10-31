@@ -39,6 +39,7 @@ Singleton {
     readonly property string fontWeight: appearanceSettings.fontWeight
     readonly property real iconScale: appearanceSettings.iconScale
     readonly property bool topGradient: appearanceSettings.topGradient
+    readonly property string textContrast: appearanceSettings.contrast === "high" ? "high" : "standard"
     readonly property var pinnedIds: Settings.normalizePinnedIds(launcherSettings.pinnedIds)
     readonly property int settingsWindowWidth: windowSettings.width
     readonly property int settingsWindowHeight: windowSettings.height
@@ -101,6 +102,7 @@ Singleton {
                 fontWeight: appearanceSettings.fontWeight,
                 iconScale: appearanceSettings.iconScale,
                 topGradient: appearanceSettings.topGradient,
+                contrast: appearanceSettings.contrast,
                 automaticText: appearanceSettings.automaticText,
                 automaticGradient: appearanceSettings.automaticGradient,
                 manualText: appearanceSettings.manualText,
@@ -197,6 +199,7 @@ Singleton {
         appearanceSettings.fontWeight = appearance.fontWeight
         appearanceSettings.iconScale = appearance.iconScale
         appearanceSettings.topGradient = appearance.topGradient
+        appearanceSettings.contrast = appearance.contrast
         appearanceSettings.automaticText = appearance.automaticText
         appearanceSettings.automaticGradient = appearance.automaticGradient
         appearanceSettings.manualText = appearance.manualText
@@ -514,6 +517,7 @@ Singleton {
                 property string fontWeight: "regular"
                 property real iconScale: 1
                 property bool topGradient: false
+                property string contrast: "standard"
                 property bool automaticText: false
                 property bool automaticGradient: false
                 property string manualText: ""

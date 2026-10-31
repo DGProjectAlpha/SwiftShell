@@ -135,6 +135,7 @@ var DEFAULTS = {
         fontWeight: "regular",
         iconScale: 1,
         topGradient: false,
+        contrast: "standard",
         automaticText: false,
         automaticGradient: false,
         manualText: "",
@@ -356,6 +357,7 @@ function validateSettings(input) {
     const fontWeight = pickEnum(appearance, "fontWeight", ["regular", "medium"], DEFAULTS.appearance.fontWeight, errors, "appearance.fontWeight");
     const iconScale = pickNumber(appearance, "iconScale", 0.75, 1.5, DEFAULTS.appearance.iconScale, errors, "appearance.iconScale");
     const topGradient = pickBoolean(appearance, "topGradient", DEFAULTS.appearance.topGradient, errors, "appearance.topGradient");
+    const appearanceContrast = pickEnum(appearance, "contrast", ["standard", "high"], DEFAULTS.appearance.contrast, errors, "appearance.contrast");
     const automaticText = pickBoolean(appearance, "automaticText", DEFAULTS.appearance.automaticText, errors, "appearance.automaticText");
     const automaticGradient = pickBoolean(appearance, "automaticGradient", DEFAULTS.appearance.automaticGradient, errors, "appearance.automaticGradient");
     const manualText = hexColor(appearance.manualText, errors, "appearance.manualText");
@@ -442,6 +444,7 @@ function validateSettings(input) {
                 fontWeight: fontWeight,
                 iconScale: iconScale,
                 topGradient: topGradient,
+                contrast: appearanceContrast,
                 automaticText: automaticText,
                 automaticGradient: automaticGradient,
                 manualText: manualText,

@@ -272,6 +272,8 @@ TestCase {
         verify(page !== null)
         verify(findText(page, "translucent scrim", 0))
         verify(findText(page, "not a rounded blur mask", 0))
+        verify(findText(page, "High contrast", 0))
+        verify(page.shows("textContrast"))
         verify(!findText(page, "Gaussian", 0))
         verify(page.shows("backdropBlur"))
         verify(page.shows("panelOpacity"))

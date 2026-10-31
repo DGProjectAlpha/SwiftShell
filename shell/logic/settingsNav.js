@@ -1,6 +1,7 @@
 var CONTROLS = [
     { id: "preview", category: "appearance", section: "Preview", label: "Preview", keywords: ["panel", "sample"] },
     { id: "mode", category: "appearance", section: "Theme", label: "Theme", keywords: ["dark", "light", "mode"] },
+    { id: "textContrast", category: "appearance", section: "Text", label: "High contrast", keywords: ["contrast", "accessibility", "readable"] },
     { id: "fontSize", category: "appearance", section: "Text", label: "Text size", keywords: ["font", "size", "type"] },
     { id: "fontWeight", category: "appearance", section: "Text", label: "Text weight", keywords: ["font", "medium", "regular"] },
     { id: "density", category: "appearance", section: "Text", label: "Density", keywords: ["padding", "spacing", "compact"] },

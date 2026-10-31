@@ -324,6 +324,15 @@ Item {
         }
 
         SettingsToggle {
+            controlId: "textContrast"
+            visible: page.shows("textContrast")
+            marked: page.marked("textContrast")
+            label: "High contrast"
+            checked: SettingsStore.textContrast === "high"
+            onToggled: function (next) { page.edited({ contrast: next ? "high" : "standard" }) }
+        }
+
+        SettingsToggle {
             controlId: "reducedMotion"
             visible: page.shows("reducedMotion")
             marked: page.marked("reducedMotion")
