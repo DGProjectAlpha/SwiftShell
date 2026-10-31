@@ -391,6 +391,8 @@ test("wallpaper source, crop, and per-output paths", function () {
     assert.equal(wallpaper.fileUrl("/tmp/my photo.png"), "file:///tmp/my%20photo.png");
     assert.equal(wallpaper.fileUrl("file:///tmp/a.png"), "file:///tmp/a.png");
     const specific = wallpaper.sourceForOutput("HDMI-A-1", "/tmp/a.png", JSON.stringify({ "HDMI-A-1": "/tmp/b.jpg" }));
+    assert.equal(specific.override, true);
+    assert.equal(wallpaper.sourceForOutput("DP-1", "/tmp/a.png", "{}").override, false);
     assert.equal(specific.path, "/tmp/b.jpg");
     assert.equal(wallpaper.sourceForOutput("DP-1", "/tmp/a.png", "{}").path, "/tmp/a.png");
     assert.equal(wallpaper.sourceForOutput("DP-1", "/tmp/a.png", "nope").source, "file");
@@ -413,6 +415,12 @@ test("wallpaper source, crop, and per-output paths", function () {
     assert.ok(portrait.y < 0);
     assert.deepEqual(wallpaper.cropRect(0, 10, 10, 10, "cover"), { x: 0, y: 0, width: 0, height: 0 });
     assert.deepEqual(wallpaper.decodeLimit(8000, 2000), { width: 3840, height: 960 });
+    assert.deepEqual(wallpaper.decodeLimit(2000, 8000), { width: 960, height: 3840 });
+    assert.deepEqual(wallpaper.sourceRequest(2000, 8000), { width: 0, height: 3840 });
+    assert.deepEqual(wallpaper.sourceRequest(8000, 2000), { width: 3840, height: 0 });
+    assert.equal(wallpaper.samplePath(true, "/slide.png", "/wall.png"), "/slide.png");
+    assert.equal(wallpaper.samplePath(false, "/slide.png", "/wall.png"), "/wall.png");
+    assert.equal(wallpaper.samplePath(true, "", "/wall.png"), "/wall.png");
     assert.deepEqual(wallpaper.decodeLimit(100, 50), { width: 100, height: 50 });
     assert.equal(fs.existsSync(path.join(__dirname, "..", "shell", "assets", "wallpapers", "swiftshell-default-crimson.png")), true);
     const rejected = settings.validateSettings({
@@ -479,13 +487,22 @@ test("slideshow and wallpaper contrast are deterministic", function () {
     assert.equal(session.shown, "/a.png");
     const during = slideshow.reduceSlideshow(session, { type: "tick" });
     assert.equal(during.state, "preloading");
+    const preloading = session;
     session = slideshow.reduceSlideshow(session, { type: "loaded" });
     assert.equal(session.state, "transitioning");
     assert.equal(session.outgoing, "/a.png");
+    const secondLoad = slideshow.reduceSlideshow(session, { type: "loaded" });
+    assert.equal(secondLoad.state, "transitioning");
+    assert.equal(secondLoad.shown, "/a.png");
+    assert.equal(secondLoad.incoming, "/b.png");
     session = slideshow.reduceSlideshow(session, { type: "finish" });
     assert.equal(session.state, "waiting");
     assert.equal(session.shown, "/b.png");
     assert.equal(session.incoming, "");
+    const secondFinish = slideshow.reduceSlideshow(session, { type: "finish" });
+    assert.equal(secondFinish.state, "waiting");
+    assert.equal(secondFinish.shown, "/b.png");
+    assert.equal(preloading.state, "preloading");
     const one = slideshow.reduceSlideshow(null, {
         type: "scanned",
         enabled: true,
@@ -504,7 +521,7 @@ test("slideshow and wallpaper contrast are deterministic", function () {
         intervalMinutes: 5,
     }, { resolveSource: resolve }), { type: "tick" });
     assert.equal(slideshow.reduceSlideshow(fast, { type: "loaded" }).state, "waiting");
-    assert.equal(slideshow.reduceSlideshow(fast, { type: "failed" }).state, "error");
+    assert.equal(slideshow.reduceSlideshow(fast, { type: "failed" }).state, "waiting");
     assert.equal(slideshow.reduceSlideshow(fast, { type: "failed" }).shown, "/a.png");
     const empty = slideshow.reduceSlideshow(null, {
         type: "scanned",

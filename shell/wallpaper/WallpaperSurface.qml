@@ -33,7 +33,14 @@ PanelWindow {
         right: true
     }
 
+    readonly property bool ownImage: choice.override === true
+    property bool capHeight: false
     readonly property string displayPath: {
+        if (surface.ownImage) {
+            if (surface.failed || surface.choice.source !== "file")
+                return ""
+            return surface.choice.path
+        }
         if (SettingsStore.slideshow && WallpaperModel.shownPath !== "")
             return WallpaperModel.shownPath
         if (surface.failed || surface.choice.source !== "file")
@@ -49,11 +56,14 @@ PanelWindow {
         anchors.fill: parent
         asynchronous: true
         fillMode: SettingsStore.wallpaperFit === "contain" ? Image.PreserveAspectFit : Image.PreserveAspectCrop
-        // One edge is capped. The other follows the picture so the crop is not stretched.
-        sourceSize.width: surface.limitEdge
+        // Set one edge so Qt keeps the aspect ratio. A portrait result switches to the height cap.
+        sourceSize.width: surface.capHeight ? 0 : surface.limitEdge
+        sourceSize.height: surface.capHeight ? surface.limitEdge : 0
         source: surface.displaySource
         onStatusChanged: {
-            if (status === Image.Error && !surface.failed && WallpaperModel.shownPath === "")
+            if (status === Image.Ready && !surface.capHeight && implicitHeight > surface.limitEdge)
+                surface.capHeight = true
+            if (status === Image.Error && !surface.failed && (surface.ownImage || WallpaperModel.shownPath === ""))
                 surface.failed = true
         }
     }
@@ -64,10 +74,11 @@ PanelWindow {
         asynchronous: true
         opacity: 0
         fillMode: baseImage.fillMode
-        sourceSize.width: surface.limitEdge
-        source: WallpaperModel.incomingPath === "" ? "" : Wallpaper.fileUrl(WallpaperModel.incomingPath)
+        sourceSize.width: surface.capHeight ? 0 : surface.limitEdge
+        sourceSize.height: surface.capHeight ? surface.limitEdge : 0
+        source: surface.ownImage || WallpaperModel.incomingPath === "" ? "" : Wallpaper.fileUrl(WallpaperModel.incomingPath)
         onStatusChanged: {
-            if (WallpaperModel.slideState !== "preloading")
+            if (surface.ownImage || WallpaperModel.slideState !== "preloading")
                 return
             if (status === Image.Ready)
                 WallpaperModel.noteLoaded()
@@ -89,6 +100,8 @@ PanelWindow {
     Connections {
         target: WallpaperModel
         function onSlideStateChanged() {
+            if (surface.ownImage)
+                return
             if (WallpaperModel.slideState === "transitioning") {
                 incomingImage.opacity = 0
                 fade.start()

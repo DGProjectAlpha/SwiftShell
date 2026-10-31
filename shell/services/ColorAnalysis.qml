@@ -10,6 +10,7 @@ import "../logic/wallpaper.js" as Wallpaper
 Singleton {
     id: root
 
+    property int requestId: 0
     property var sample: ({
         available: false,
         reason: "Automatic contrast is off.",
@@ -29,11 +30,13 @@ Singleton {
     }
 
     function refresh() {
+        root.requestId += 1
         if (!SettingsStore.automaticText && !SettingsStore.automaticGradient) {
             root.sample = root.blank("Automatic contrast is off.")
             return
         }
-        var choice = Wallpaper.resolveSource(SettingsStore.wallpaperPath)
+        var path = Wallpaper.samplePath(SettingsStore.slideshow, WallpaperModel.shownPath, SettingsStore.wallpaperPath)
+        var choice = Wallpaper.resolveSource(path)
         if (choice.source !== "file") {
             root.readUrl(Qt.resolvedUrl("../assets/wallpapers/swiftshell-default-crimson.png"))
             return
@@ -47,11 +50,14 @@ Singleton {
     }
 
     function readUrl(url) {
+        var token = root.requestId
         Png.bindInflate(Inflate.inflateZlib)
         var request = new XMLHttpRequest()
         request.open("GET", url)
         request.responseType = "arraybuffer"
         request.onreadystatechange = function () {
+            if (token !== root.requestId)
+                return
             if (request.readyState !== XMLHttpRequest.DONE)
                 return
             if (!request.response) {
@@ -71,5 +77,11 @@ Singleton {
         function onWallpaperPathChanged() { root.refresh() }
         function onAutomaticTextChanged() { root.refresh() }
         function onAutomaticGradientChanged() { root.refresh() }
+        function onSlideshowChanged() { root.refresh() }
+    }
+
+    Connections {
+        target: WallpaperModel
+        function onShownPathChanged() { root.refresh() }
     }
 }
