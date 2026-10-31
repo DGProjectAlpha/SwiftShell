@@ -25,6 +25,10 @@ scripts/check.sh
 
 The mock QML gate now rejects every component error except a short path-specific list for unavailable C++ attached Quickshell types and optional modules. When `QtQuick.Dialogs` is installed, `tst_dialogs.qml` requires `ImageDialog.qml` to compile. When it is absent, the check prints an explicit diagnostic and exercises the path-entry fallback; it does not silently claim native image selection was compiled. GitHub CI installs the Qt Quick, Layouts, WorkerScript, Core, and Dialogs runtime modules explicitly.
 
+## Release-candidate notification checks
+
+`scripts/check.sh` passed after the native-lifecycle repair. Logic coverage includes banner/history/drop dispositions, in-place id replacement, a replacement becoming hidden, de-duplicated quiet history, DND with critical bypass, bounded bursts, and native dismiss/expire stand-ins. The strict QML gate compiles the host up to its intentionally unstubbed layer-shell attachment. Claiming `org.freedesktop.Notifications`, observing native replacement signals, action delivery, release behavior, and focused-output placement are **NOT RUN** because this workspace has no Quickshell session or user D-Bus notification traffic.
+
 ## Pull and test on CachyOS
 
 These commands use the checkout as the Quickshell config. They do not install over Noctalia, and they do not edit Hyprland.

@@ -2,7 +2,15 @@ var HISTORY_CAP = 40;
 var BANNER_CAP = 4;
 
 function emptyCenter() {
-    return { ownership: "off", dnd: false, policies: {}, live: [], history: [], sequence: 1 };
+    return {
+        ownership: "off",
+        dnd: false,
+        policies: {},
+        live: [],
+        history: [],
+        sequence: 1,
+        lastRoute: { id: -1, disposition: "ignored" },
+    };
 }
 
 function clip(value, max) {
@@ -77,13 +85,20 @@ function clone(state) {
         live: current.live.slice(),
         history: current.history.slice(),
         sequence: typeof current.sequence === "number" ? current.sequence : 1,
+        lastRoute: current.lastRoute && typeof current.lastRoute === "object"
+            ? current.lastRoute : { id: -1, disposition: "ignored" },
     };
 }
 
 function remember(next, item) {
     if (item.preview === true)
         return;
-    next.history = [item].concat(next.history).slice(0, HISTORY_CAP);
+    const kept = [];
+    for (let i = 0; i < next.history.length; i++) {
+        if (next.history[i].id !== item.id)
+            kept.push(next.history[i]);
+    }
+    next.history = [item].concat(kept).slice(0, HISTORY_CAP);
 }
 
 function parsePolicies(text) {
@@ -189,12 +204,17 @@ function reduceNotifications(state, action) {
             }
         }
         const place = placement(next, item);
-        if (place === "drop")
+        if (place === "drop") {
+            if (index !== -1)
+                next.live = next.live.filter(function (_, liveIndex) { return liveIndex !== index; });
+            next.lastRoute = { id: item.id, disposition: "drop" };
             return next;
+        }
         if (index !== -1) {
-            if (place === "banner")
+            if (place === "banner") {
                 next.live[index] = item;
-            else {
+                next.lastRoute = { id: item.id, disposition: "banner" };
+            } else {
                 const kept = [];
                 for (let i = 0; i < next.live.length; i++) {
                     if (i !== index)
@@ -202,11 +222,15 @@ function reduceNotifications(state, action) {
                 }
                 next.live = kept;
                 remember(next, item);
+                next.lastRoute = { id: item.id, disposition: "history" };
             }
-        } else if (place === "banner" && next.live.length < BANNER_CAP)
+        } else if (place === "banner" && next.live.length < BANNER_CAP) {
             next.live = next.live.concat([item]);
-        else
+            next.lastRoute = { id: item.id, disposition: "banner" };
+        } else {
             remember(next, item);
+            next.lastRoute = { id: item.id, disposition: "history" };
+        }
         return next;
     }
     if (type === "dismiss" || type === "expire" || type === "closed") {

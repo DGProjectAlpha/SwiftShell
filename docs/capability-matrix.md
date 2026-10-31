@@ -27,7 +27,7 @@ Later source repairs were checked with `scripts/check.sh` through 11:05 PM Ameri
 | Audio | NOT RUN | NOT RUN | Stream nodes are added to the tracker. No device volume was changed |
 | Network and Bluetooth | NOT RUN | NOT RUN | Network stays unavailable. Bluetooth does not start a scan |
 | Tray, MPRIS, brightness, and battery | NOT RUN | NOT RUN | Brightness stays unavailable. A tray menu uses the clicked position in source only |
-| Notifications | PASS | NOT RUN | Dismiss and expire call a stand-in object. Ownership stays off until a second confirmation |
+| Notifications | PASS | NOT RUN | Policy routing precedes native tracking; replacements, close, dismiss, expiration, and bounded history are covered in source/logic tests. D-Bus ownership and focused-output placement remain unverified |
 | Locked, fullscreen, or high GPU load | NOT RUN | NOT RUN | No CPU or GPU number is claimed |
 | Clean install, reinstall, update, and uninstall | PASS | NOT RUN | Temporary home passed, including doctor and settings rollback. The draft package was not built |
 
