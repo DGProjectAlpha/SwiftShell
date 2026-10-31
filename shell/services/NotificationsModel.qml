@@ -11,7 +11,10 @@ Singleton {
     property string serverState: "off"
 
     function noteServer(state) {
-        root.serverState = state === "running" || state === "failed" ? state : "off"
+        if (state === "waiting" || state === "running" || state === "failed")
+            root.serverState = state
+        else
+            root.serverState = "off"
     }
 
     function configure(ownership, dnd, policiesJson) {
@@ -25,6 +28,8 @@ Singleton {
 
     function receive(raw) {
         root.center = Notifications.reduceNotifications(root.center, { type: "receive", notification: raw })
+        var route = root.center.lastRoute || {}
+        return route.id === raw.id ? route.disposition : "ignored"
     }
 
     function preview() {
