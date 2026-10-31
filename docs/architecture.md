@@ -111,6 +111,7 @@ Schema version 3 is the current file. Versions 1 and 2 migrate. Version 3 is kep
 | `settingsWindow.category` | `appearance` | `appearance`, `bar`, `wallpaper`, `displays`, `shortcuts`, `audio`, `network`, `bluetooth`, `power`, or `notifications` |
 | `notifications.ownership` | `off` | `on` tries to create a notification server. `off` does not |
 | `notifications.dnd` | `false` | When ownership is on, non-critical banners wait in history |
+| `notifications.policiesJson` | `{}` | Desktop id to `show`, `quiet`, or `hide`. `hide` drops the notification. `quiet` keeps it in history unless it is critical |
 | `wallpaper.enabled` | `true` | Draws one background layer per output. `false` removes those layers and does not stop another wallpaper program |
 | `wallpaper.fit` | `cover` | `cover` crops to fill. `contain` shows the whole picture on black |
 | `wallpaper.path` | `""` | Empty uses the packaged crimson image. A png, jpeg, or webp path is used as written |
