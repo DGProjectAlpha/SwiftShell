@@ -11,7 +11,7 @@ The first shell has to be launchable beside the working Noctalia session. The pr
 ## Decision
 
 - The prototype lives in `shell/` and starts only through `qs --path`.
-- The default output is HDMI-A-1. Other screens get no window.
+- The first prototype's default output was HDMI-A-1, and other screens got no window. `0008-m3-2-spotlight.md` changes a new settings file to automatic monitor selection. An existing settings file that names HDMI-A-1 is not rewritten.
 - The bar color is transparent and the height token is 28 logical pixels.
 - Workspace state comes from Quickshell's Hyprland object model. Activation uses the workspace object or one `dispatch` string. No `hyprctl` process is started.
 - `bar.reserveSpace` originally defaulted to false so the bar would not reserve the top edge while Noctalia was still responsible for that output. `0007-m3-stabilization.md` changes the default for a new settings file to true and keeps false as the overlay. An existing settings file is not rewritten.

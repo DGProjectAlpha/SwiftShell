@@ -63,10 +63,12 @@ test("monitor matching is exact and accepts either screen or hyprland name", fun
     assert.equal(monitors.matchesTarget("HDMI-A-1", "HDMI-A-1", null), false);
 });
 
-test("workspace ids fall back to 4, 5, and 6", function () {
-    assert.deepEqual(workspaces.normalizeWorkspaceIds(undefined), [4, 5, 6]);
-    assert.deepEqual(workspaces.normalizeWorkspaceIds([]), [4, 5, 6]);
-    assert.deepEqual(workspaces.normalizeWorkspaceIds([0, -1, 4.5, "nope"]), [4, 5, 6]);
+test("empty workspace ids stay empty for automatic indicators", function () {
+    assert.deepEqual(workspaces.normalizeWorkspaceIds(undefined), []);
+    assert.deepEqual(workspaces.normalizeWorkspaceIds([]), []);
+    assert.deepEqual(workspaces.normalizeWorkspaceIds([0, -1, 4.5, "nope"]), []);
+    assert.equal(workspaces.workspaceIdsValid([]), true);
+    assert.equal(workspaces.workspaceIdsValid(undefined), true);
 });
 
 test("workspace ids drop duplicates and keep order", function () {
@@ -178,10 +180,10 @@ test("empty settings validate to the documented defaults", function () {
     const result = settings.validateSettings({});
     assert.equal(result.ok, true);
     assert.deepEqual(result.settings, settings.DEFAULTS);
-    assert.equal(result.settings.bar.targetMonitor, "HDMI-A-1");
+    assert.equal(result.settings.bar.targetMonitor, "");
     assert.equal(result.settings.bar.reserveSpace, true);
     assert.equal(result.settings.clock.use24Hour, true);
-    assert.deepEqual(result.settings.bar.workspaceIds, [4, 5, 6]);
+    assert.deepEqual(result.settings.bar.workspaceIds, []);
 });
 
 test("invalid settings are reported and repaired without accepting the bad value", function () {
@@ -189,7 +191,7 @@ test("invalid settings are reported and repaired without accepting the bad value
         version: 2,
         clock: { use24Hour: "yes" },
         bar: {
-            targetMonitor: " ",
+            targetMonitor: false,
             reserveSpace: 1,
             showFocusedTitle: "yes",
             workspaceIds: [4, 4, 0],
@@ -206,9 +208,20 @@ test("invalid settings are reported and repaired without accepting the bad value
     ]);
     assert.equal(result.settings.version, 1);
     assert.equal(result.settings.clock.use24Hour, true);
-    assert.equal(result.settings.bar.targetMonitor, "HDMI-A-1");
+    assert.equal(result.settings.bar.targetMonitor, "");
     assert.equal(result.settings.bar.reserveSpace, true);
     assert.deepEqual(result.settings.bar.workspaceIds, [4]);
+});
+
+test("blank monitor text means automatic placement", function () {
+    const blank = settings.validateSettings({ bar: { targetMonitor: " ", workspaceIds: [] } });
+    assert.equal(blank.ok, true);
+    assert.equal(blank.settings.bar.targetMonitor, "");
+    assert.deepEqual(blank.settings.bar.workspaceIds, []);
+    const kept = settings.validateSettings({ bar: { targetMonitor: "HDMI-A-1", workspaceIds: [4, 5, 6] } });
+    assert.equal(kept.ok, true);
+    assert.equal(kept.settings.bar.targetMonitor, "HDMI-A-1");
+    assert.deepEqual(kept.settings.bar.workspaceIds, [4, 5, 6]);
 });
 
 test("valid custom settings round-trip", function () {
@@ -258,7 +271,7 @@ test("non-object settings are rejected", function () {
     const result = settings.validateSettings("nope");
     assert.equal(result.ok, false);
     assert.equal(result.errors[0], "settings");
-    assert.equal(result.settings.bar.targetMonitor, "HDMI-A-1");
+    assert.equal(result.settings.bar.targetMonitor, "");
 });
 
 test("theme defaults stay readable on black and white", function () {
@@ -939,6 +952,182 @@ test("desktop discovery waits for the model and searches past the empty grid", f
     assert.equal(searched[0].section, "Results");
     assert.equal(searched[0].icon, "system-file-manager");
     assert.equal(searched.some(function (row) { return row.argv; }), false);
+});
+
+test("bar placement follows a saved monitor, then focus, then the first screen", function () {
+    const hdmi = { id: "hdmi" };
+    const dp = { id: "dp" };
+    const laptop = { id: "laptop" };
+    const records = [
+        monitors.describeScreen({ name: "DP-1", id: "dp" }, "DP-1", "Dell Inc. DP"),
+        monitors.describeScreen({ name: "HDMI-A-1", id: "hdmi" }, "HDMI-A-1", "LG Electronics HDMI"),
+    ];
+    records[0].screen = dp;
+    records[1].screen = hdmi;
+
+    const preferred = monitors.selectBarPlacement(records, "HDMI-A-1", { name: "DP-1", description: "Dell Inc. DP" });
+    assert.equal(preferred.mode, "preference");
+    assert.equal(preferred.screen, hdmi);
+
+    const byDescription = monitors.selectBarPlacement(records, "LG Electronics HDMI", { name: "DP-1" });
+    assert.equal(byDescription.mode, "preference");
+    assert.equal(byDescription.screen, hdmi);
+
+    const focused = monitors.selectBarPlacement(records, "", { name: "HDMI-A-1" });
+    assert.equal(focused.mode, "focused");
+    assert.equal(focused.screen, hdmi);
+
+    const disconnected = monitors.selectBarPlacement(
+        [records[0]],
+        "HDMI-A-1",
+        { name: "DP-1", description: "Dell Inc. DP" }
+    );
+    assert.equal(disconnected.mode, "fallback");
+    assert.equal(disconnected.screen, dp);
+
+    const renamed = monitors.selectBarPlacement(records, "hdmi-a-1", { name: "DP-1" });
+    assert.equal(renamed.mode, "fallback");
+    assert.equal(renamed.screen, dp);
+
+    const alone = monitors.selectBarPlacement(
+        [monitors.describeScreen(laptop, "eDP-1", "Laptop Panel")],
+        "",
+        null
+    );
+    assert.equal(alone.mode, "fallback");
+    assert.equal(alone.screen, laptop);
+    assert.equal(monitors.selectBarPlacement([], "HDMI-A-1", { name: "HDMI-A-1" }).mode, "missing");
+});
+
+test("spotlight resolves the focused monitor and survives a missing one", function () {
+    const hdmi = { id: "hdmi" };
+    const dp = { id: "dp" };
+    const records = [
+        monitors.describeScreen(hdmi, "HDMI-A-1", "LG Electronics HDMI"),
+        monitors.describeScreen(dp, "DP-1", "Dell Inc. DP"),
+    ];
+    const onDp = monitors.resolveLauncherScreen(records, { name: "DP-1" }, hdmi);
+    assert.equal(onDp.mode, "focused");
+    assert.equal(onDp.screen, dp);
+    const onDescription = monitors.resolveLauncherScreen(records, { name: "", description: "LG Electronics HDMI" }, dp);
+    assert.equal(onDescription.mode, "focused");
+    assert.equal(onDescription.screen, hdmi);
+
+    const noFocus = monitors.resolveLauncherScreen(records, null, dp);
+    assert.equal(noFocus.mode, "fallback");
+    assert.equal(noFocus.screen, hdmi);
+    const disconnectedFocus = monitors.resolveLauncherScreen(records, { name: "eDP-1" }, hdmi);
+    assert.equal(disconnectedFocus.mode, "fallback");
+    assert.equal(disconnectedFocus.screen, hdmi);
+
+    const gone = monitors.resolveLauncherScreen([], { name: "DP-1" }, dp);
+    assert.equal(gone.mode, "last");
+    assert.equal(gone.screen, dp);
+    assert.equal(monitors.screenListed(dp, []), false);
+    assert.equal(monitors.screenListed(dp, [hdmi, dp]), true);
+    assert.equal(monitors.resolveLauncherScreen([], null, null).mode, "missing");
+
+    const barPrefersHdmi = monitors.selectBarPlacement(records, "HDMI-A-1", { name: "DP-1" });
+    assert.equal(barPrefersHdmi.screen, hdmi);
+    assert.equal(onDp.screen, dp);
+});
+
+test("workspace rows follow the bar monitor unless ids are explicit", function () {
+    const live = [
+        { id: 2, name: "2", monitorName: "DP-1", active: false, focused: false, urgent: false },
+        { id: 1, name: "1", monitorName: "DP-1", active: true, focused: true, urgent: false },
+        { id: 3, name: "3", monitorName: "DP-1", active: false, focused: false, urgent: false },
+        { id: 4, name: "4", monitorName: "HDMI-A-1", active: true, focused: false, urgent: false },
+        { id: 6, name: "6", monitorName: "HDMI-A-1", active: false, focused: false, urgent: false },
+        { id: 5, name: "5", monitorName: "HDMI-A-1", active: false, focused: false, urgent: false },
+        { id: -98, name: "special", monitorName: "HDMI-A-1", active: false, focused: false, urgent: false },
+    ];
+    assert.deepEqual(workspaces.indicatorItems([], live, "DP-1").map(function (item) { return item.id; }), [1, 2, 3]);
+    assert.deepEqual(workspaces.indicatorItems([], live, "HDMI-A-1").map(function (item) { return item.id; }), [4, 5, 6]);
+    assert.equal(workspaces.indicatorItems([], live, "DP-1")[0].active, true);
+    assert.deepEqual(workspaces.indicatorItems([], live, ""), []);
+    assert.deepEqual(workspaces.indicatorItems([], [], "eDP-1"), []);
+
+    const explicit = workspaces.indicatorItems([4, 5, 6], live.filter(function (item) { return item.id !== 6; }), "HDMI-A-1");
+    assert.deepEqual(explicit.map(function (item) { return item.id; }), [4, 5, 6]);
+    assert.equal(explicit[2].exists, false);
+    assert.equal(explicit[0].onMonitor, true);
+    assert.equal(workspaces.dispatchWorkspaceCommand(5), "hl.dsp.focus({ workspace = 5 })");
+});
+
+test("spotlight card stays centered on each monitor", function () {
+    assert.ok(launcher.SPOTLIGHT_MAX_WIDTH >= 440 && launcher.SPOTLIGHT_MAX_WIDTH <= 520);
+    const content = launcher.spotlightContentHeight(4, 0, { field: 28, row: 28, status: 15, pad: 12, gap: 2 });
+    const dp = launcher.spotlightFrame(2560, 1440, content);
+    const hdmi = launcher.spotlightFrame(1920, 1080, content);
+    const logicalHdmi = launcher.spotlightFrame(1280, 720, content);
+    assert.equal(dp.width, 480);
+    assert.equal(dp.height, content);
+    assert.equal(dp.x, Math.round((2560 - 480) / 2));
+    assert.equal(dp.y, Math.round((1440 - content) / 2));
+    assert.equal(hdmi.x, Math.round((1920 - 480) / 2));
+    assert.equal(hdmi.y, Math.round((1080 - content) / 2));
+    assert.equal(logicalHdmi.width, 480);
+    assert.equal(logicalHdmi.x, Math.round((1280 - 480) / 2));
+    assert.equal(logicalHdmi.y, Math.round((720 - content) / 2));
+
+    const tall = launcher.spotlightFrame(1920, 1080, 4000);
+    assert.equal(tall.height, 1080 - 48);
+    assert.equal(tall.y, 24);
+    assert.equal(tall.x, Math.round((1920 - 480) / 2));
+    const narrow = launcher.spotlightFrame(400, 300, content);
+    assert.equal(narrow.width, 400 - 48);
+    assert.equal(narrow.x, 24);
+    assert.equal(launcher.spotlightFrame(0, 0, content).width, 0);
+});
+
+test("launcher requests toggle and keyboard focus is released", function () {
+    let open = false;
+    let seen = "";
+    let ready = false;
+    function apply(token) {
+        const step = launcher.requestAction(open, token, seen, ready);
+        seen = step.seen;
+        ready = step.ready;
+        if (step.action === "open")
+            open = true;
+        if (step.action === "close")
+            open = false;
+        return step.action;
+    }
+    assert.equal(apply("1.10"), "ignore");
+    assert.equal(open, false);
+    assert.equal(apply("1.10"), "ignore");
+    assert.equal(apply("2.10"), "open");
+    assert.equal(apply("3.10"), "close");
+    assert.equal(apply("4.10"), "open");
+    assert.equal(apply(""), "ignore");
+    assert.equal(open, true);
+
+    const rows = launcher.viewRows([
+        { id: "org.kde.dolphin", name: "Dolphin", genericName: "File Manager", comment: "", icon: "system-file-manager", categories: [], keywords: [], command: ["dolphin"] },
+        { id: "helium", name: "Helium", genericName: "", comment: "", icon: "helium", categories: [], keywords: [], command: ["helium"] },
+    ], "dolphin", [], []);
+    assert.equal(rows[0].id, "org.kde.dolphin");
+    assert.equal(rows[0].icon, "system-file-manager");
+    assert.equal(launcher.iconSource("system-file-manager", function () { return "image://icon/system-file-manager"; }), "image://icon/system-file-manager");
+    assert.equal(launcher.iconSource("missing-theme-icon", function () { return ""; }), "");
+    assert.equal(launcher.monogram("Dolphin"), "D");
+
+    let selected = 0;
+    const count = 6;
+    selected = launcher.moveSelection(selected, count, 1);
+    selected = launcher.moveSelection(selected, count, 1);
+    assert.equal(selected, 2);
+    selected = launcher.moveSelection(selected, count, -1);
+    assert.equal(selected, 1);
+    const scrolled = launcher.revealOffset(0, 84, 140, 28);
+    assert.ok(scrolled + 84 >= 140 + 28);
+    assert.equal(launcher.inputPlan(false, true).grab, false);
+    assert.equal(launcher.inputPlan(false, true).keyboard, "none");
+    assert.equal(launcher.inputPlan(false, false).focusField, false);
+    assert.equal(launcher.inputPlan(true, false).dismiss, true);
+    assert.equal(launcher.inputPlan(true, false).keyboard, "none");
 });
 
 if (failed > 0) {

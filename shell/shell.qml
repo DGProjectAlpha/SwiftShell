@@ -12,7 +12,7 @@ ShellRoot {
     Component.onCompleted: {
         console.info("SwiftShell: M1 prototype started");
         console.info("SwiftShell: calendar, control center, and launcher are available");
-        console.info("SwiftShell: target monitor", SettingsStore.targetMonitor);
+        console.info("SwiftShell: bar monitor preference", SettingsStore.targetMonitor === "" ? "automatic" : SettingsStore.targetMonitor);
         console.info("SwiftShell: screen count", Quickshell.screens ? Quickshell.screens.length : 0);
     }
 

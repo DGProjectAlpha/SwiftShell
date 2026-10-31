@@ -575,6 +575,58 @@ function powerInvocation(confirmId, id) {
     return { run: true, confirmId: "", argv: argv, error: "" };
 }
 
+var SPOTLIGHT_MAX_WIDTH = 480;
+var SPOTLIGHT_MARGIN = 24;
+
+function finite(value) {
+    const number = Number(value);
+    return Number.isFinite(number) ? number : 0;
+}
+
+function spotlightContentHeight(rowCount, statusCount, metrics) {
+    const spec = metrics && typeof metrics === "object" ? metrics : {};
+    const field = finite(spec.field) || 28;
+    const row = finite(spec.row) || 28;
+    const status = finite(spec.status) || 16;
+    const pad = finite(spec.pad) || 12;
+    const gap = spec.gap === undefined ? 2 : finite(spec.gap);
+    const rows = Math.max(0, Math.floor(finite(rowCount)));
+    const statuses = Math.max(0, Math.floor(finite(statusCount)));
+    let height = pad * 2 + field;
+    if (statuses > 0)
+        height += gap + statuses * status + Math.max(0, statuses - 1) * gap;
+    if (rows > 0)
+        height += gap + rows * row + Math.max(0, rows - 1) * gap;
+    return height;
+}
+
+function spotlightFrame(screenWidth, screenHeight, contentHeight) {
+    const sw = Math.max(0, finite(screenWidth));
+    const sh = Math.max(0, finite(screenHeight));
+    const content = Math.max(0, finite(contentHeight));
+    const width = Math.max(0, Math.min(SPOTLIGHT_MAX_WIDTH, sw - SPOTLIGHT_MARGIN * 2));
+    const maxHeight = Math.max(0, sh - SPOTLIGHT_MARGIN * 2);
+    const height = Math.max(0, Math.min(content, maxHeight));
+    return {
+        x: sw > width ? Math.round((sw - width) / 2) : 0,
+        y: sh > height ? Math.round((sh - height) / 2) : 0,
+        width: width,
+        height: height,
+        maxWidth: SPOTLIGHT_MAX_WIDTH,
+    };
+}
+
+function requestAction(open, token, seen, ready) {
+    const next = typeof token === "string" ? token : "";
+    if (ready !== true)
+        return { action: "ignore", seen: next, ready: true };
+    if (next === "" || next === seen)
+        return { action: "ignore", seen: seen, ready: true };
+    if (open === true)
+        return { action: "close", seen: next, ready: true };
+    return { action: "open", seen: next, ready: true };
+}
+
 function inputPlan(open, hasScreen) {
     const show = open === true && hasScreen === true;
     return {
@@ -625,6 +677,10 @@ var swiftshellLauncher = {
     iconSource: iconSource,
     cachedIconSource: cachedIconSource,
     powerInvocation: powerInvocation,
+    SPOTLIGHT_MAX_WIDTH: SPOTLIGHT_MAX_WIDTH,
+    spotlightContentHeight: spotlightContentHeight,
+    spotlightFrame: spotlightFrame,
+    requestAction: requestAction,
     inputPlan: inputPlan,
     revealOffset: revealOffset,
 };

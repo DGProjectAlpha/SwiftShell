@@ -6,14 +6,10 @@
     "weekStart": "locale"
   },
   "bar": {
-    "targetMonitor": "HDMI-A-1",
+    "targetMonitor": "",
     "reserveSpace": true,
     "showFocusedTitle": true,
-    "workspaceIds": [
-      4,
-      5,
-      6
-    ],
+    "workspaceIds": [],
     "workspaceDispatch": "auto"
   },
   "appearance": {

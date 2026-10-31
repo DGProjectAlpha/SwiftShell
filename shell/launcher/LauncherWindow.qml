@@ -25,6 +25,16 @@ PanelWindow {
     property bool noApplications: false
     property bool waitingForEntries: false
     property bool dismissing: false
+    property real reveal: 0
+    readonly property int statusCount: (queryMiss ? 1 : 0) + (noApplications ? 1 : 0) + (waitingForEntries ? 1 : 0) + (LauncherModel.notice !== "" ? 1 : 0)
+    readonly property int contentPx: Launcher.spotlightContentHeight(rows.length, statusCount, {
+        field: Theme.controlHeight,
+        row: Theme.controlHeight,
+        status: Theme.fontSizeSmall + 4,
+        pad: Theme.panelPadding,
+        gap: 2
+    })
+    readonly property var frame: Launcher.spotlightFrame(screen ? screen.width : 0, screen ? screen.height : 0, contentPx)
 
     function iconSourceFor(icon) {
         return Launcher.cachedIconSource(icon, function (name) {
@@ -113,9 +123,19 @@ PanelWindow {
 
     onVisibleChanged: {
         if (visible) {
+            if (Theme.reducedMotion) {
+                window.reveal = 1;
+            } else {
+                window.reveal = 0;
+                Qt.callLater(function () {
+                    if (window.visible)
+                        window.reveal = 1;
+                });
+            }
             window.focusField();
             return;
         }
+        window.reveal = 0;
         window.releaseInput();
         if (LauncherModel.open && LauncherModel.screen === null && !dismissing)
             window.dismiss();
@@ -161,23 +181,151 @@ PanelWindow {
     Rectangle {
         id: card
         z: 1
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.top: parent.top
-        anchors.topMargin: Math.max(Theme.barHeight + 24, parent.height * 0.18)
-        width: Math.min(440, parent.width - 48)
-        height: Math.min(column.implicitHeight + Theme.panelPadding * 2, Math.max(120, parent.height - anchors.topMargin - 24))
+        x: window.frame.x
+        y: window.frame.y
+        width: window.frame.width
+        height: window.frame.height
         radius: Theme.radius
         color: Theme.panelColor
+        clip: true
+        opacity: Theme.reducedMotion ? 1 : window.reveal
+
+        Behavior on opacity {
+            NumberAnimation {
+                duration: Theme.motionOpen
+                easing.type: Easing.OutCubic
+            }
+        }
 
         MouseArea {
             anchors.fill: parent
             onClicked: function () {}
         }
 
+        Column {
+            id: chrome
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.leftMargin: Theme.panelPadding
+            anchors.rightMargin: Theme.panelPadding
+            anchors.topMargin: Theme.panelPadding
+            spacing: 2
+
+            TextInput {
+                id: field
+                width: parent.width
+                height: Theme.controlHeight
+                focus: true
+                activeFocusOnTab: false
+                color: Theme.panelText
+                selectionColor: Theme.panelHover
+                selectedTextColor: Theme.panelText
+                font.pixelSize: Theme.fontSize
+                font.weight: Theme.fontWeight
+                clip: true
+                text: LauncherModel.query
+                onTextChanged: {
+                    if (text !== LauncherModel.query)
+                        LauncherModel.setQuery(text);
+                }
+
+                Keys.onPressed: function (event) {
+                    const alt = (event.modifiers & Qt.AltModifier) !== 0;
+                    const shift = (event.modifiers & Qt.ShiftModifier) !== 0;
+                    if (event.key === Qt.Key_Escape) {
+                        window.dismiss();
+                        event.accepted = true;
+                        return;
+                    }
+                    if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                        window.activateSelection();
+                        event.accepted = true;
+                        return;
+                    }
+                    if (event.key === Qt.Key_Backtab || (event.key === Qt.Key_Tab && shift)) {
+                        window.move(-1);
+                        event.accepted = true;
+                        return;
+                    }
+                    if (event.key === Qt.Key_Tab) {
+                        window.move(1);
+                        event.accepted = true;
+                        return;
+                    }
+                    if (alt && (event.key === Qt.Key_J || event.key === Qt.Key_K)) {
+                        window.move(event.key === Qt.Key_J ? 1 : -1);
+                        event.accepted = true;
+                    }
+                }
+
+                Text {
+                    anchors.fill: parent
+                    anchors.leftMargin: 2
+                    visible: field.text === ""
+                    text: "Search applications"
+                    color: Theme.panelMuted
+                    font.pixelSize: Theme.fontSize
+                    verticalAlignment: Text.AlignVCenter
+                }
+            }
+
+            Text {
+                width: parent.width
+                height: Theme.fontSizeSmall + 4
+                visible: window.queryMiss
+                text: "No matching applications"
+                color: Theme.panelMuted
+                font.pixelSize: Theme.fontSizeSmall
+                verticalAlignment: Text.AlignVCenter
+                elide: Text.ElideRight
+            }
+
+            Text {
+                width: parent.width
+                height: Theme.fontSizeSmall + 4
+                visible: window.noApplications
+                text: "No applications to show"
+                color: Theme.panelMuted
+                font.pixelSize: Theme.fontSizeSmall
+                verticalAlignment: Text.AlignVCenter
+                elide: Text.ElideRight
+            }
+
+            Text {
+                width: parent.width
+                height: Theme.fontSizeSmall + 4
+                visible: window.waitingForEntries
+                text: "Reading installed applications"
+                color: Theme.panelMuted
+                font.pixelSize: Theme.fontSizeSmall
+                verticalAlignment: Text.AlignVCenter
+                elide: Text.ElideRight
+            }
+
+            Text {
+                width: parent.width
+                height: Theme.fontSizeSmall + 4
+                visible: LauncherModel.notice !== ""
+                text: LauncherModel.notice
+                color: Theme.panelMuted
+                font.pixelSize: Theme.fontSizeSmall
+                verticalAlignment: Text.AlignVCenter
+                elide: Text.ElideRight
+                wrapMode: Text.NoWrap
+            }
+        }
+
         Flickable {
             id: scroller
-            anchors.fill: parent
-            anchors.margins: Theme.panelPadding
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            anchors.top: chrome.bottom
+            anchors.leftMargin: Theme.panelPadding
+            anchors.rightMargin: Theme.panelPadding
+            anchors.bottomMargin: Theme.panelPadding
+            anchors.topMargin: window.rows.length > 0 ? 2 : 0
             contentWidth: width
             contentHeight: column.implicitHeight
             clip: true
@@ -188,101 +336,6 @@ PanelWindow {
                 id: column
                 width: scroller.width
                 spacing: 2
-
-                TextInput {
-                    id: field
-                    width: parent.width
-                    height: Theme.controlHeight
-                    focus: true
-                    activeFocusOnTab: false
-                    color: Theme.panelText
-                    selectionColor: Theme.panelHover
-                    selectedTextColor: Theme.panelText
-                    font.pixelSize: Theme.fontSize
-                    font.weight: Theme.fontWeight
-                    clip: true
-                    text: LauncherModel.query
-                    onTextChanged: {
-                        if (text !== LauncherModel.query)
-                            LauncherModel.setQuery(text);
-                    }
-
-                    Keys.onPressed: function (event) {
-                        const alt = (event.modifiers & Qt.AltModifier) !== 0;
-                        const shift = (event.modifiers & Qt.ShiftModifier) !== 0;
-                        if (event.key === Qt.Key_Escape) {
-                            window.dismiss();
-                            event.accepted = true;
-                            return;
-                        }
-                        if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                            window.activateSelection();
-                            event.accepted = true;
-                            return;
-                        }
-                        if (event.key === Qt.Key_Backtab || (event.key === Qt.Key_Tab && shift)) {
-                            window.move(-1);
-                            event.accepted = true;
-                            return;
-                        }
-                        if (event.key === Qt.Key_Tab) {
-                            window.move(1);
-                            event.accepted = true;
-                            return;
-                        }
-                        if (alt && (event.key === Qt.Key_J || event.key === Qt.Key_K)) {
-                            window.move(event.key === Qt.Key_J ? 1 : -1);
-                            event.accepted = true;
-                        }
-                    }
-
-                    Text {
-                        anchors.fill: parent
-                        anchors.leftMargin: 2
-                        visible: field.text === ""
-                        text: "Search applications"
-                        color: Theme.panelMuted
-                        font.pixelSize: Theme.fontSize
-                        verticalAlignment: Text.AlignVCenter
-                    }
-                }
-
-                Text {
-                    width: parent.width
-                    visible: window.queryMiss
-                    text: "No matching applications"
-                    color: Theme.panelMuted
-                    font.pixelSize: Theme.fontSizeSmall
-                    elide: Text.ElideRight
-                }
-
-                Text {
-                    width: parent.width
-                    visible: window.noApplications
-                    text: "No applications to show"
-                    color: Theme.panelMuted
-                    font.pixelSize: Theme.fontSizeSmall
-                    elide: Text.ElideRight
-                }
-
-                Text {
-                    width: parent.width
-                    visible: window.waitingForEntries
-                    text: "Reading installed applications"
-                    color: Theme.panelMuted
-                    font.pixelSize: Theme.fontSizeSmall
-                    elide: Text.ElideRight
-                }
-
-                Text {
-                    width: parent.width
-                    visible: LauncherModel.notice !== ""
-                    text: LauncherModel.notice
-                    color: Theme.panelMuted
-                    font.pixelSize: Theme.fontSizeSmall
-                    elide: Text.ElideRight
-                    wrapMode: Text.NoWrap
-                }
 
                 Repeater {
                     model: window.rows
