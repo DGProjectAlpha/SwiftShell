@@ -7,4 +7,10 @@ QtObject {
 
     function execDetached(options) {
     }
+
+    function iconPath(icon, check) {
+        if (check === true)
+            return "";
+        return "";
+    }
 }

@@ -60,6 +60,23 @@ TestCase {
         return component.errorString()
     }
 
+    function test_top_level_files_resolve_project_types() {
+        var paths = [
+            "shell/shell.qml",
+            "shell/bar/BarHost.qml",
+            "shell/bar/BarWindow.qml",
+            "shell/launcher/LauncherWindow.qml",
+            "shell/services/LauncherModel.qml"
+        ]
+        for (var index = 0; index < paths.length; index++) {
+            var path = paths[index]
+            var message = errorText(componentFor(path))
+            // The original startup failure was "BarLabel is not a type" in BarWindow.qml.
+            // WlrLayershell is a C++ attached type and may still be absent from the stub.
+            verify(message.indexOf("BarLabel") === -1, path + "\n" + message)
+        }
+    }
+
     function test_documents_do_not_assign_readonly_properties() {
         for (var index = 0; index < shellFiles.length; index++) {
             var path = shellFiles[index]

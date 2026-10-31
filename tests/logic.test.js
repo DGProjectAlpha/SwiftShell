@@ -179,7 +179,7 @@ test("empty settings validate to the documented defaults", function () {
     assert.equal(result.ok, true);
     assert.deepEqual(result.settings, settings.DEFAULTS);
     assert.equal(result.settings.bar.targetMonitor, "HDMI-A-1");
-    assert.equal(result.settings.bar.reserveSpace, false);
+    assert.equal(result.settings.bar.reserveSpace, true);
     assert.equal(result.settings.clock.use24Hour, true);
     assert.deepEqual(result.settings.bar.workspaceIds, [4, 5, 6]);
 });
@@ -207,7 +207,7 @@ test("invalid settings are reported and repaired without accepting the bad value
     assert.equal(result.settings.version, 1);
     assert.equal(result.settings.clock.use24Hour, true);
     assert.equal(result.settings.bar.targetMonitor, "HDMI-A-1");
-    assert.equal(result.settings.bar.reserveSpace, false);
+    assert.equal(result.settings.bar.reserveSpace, true);
     assert.deepEqual(result.settings.bar.workspaceIds, [4]);
 });
 
@@ -699,15 +699,14 @@ test("stored blur preference does not enable a background effect", function () {
     assert.equal(popover.panelBlurPolicy().fallback, "scrim");
 });
 
-test("bar exclusion writes one property and popup focus clears before the grab", function () {
-    const reserved = bar.exclusionUpdate(true, 28);
-    assert.deepEqual(reserved, { property: "exclusiveZone", value: 28 });
-    assert.equal(Object.prototype.hasOwnProperty.call(reserved, "exclusionMode"), false);
-    const overlay = bar.exclusionUpdate(false, 28);
-    assert.deepEqual(overlay, { property: "exclusionMode", value: "ignore" });
-    assert.equal(Object.prototype.hasOwnProperty.call(overlay, "exclusiveZone"), false);
-    assert.deepEqual(bar.exclusionUpdate(true, 0), { property: "exclusionMode", value: "ignore" });
-    assert.equal(bar.exclusionUpdate(true, 28).value, 28);
+test("bar exclusion can turn reservation on again and popup focus clears before the grab", function () {
+    const reserved = bar.exclusionUpdate(true, 28, 0);
+    assert.deepEqual(reserved, { mode: "normal", zone: 28, writeZone: true });
+    const again = bar.exclusionUpdate(true, 28, 28);
+    assert.deepEqual(again, { mode: "normal", zone: 28, writeZone: false });
+    const overlay = bar.exclusionUpdate(false, 28, 28);
+    assert.deepEqual(overlay, { mode: "ignore", zone: null, writeZone: false });
+    assert.deepEqual(bar.exclusionUpdate(true, 0, 28), { mode: "ignore", zone: null, writeZone: false });
     assert.equal(bar.layerForBar(), "top");
 
     const open = popover.reducePopup(popover.popupModel(), { type: "open", id: "calendar" }, { instantOpen: true });
@@ -766,6 +765,12 @@ test("desktop entries keep visibility and do not build a shell command", functio
     assert.equal(launcher.iconPath("/usr/share/icons/firefox.png"), "/usr/share/icons/firefox.png");
     assert.equal(launcher.iconPath("firefox"), "");
     assert.equal(launcher.iconPath("/tmp/a\nb"), "");
+    assert.equal(launcher.iconSource("system-file-manager", function (name) {
+        return name === "system-file-manager" ? "image://icon/system-file-manager" : "";
+    }), "image://icon/system-file-manager");
+    assert.equal(launcher.iconSource("missing", function () { return ""; }), "");
+    assert.equal(launcher.iconSource("/usr/share/icons/helium.png", function () { throw new Error("unused"); }), "/usr/share/icons/helium.png");
+    assert.equal(launcher.iconSource("firefox", null), "");
     assert.equal(launcher.monogram("firefox"), "F");
 });
 
@@ -803,6 +808,23 @@ test("launcher ranking is stable and ignores the query as a command", function (
     assert.equal(launcher.powerStep("", "custom").run, false);
     assert.equal(launcher.moveSelection(0, 4, -1), 3);
     assert.equal(launcher.moveSelection(3, 4, 1), 0);
+    const armedPower = launcher.powerInvocation("", "reboot");
+    assert.equal(armedPower.run, false);
+    assert.equal(armedPower.argv, null);
+    const confirmedPower = launcher.powerInvocation("reboot", "reboot");
+    assert.equal(confirmedPower.run, true);
+    assert.deepEqual(confirmedPower.argv, ["loginctl", "reboot"]);
+    assert.equal(JSON.stringify(confirmedPower.argv).indexOf("dolphin"), -1);
+    const switchedPower = launcher.powerInvocation("reboot", "poweroff");
+    assert.equal(switchedPower.run, false);
+    assert.equal(switchedPower.confirmId, "poweroff");
+    assert.deepEqual(launcher.inputPlan(true, true), { visible: true, grab: true, keyboard: "exclusive", focusField: true, dismiss: false });
+    assert.deepEqual(launcher.inputPlan(false, true), { visible: false, grab: false, keyboard: "none", focusField: false, dismiss: false });
+    assert.equal(launcher.inputPlan(true, false).dismiss, true);
+    assert.equal(launcher.inputPlan(true, false).grab, false);
+    assert.equal(launcher.revealOffset(0, 100, 180, 28), 108);
+    assert.equal(launcher.revealOffset(80, 100, 20, 28), 20);
+    assert.equal(launcher.revealOffset(40, 100, 50, 28), 40);
 
     const recent = launcher.pushRecent(["a.desktop", "b.desktop"], "a.desktop");
     assert.deepEqual(recent, ["a.desktop", "b.desktop"]);
@@ -833,6 +855,90 @@ test("launcher ranking is stable and ignores the query as a command", function (
     console.log("launcher rank 400 apps: " + elapsed.toFixed(2) + " ms");
     assert.equal(ranked[0].id, "app12.desktop");
     assert.ok(elapsed < 50, "rank took " + elapsed + " ms");
+});
+
+test("desktop discovery waits for the model and searches past the empty grid", function () {
+    assert.deepEqual(launcher.readApplicationModel(null), { available: false, entries: [] });
+    assert.deepEqual(launcher.readApplicationModel({ values: null }), { available: false, entries: [] });
+    const pending = launcher.readApplicationModel({ values: { length: 0 } });
+    assert.equal(pending.available, true);
+    assert.equal(pending.entries.length, 0);
+    assert.equal(launcher.snapshotApplications(pending.entries).applications.length, 0);
+
+    const dolphinText = [
+        "[Desktop Entry]",
+        "Type=Application",
+        "Name=Dolphin",
+        "GenericName=File Manager",
+        "Exec=dolphin %u",
+        "Icon=system-file-manager",
+        "Categories=Qt;KDE;System;FileTools;FileManager;",
+    ].join("\n");
+    const heliumText = [
+        "[Desktop Entry]",
+        "Type=Application",
+        "Name=Helium",
+        "Exec=helium",
+        "Icon=helium",
+    ].join("\n");
+    const dolphin = launcher.parseDesktopEntry(dolphinText, "org.kde.dolphin");
+    const helium = launcher.parseDesktopEntry(heliumText, "helium");
+    assert.equal(launcher.entryVisible(dolphin, ["Hyprland"]), true);
+    assert.deepEqual(dolphin.command, ["dolphin"]);
+    assert.equal(launcher.entryVisible(helium, ["Hyprland"]), true);
+    assert.deepEqual(helium.command, ["helium"]);
+
+    const hidden = launcher.parseDesktopEntry("[Desktop Entry]\nType=Application\nName=Hidden Dolphin\nExec=dolphin\nHidden=true\n", "org.kde.dolphin");
+    const model = launcher.readApplicationModel({
+        values: {
+            length: 3,
+            0: dolphin,
+            1: helium,
+            2: hidden,
+        },
+    });
+    const qmlList = { length: 3, 0: dolphin, 1: helium, 2: hidden };
+    assert.equal(Array.isArray(qmlList), false);
+    assert.equal(model.entries.length, 3);
+    const snap = launcher.snapshotApplications(model.entries);
+    assert.equal(snap.applications.length, 2);
+    assert.equal(snap.skipped, 1);
+    assert.equal(snap.applications[0].id, "org.kde.dolphin");
+    assert.equal(snap.applications[0].icon, "system-file-manager");
+    assert.deepEqual(snap.applications[0].command, ["dolphin"]);
+
+    const duplicate = launcher.snapshotApplications([
+        { id: "helium", name: "Helium", command: ["helium"], icon: "helium" },
+        { id: "helium", name: "Other Helium", command: ["other"], icon: "other" },
+    ]);
+    assert.equal(duplicate.applications.length, 1);
+    assert.equal(duplicate.applications[0].name, "Helium");
+
+    const catalog = snap.applications.slice();
+    for (let i = 0; i < 20; i++) {
+        catalog.push({
+            id: "extra" + i,
+            name: "Extra " + i,
+            genericName: "",
+            comment: "",
+            icon: "extra",
+            categories: [],
+            keywords: [],
+            command: ["extra"],
+        });
+    }
+    const emptyRows = launcher.viewRows(catalog, "", [], []).filter(function (row) { return row.kind === "application"; });
+    assert.equal(emptyRows.length, 12);
+    assert.ok(catalog.length > emptyRows.length);
+    assert.equal(emptyRows.some(function (row) { return row.id === "helium"; }), false);
+    assert.equal(launcher.rank(catalog, "dolphin")[0].id, "org.kde.dolphin");
+    assert.equal(launcher.rank(catalog, "helium")[0].id, "helium");
+    assert.equal(launcher.rank(catalog, "org.kde.dolphin")[0].id, "org.kde.dolphin");
+    const searched = launcher.viewRows(catalog, "dolphin", [], []);
+    assert.equal(searched[0].id, "org.kde.dolphin");
+    assert.equal(searched[0].section, "Results");
+    assert.equal(searched[0].icon, "system-file-manager");
+    assert.equal(searched.some(function (row) { return row.argv; }), false);
 });
 
 if (failed > 0) {

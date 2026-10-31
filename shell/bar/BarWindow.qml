@@ -52,14 +52,18 @@ PanelWindow {
     }
 
     function syncExclusion() {
-        const update = Bar.exclusionUpdate(reserveSpace, Theme.barHeight);
-        if (update.property === "exclusiveZone") {
-            exclusiveZone = update.value;
-            console.info("SwiftShell: bar reserves", update.value, "logical px on", monitorKey);
+        const update = Bar.exclusionUpdate(reserveSpace, Theme.barHeight, exclusiveZone);
+        if (update.mode === "normal") {
+            // Writing exclusiveZone forces Normal, but assigning the same height again
+            // does not call the setter. The mode write is what turns reservation back on.
+            if (update.writeZone)
+                exclusiveZone = update.zone;
+            exclusionMode = ExclusionMode.Normal;
+            console.info("SwiftShell: bar reserves", update.zone, "logical px on", monitorKey);
             return;
         }
         exclusionMode = ExclusionMode.Ignore;
-        console.info("SwiftShell: bar reserves no space on", monitorKey);
+        console.info("SwiftShell: bar reserves no space on", monitorKey, "(overlay)");
     }
 
     Component.onCompleted: {
@@ -68,6 +72,7 @@ PanelWindow {
     }
     onScreenChanged: LauncherModel.screen = window.screen
     onReserveSpaceChanged: syncExclusion()
+    onImplicitHeightChanged: syncExclusion()
 
     Rectangle {
         z: -1

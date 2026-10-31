@@ -693,6 +693,87 @@ def resolve_import(qml_path, spec):
     return None
 
 
+def project_component_names():
+    return {path.stem for path in SHELL.rglob("*.qml")}
+
+
+def types_from_directory(directory):
+    names = {path.stem for path in directory.glob("*.qml")}
+    qmldir = directory / "qmldir"
+    if not qmldir.is_file():
+        return names
+    for line in qmldir.read_text(encoding="utf-8").splitlines():
+        parts = line.split()
+        if not parts or parts[0].startswith("#"):
+            continue
+        if parts[0] == "singleton" and len(parts) >= 2:
+            names.add(parts[1])
+        elif parts[0][:1].isupper():
+            names.add(parts[0])
+    return names
+
+
+def imported_component_names(qml_path, text):
+    names = types_from_directory(qml_path.parent)
+    names.discard(qml_path.stem)
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("import "):
+            continue
+        if '"' not in stripped and "'" not in stripped:
+            continue
+        quote = '"' if '"' in stripped else "'"
+        spec = stripped.split(quote)[1]
+        if spec.startswith("Qt") or spec.startswith("Quickshell"):
+            continue
+        target = resolve_import(qml_path, spec)
+        if target is None:
+            continue
+        if target.is_dir():
+            names.update(types_from_directory(target))
+        elif target.suffix == ".qml":
+            names.add(target.stem)
+    return names
+
+
+def element_type_names(text):
+    tokens = tokenize_qml(text)
+    names = []
+    for index, token in enumerate(tokens):
+        if token[0] != "{":
+            continue
+        previous = tokens[index - 1] if index else None
+        if previous and previous[0] == "ident" and TYPE_NAME.match(previous[1]):
+            names.append(previous[1])
+    return names
+
+
+def unresolved_component_errors(text, qml_path, project_names):
+    available = imported_component_names(qml_path, text)
+    errors = []
+    seen = set()
+    for name in element_type_names(text):
+        if name not in project_names or name in available or name in seen:
+            continue
+        seen.add(name)
+        errors.append(str(qml_path) + " uses " + name + " without importing its module")
+    return errors
+
+
+def check_component_import_fixture(project_names):
+    errors = []
+    path = SHELL / "bar" / "FixtureBar.qml"
+    broken = "import QtQuick\nPanelWindow {\n    BarLabel { text: \"Search\" }\n}\n"
+    broken_errors = unresolved_component_errors(broken, path, project_names)
+    if not any("BarLabel" in item for item in broken_errors):
+        errors.append("component import fixture missed a BarLabel without ../components")
+    fixed = "import QtQuick\nimport \"../components\"\nPanelWindow {\n    BarLabel { text: \"Search\" }\n}\n"
+    fixed_errors = unresolved_component_errors(fixed, path, project_names)
+    if fixed_errors:
+        errors.append("component import fixture flagged an imported BarLabel: " + "; ".join(fixed_errors))
+    return errors
+
+
 def shell_code(text):
     lines = []
     for line in text.splitlines():
@@ -740,6 +821,8 @@ def main():
     errors.extend(check_nesting_fixtures())
     errors.extend(check_readonly_implicit_fixtures())
     errors.extend(check_qmltypes_agreement())
+    project_names = project_component_names()
+    errors.extend(check_component_import_fixture(project_names))
     for path in REQUIRED:
         if not path.is_file():
             errors.append("missing " + str(path.relative_to(ROOT)))
@@ -794,6 +877,7 @@ def main():
                 continue
             if resolve_import(path, spec) is None:
                 errors.append(str(path.relative_to(ROOT)) + " has unresolved import " + spec)
+        errors.extend(unresolved_component_errors(text, path, project_names))
 
     for path in shell_files:
         check_shell(path, errors)
@@ -812,10 +896,14 @@ def main():
         "transparent bar": "Theme.transparent" in bar and "Qt.rgba(0, 0, 0, 0)" in theme,
         "ignore exclusion by default": "ExclusionMode.Ignore" in bar,
         "bar search label module": 'import "../components"' in bar,
+        "bar can reserve again": "ExclusionMode.Normal" in bar and "writeZone" in bar,
+        "launcher rereads desktop entries": "onApplicationsChanged" in (SHELL / "services" / "LauncherModel.qml").read_text(encoding="utf-8"),
+        "launcher icon theme": "Quickshell.iconPath" in (SHELL / "launcher" / "LauncherWindow.qml").read_text(encoding="utf-8"),
+        "launcher releases focus when hidden": "WlrKeyboardFocus.None" in (SHELL / "launcher" / "LauncherWindow.qml").read_text(encoding="utf-8") and "inputPlan" in (SHELL / "launcher" / "LauncherWindow.qml").read_text(encoding="utf-8"),
         "bar height": "barHeight: 28" in theme,
         "target monitor": 'targetMonitor: "HDMI-A-1"' in store,
         "clock default": "use24Hour: true" in store,
-        "reserve default": "reserveSpace: false" in store,
+        "reserve default": "reserveSpace: true" in store,
         "workspace default": "workspaceIds: [4, 5, 6]" in store,
         "socket dispatch": "Hyprland.dispatch" in (SHELL / "services" / "HyprlandModel.qml").read_text(encoding="utf-8"),
         "lua workspace expression": "hl.dsp.focus({ workspace = " in (SHELL / "logic" / "workspaces.js").read_text(encoding="utf-8"),

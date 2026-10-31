@@ -1,11 +1,17 @@
-function exclusionUpdate(reserveSpace, barHeight) {
+function exclusionUpdate(reserveSpace, barHeight, currentZone) {
     if (reserveSpace === true) {
         const height = Number(barHeight);
-        if (Number.isFinite(height) && height > 0)
-            return { property: "exclusiveZone", value: Math.round(height) };
+        if (Number.isFinite(height) && height > 0) {
+            const zone = Math.round(height);
+            return {
+                mode: "normal",
+                zone: zone,
+                writeZone: currentZone !== zone,
+            };
+        }
     }
 
-    return { property: "exclusionMode", value: "ignore" };
+    return { mode: "ignore", zone: null, writeZone: false };
 }
 
 function layerForBar() {

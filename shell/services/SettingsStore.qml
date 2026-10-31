@@ -143,7 +143,7 @@ Singleton {
             property JsonObject bar: JsonObject {
                 id: barSettings
                 property string targetMonitor: "HDMI-A-1"
-                property bool reserveSpace: false
+                property bool reserveSpace: true
                 property bool showFocusedTitle: true
                 property list<int> workspaceIds: [4, 5, 6]
                 property string workspaceDispatch: "auto"

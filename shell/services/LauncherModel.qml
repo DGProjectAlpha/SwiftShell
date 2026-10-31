@@ -22,72 +22,61 @@ Singleton {
     property bool warnedScreen: false
     property bool warnedRecent: false
     property bool warnedRecentSave: false
+    property bool indexPending: false
+    property int indexedCount: -1
+    property string notice: ""
 
     signal controlRequested()
-
-    function copyList(value) {
-        const out = [];
-        if (!value || typeof value.length !== "number")
-            return out;
-        for (let i = 0; i < value.length; i++) {
-            if (typeof value[i] === "string")
-                out.push(value[i]);
-        }
-        return out;
-    }
+    signal inputRequested()
 
     function indexApplications() {
-        let values = null;
+        let model = null;
         try {
-            values = DesktopEntries.applications.values;
+            model = DesktopEntries.applications;
         } catch (error) {
-            values = null;
+            model = null;
         }
-        if (!values) {
+        const read = Launcher.readApplicationModel(model);
+        if (!read.available) {
             if (!root.warnedEntries) {
                 console.warn("SwiftShell: desktop entries are unavailable");
                 root.warnedEntries = true;
             }
-            root.applications = [];
+            root.indexPending = false;
             return;
         }
 
-        const out = [];
-        const seen = {};
-        for (let i = 0; i < values.length; i++) {
-            const entry = values[i];
-            if (!entry)
-                continue;
-            const id = entry.id || "";
-            if (id === "" || seen[id])
-                continue;
-            seen[id] = true;
-            let command = [];
-            try {
-                command = root.copyList(entry.command);
-            } catch (error) {
-                command = [];
+        const snap = Launcher.snapshotApplications(read.entries);
+        const count = snap.applications.length;
+        if (count === 0) {
+            const waiting = root.indexedCount < 0;
+            root.applications = [];
+            root.indexPending = waiting;
+            if (root.indexedCount !== 0) {
+                console.info(waiting
+                    ? "SwiftShell: launcher indexed 0 applications; waiting for the desktop entry scan"
+                    : "SwiftShell: launcher indexed 0 applications");
+                root.indexedCount = 0;
             }
-            out.push({
-                id: id,
-                name: entry.name || "",
-                genericName: entry.genericName || "",
-                comment: entry.comment || "",
-                icon: entry.icon || "",
-                categories: root.copyList(entry.categories),
-                keywords: root.copyList(entry.keywords),
-                terminal: entry.runInTerminal === true,
-                command: command
-            });
+            return;
         }
-        root.applications = out;
-        console.info("SwiftShell: launcher indexed", out.length, "applications");
+
+        root.indexPending = false;
+        root.warnedEntries = false;
+        root.applications = snap.applications;
+        if (count !== root.indexedCount) {
+            console.info("SwiftShell: launcher indexed", count, "applications");
+            if (snap.skipped > 0)
+                console.info("SwiftShell: launcher skipped", snap.skipped, "desktop entries");
+            root.indexedCount = count;
+        }
     }
 
     function setQuery(text) {
         root.query = typeof text === "string" ? text : "";
         root.selected = 0;
         root.confirmId = "";
+        root.notice = "";
     }
 
     function openLauncher() {
@@ -103,18 +92,20 @@ Singleton {
         root.query = "";
         root.selected = 0;
         root.confirmId = "";
+        root.notice = "";
         root.open = true;
+        root.inputRequested();
         console.info("SwiftShell: launcher opened");
     }
 
     function closeLauncher() {
-        if (!root.open && root.query === "" && root.applications.length === 0)
+        if (!root.open && root.query === "" && root.notice === "")
             return;
         root.open = false;
         root.query = "";
         root.selected = 0;
         root.confirmId = "";
-        root.applications = [];
+        root.notice = "";
         console.info("SwiftShell: launcher closed");
     }
 
@@ -124,14 +115,31 @@ Singleton {
         recentFile.writeAdapter();
     }
 
-    function launchApplication(id) {
-        let entry = null;
-        try {
-            entry = DesktopEntries.byId(id);
-        } catch (error) {
-            entry = null;
+    function lookupEntry(id) {
+        if (typeof id !== "string" || id === "")
+            return null;
+        const candidates = [id];
+        if (id.length > 8 && id.slice(id.length - 8) === ".desktop")
+            candidates.push(id.slice(0, id.length - 8));
+        else
+            candidates.push(id + ".desktop");
+        for (let i = 0; i < candidates.length; i++) {
+            try {
+                const entry = DesktopEntries.byId(candidates[i]);
+                if (entry)
+                    return entry;
+            } catch (error) {
+                continue;
+            }
         }
+        return null;
+    }
+
+    function launchApplication(id, label) {
+        const entry = root.lookupEntry(id);
+        const shown = typeof label === "string" && label !== "" ? label : "the application";
         if (!entry) {
+            root.notice = "Could not launch " + shown;
             console.warn("SwiftShell: launcher could not find", id);
             return;
         }
@@ -142,6 +150,7 @@ Singleton {
             commandLength = 0;
         }
         if (commandLength === 0) {
+            root.notice = "Could not launch " + shown;
             console.warn("SwiftShell: application has no command", id);
             return;
         }
@@ -150,6 +159,7 @@ Singleton {
                 console.info("SwiftShell: Quickshell 0.2 execute ignores the terminal flag for", id);
             entry.execute();
         } catch (error) {
+            root.notice = "Could not launch " + shown;
             console.warn("SwiftShell: application launch failed", id);
             return;
         }
@@ -158,13 +168,20 @@ Singleton {
     }
 
     function runPower(id) {
-        const step = Launcher.powerStep(root.confirmId, id);
+        const step = Launcher.powerInvocation(root.confirmId, id);
         root.confirmId = step.confirmId;
-        if (!step.run || !step.argv)
+        if (!step.run) {
+            if (step.error !== "") {
+                root.notice = step.error;
+                console.warn("SwiftShell: power action refused", id);
+            }
             return;
+        }
         try {
             Quickshell.execDetached({ command: step.argv });
         } catch (error) {
+            root.confirmId = "";
+            root.notice = "Could not run the power action";
             console.warn("SwiftShell: power action failed", id);
             return;
         }
@@ -185,7 +202,7 @@ Singleton {
             return;
         }
         if (row.kind === "application")
-            root.launchApplication(row.id);
+            root.launchApplication(row.id, row.name);
     }
 
     function noteRequest(token) {
@@ -200,6 +217,13 @@ Singleton {
             console.info("SwiftShell: launcher requested");
             root.openLauncher();
         }
+    }
+
+    Component.onCompleted: root.indexApplications()
+
+    Connections {
+        target: DesktopEntries
+        function onApplicationsChanged() { root.indexApplications(); }
     }
 
     FileView {

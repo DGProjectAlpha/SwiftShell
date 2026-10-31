@@ -280,6 +280,7 @@ function fieldScore(field, query, base) {
 function bestScore(app, query) {
     const chunks = [
         fieldScore(app.name, query, 1000),
+        fieldScore(app.id, query, 800),
         fieldScore(app.genericName, query, 500),
         fieldScore(app.comment, query, 300),
         fieldScore(asStringList(app.keywords).join(" "), query, 200),
@@ -384,7 +385,7 @@ function viewRows(apps, query, pinnedIds, recentIds) {
     } else {
         const found = rank(unique, q);
         for (let i = 0; i < found.length; i++)
-            rows.push(appRow(found[i], "Application"));
+            rows.push(appRow(found[i], "Results"));
     }
     rows.push({ kind: "settings", id: "settings", name: "Settings", detail: "Control center", icon: "", section: "Session" });
     for (let i = 0; i < POWER.length; i++) {
@@ -456,6 +457,150 @@ function iconPath(icon) {
     return text;
 }
 
+function readList(value) {
+    if (Array.isArray(value))
+        return value.slice();
+    if (value && typeof value === "object" && typeof value.length === "number" && value.length >= 0) {
+        const out = [];
+        for (let i = 0; i < value.length; i++)
+            out.push(value[i]);
+        return out;
+    }
+    return null;
+}
+
+// DesktopEntries.applications is an ObjectModel. Its values list is what
+// search must copy. A QML list is array-like and Array.isArray is false.
+function readApplicationModel(model) {
+    if (model == null)
+        return { available: false, entries: [] };
+    if (typeof model === "object" && model.values !== undefined) {
+        const nested = readList(model.values);
+        if (nested == null)
+            return { available: false, entries: [] };
+        return { available: true, entries: nested };
+    }
+    const entries = readList(model);
+    if (entries == null)
+        return { available: false, entries: [] };
+    return { available: true, entries: entries };
+}
+
+function entryField(entry, key) {
+    if (!entry || typeof entry !== "object")
+        return "";
+    return typeof entry[key] === "string" ? entry[key].trim() : "";
+}
+
+function snapshotApplications(entries) {
+    const source = readList(entries) || [];
+    const applications = [];
+    const seen = {};
+    let skipped = 0;
+    for (let i = 0; i < source.length; i++) {
+        const entry = source[i];
+        const id = entryField(entry, "id");
+        const name = entryField(entry, "name");
+        if (id === "" || name === "" || !entry || entry.noDisplay === true || entry.hidden === true || seen[id]) {
+            skipped++;
+            continue;
+        }
+        seen[id] = true;
+        const command = [];
+        const rawCommand = readList(entry.command) || [];
+        for (let j = 0; j < rawCommand.length; j++) {
+            if (typeof rawCommand[j] === "string" && rawCommand[j] !== "")
+                command.push(rawCommand[j]);
+        }
+        applications.push({
+            id: id,
+            name: name,
+            genericName: entryField(entry, "genericName"),
+            comment: entryField(entry, "comment"),
+            icon: entryField(entry, "icon"),
+            categories: asStringList(entry.categories),
+            keywords: asStringList(entry.keywords),
+            terminal: entry.runInTerminal === true || entry.terminal === true,
+            command: command,
+        });
+    }
+    return { applications: applications, skipped: skipped };
+}
+
+var iconCache = {};
+
+function cachedIconSource(icon, lookup) {
+    const key = asText(icon).trim();
+    if (Object.prototype.hasOwnProperty.call(iconCache, key))
+        return iconCache[key];
+    const resolved = iconSource(key, lookup);
+    iconCache[key] = resolved;
+    return resolved;
+}
+
+function iconSource(icon, lookup) {
+    const text = asText(icon).trim();
+    if (text === "" || text.indexOf("\n") !== -1 || text.indexOf("\0") !== -1)
+        return "";
+    if (text[0] === "/")
+        return text;
+    if (typeof lookup !== "function")
+        return "";
+    let resolved = "";
+    try {
+        resolved = lookup(text);
+    } catch (error) {
+        return "";
+    }
+    if (typeof resolved !== "string" || resolved === "" || resolved.indexOf("\n") !== -1 || resolved.indexOf("\0") !== -1)
+        return "";
+    return resolved;
+}
+
+var POWER_VERBS = {
+    "lock-session": true,
+    suspend: true,
+    reboot: true,
+    poweroff: true,
+};
+
+function powerInvocation(confirmId, id) {
+    const step = powerStep(confirmId, id);
+    if (!step.run)
+        return { run: false, confirmId: step.confirmId, argv: null, error: "" };
+    const argv = step.argv ? step.argv.slice() : null;
+    const verb = argv && argv.length === 2 ? argv[1] : "";
+    if (!argv || argv[0] !== "loginctl" || POWER_VERBS[verb] !== true)
+        return { run: false, confirmId: "", argv: null, error: "Power action is not available" };
+    return { run: true, confirmId: "", argv: argv, error: "" };
+}
+
+function inputPlan(open, hasScreen) {
+    const show = open === true && hasScreen === true;
+    return {
+        visible: show,
+        grab: show,
+        keyboard: show ? "exclusive" : "none",
+        focusField: show,
+        dismiss: open === true && hasScreen !== true,
+    };
+}
+
+function revealOffset(contentY, viewport, rowY, rowHeight) {
+    const top = Number(contentY);
+    const view = Number(viewport);
+    const y = Number(rowY);
+    const height = Number(rowHeight);
+    if (!Number.isFinite(top) || !Number.isFinite(view) || !Number.isFinite(y) || !Number.isFinite(height))
+        return 0;
+    if (y < top)
+        return Math.max(0, y);
+    const bottom = y + height;
+    if (bottom > top + view)
+        return Math.max(0, bottom - view);
+    return Math.max(0, top);
+}
+
 var swiftshellLauncher = {
     MAX_PINS: MAX_PINS,
     MAX_RECENT: MAX_RECENT,
@@ -475,6 +620,13 @@ var swiftshellLauncher = {
     pushRecent: pushRecent,
     monogram: monogram,
     iconPath: iconPath,
+    readApplicationModel: readApplicationModel,
+    snapshotApplications: snapshotApplications,
+    iconSource: iconSource,
+    cachedIconSource: cachedIconSource,
+    powerInvocation: powerInvocation,
+    inputPlan: inputPlan,
+    revealOffset: revealOffset,
 };
 
 if (typeof module !== "undefined" && module.exports)

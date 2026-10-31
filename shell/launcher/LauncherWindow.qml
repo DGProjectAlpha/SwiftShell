@@ -23,7 +23,16 @@ PanelWindow {
     property var rows: []
     property bool queryMiss: false
     property bool noApplications: false
+    property bool waitingForEntries: false
     property bool dismissing: false
+
+    function iconSourceFor(icon) {
+        return Launcher.cachedIconSource(icon, function (name) {
+            if (typeof Quickshell.iconPath !== "function")
+                return "";
+            return Quickshell.iconPath(name, true);
+        });
+    }
 
     function rebuild() {
         const next = Launcher.viewRows(
@@ -41,21 +50,56 @@ PanelWindow {
                 apps++;
         }
         const typed = LauncherModel.query.trim() !== "";
-        queryMiss = typed && apps === 0;
-        noApplications = !typed && apps === 0;
+        const catalog = LauncherModel.applications ? LauncherModel.applications.length : 0;
+        queryMiss = typed && apps === 0 && catalog > 0;
+        waitingForEntries = catalog === 0 && LauncherModel.indexPending;
+        noApplications = apps === 0 && catalog === 0 && !LauncherModel.indexPending;
+        if (queryMiss)
+            console.info("SwiftShell: launcher query matched 0 of", catalog);
     }
 
     function move(delta) {
         LauncherModel.selected = Launcher.moveSelection(LauncherModel.selected, rows.length, delta);
         LauncherModel.confirmId = "";
+        LauncherModel.notice = "";
+    }
+
+    function revealRow(item) {
+        if (!item)
+            return;
+        scroller.contentY = Launcher.revealOffset(scroller.contentY, scroller.height, item.y, item.height);
+    }
+
+    function releaseInput() {
+        if (field)
+            field.focus = false;
+        if (focusGrab)
+            focusGrab.active = false;
+    }
+
+    function focusField() {
+        const plan = Launcher.inputPlan(LauncherModel.open, LauncherModel.screen !== null);
+        focusGrab.active = plan.grab;
+        if (!plan.focusField)
+            return;
+        Qt.callLater(function () {
+            if (!window.visible || !LauncherModel.open)
+                return;
+            field.forceActiveFocus();
+            if (!field.activeFocus) {
+                Qt.callLater(function () {
+                    if (window.visible && LauncherModel.open)
+                        field.forceActiveFocus();
+                });
+            }
+        });
     }
 
     function dismiss() {
         if (dismissing || !LauncherModel.open)
             return;
         dismissing = true;
-        field.focus = false;
-        focusGrab.active = false;
+        window.releaseInput();
         LauncherModel.closeLauncher();
         dismissing = false;
     }
@@ -67,18 +111,14 @@ PanelWindow {
         LauncherModel.activate(rows[index]);
     }
 
-    function engage() {
-        focusGrab.active = true;
-        Qt.callLater(function () {
-            if (!window.visible || !LauncherModel.open)
-                return;
-            field.forceActiveFocus();
-        });
-    }
-
     onVisibleChanged: {
-        if (visible)
-            engage();
+        if (visible) {
+            window.focusField();
+            return;
+        }
+        window.releaseInput();
+        if (LauncherModel.open && LauncherModel.screen === null && !dismissing)
+            window.dismiss();
     }
 
     Connections {
@@ -90,6 +130,8 @@ PanelWindow {
             if (LauncherModel.open)
                 window.rebuild();
         }
+        function onInputRequested() { window.focusField(); }
+        function onIndexPendingChanged() { window.rebuild(); }
     }
 
     Connections {
@@ -98,9 +140,11 @@ PanelWindow {
     }
 
     Component.onCompleted: rebuild()
-    Component.onDestruction: {
-        field.focus = false;
-        focusGrab.active = false;
+    Component.onDestruction: window.releaseInput()
+
+    Keys.onEscapePressed: function (event) {
+        window.dismiss();
+        event.accepted = true;
     }
 
     HyprlandFocusGrab {
@@ -149,6 +193,7 @@ PanelWindow {
                     id: field
                     width: parent.width
                     height: Theme.controlHeight
+                    focus: true
                     activeFocusOnTab: false
                     color: Theme.panelText
                     selectionColor: Theme.panelHover
@@ -220,6 +265,25 @@ PanelWindow {
                     elide: Text.ElideRight
                 }
 
+                Text {
+                    width: parent.width
+                    visible: window.waitingForEntries
+                    text: "Reading installed applications"
+                    color: Theme.panelMuted
+                    font.pixelSize: Theme.fontSizeSmall
+                    elide: Text.ElideRight
+                }
+
+                Text {
+                    width: parent.width
+                    visible: LauncherModel.notice !== ""
+                    text: LauncherModel.notice
+                    color: Theme.panelMuted
+                    font.pixelSize: Theme.fontSizeSmall
+                    elide: Text.ElideRight
+                    wrapMode: Text.NoWrap
+                }
+
                 Repeater {
                     model: window.rows
 
@@ -235,6 +299,14 @@ PanelWindow {
                         Accessible.name: modelData.name
 
                         readonly property bool current: index === LauncherModel.selected
+                        onCurrentChanged: {
+                            if (current)
+                                window.revealRow(row);
+                        }
+                        Component.onCompleted: {
+                            if (current)
+                                window.revealRow(row);
+                        }
                         readonly property string label: {
                             if (modelData.kind === "power" && LauncherModel.confirmId === modelData.id)
                                 return "Confirm " + modelData.name.toLowerCase();
@@ -265,15 +337,19 @@ PanelWindow {
                             Image {
                                 id: icon
                                 anchors.fill: parent
-                                source: Launcher.iconPath(modelData.icon)
+                                source: window.iconSourceFor(modelData.icon)
                                 fillMode: Image.PreserveAspectFit
                                 asynchronous: true
-                                cache: false
+                                cache: true
+                                mipmap: true
+                                smooth: true
+                                sourceSize.width: Math.round(16 * Math.max(1, Screen.devicePixelRatio))
+                                sourceSize.height: Math.round(16 * Math.max(1, Screen.devicePixelRatio))
                             }
 
                             Text {
                                 anchors.centerIn: parent
-                                visible: icon.status !== Image.Ready
+                                visible: icon.source === "" || icon.status === Image.Error
                                 text: Launcher.monogram(modelData.name)
                                 color: Theme.panelText
                                 font.pixelSize: Theme.fontSizeSmall
