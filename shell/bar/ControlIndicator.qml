@@ -5,6 +5,9 @@ MouseArea {
     id: root
 
     signal activated()
+    property color textPrimary: Theme.textPrimary
+    property color textMuted: Theme.textMuted
+    property color textHover: Theme.textHover
 
     implicitWidth: Theme.barIcon
     implicitHeight: Theme.barHeight
@@ -36,7 +39,7 @@ MouseArea {
             delegate: Rectangle {
                 width: Math.max(2, 2 * Theme.iconScale)
                 height: width
-                color: root.containsMouse || root.activeFocus ? Theme.textHover : Theme.textMuted
+                color: root.containsMouse || root.activeFocus ? root.textHover : root.textMuted
 
                 Behavior on color {
                     enabled: Theme.motionHover > 0
@@ -53,6 +56,6 @@ MouseArea {
         anchors.fill: parent
         color: Theme.transparent
         border.width: root.activeFocus ? 1 : 0
-        border.color: Theme.textPrimary
+        border.color: root.textPrimary
     }
 }

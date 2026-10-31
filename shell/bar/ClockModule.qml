@@ -9,6 +9,8 @@ MouseArea {
     id: root
 
     signal activated()
+    property color textPrimary: Theme.textPrimary
+    property color textHover: Theme.textHover
 
     implicitWidth: label.implicitWidth
     implicitHeight: Theme.barHeight
@@ -39,7 +41,7 @@ MouseArea {
         id: label
         anchors.centerIn: parent
         text: Clock.formatTime(clock.date, SettingsStore.use24Hour)
-        color: root.containsMouse || root.activeFocus ? Theme.textHover : Theme.textPrimary
+        color: root.containsMouse || root.activeFocus ? root.textHover : root.textPrimary
 
         Behavior on color {
             enabled: Theme.motionHover > 0

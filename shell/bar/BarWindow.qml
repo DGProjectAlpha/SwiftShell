@@ -36,6 +36,17 @@ PanelWindow {
     readonly property bool reserveSpace: SettingsStore.reserveSpace
     readonly property string hyprlandMonitorName: HyprlandModel.hyprlandNameForScreen(modelData)
     readonly property string monitorKey: hyprlandMonitorName !== "" ? hyprlandMonitorName : SettingsStore.targetMonitor
+    readonly property string analysisKey: modelData && modelData.name ? modelData.name : monitorKey
+    readonly property var outputAnalysis: ColorAnalysis.sampleForOutput(analysisKey)
+    readonly property var outputSurface: Theme.surfaceForAnalysis(outputAnalysis)
+    readonly property color outputTextPrimary: Qt.rgba(outputSurface.text.r / 255, outputSurface.text.g / 255,
+                                                       outputSurface.text.b / 255, 1)
+    readonly property color outputTextMuted: Qt.rgba(outputSurface.muted.r / 255, outputSurface.muted.g / 255,
+                                                     outputSurface.muted.b / 255, 1)
+    readonly property color outputGradientTop: Qt.rgba(outputSurface.gradient.r / 255,
+                                                       outputSurface.gradient.g / 255,
+                                                       outputSurface.gradient.b / 255,
+                                                       outputSurface.gradientAlpha)
     readonly property var workspaceItems: Workspaces.indicatorItems(SettingsStore.workspaceIds, HyprlandModel.liveWorkspaces, monitorKey)
     readonly property int activeWorkspaceId: {
         for (let i = 0; i < workspaceItems.length; i++) {
@@ -72,11 +83,11 @@ PanelWindow {
 
     Rectangle {
         z: -1
-        visible: Theme.topGradient || Theme.contrastScrim
+        visible: Theme.topGradient || outputSurface.scrim
         anchors.fill: parent
         color: Theme.transparent
         gradient: Gradient {
-            GradientStop { position: 0.0; color: Theme.gradientTop }
+            GradientStop { position: 0.0; color: window.outputGradientTop }
             GradientStop { position: 1.0; color: Theme.transparent }
         }
     }
@@ -126,6 +137,9 @@ PanelWindow {
 
         WorkspaceIndicators {
             workspaces: window.workspaceItems
+            textPrimary: window.outputTextPrimary
+            textMuted: window.outputTextMuted
+            textHover: window.outputTextPrimary
         }
     }
 
@@ -138,6 +152,7 @@ PanelWindow {
             FocusedTitle {
                 anchors.fill: parent
                 title: SettingsStore.showFocusedTitle ? window.windowTitle : ""
+                textMuted: window.outputTextMuted
             }
         }
     }
@@ -171,7 +186,8 @@ PanelWindow {
                 id: searchLabel
                 anchors.centerIn: parent
                 text: "Search"
-                color: searchButton.containsMouse || searchButton.activeFocus ? Theme.textHover : Theme.textMuted
+                color: searchButton.containsMouse || searchButton.activeFocus
+                    ? window.outputTextPrimary : window.outputTextMuted
             }
         }
     }
@@ -181,6 +197,8 @@ PanelWindow {
 
         ClockModule {
             id: clockModule
+            textPrimary: window.outputTextPrimary
+            textHover: window.outputTextPrimary
             onActivated: {
                 LauncherModel.closeLauncher()
                 popovers.toggle("calendar", clockModule)
@@ -199,6 +217,24 @@ PanelWindow {
                 id: mediaLoader
                 source: "MediaModule.qml"
                 active: true
+                onLoaded: {
+                    if (item) {
+                        item.textPrimary = window.outputTextPrimary
+                        item.textMuted = window.outputTextMuted
+                    }
+                }
+            }
+            Binding {
+                target: mediaLoader.item
+                property: "textPrimary"
+                value: window.outputTextPrimary
+                when: mediaLoader.status === Loader.Ready
+            }
+            Binding {
+                target: mediaLoader.item
+                property: "textMuted"
+                value: window.outputTextMuted
+                when: mediaLoader.status === Loader.Ready
             }
         }
     }
@@ -215,9 +251,24 @@ PanelWindow {
                 source: "TrayModule.qml"
                 active: true
                 onLoaded: {
-                    if (item)
+                    if (item) {
                         item.hostWindow = window
+                        item.textPrimary = window.outputTextPrimary
+                        item.textMuted = window.outputTextMuted
+                    }
                 }
+            }
+            Binding {
+                target: trayLoader.item
+                property: "textPrimary"
+                value: window.outputTextPrimary
+                when: trayLoader.status === Loader.Ready
+            }
+            Binding {
+                target: trayLoader.item
+                property: "textMuted"
+                value: window.outputTextMuted
+                when: trayLoader.status === Loader.Ready
             }
         }
     }
@@ -233,6 +284,16 @@ PanelWindow {
                 id: batteryLoader
                 source: "BatteryModule.qml"
                 active: true
+                onLoaded: {
+                    if (item)
+                        item.textPrimary = window.outputTextPrimary
+                }
+            }
+            Binding {
+                target: batteryLoader.item
+                property: "textPrimary"
+                value: window.outputTextPrimary
+                when: batteryLoader.status === Loader.Ready
             }
         }
     }
@@ -242,6 +303,9 @@ PanelWindow {
 
         ControlIndicator {
             id: controlIndicator
+            textPrimary: window.outputTextPrimary
+            textMuted: window.outputTextMuted
+            textHover: window.outputTextPrimary
             Component.onCompleted: window.controlAnchor = controlIndicator
             Component.onDestruction: {
                 if (window.controlAnchor === controlIndicator)

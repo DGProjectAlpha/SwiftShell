@@ -7,6 +7,7 @@ Item {
     id: root
 
     readonly property var report: Power.batteryReport(UPower.displayDevice, UPower.onBattery)
+    property color textPrimary: Theme.textPrimary
 
     implicitWidth: report.available ? label.implicitWidth : 0
     implicitHeight: Theme.barHeight
@@ -16,7 +17,7 @@ Item {
         id: label
         anchors.verticalCenter: parent.verticalCenter
         text: root.report.text
-        color: Theme.textPrimary
+        color: root.textPrimary
         font.family: Theme.fontFamily
         font.pixelSize: Theme.fontSize
     }
