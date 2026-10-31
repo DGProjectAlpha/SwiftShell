@@ -34,10 +34,19 @@ If `~/.local/bin` is not on `PATH`, the installer prints that fact and does not 
 
 ```sh
 swiftshell check
+swiftshell doctor
 swiftshell activate
 swiftshell start
 swiftshell stop
 ```
+
+`swiftshell doctor` prints versions, says blur is unavailable, and reports whether a settings file and its SwiftShell backup exist. It prints notification ownership as `off`, `on`, `absent`, or `unreadable`. It does not print the settings file. It does not read or write Hyprland or Noctalia files.
+
+```sh
+swiftshell rollback-settings
+```
+
+That restores `settings.json` from `settings.json.bak-swiftshell` only. It does not restore any other program's files. If the backup is missing, it stops.
 
 `activate` writes an activation marker, a desktop entry under `~/.local/share/applications`, and a symlink at `~/.config/quickshell/swiftshell` when that name is free. If a default `~/.config/quickshell/shell.qml` already exists, it is left unchanged. Quickshell ignores named configs while that default file exists, so `swiftshell start` is the launch command. It runs `qs --path` against this install.
 

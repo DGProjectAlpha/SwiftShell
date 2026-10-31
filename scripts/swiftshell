@@ -9,17 +9,23 @@ if [ -f "$HERE/common.sh" ]; then
     . "$HERE/common.sh"
     # shellcheck source=lib/deps.sh
     . "$HERE/deps.sh"
+    # shellcheck source=lib/doctor.sh
+    . "$HERE/doctor.sh"
 elif [ -f "$HERE/lib/common.sh" ]; then
     # shellcheck source=lib/common.sh
     . "$HERE/lib/common.sh"
     # shellcheck source=lib/deps.sh
     . "$HERE/lib/deps.sh"
+    # shellcheck source=lib/doctor.sh
+    . "$HERE/lib/doctor.sh"
 else
     DATA=${XDG_DATA_HOME:-"$HOME/.local/share"}/swiftshell
     # shellcheck source=lib/common.sh
     . "$DATA/lib/common.sh"
     # shellcheck source=lib/deps.sh
     . "$DATA/lib/deps.sh"
+    # shellcheck source=lib/doctor.sh
+    . "$DATA/lib/doctor.sh"
 fi
 
 usage() {
@@ -27,6 +33,8 @@ usage() {
 Usage: swiftshell <command>
 
   check        Report Quickshell and Hyprland versions.
+  doctor       Report versions, blur, settings, and notification ownership.
+               Does not edit Hyprland, Noctalia, or settings.
   status       Show install, settings, and activation paths.
   start        Launch this install. Does not replace another shell.
   stop         Stop this install only.
@@ -34,6 +42,8 @@ Usage: swiftshell <command>
   deactivate   Remove that registration and stop this install.
   uninstall    Remove installed files. Settings are kept.
                uninstall --purge-settings also removes the settings directory.
+  rollback-settings
+               Restore settings.json from the SwiftShell backup only.
   request-launcher
                Ask a running SwiftShell to open its launcher.
 EOF
@@ -55,6 +65,12 @@ case $cmd in
             exit 0
         fi
         exit 1
+        ;;
+    doctor)
+        swiftshell_doctor
+        ;;
+    rollback-settings)
+        swiftshell_rollback_settings
         ;;
     status)
         swiftshell_need_home
