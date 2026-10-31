@@ -189,6 +189,16 @@ scripts/check.sh
 
 Exit status 0. Static checks passed for 28 QML files. Logic tests passed, including bar heights 22, 28, and 52, derived font and icon size, module hide, and reorder. The run printed `launcher rank 400 apps: 2.12 ms`. Install tests passed, 15 cases. `qmltestrunner` 6.4.2 reported Totals: 6 passed and Totals: 8 passed. `QStandardPaths: XDG_RUNTIME_DIR not set` was printed. The run did not draw the bar or measure the reserved strip.
 
+## What was run for M7.2
+
+On 30 Oct 2026, at 10:23 PM America/New_York, in the cloud workspace, with no Hyprland session and no `qs` binary:
+
+```text
+scripts/check.sh
+```
+
+Exit status 0. Static checks passed for 52 QML files. Logic tests passed, including a 100-notification burst that stays at 4 banners and 40 history rows, a 1000-app rank, and a search view capped at 24 rows. High contrast stores `high` and still loses to a manual hex and to automatic png text. `launcher rank 400 apps: 1.16 ms`. `launcher rank 1000 apps: 1.62 ms`. Install tests passed, 15 cases. `qmltestrunner` 6.4.2 reported Totals: 6 passed and Totals: 8 passed. The appearance page case finds the High contrast label. `QStandardPaths: XDG_RUNTIME_DIR not set` was printed. No CPU, GPU, suspend, or hotplug measurement was taken.
+
 ## What was run for M7.1
 
 On 30 Oct 2026, at 10:21 PM America/New_York, in the cloud workspace, with no Hyprland session and no `qs` binary:
@@ -290,7 +300,7 @@ After the M3.2 checks, and only with SwiftShell launched by `scripts/launch.sh`:
 1. Copy `~/.config/swiftshell/settings.json` aside if it contains keys that are not in `docs/architecture.md`. A version 1 file is backed up to `settings.json.bak-swiftshell` and rewritten as version 2 on launch. `HDMI-A-1` and workspaces `[4, 5, 6]` are known keys.
 2. Open Spotlight, choose Settings, and confirm one normal window appears. Hyprland's own move bind should move it. Resize it from the compositor, close it, and open it again. The size should come back. Escape should close it.
 3. Open Settings again from the control center button, and once more from Spotlight while it is already open. There should still be one window.
-4. Change dark, light, text size, text weight, density, panel opacity, corner radius, shadow, icon scale, motion scale, reduced motion, and the top gradient. The bar, Spotlight, and the settings window should follow without a restart. Restart with `scripts/stop.sh` and `scripts/launch.sh` and confirm the same values. Undo should restore the previous values. Reset should restore the appearance defaults. There is no blur slider. Wallpaper tint should say it is not sampled. Search should hide controls that do not match, and Escape in a filled search field should clear it before the next Escape closes the window.
+4. Change dark, light, high contrast, text size, text weight, density, panel opacity, corner radius, shadow, icon scale, motion scale, reduced motion, and the top gradient. The bar, Spotlight, and the settings window should follow without a restart. Restart with `scripts/stop.sh` and `scripts/launch.sh` and confirm the same values. Undo should restore the previous values. Reset should restore the appearance defaults. There is no blur slider. Wallpaper tint should say it is not sampled. Search should hide controls that do not match, and Escape in a filled search field should clear it before the next Escape closes the window.
 5. Confirm `~/.config/hypr` and the Noctalia config are unchanged.
 6. Open Settings, Top bar. Set the height to 22 and to 52. The text, workspace marks, and reserved strip should follow. Hide Clock and move Search earlier. Restart and confirm the order. Set the height back to 28.
 7. Open Settings, Wallpaper. The preview should show the crimson image. Choose a png, or type its path, and confirm Cover crops and Contain shows the whole picture on each output. Point one output at a different file and restart. Remove that file and confirm the crimson image returns. Turn Draw wallpaper off and confirm another wallpaper program is still running. `~/.config/hypr` must stay unchanged.
