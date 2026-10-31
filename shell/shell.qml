@@ -40,6 +40,8 @@ ShellRoot {
     Connections {
         target: SettingsStore
         function onNotificationOwnershipChanged() {
+            if (SettingsStore.notificationOwnership !== "on")
+                NotificationsModel.noteServer("off")
             NotificationsModel.configure(SettingsStore.notificationOwnership, SettingsStore.notificationDnd, SettingsStore.notificationPoliciesJson)
         }
         function onNotificationDndChanged() {
@@ -55,8 +57,10 @@ ShellRoot {
         active: SettingsStore.notificationOwnership === "on"
         source: "notifications/NotificationHost.qml"
         onStatusChanged: {
-            if (status === Loader.Error)
+            if (status === Loader.Error) {
+                NotificationsModel.noteServer("failed")
                 console.warn("SwiftShell: the notification server was not created. Another owner was left in place.")
+            }
         }
     }
 

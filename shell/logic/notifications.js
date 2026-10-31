@@ -16,17 +16,41 @@ function urgencyOf(value) {
     return value === "critical" ? "critical" : "normal";
 }
 
-function actionNames(actions) {
+function actionRecords(actions) {
     const source = Array.isArray(actions) ? actions : [];
     const out = [];
     for (let i = 0; i < source.length && out.length < 4; i++) {
         const item = source[i];
         const text = typeof item === "string" ? item : (item && (item.text || item.identifier));
+        const identifier = item && typeof item.identifier === "string" ? item.identifier : "";
         const name = clip(text, 32);
         if (name !== "")
-            out.push(name);
+            out.push({ text: name, identifier: identifier });
     }
     return out;
+}
+
+function expireMs(timeoutSeconds) {
+    const value = Number(timeoutSeconds);
+    if (value === 0)
+        return 0;
+    if (!Number.isFinite(value) || value < 0)
+        return 5000;
+    return Math.max(1000, Math.round(value * 1000));
+}
+
+function nativeClose(native, kind) {
+    if (!native)
+        return "missing";
+    if (kind === "expire" && typeof native.expire === "function") {
+        native.expire();
+        return "expire";
+    }
+    if (typeof native.dismiss === "function") {
+        native.dismiss();
+        return "dismiss";
+    }
+    return "missing";
 }
 
 function entryFrom(raw, sequence) {
@@ -38,7 +62,8 @@ function entryFrom(raw, sequence) {
         body: clip(source.body, 280),
         urgency: urgencyOf(source.urgency),
         desktopEntry: clip(source.desktopEntry, 128),
-        actions: actionNames(source.actions),
+        actions: actionRecords(source.actions),
+        expireMs: expireMs(source.expireTimeout),
         preview: source.preview === true,
     };
 }
@@ -184,7 +209,7 @@ function reduceNotifications(state, action) {
             remember(next, item);
         return next;
     }
-    if (type === "dismiss" || type === "expire") {
+    if (type === "dismiss" || type === "expire" || type === "closed") {
         const kept = [];
         for (let i = 0; i < next.live.length; i++) {
             if (next.live[i].id === action.id)
@@ -212,6 +237,9 @@ var swiftshellNotifications = {
     policyFor: policyFor,
     groupHistory: groupHistory,
     policyRows: policyRows,
+    expireMs: expireMs,
+    nativeClose: nativeClose,
+    actionRecords: actionRecords,
 };
 
 if (typeof module !== "undefined" && module.exports)

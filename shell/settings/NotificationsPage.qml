@@ -45,7 +45,7 @@ Item {
         Text {
             width: parent.width
             wrapMode: Text.WordWrap
-            text: "SwiftShell does not own notifications unless you confirm it. The default is off, so another program keeps the bus. Confirming tries to create a server. If that fails, this shell stops and leaves the current owner alone."
+            text: "SwiftShell does not own notifications unless you confirm it. The default is off, so another program keeps the bus. Confirming tries to create a server. If that fails, the saved choice stays on and the status says the server is not running. The current owner is left alone."
             color: Theme.panelMuted
             font.family: Theme.fontFamily
             font.pixelSize: Theme.fontSizeSmall
@@ -53,7 +53,7 @@ Item {
 
         ServiceStatus {
             name: "Owner"
-            detail: SettingsStore.notificationOwnership === "on" ? "SwiftShell, after confirmation" : "Not SwiftShell"
+            detail: SettingsStore.notificationOwnership !== "on" ? "Not SwiftShell" : (NotificationsModel.serverState === "running" ? "Server running" : "Saved, server not running")
         }
 
         FlatButton {

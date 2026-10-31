@@ -910,7 +910,9 @@ def main():
         if "Process {" in text:
             errors.append(str(path.relative_to(ROOT)) + " polls or spawns a process")
         if "Timer {" in text:
-            if path.name != "SlideshowClock.qml" or "Math.max(60000" not in text:
+            slideshow = path.name == "SlideshowClock.qml" and "Math.max(60000" in text
+            banner = path.name == "NotificationHost.qml" and "repeat: false" in text and "repeat: true" not in text
+            if not slideshow and not banner:
                 errors.append(str(path.relative_to(ROOT)) + " polls or spawns a process")
         errors.extend(nesting_errors(text, str(path.relative_to(ROOT)), component_roots))
         errors.extend(readonly_implicit_errors(text, str(path.relative_to(ROOT)), component_roots))

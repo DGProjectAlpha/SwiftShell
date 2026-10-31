@@ -1815,6 +1815,31 @@ test("notifications stay off until ownership is confirmed", function () {
     assert.equal(burst.history.length, notifications.HISTORY_CAP);
     assert.ok(burst.live.length <= 4);
     assert.ok(burst.history.length <= 40);
+    assert.equal(notifications.expireMs(0), 0);
+    assert.equal(notifications.expireMs(-1), 5000);
+    assert.equal(notifications.expireMs(2), 2000);
+    assert.equal(notifications.expireMs(0.2), 1000);
+    const calls = [];
+    const native = {
+        dismiss: function () { calls.push("dismiss"); },
+        expire: function () { calls.push("expire"); },
+    };
+    assert.equal(notifications.nativeClose(native, "dismiss"), "dismiss");
+    assert.equal(notifications.nativeClose(native, "expire"), "expire");
+    assert.equal(notifications.nativeClose(null, "dismiss"), "missing");
+    assert.deepEqual(calls, ["dismiss", "expire"]);
+    let expired = notifications.reduceNotifications(notifications.emptyCenter(), { type: "configure", ownership: "on", dnd: false });
+    expired = notifications.reduceNotifications(expired, {
+        type: "receive",
+        notification: { id: 4, appName: "Mail", summary: "Hello", body: "body", urgency: "normal", expireTimeout: 0 },
+    });
+    assert.equal(expired.live[0].expireMs, 0);
+    expired = notifications.reduceNotifications(expired, { type: "expire", id: 4 });
+    assert.equal(expired.live.length, 0);
+    assert.equal(expired.history[0].summary, "Hello");
+    const recorded = notifications.actionRecords([{ text: "Open", identifier: "open" }]);
+    assert.equal(recorded[0].text, "Open");
+    assert.equal(recorded[0].identifier, "open");
 });
 
 if (failed > 0) {

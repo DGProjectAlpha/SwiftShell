@@ -44,7 +44,9 @@ Settings rollback, bar battery/media/tray colors, notification dismissal, wallpa
 | A1 | Repaired in the settings-backup change. The backup text is the original file. Rollback unwraps an old `document` string. A malformed file is not rewritten. Not run inside Quickshell on a Hyprland session. |
 | A2 | Repaired. Bar modules use `textPrimary`. The static check rejects an unknown `Theme` name. Offscreen tests create the modules empty and populated. Not shown on a session. |
 | A6 | Partially repaired. `panelText` and `panelMuted` now follow the surface. Hover comes from the palette. Hardware contrast is not measured. |
-| A3–A5, A7–A15 | Open after the theme-token repair. |
+| A3 | Repaired in source. Dismiss and expire call the native object. The saved preference is separate from `serverState`. Not run against another notification owner. |
+| A4 | Partially repaired. Battery, media, and tray modules are instantiated empty and populated. The notification host is still not instantiated, because the Wayland attached type is not stubbed. |
+| A5, A7–A15 | Open after the notification-lifetime repair. |
 
 ## Repair order
 

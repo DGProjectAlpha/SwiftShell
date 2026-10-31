@@ -8,6 +8,11 @@ Singleton {
     id: root
 
     property var center: Notifications.emptyCenter()
+    property string serverState: "off"
+
+    function noteServer(state) {
+        root.serverState = state === "running" || state === "failed" ? state : "off"
+    }
 
     function configure(ownership, dnd, policiesJson) {
         root.center = Notifications.reduceNotifications(root.center, {
@@ -36,6 +41,14 @@ Singleton {
 
     function dismiss(id) {
         root.center = Notifications.reduceNotifications(root.center, { type: "dismiss", id: id })
+    }
+
+    function expire(id) {
+        root.center = Notifications.reduceNotifications(root.center, { type: "expire", id: id })
+    }
+
+    function closed(id) {
+        root.center = Notifications.reduceNotifications(root.center, { type: "closed", id: id })
     }
 
     function clearHistory() {
