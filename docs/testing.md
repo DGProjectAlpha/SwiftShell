@@ -23,6 +23,8 @@ scripts/check.sh
 
 `scripts/check.sh` expects `node`, `python3`, and `qmltestrunner` (or `qml6testrunner`) on `PATH`. The runner is also found at `/usr/lib/qt6/bin/qmltestrunner`. Debian and Ubuntu package that binary in `qt6-declarative-dev-tools`. Arch and CachyOS package it in `qt6-declarative`. The script exits if the runner is missing. That run instantiates Qt objects. It does not start Quickshell.
 
+The mock QML gate now rejects every component error except a short path-specific list for unavailable C++ attached Quickshell types and optional modules. When `QtQuick.Dialogs` is installed, `tst_dialogs.qml` requires `ImageDialog.qml` to compile. When it is absent, the check prints an explicit diagnostic and exercises the path-entry fallback; it does not silently claim native image selection was compiled. GitHub CI installs the Qt Quick, Layouts, WorkerScript, Core, and Dialogs runtime modules explicitly.
+
 ## Pull and test on CachyOS
 
 These commands use the checkout as the Quickshell config. They do not install over Noctalia, and they do not edit Hyprland.
