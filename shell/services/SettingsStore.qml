@@ -59,6 +59,8 @@ Singleton {
     readonly property string manualPanel: appearanceSettings.manualPanel
     readonly property string manualGradient: appearanceSettings.manualGradient
     readonly property string shortcutsJson: adapter.shortcutsJson
+    readonly property string notificationOwnership: notificationSettings.ownership === "on" ? "on" : "off"
+    readonly property bool notificationDnd: notificationSettings.dnd === true
 
     property bool writing: false
     property bool suppressReload: false
@@ -125,6 +127,10 @@ Singleton {
                 category: windowSettings.category
             },
             shortcutsJson: adapter.shortcutsJson,
+            notifications: {
+                ownership: notificationSettings.ownership,
+                dnd: notificationSettings.dnd
+            },
             extensionsJson: adapter.extensionsJson
         };
     }
@@ -387,6 +393,14 @@ Singleton {
         setWallpaperOutputs(JSON.stringify(map))
     }
 
+    function setNotificationOwnership(value) {
+        notificationSettings.ownership = value === "on" ? "on" : "off"
+    }
+
+    function setNotificationDnd(value) {
+        notificationSettings.dnd = value === true
+    }
+
     function setSettingsCategory(category) {
         const decision = Settings.validateSettings({
             settingsWindow: {
@@ -514,6 +528,13 @@ Singleton {
             }
 
             property string shortcutsJson: "{}"
+
+            property JsonObject notifications: JsonObject {
+                id: notificationSettings
+                property string ownership: "off"
+                property bool dnd: false
+            }
+
             property string extensionsJson: "{}"
         }
     }

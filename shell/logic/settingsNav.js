@@ -39,6 +39,9 @@ var CONTROLS = [
     { id: "bluetoothDevices", category: "bluetooth", section: "Bluetooth", label: "Devices", keywords: ["adapter", "pair", "bluez"] },
     { id: "battery", category: "power", section: "Battery", label: "Battery", keywords: ["upower", "charge", "ac"] },
     { id: "sessionPower", category: "power", section: "Session", label: "Session", keywords: ["lock", "suspend", "restart", "shutdown"] },
+    { id: "notificationOwner", category: "notifications", section: "Owner", label: "Owner", keywords: ["notification", "dbus", "noctalia"] },
+    { id: "notificationDnd", category: "notifications", section: "Quiet", label: "Do not disturb", keywords: ["dnd", "quiet", "critical"] },
+    { id: "notificationPreview", category: "notifications", section: "Preview", label: "Preview", keywords: ["preview", "banner"] },
 ];
 
 function clamp01(unit) {
@@ -116,6 +119,7 @@ function categories() {
         { id: "network", label: "Network" },
         { id: "bluetooth", label: "Bluetooth" },
         { id: "power", label: "Power" },
+        { id: "notifications", label: "Notifications" },
     ];
 }
 

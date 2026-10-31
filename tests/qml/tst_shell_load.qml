@@ -41,11 +41,14 @@ TestCase {
         "shell/services/SettingsModel.qml",
         "shell/services/ColorAnalysis.qml",
         "shell/services/WallpaperModel.qml",
+        "shell/services/NotificationsModel.qml",
         "shell/launcher/LauncherWindow.qml",
         "shell/settings/AudioPage.qml",
         "shell/settings/NetworkPage.qml",
         "shell/settings/BluetoothPage.qml",
         "shell/settings/PowerPage.qml",
+        "shell/settings/NotificationsPage.qml",
+        "shell/notifications/NotificationHost.qml",
         "shell/settings/AppearancePage.qml",
         "shell/settings/BarPage.qml",
         "shell/settings/ImageDialog.qml",
@@ -89,6 +92,7 @@ TestCase {
         "shell/settings/NetworkPage.qml",
         "shell/settings/BluetoothPage.qml",
         "shell/settings/PowerPage.qml",
+        "shell/settings/NotificationsPage.qml",
         "shell/settings/AppearancePage.qml",
         "shell/settings/BarPage.qml",
         "shell/settings/DisplaysPage.qml",
@@ -319,6 +323,10 @@ TestCase {
         var powerPage = componentFor("shell/settings/PowerPage.qml").createObject(this)
         verify(powerPage !== null)
         verify(findText(powerPage, "ask once more", 0))
+        var notes = componentFor("shell/settings/NotificationsPage.qml").createObject(this)
+        verify(notes !== null)
+        verify(findText(notes, "does not own notifications", 0))
+        verify(findText(notes, "Not SwiftShell", 0))
         wallpaper.query = "cover"
         verify(wallpaper.shows("wallpaperFit"))
         verify(!wallpaper.shows("wallpaperPath"))
@@ -333,5 +341,6 @@ TestCase {
         network.destroy()
         bluetoothPage.destroy()
         powerPage.destroy()
+        notes.destroy()
     }
 }
