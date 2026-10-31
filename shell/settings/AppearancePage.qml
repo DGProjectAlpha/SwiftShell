@@ -367,7 +367,7 @@ Item {
                 id: blurText
                 width: parent.width
                 wrapMode: Text.WordWrap
-                text: Material.materialReport().backdropBlur.reason
+                text: Material.materialReport().backdropBlur.reason + " " + Material.CLIP_REASON
                 color: page.marked("backdropBlur") ? Theme.panelText : Theme.panelMuted
                 font.family: Theme.fontFamily
                 font.pixelSize: Theme.fontSizeSmall

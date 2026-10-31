@@ -851,6 +851,23 @@ def main():
         for token in FORBIDDEN:
             if token in text:
                 errors.append(str(path.relative_to(ROOT)) + " contains " + token)
+        for token in (
+            "Easing.OutBounce",
+            "Easing.InBounce",
+            "Easing.OutInBounce",
+            "Easing.InOutBounce",
+            "Easing.OutElastic",
+            "Easing.InElastic",
+            "Easing.OutInElastic",
+            "Easing.InOutElastic",
+            "Easing.OutBack",
+            "Easing.InBack",
+            "Easing.OutInBack",
+            "Easing.InOutBack",
+            "SpringAnimation",
+        ):
+            if token in text:
+                errors.append(str(path.relative_to(ROOT)) + " contains " + token)
         depth, paren, negative = scan_qml(text)
         if negative or depth != 0 or paren != 0:
             errors.append(
@@ -881,6 +898,16 @@ def main():
             if resolve_import(path, spec) is None:
                 errors.append(str(path.relative_to(ROOT)) + " has unresolved import " + spec)
         errors.extend(unresolved_component_errors(text, path, project_names))
+
+    popover = (SHELL / "popovers" / "PopoverSurface.qml").read_text(encoding="utf-8")
+    if "clip: true" in popover:
+        errors.append("PopoverSurface clips to a rectangle")
+    button = (SHELL / "components" / "FlatButton.qml").read_text(encoding="utf-8")
+    toggle = (SHELL / "components" / "SettingsToggle.qml").read_text(encoding="utf-8")
+    if "elide: Text.ElideRight" not in button:
+        errors.append("FlatButton does not elide a long label")
+    if "elide: Text.ElideRight" not in toggle:
+        errors.append("SettingsToggle does not elide a long label")
 
     for path in shell_files:
         check_shell(path, errors)

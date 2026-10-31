@@ -282,6 +282,8 @@ test("settings window stays one instance and blur is not available", function ()
     assert.equal(surface.hardwareVerified, false);
     assert.equal(surface.reason, material.BLUR_REASON);
     assert.equal(report.backdropBlur.reason, material.BLUR_REASON);
+    assert.equal(material.materialReport().cornerClip.followsRadius, false);
+    assert.equal(material.materialReport().cornerClip.reason, material.CLIP_REASON);
     assert.ok(surface.surfaces.indexOf("bar") !== -1);
     assert.ok(surface.surfaces.indexOf("settings") !== -1);
     let session = capabilities.reduceSettingsWindow(undefined, "launch");
