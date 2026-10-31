@@ -37,6 +37,13 @@ Severity is P0 (data loss, a dead control, or a false ownership claim), P1 (a ma
 
 Settings rollback, bar battery/media/tray colors, notification dismissal, wallpaper sampling, display apply, shortcut installation, network, brightness, blur, and any Hyprland pixel check.
 
+## Disposition
+
+| ID | State |
+|---|---|
+| A1 | Repaired in the settings-backup change. The backup text is the original file. Rollback unwraps an old `document` string. A malformed file is not rewritten. Not run inside Quickshell on a Hyprland session. |
+| A2–A15 | Open at the time A1 was repaired. |
+
 ## Repair order
 
 1. A1 backup bytes and filesystem tests.

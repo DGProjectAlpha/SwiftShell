@@ -12,6 +12,7 @@ else
 fi
 
 "$NODE" "$ROOT/tests/logic.test.js"
+"$NODE" "$ROOT/tests/settings_files.test.js"
 sh "$ROOT/tests/install_flow.sh"
 
 QMLTESTRUNNER=""

@@ -189,6 +189,16 @@ scripts/check.sh
 
 Exit status 0. Static checks passed for 28 QML files. Logic tests passed, including bar heights 22, 28, and 52, derived font and icon size, module hide, and reorder. The run printed `launcher rank 400 apps: 2.12 ms`. Install tests passed, 15 cases. `qmltestrunner` 6.4.2 reported Totals: 6 passed and Totals: 8 passed. `QStandardPaths: XDG_RUNTIME_DIR not set` was printed. The run did not draw the bar or measure the reserved strip.
 
+## What was run for the settings backup repair
+
+On 30 Oct 2026, at 10:55 PM America/New_York, in the cloud workspace, with no Hyprland session and no `qs` binary:
+
+```text
+scripts/check.sh
+```
+
+Exit status 0. Static checks passed for 52 QML files. Logic tests passed, including an exact v1 backup string, a refusal to replace a usable backup, and a refusal to migrate malformed JSON. `tests/settings_files.test.js` wrote those cases under a temporary directory and read the bytes back. Install tests passed, 16 cases. One case restores a JSON backup, unwraps a `document` string without printing it, and leaves settings in place when the backup is not JSON. `launcher rank 400 apps: 1.26 ms`. `launcher rank 1000 apps: 1.73 ms`. `qmltestrunner` 6.4.2 reported Totals: 6 passed and Totals: 8 passed. `QStandardPaths: XDG_RUNTIME_DIR not set` was printed. Quickshell itself did not load the settings file.
+
 ## What was run for M8.2
 
 On 30 Oct 2026, at 10:26 PM America/New_York, in the cloud workspace, with no Hyprland session and no `qs` binary:
