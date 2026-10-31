@@ -27,6 +27,16 @@ ShellRoot {
     }
 
     Loader {
+        id: wallpaperLoader
+        active: SettingsStore.wallpaperEnabled
+        source: "wallpaper/WallpaperHost.qml"
+        onStatusChanged: {
+            if (status === Loader.Error)
+                console.warn("SwiftShell: the wallpaper surface did not load")
+        }
+    }
+
+    Loader {
         id: settingsLoader
         active: SettingsModel.open
         source: "settings/SettingsWindow.qml"

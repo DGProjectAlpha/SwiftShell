@@ -202,6 +202,9 @@ test_fresh_install() {
     noctalia_sum=$(checksum "$HOME/.config/quickshell/noctalia/shell.qml")
     run_install >/dev/null
     [ -f "$XDG_DATA_HOME/swiftshell/app/shell.qml" ] || fail "app missing"
+    [ -f "$XDG_DATA_HOME/swiftshell/app/assets/wallpapers/swiftshell-default-crimson.png" ] || fail "wallpaper missing"
+    [ ! -L "$XDG_DATA_HOME/swiftshell/app/assets/wallpapers/swiftshell-default-crimson.png" ] || fail "wallpaper is still a symlink"
+    assert_same "$ROOT/assets/wallpapers/swiftshell-default-crimson.png" "$XDG_DATA_HOME/swiftshell/app/assets/wallpapers/swiftshell-default-crimson.png" "installed wallpaper differs"
     assert_same "$ROOT/shell/shell.qml" "$XDG_DATA_HOME/swiftshell/app/shell.qml" "installed shell differs"
     [ "$(sed -n 's/^product=//p' "$XDG_DATA_HOME/swiftshell/manifest")" = "swiftshell" ] || fail "manifest"
     [ -f "$HOME/.local/bin/swiftshell" ] || fail "launcher missing"

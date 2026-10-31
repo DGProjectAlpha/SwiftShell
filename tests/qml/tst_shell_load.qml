@@ -34,7 +34,11 @@ TestCase {
         "shell/launcher/LauncherWindow.qml",
         "shell/settings/AppearancePage.qml",
         "shell/settings/BarPage.qml",
-        "shell/settings/SettingsWindow.qml"
+        "shell/settings/ImageDialog.qml",
+        "shell/settings/SettingsWindow.qml",
+        "shell/settings/WallpaperPage.qml",
+        "shell/wallpaper/WallpaperHost.qml",
+        "shell/wallpaper/WallpaperSurface.qml"
     ]
 
     // These compile with the Qt Quick stubs. shell.qml, BarHost, and BarWindow also
@@ -58,7 +62,8 @@ TestCase {
         "shell/popovers/AudioSection.qml",
         "shell/settings/AppearancePage.qml",
         "shell/settings/BarPage.qml",
-        "shell/settings/SettingsWindow.qml"
+        "shell/settings/SettingsWindow.qml",
+        "shell/settings/WallpaperPage.qml"
     ]
 
     function componentFor(path) {
@@ -253,8 +258,18 @@ TestCase {
         verify(settings.minimumSize.width === 640)
         verify(settings.minimumSize.height === 440)
 
+        var wallpaper = componentFor("shell/settings/WallpaperPage.qml").createObject(this)
+        verify(wallpaper !== null)
+        verify(findText(wallpaper, "does not stop that program", 0))
+        verify(findText(wallpaper, "No outputs are connected", 0))
+        verify(wallpaper.shows("wallpaperPath"))
+        wallpaper.query = "cover"
+        verify(wallpaper.shows("wallpaperFit"))
+        verify(!wallpaper.shows("wallpaperPath"))
+
         page.destroy()
         toggle.destroy()
         settings.destroy()
+        wallpaper.destroy()
     }
 }

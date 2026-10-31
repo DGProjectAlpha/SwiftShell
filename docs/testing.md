@@ -189,6 +189,16 @@ scripts/check.sh
 
 Exit status 0. Static checks passed for 28 QML files. Logic tests passed, including bar heights 22, 28, and 52, derived font and icon size, module hide, and reorder. The run printed `launcher rank 400 apps: 2.12 ms`. Install tests passed, 15 cases. `qmltestrunner` 6.4.2 reported Totals: 6 passed and Totals: 8 passed. `QStandardPaths: XDG_RUNTIME_DIR not set` was printed. The run did not draw the bar or measure the reserved strip.
 
+## What was run for M4.4
+
+On 30 Oct 2026, at 9:21 PM America/New_York, in the cloud workspace, with no Hyprland session and no `qs` binary:
+
+```text
+scripts/check.sh
+```
+
+Exit status 0. Static checks passed for 32 QML files. Logic tests passed, including packaged and rejected wallpaper paths, cover and contain crop rectangles for 2560×1440, 1920×1080, a wide crop, a portrait crop, and an 8K decode cap of 3840. `launcher rank 400 apps: 2.39 ms`. Install tests passed, 15 cases, including a regular-file copy of the crimson PNG. `qmltestrunner` 6.4.2 reported Totals: 6 passed and Totals: 8 passed. The wallpaper page case checks the coexistence sentence and that a cover query hides the path row. `QStandardPaths: XDG_RUNTIME_DIR not set` was printed. The run did not start `qs`, show a background layer, or open a file dialog. `QtQuick.Dialogs` is not installed in this workspace.
+
 ## What was run for M4.3
 
 On 30 Oct 2026, at 9:12 PM America/New_York, `scripts/check.sh` exited 0. Static checks passed for 28 QML files. Logic tests passed, including the material report: blur unavailable, fallback scrim, not hardware-verified. `launcher rank 400 apps: 2.08 ms`. Install tests passed, 15 cases. `qmltestrunner` 6.4.2 reported Totals: 6 passed and Totals: 8 passed. No checkerboard screenshot was taken. Hyprland blur rules were not read or written.
@@ -203,6 +213,7 @@ After the M3.2 checks, and only with SwiftShell launched by `scripts/launch.sh`:
 4. Change dark, light, text size, text weight, density, panel opacity, corner radius, shadow, icon scale, motion scale, reduced motion, and the top gradient. The bar, Spotlight, and the settings window should follow without a restart. Restart with `scripts/stop.sh` and `scripts/launch.sh` and confirm the same values. Undo should restore the previous values. Reset should restore the appearance defaults. There is no blur slider. Wallpaper tint should say it is not sampled. Search should hide controls that do not match, and Escape in a filled search field should clear it before the next Escape closes the window.
 5. Confirm `~/.config/hypr` and the Noctalia config are unchanged.
 6. Open Settings, Top bar. Set the height to 22 and to 52. The text, workspace marks, and reserved strip should follow. Hide Clock and move Search earlier. Restart and confirm the order. Set the height back to 28.
+7. Open Settings, Wallpaper. The preview should show the crimson image. Choose a png, or type its path, and confirm Cover crops and Contain shows the whole picture on each output. Point one output at a different file and restart. Remove that file and confirm the crimson image returns. Turn Draw wallpaper off and confirm another wallpaper program is still running. `~/.config/hypr` must stay unchanged.
 
 This checklist is not done in the cloud run.
 

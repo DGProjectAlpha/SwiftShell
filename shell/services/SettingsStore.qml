@@ -43,6 +43,10 @@ Singleton {
     readonly property int settingsWindowWidth: windowSettings.width
     readonly property int settingsWindowHeight: windowSettings.height
     readonly property string settingsWindowCategory: windowSettings.category
+    readonly property bool wallpaperEnabled: wallpaperSettings.enabled
+    readonly property string wallpaperFit: wallpaperSettings.fit === "contain" ? "contain" : "cover"
+    readonly property string wallpaperPath: wallpaperSettings.path
+    readonly property string wallpaperOutputsJson: wallpaperSettings.outputsJson
 
     property bool writing: false
     property bool suppressReload: false
@@ -85,6 +89,12 @@ Singleton {
             },
             launcher: {
                 pinnedIds: launcherSettings.pinnedIds
+            },
+            wallpaper: {
+                enabled: wallpaperSettings.enabled,
+                fit: wallpaperSettings.fit,
+                path: wallpaperSettings.path,
+                outputsJson: wallpaperSettings.outputsJson
             },
             settingsWindow: {
                 width: windowSettings.width,
@@ -194,6 +204,63 @@ Singleton {
         barSettings.hiddenModules = Settings.validateSettings({ bar: next }).settings.bar.hiddenModules
     }
 
+    function currentWallpaper() {
+        return {
+            enabled: wallpaperSettings.enabled,
+            fit: wallpaperSettings.fit,
+            path: wallpaperSettings.path,
+            outputsJson: wallpaperSettings.outputsJson
+        }
+    }
+
+    function writeWallpaper(next) {
+        const decision = Settings.validateSettings({ wallpaper: next }).settings.wallpaper
+        wallpaperSettings.enabled = decision.enabled
+        wallpaperSettings.fit = decision.fit
+        wallpaperSettings.path = decision.path
+        wallpaperSettings.outputsJson = decision.outputsJson
+    }
+
+    function setWallpaperEnabled(value) {
+        const next = currentWallpaper()
+        next.enabled = value === true
+        writeWallpaper(next)
+    }
+
+    function setWallpaperPath(path) {
+        const next = currentWallpaper()
+        next.path = path
+        writeWallpaper(next)
+    }
+
+    function setWallpaperFit(fit) {
+        const next = currentWallpaper()
+        next.fit = fit
+        writeWallpaper(next)
+    }
+
+    function setWallpaperOutputs(text) {
+        const next = currentWallpaper()
+        next.outputsJson = text
+        writeWallpaper(next)
+    }
+
+    function setOutputWallpaper(name, path) {
+        let map = {}
+        try {
+            map = JSON.parse(wallpaperSettings.outputsJson || "{}")
+        } catch (error) {
+            map = {}
+        }
+        if (!map || typeof map !== "object")
+            map = {}
+        if (path === "")
+            delete map[name]
+        else
+            map[name] = path
+        setWallpaperOutputs(JSON.stringify(map))
+    }
+
     function setSettingsCategory(category) {
         const decision = Settings.validateSettings({
             settingsWindow: {
@@ -292,6 +359,14 @@ Singleton {
             property JsonObject launcher: JsonObject {
                 id: launcherSettings
                 property list<string> pinnedIds: []
+            }
+
+            property JsonObject wallpaper: JsonObject {
+                id: wallpaperSettings
+                property bool enabled: true
+                property string fit: "cover"
+                property string path: ""
+                property string outputsJson: "{}"
             }
 
             property JsonObject settingsWindow: JsonObject {

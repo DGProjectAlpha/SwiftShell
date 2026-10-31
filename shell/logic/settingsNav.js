@@ -20,6 +20,10 @@ var CONTROLS = [
     { id: "showTitle", category: "bar", section: "Modules", label: "Focused title", keywords: ["window", "title", "app"] },
     { id: "clock24", category: "bar", section: "Modules", label: "24-hour clock", keywords: ["clock", "time", "hour"] },
     { id: "moduleOrder", category: "bar", section: "Modules", label: "Module order", keywords: ["reorder", "hide", "workspaces", "search"] },
+    { id: "wallpaperEnabled", category: "wallpaper", section: "Image", label: "Draw wallpaper", keywords: ["background", "hyprpaper", "swww"] },
+    { id: "wallpaperFit", category: "wallpaper", section: "Image", label: "Fit", keywords: ["cover", "contain", "crop", "fill"] },
+    { id: "wallpaperPath", category: "wallpaper", section: "Image", label: "Image", keywords: ["file", "choose", "path", "default", "crimson"] },
+    { id: "wallpaperOutput", category: "wallpaper", section: "Outputs", label: "Per output", keywords: ["monitor", "display", "screen"] },
 ];
 
 function clamp01(unit) {
@@ -90,6 +94,7 @@ function categories() {
     return [
         { id: "appearance", label: "Appearance" },
         { id: "bar", label: "Top bar" },
+        { id: "wallpaper", label: "Wallpaper" },
     ];
 }
 
