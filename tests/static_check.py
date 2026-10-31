@@ -58,6 +58,7 @@ REQUIRED = [
     SCRIPTS / "lib" / "uninstall.sh",
     ROOT / "install.sh",
     ROOT / "docs" / "install.md",
+    ROOT / "docs" / "RELEASE_CANDIDATE.md",
     ROOT / "tests" / "qml" / "tst_implicit_size.qml",
     ROOT / "tests" / "qml" / "tst_shell_load.qml",
     ROOT / "tests" / "stubs" / "Quickshell" / "qmldir",
