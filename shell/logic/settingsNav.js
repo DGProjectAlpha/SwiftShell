@@ -42,6 +42,7 @@ var CONTROLS = [
     { id: "notificationOwner", category: "notifications", section: "Owner", label: "Owner", keywords: ["notification", "dbus", "noctalia"] },
     { id: "notificationDnd", category: "notifications", section: "Quiet", label: "Do not disturb", keywords: ["dnd", "quiet", "critical"] },
     { id: "notificationPreview", category: "notifications", section: "Preview", label: "Preview", keywords: ["preview", "banner"] },
+    { id: "notificationPolicy", category: "notifications", section: "Applications", label: "Per application", keywords: ["quiet", "hide", "desktop"] },
 ];
 
 function clamp01(unit) {

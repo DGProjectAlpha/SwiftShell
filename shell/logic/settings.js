@@ -165,6 +165,7 @@ var DEFAULTS = {
     notifications: {
         ownership: "off",
         dnd: false,
+        policiesJson: "{}",
     },
     extensionsJson: "{}",
 };
@@ -377,6 +378,7 @@ function validateSettings(input) {
         errors.push("notifications");
     const notificationOwnership = pickEnum(noteSource, "ownership", ["off", "on"], DEFAULTS.notifications.ownership, errors, "notifications.ownership");
     const notificationDnd = pickBoolean(noteSource, "dnd", DEFAULTS.notifications.dnd, errors, "notifications.dnd");
+    const notificationPolicies = policiesValue(noteSource.policiesJson, errors);
     const shortcutsJson = shortcutsValue(source.shortcutsJson, errors);
 
     let pinnedIds = DEFAULTS.launcher.pinnedIds.slice();
@@ -470,10 +472,44 @@ function validateSettings(input) {
             notifications: {
                 ownership: notificationOwnership,
                 dnd: notificationDnd,
+                policiesJson: notificationPolicies,
             },
             extensionsJson: extensionsJson,
         },
     };
+}
+
+function policiesValue(text, errors) {
+    if (text === undefined || text === "")
+        return "{}";
+    if (typeof text !== "string") {
+        errors.push("notifications.policiesJson");
+        return "{}";
+    }
+    try {
+        const parsed = JSON.parse(text);
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+            errors.push("notifications.policiesJson");
+            return "{}";
+        }
+        const out = {};
+        const keys = Object.keys(parsed);
+        for (let i = 0; i < keys.length; i++) {
+            if (!/^[A-Za-z0-9._+-]{1,128}$/.test(keys[i]))
+                continue;
+            if (parsed[keys[i]] === "show" || parsed[keys[i]] === "quiet" || parsed[keys[i]] === "hide")
+                out[keys[i]] = parsed[keys[i]];
+        }
+        const encoded = JSON.stringify(out);
+        if (encoded.length > 2048) {
+            errors.push("notifications.policiesJson");
+            return "{}";
+        }
+        return encoded;
+    } catch (error) {
+        errors.push("notifications.policiesJson");
+        return "{}";
+    }
 }
 
 function shortcutsValue(text, errors) {

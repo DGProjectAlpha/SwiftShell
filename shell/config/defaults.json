@@ -69,7 +69,8 @@
   "shortcutsJson": "{}",
   "notifications": {
     "ownership": "off",
-    "dnd": false
+    "dnd": false,
+    "policiesJson": "{}"
   },
   "extensionsJson": "{}"
 }

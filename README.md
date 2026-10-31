@@ -516,6 +516,8 @@ Acceptance: user explicitly opts in; Noctalia remains readily restorable.
 - [ ] M5.2 Bluetooth, battery, and power confirmed on a Hyprland session
 - [x] M6.1 notification ownership stays off until a second confirmation, in source
 - [ ] M6.1 notification handoff confirmed on a Hyprland session against the current owner
+- [x] M6.2 per-application show, quiet, and hide rules, in source; sounds are not played
+- [ ] M6.2 rules confirmed with a real notifying application
 - [ ] M4.1 search, undo, and appearance changes shown on a Hyprland session
 - [ ] Local Quickshell and Hyprland versions recorded from `qs -V` and `Hyprland --version`
 - [ ] Visual rendering of the stabilization fixes verified

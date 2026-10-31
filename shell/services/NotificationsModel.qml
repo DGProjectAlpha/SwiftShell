@@ -9,11 +9,12 @@ Singleton {
 
     property var center: Notifications.emptyCenter()
 
-    function configure(ownership, dnd) {
+    function configure(ownership, dnd, policiesJson) {
         root.center = Notifications.reduceNotifications(root.center, {
             type: "configure",
             ownership: ownership,
-            dnd: dnd === true
+            dnd: dnd === true,
+            policies: policiesJson || "{}"
         })
     }
 

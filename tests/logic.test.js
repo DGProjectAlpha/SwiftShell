@@ -1712,6 +1712,35 @@ test("notifications stay off until ownership is confirmed", function () {
     const rejected = settings.validateSettings({ notifications: { ownership: "steal" } });
     assert.equal(rejected.settings.notifications.ownership, "off");
     assert.ok(rejected.errors.indexOf("notifications.ownership") !== -1);
+    center = notifications.reduceNotifications(notifications.emptyCenter(), {
+        type: "configure",
+        ownership: "on",
+        dnd: false,
+        policies: JSON.stringify({ "org.example.Chat": "hide", "org.example.Mail": "quiet" }),
+    });
+    center = notifications.reduceNotifications(center, {
+        type: "receive",
+        notification: { id: 1, appName: "Chat", desktopEntry: "org.example.Chat", summary: "Hidden", urgency: "critical" },
+    });
+    assert.equal(center.live.length, 0);
+    assert.equal(center.history.length, 0);
+    center = notifications.reduceNotifications(center, {
+        type: "receive",
+        notification: { id: 2, appName: "Mail", desktopEntry: "org.example.Mail", summary: "Quiet mail", urgency: "normal" },
+    });
+    assert.equal(center.live.length, 0);
+    assert.equal(center.history[0].summary, "Quiet mail");
+    center = notifications.reduceNotifications(center, {
+        type: "receive",
+        notification: { id: 3, appName: "Mail", desktopEntry: "org.example.Mail", summary: "Urgent mail", urgency: "critical" },
+    });
+    assert.equal(center.live[0].summary, "Urgent mail");
+    const groups = notifications.groupHistory(center.history.concat(center.live));
+    assert.equal(groups[0].app, "Mail");
+    const rules = settings.validateSettings({
+        notifications: { policiesJson: JSON.stringify({ "org.example.Chat": "hide", "../x": "hide", bad: "nope" }) },
+    });
+    assert.deepEqual(JSON.parse(rules.settings.notifications.policiesJson), { "org.example.Chat": "hide" });
 });
 
 if (failed > 0) {

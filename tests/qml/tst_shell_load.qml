@@ -327,6 +327,7 @@ TestCase {
         verify(notes !== null)
         verify(findText(notes, "does not own notifications", 0))
         verify(findText(notes, "Not SwiftShell", 0))
+        verify(findText(notes, "sounds are not played", 0))
         wallpaper.query = "cover"
         verify(wallpaper.shows("wallpaperFit"))
         verify(!wallpaper.shows("wallpaperPath"))
