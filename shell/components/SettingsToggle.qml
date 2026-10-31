@@ -48,8 +48,11 @@ MouseArea {
     Text {
         id: labelText
         anchors.left: parent.left
+        anchors.right: parent.right
         anchors.leftMargin: 36
+        anchors.rightMargin: 4
         anchors.verticalCenter: parent.verticalCenter
+        elide: Text.ElideRight
         text: control.label
         color: Theme.panelText
         font.family: Theme.fontFamily

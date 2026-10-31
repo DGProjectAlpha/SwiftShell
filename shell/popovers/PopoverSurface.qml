@@ -17,6 +17,7 @@ Item {
         opacity: Theme.shadowOpacity
     }
 
+    // clip stays off. Qt Quick clip is a rectangle and would not follow this radius.
     Rectangle {
         id: card
         x: Theme.shadowSoftness / 2
@@ -26,6 +27,7 @@ Item {
         radius: Theme.radius
         color: Theme.panelColor
         border.width: 0
+        clip: false
 
         Column {
             id: body

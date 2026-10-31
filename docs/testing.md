@@ -189,6 +189,16 @@ scripts/check.sh
 
 Exit status 0. Static checks passed for 28 QML files. Logic tests passed, including bar heights 22, 28, and 52, derived font and icon size, module hide, and reorder. The run printed `launcher rank 400 apps: 2.12 ms`. Install tests passed, 15 cases. `qmltestrunner` 6.4.2 reported Totals: 6 passed and Totals: 8 passed. `QStandardPaths: XDG_RUNTIME_DIR not set` was printed. The run did not draw the bar or measure the reserved strip.
 
+## What was run for M7.1
+
+On 30 Oct 2026, at 10:21 PM America/New_York, in the cloud workspace, with no Hyprland session and no `qs` binary:
+
+```text
+scripts/check.sh
+```
+
+Exit status 0. Static checks passed for 52 QML files. Bounce, elastic, back, and spring animations are rejected. The popover card does not set rectangular clipping. Logic tests passed, including the corner-clip report. `launcher rank 400 apps: 1.15 ms`. Install tests passed, 15 cases. `qmltestrunner` 6.4.2 reported Totals: 6 passed and Totals: 8 passed. The appearance page case checks the scrim sentence and the line that the radius is not a rounded blur mask. `QStandardPaths: XDG_RUNTIME_DIR not set` was printed. No panel was shown, and no label was measured on a display.
+
 ## What was run for M6.2
 
 On 30 Oct 2026, at 9:53 PM America/New_York, in the cloud workspace, with no Hyprland session and no `qs` binary:
