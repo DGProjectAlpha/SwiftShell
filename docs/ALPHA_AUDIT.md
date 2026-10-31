@@ -46,7 +46,11 @@ Settings rollback, bar battery/media/tray colors, notification dismissal, wallpa
 | A6 | Partially repaired. `panelText` and `panelMuted` now follow the surface. Hover comes from the palette. Hardware contrast is not measured. |
 | A3 | Repaired in source. Dismiss and expire call the native object. The saved preference is separate from `serverState`. Not run against another notification owner. |
 | A4 | Partially repaired. Battery, media, and tray modules are instantiated empty and populated. The notification host is still not instantiated, because the Wayland attached type is not stubbed. |
-| A5, A7–A15 | Open after the notification-lifetime repair. |
+| A5 | Repaired in source for per-output paths, duplicate slideshow completion, failed-slide recovery, and the sample path. Folder picking and jpeg sampling stay unavailable here. Not shown on a session. |
+| A7 | Repaired in source. `bar.placement` is `focused`, `primary`, or `all`. Default remains `focused`. Not shown on a session. |
+| A8 | Repaired in source. Stream nodes are included in the tracker list. Tray menus use the clicked item's position. Not shown on a session. |
+| A12 | Repaired in the draft package file list. `doctor.sh` and the real PNG are installed. The license is still unchosen and the package was not built. |
+| A9–A11, A13–A15 | Still open. Display apply, shortcut install, network, brightness, folder scan, blur, and hardware checks stay gated. |
 
 ## Repair order
 

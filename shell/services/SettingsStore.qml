@@ -20,6 +20,7 @@ Singleton {
     readonly property bool showFocusedTitle: barSettings.showFocusedTitle
     readonly property var workspaceIds: Settings.normalizeWorkspaceIds(barSettings.workspaceIds)
     readonly property string workspaceDispatch: barSettings.workspaceDispatch === "lua" || barSettings.workspaceDispatch === "legacy" ? barSettings.workspaceDispatch : "auto"
+    readonly property string barPlacement: barSettings.placement === "all" || barSettings.placement === "primary" ? barSettings.placement : "focused"
     readonly property int barHeight: barSettings.height
     readonly property var moduleOrder: Bar.normalizeModuleOrder(barSettings.moduleOrder)
     readonly property var hiddenModules: barSettings.hiddenModules
@@ -89,6 +90,7 @@ Singleton {
         barSettings.showFocusedTitle = bar.showFocusedTitle !== false
         barSettings.workspaceIds = bar.workspaceIds || []
         barSettings.workspaceDispatch = bar.workspaceDispatch || "auto"
+        barSettings.placement = bar.placement === "all" || bar.placement === "primary" ? bar.placement : "focused"
         barSettings.height = bar.height
         barSettings.moduleOrder = bar.moduleOrder || []
         barSettings.hiddenModules = bar.hiddenModules || []
@@ -169,6 +171,7 @@ Singleton {
                 showFocusedTitle: barSettings.showFocusedTitle,
                 workspaceIds: barSettings.workspaceIds,
                 workspaceDispatch: barSettings.workspaceDispatch,
+                placement: barSettings.placement,
                 height: barSettings.height,
                 moduleOrder: barSettings.moduleOrder,
                 hiddenModules: barSettings.hiddenModules
@@ -326,6 +329,10 @@ Singleton {
 
     function setUse24Hour(value) {
         clockSettings.use24Hour = value === true
+    }
+
+    function setBarPlacement(value) {
+        barSettings.placement = value === "all" || value === "primary" ? value : "focused"
     }
 
     function setTargetMonitor(value) {
@@ -596,6 +603,7 @@ Singleton {
                 property bool showFocusedTitle: true
                 property list<int> workspaceIds: []
                 property string workspaceDispatch: "auto"
+                property string placement: "focused"
                 property int height: 28
                 property list<string> moduleOrder: ["workspaces", "title", "search", "clock", "control", "media", "tray", "battery"]
                 property list<string> hiddenModules: []

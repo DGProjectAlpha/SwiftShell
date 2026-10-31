@@ -23,13 +23,15 @@ Item {
         return null
     }
 
-    function invoke(entry) {
+    function invoke(entry, local) {
         var item = itemAt(entry.id)
         if (!item)
             return
         try {
-            if (entry.action === "menu" && item.hasMenu === true && hostWindow)
-                item.display(hostWindow, 0, 0)
+            if (entry.action === "menu" && item.hasMenu === true && hostWindow) {
+                var menu = Tray.menuPoint(local ? local.x : 0, local ? local.y : 0)
+                item.display(hostWindow, menu.x, menu.y)
+            }
             else if (entry.action === "activate" && item.onlyMenu !== true)
                 item.activate()
         } catch (error) {
@@ -52,7 +54,7 @@ Item {
                 hoverEnabled: true
                 Accessible.role: Accessible.Button
                 Accessible.name: modelData.title
-                onClicked: root.invoke(modelData)
+                onClicked: root.invoke(modelData, mapToItem(root.hostWindow ? root.hostWindow.contentItem : null, width / 2, height))
 
                 Image {
                     anchors.centerIn: parent

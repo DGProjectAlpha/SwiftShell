@@ -748,6 +748,9 @@ test("theme defaults stay readable on black and white", function () {
         analysis: { available: true, scrim: false, foreground: "dark" },
     });
     assert.deepEqual(automaticHigh.text, contrast.DARK_TEXT);
+    const placed = settings.validateSettings({ bar: { placement: "all" } });
+    assert.equal(placed.settings.bar.placement, "all");
+    assert.equal(settings.validateSettings({ bar: { placement: "nope" } }).settings.bar.placement, "focused");
     const storedContrast = settings.validateSettings({ appearance: { contrast: "high" } });
     assert.equal(storedContrast.ok, true);
     assert.equal(storedContrast.settings.appearance.contrast, "high");
@@ -1495,6 +1498,17 @@ test("bar placement follows a saved monitor, then focus, then the first screen",
     assert.equal(byDescription.screen, hdmi);
 
     const focused = monitors.selectBarPlacement(records, "", { name: "HDMI-A-1" });
+    assert.equal(focused.screens.length, 1);
+    const stable = monitors.selectBarPlacement(records, "", { name: "HDMI-A-1" }, "primary");
+    assert.equal(stable.mode, "primary");
+    assert.equal(stable.screens.length, 1);
+    assert.equal(stable.screen, records[0].screen);
+    const every = monitors.selectBarPlacement(records, "", { name: "HDMI-A-1" }, "all");
+    assert.equal(every.mode, "all");
+    assert.equal(every.screens.length, records.length);
+    const named = monitors.selectBarPlacement(records, "HDMI-A-1", { name: "DP-1" }, "all");
+    assert.equal(named.mode, "preference");
+    assert.equal(named.screens.length, 1);
     assert.equal(focused.mode, "focused");
     assert.equal(focused.screen, hdmi);
 
@@ -1721,6 +1735,8 @@ test("audio devices, players, and tray items stay actionable", function () {
     assert.equal(tray.trayRows(items, 4)[0].action, "activate");
     assert.equal(tray.trayRows(items, 4)[1].action, "menu");
     assert.equal(tray.trayOverflow(items, 1), 1);
+    assert.deepEqual(tray.menuPoint(12.4, 30), { x: 12, y: 30 });
+    assert.deepEqual(tray.menuPoint("nope", null), { x: 0, y: 0 });
     const kept = settings.validateSettings({ bar: { moduleOrder: ["workspaces", "title", "search", "clock", "control"] } });
     assert.equal(kept.ok, true);
     assert.ok(kept.settings.bar.moduleOrder.indexOf("tray") !== -1);

@@ -115,6 +115,7 @@ var DEFAULTS = {
         showFocusedTitle: true,
         workspaceIds: [],
         workspaceDispatch: "auto",
+        placement: "focused",
         height: 28,
         moduleOrder: ["workspaces", "title", "search", "clock", "control", "media", "tray", "battery"],
         hiddenModules: [],
@@ -318,6 +319,7 @@ function validateSettings(input) {
         errors,
         "bar.workspaceDispatch"
     );
+    const barPlacement = pickEnum(bar, "placement", ["focused", "primary", "all"], DEFAULTS.bar.placement, errors, "bar.placement");
     const barHeight = pickInt(bar, "height", 22, 52, DEFAULTS.bar.height, errors, "bar.height");
     let moduleOrder = DEFAULTS.bar.moduleOrder.slice();
     if (bar.moduleOrder === undefined) {
@@ -424,6 +426,7 @@ function validateSettings(input) {
                 showFocusedTitle: showFocusedTitle,
                 workspaceIds: workspaceIds,
                 workspaceDispatch: workspaceDispatch,
+                placement: barPlacement,
                 height: barHeight,
                 moduleOrder: moduleOrder,
                 hiddenModules: hiddenModules,

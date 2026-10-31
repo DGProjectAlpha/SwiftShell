@@ -122,8 +122,23 @@ Column {
         }
     }
 
+    function trackedObjects() {
+        var list = []
+        if (root.sink)
+            list.push(root.sink)
+        if (root.sourceNode)
+            list.push(root.sourceNode)
+        var streams = Audio.audioStreams(root.listedNodes())
+        for (var index = 0; index < streams.length; index++) {
+            var node = root.nodeById(streams[index].id)
+            if (node)
+                list.push(node)
+        }
+        return list
+    }
+
     PwObjectTracker {
-        objects: [root.sink, root.sourceNode]
+        objects: root.trackedObjects()
     }
 
     SectionHeader {

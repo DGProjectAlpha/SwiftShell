@@ -61,9 +61,10 @@ Scope {
         const placement = Monitors.selectBarPlacement(
             root.screenRecords(),
             SettingsStore.targetMonitor,
-            HyprlandModel.readFocusedOutput()
+            HyprlandModel.readFocusedOutput(),
+            SettingsStore.barPlacement
         );
-        const matched = placement.screen ? [placement.screen] : [];
+        const matched = placement.screens && placement.screens.length ? placement.screens : [];
         if (!root.sameScreens(root.targetScreens, matched))
             root.targetScreens = matched;
         root.refreshingScreens = false;
@@ -85,6 +86,7 @@ Scope {
     Connections {
         target: SettingsStore
         function onTargetMonitorChanged() { root.refreshTargetScreens(); }
+        function onBarPlacementChanged() { root.refreshTargetScreens(); }
     }
 
     Variants {

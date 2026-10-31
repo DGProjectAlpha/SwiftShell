@@ -13,6 +13,15 @@ function objectValues(model) {
     return [];
 }
 
+function menuPoint(x, y) {
+    const px = Number(x);
+    const py = Number(y);
+    return {
+        x: Number.isFinite(px) ? Math.round(px) : 0,
+        y: Number.isFinite(py) ? Math.round(py) : 0,
+    };
+}
+
 function trayAction(item) {
     if (!item)
         return "";
@@ -55,6 +64,7 @@ function trayOverflow(items, limit) {
 var swiftshellTray = {
     objectValues: objectValues,
     trayAction: trayAction,
+    menuPoint: menuPoint,
     trayRows: trayRows,
     trayOverflow: trayOverflow,
 };
