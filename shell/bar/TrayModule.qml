@@ -7,6 +7,8 @@ Item {
     id: root
 
     property var hostWindow: null
+    property color textPrimary: Theme.textPrimary
+    property color textMuted: Theme.textMuted
     readonly property var rows: Tray.trayRows(SystemTray.items, 4)
     readonly property int overflow: Tray.trayOverflow(SystemTray.items, 4)
 
@@ -69,7 +71,7 @@ Item {
                     anchors.centerIn: parent
                     visible: modelData.icon === ""
                     text: modelData.title.length > 0 ? modelData.title.charAt(0) : ""
-                    color: Theme.textPrimary
+                    color: root.textPrimary
                     font.family: Theme.fontFamily
                     font.pixelSize: Theme.fontSizeSmall
                 }
@@ -80,7 +82,7 @@ Item {
             visible: root.overflow > 0
             anchors.verticalCenter: parent.verticalCenter
             text: "+" + root.overflow
-            color: Theme.textMuted
+            color: root.textMuted
             font.family: Theme.fontFamily
             font.pixelSize: Theme.fontSizeSmall
         }

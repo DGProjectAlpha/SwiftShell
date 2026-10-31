@@ -6,6 +6,7 @@ Item {
     id: root
 
     required property string title
+    property color textMuted: Theme.textMuted
     visible: title !== ""
 
     BarLabel {
@@ -13,7 +14,7 @@ Item {
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
         text: root.title
-        color: Theme.textMuted
+        color: root.textMuted
         elide: Text.ElideRight
         Accessible.role: Accessible.StaticText
         Accessible.name: root.title === "" ? "No focused window" : "Focused window " + root.title

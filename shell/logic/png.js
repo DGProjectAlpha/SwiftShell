@@ -1,4 +1,6 @@
 var inflateZlibRef = null;
+var MAX_INPUT_BYTES = 32 * 1024 * 1024;
+var MAX_INFLATED_BYTES = 16 * 1024 * 1024;
 
 function bindInflate(fn) {
     inflateZlibRef = fn;
@@ -66,6 +68,8 @@ function decodePng(bytes) {
     var input = toBytes(bytes);
     if (!input || input.length < 8)
         return { ok: false, reason: "That file is not a png." };
+    if (input.length > MAX_INPUT_BYTES)
+        return { ok: false, reason: "That png is too large to sample safely." };
     var signature = [137, 80, 78, 71, 13, 10, 26, 10];
     for (var mark = 0; mark < signature.length; mark++) {
         if (input[mark] !== signature[mark])
@@ -77,6 +81,7 @@ function decodePng(bytes) {
     var colorType = 0;
     var interlace = 0;
     var idat = [];
+    var idatLength = 0;
     var offset = 8;
     while (offset + 8 <= input.length) {
         var length = word(input, offset);
@@ -93,8 +98,8 @@ function decodePng(bytes) {
             colorType = input[offset + 9];
             interlace = input[offset + 12];
         } else if (type === "IDAT") {
-            for (var index = 0; index < length; index++)
-                idat.push(input[offset + index]);
+            idat.push(input.slice(offset, offset + length));
+            idatLength += length;
         } else if (type === "IEND") {
             break;
         }
@@ -107,10 +112,19 @@ function decodePng(bytes) {
     if (bitDepth !== 8 || (colorType !== 2 && colorType !== 6 && colorType !== 0))
         return { ok: false, reason: "That png color format is not read." };
     var bpp = colorType === 2 ? 3 : colorType === 6 ? 4 : 1;
+    var expected = height * (width * bpp + 1);
+    if (!Number.isSafeInteger(expected) || expected > MAX_INFLATED_BYTES)
+        return { ok: false, reason: "That png is too large to sample safely." };
     try {
         if (typeof inflateZlibRef !== "function")
             return { ok: false, reason: "PNG inflate is not connected." };
-        var inflated = inflateZlibRef(Uint8Array.from(idat));
+        var compressed = new Uint8Array(idatLength);
+        var compressedOffset = 0;
+        for (var chunkIndex = 0; chunkIndex < idat.length; chunkIndex++) {
+            compressed.set(idat[chunkIndex], compressedOffset);
+            compressedOffset += idat[chunkIndex].length;
+        }
+        var inflated = inflateZlibRef(compressed, expected);
         var pixels = unfilter(inflated, width, height, bpp);
         return { ok: true, reason: "", width: width, height: height, bpp: bpp, pixels: pixels };
     } catch (error) {
@@ -163,10 +177,82 @@ function topBands(decoded, rowCount) {
     };
 }
 
+function pixel(decoded, x, y) {
+    var offset = (y * decoded.width + x) * decoded.bpp;
+    if (decoded.bpp === 1) {
+        var gray = decoded.pixels[offset];
+        return { r: gray, g: gray, b: gray };
+    }
+    var alpha = decoded.bpp === 4 ? decoded.pixels[offset + 3] / 255 : 1;
+    return {
+        r: Math.round(decoded.pixels[offset] * alpha),
+        g: Math.round(decoded.pixels[offset + 1] * alpha),
+        b: Math.round(decoded.pixels[offset + 2] * alpha),
+    };
+}
+
+function visibleBand(decoded, rect, viewWidth, bandStart, bandEnd, barHeight) {
+    var red = 0;
+    var green = 0;
+    var blue = 0;
+    var count = 0;
+    var columns = 24;
+    var rows = 8;
+    for (var row = 0; row < rows; row++) {
+        var viewY = (row + 0.5) * barHeight / rows;
+        for (var column = 0; column < columns; column++) {
+            var viewX = bandStart + (column + 0.5) * (bandEnd - bandStart) / columns;
+            var sample = { r: 0, g: 0, b: 0 };
+            if (viewX >= rect.x && viewX < rect.x + rect.width
+                    && viewY >= rect.y && viewY < rect.y + rect.height) {
+                var sourceX = Math.max(0, Math.min(decoded.width - 1,
+                    Math.floor((viewX - rect.x) * decoded.width / rect.width)));
+                var sourceY = Math.max(0, Math.min(decoded.height - 1,
+                    Math.floor((viewY - rect.y) * decoded.height / rect.height)));
+                sample = pixel(decoded, sourceX, sourceY);
+            }
+            red += sample.r;
+            green += sample.g;
+            blue += sample.b;
+            count += 1;
+        }
+    }
+    return {
+        r: Math.round(red / count),
+        g: Math.round(green / count),
+        b: Math.round(blue / count),
+    };
+}
+
+function visibleBands(decoded, viewWidth, viewHeight, mode, barHeight, cropRectFn) {
+    if (!decoded || !decoded.ok)
+        return { ok: false, reason: decoded && decoded.reason ? decoded.reason : "That png could not be decoded." };
+    var width = Number(viewWidth);
+    var height = Number(viewHeight);
+    var top = Math.max(1, Math.min(height, Number(barHeight) || 32));
+    if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0
+            || typeof cropRectFn !== "function")
+        return { ok: false, reason: "The output geometry is unavailable." };
+    var rect = cropRectFn(decoded.width, decoded.height, width, height, mode);
+    var third = width / 3;
+    return {
+        ok: true,
+        reason: "",
+        width: decoded.width,
+        height: decoded.height,
+        left: visibleBand(decoded, rect, width, 0, third, top),
+        center: visibleBand(decoded, rect, width, third, third * 2, top),
+        right: visibleBand(decoded, rect, width, third * 2, width, top),
+    };
+}
+
 var swiftshellPng = {
+    MAX_INPUT_BYTES: MAX_INPUT_BYTES,
+    MAX_INFLATED_BYTES: MAX_INFLATED_BYTES,
     bindInflate: bindInflate,
     decodePng: decodePng,
     topBands: topBands,
+    visibleBands: visibleBands,
 };
 
 if (typeof module !== "undefined" && module.exports)

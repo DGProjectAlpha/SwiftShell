@@ -13,7 +13,23 @@ function fileUrl(path) {
     const text = String(path == null ? "" : path);
     if (text.indexOf("file:") === 0)
         return text;
-    return "file://" + text.split(" ").join("%20").split("#").join("%23");
+    return "file://" + text.split("/").map(function (part) {
+        return encodeURIComponent(part);
+    }).join("/");
+}
+
+function pathFromFileUrl(url) {
+    const text = String(url == null ? "" : url);
+    if (text.indexOf("file://") !== 0)
+        return "";
+    const encoded = text.slice(7);
+    if (encoded !== "" && encoded[0] !== "/")
+        return "";
+    try {
+        return decodeURIComponent(encoded);
+    } catch (error) {
+        return "";
+    }
 }
 
 function resolveSource(requested) {
@@ -55,7 +71,7 @@ function sourceForOutput(name, path, outputsText) {
     const named = typeof name === "string" && Object.prototype.hasOwnProperty.call(map, name);
     const specific = named ? map[name] : path;
     const resolved = resolveSource(specific);
-    resolved.override = named && resolved.source === "file";
+    resolved.override = named;
     return resolved;
 }
 
@@ -114,6 +130,7 @@ var swiftshellWallpaper = {
     PACKAGED_NAME: PACKAGED_NAME,
     MAX_EDGE: MAX_EDGE,
     fileUrl: fileUrl,
+    pathFromFileUrl: pathFromFileUrl,
     resolveSource: resolveSource,
     fitMode: fitMode,
     outputMap: outputMap,

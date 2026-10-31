@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Dialogs
+import "../logic/wallpaper.js" as Wallpaper
 import "../services"
 
 FileDialog {
@@ -9,9 +10,8 @@ FileDialog {
     nameFilters: ["Images (*.png *.jpg *.jpeg *.webp)"]
     fileMode: FileDialog.OpenFile
     onAccepted: {
-        var text = dialog.selectedFile.toString()
-        if (text.indexOf("file://") === 0)
-            text = text.slice(7)
-        SettingsStore.setWallpaperPath(text)
+        var path = Wallpaper.pathFromFileUrl(dialog.selectedFile.toString())
+        if (path !== "")
+            SettingsStore.setWallpaperPath(path)
     }
 }

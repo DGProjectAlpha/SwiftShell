@@ -19,8 +19,8 @@ Later source repairs were checked with `scripts/check.sh` through 11:05 PM Ameri
 | Settings floating window | NOT RUN | NOT RUN | Source uses one `FloatingWindow`. Move, resize, and focus were not shown |
 | Settings search and migration | PASS | NOT RUN | Temporary files kept the original backup bytes, unknown keys, and a malformed file |
 | Wallpaper choose image | NOT RUN | NOT RUN | Source crops, falls back to the crimson image, and caps the long edge at 3840 |
-| Wallpaper slideshow | PASS | NOT RUN | A second completion does not skip a slide. A failed slide returns to waiting. No folder dialog in this workspace |
-| Adaptive color | NOT RUN | NOT RUN | Source samples the showing png path and ignores a stale response. Not shown on a display |
+| Wallpaper slideshow | PASS | NOT RUN | Timing/list changes preserve the current item; output generations gate preload and finish; failed current images are skipped. Crossfade and hotplug remain unobserved on a compositor |
+| Adaptive color | PASS | NOT RUN | Cover/Contain crop sampling, per-output state, stale-response rejection, and PNG allocation limits are source-tested. Not shown on a display |
 | Real Gaussian blur | NOT RUN | NOT RUN | Expected result on a session is a scrim, not blur |
 | Displays drag and drop | NOT RUN | NOT RUN | Preview only. Apply stays disabled |
 | Shortcut recording | NOT RUN | NOT RUN | Source stores chords and does not install them |
