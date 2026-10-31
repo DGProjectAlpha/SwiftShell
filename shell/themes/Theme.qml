@@ -2,15 +2,19 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
+import "../logic/bar.js" as BarMetrics
 import "../logic/palette.js" as Palette
 import "../logic/theme.js" as ThemeLogic
 import "../services"
 
 Singleton {
-    readonly property int barHeight: 28
-    readonly property int marginH: 10
-    readonly property int moduleSpacing: 12
-    readonly property int workspaceGap: 2
+    readonly property var barMetrics: BarMetrics.barMetrics(SettingsStore.barHeight, SettingsStore.iconScale)
+    readonly property int barHeight: barMetrics.height
+    readonly property int barFont: barMetrics.font
+    readonly property int barIcon: barMetrics.icon
+    readonly property int marginH: barMetrics.marginH
+    readonly property int moduleSpacing: barMetrics.moduleSpacing
+    readonly property int workspaceGap: barMetrics.workspaceGap
     readonly property int panelGap: 6
     readonly property int panelMargin: 8
     readonly property int controlHeight: 28

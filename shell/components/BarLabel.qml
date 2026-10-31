@@ -3,7 +3,7 @@ import "../themes"
 
 Text {
     font.family: Theme.fontFamily
-    font.pixelSize: Theme.fontSize
+    font.pixelSize: Theme.barFont
     font.weight: Theme.fontWeight
     color: Theme.textPrimary
     elide: Text.ElideRight

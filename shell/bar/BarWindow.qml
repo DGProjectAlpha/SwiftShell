@@ -19,6 +19,7 @@ PanelWindow {
     color: Theme.transparent
     focusable: false
     implicitHeight: Theme.barHeight
+    property Item controlAnchor: null
 
     anchors {
         top: true
@@ -86,24 +87,60 @@ PanelWindow {
         anchors.rightMargin: Theme.marginH
         spacing: Theme.moduleSpacing
 
+        Repeater {
+            model: SettingsStore.visibleModules
+
+            delegate: Loader {
+                required property var modelData
+                Layout.alignment: Qt.AlignVCenter
+                Layout.fillWidth: modelData === "title"
+                Layout.fillHeight: modelData === "title"
+                Layout.preferredHeight: Theme.barHeight
+                sourceComponent: window.componentFor(modelData)
+            }
+        }
+    }
+
+    function componentFor(id) {
+        if (id === "workspaces")
+            return workspacesComponent
+        if (id === "title")
+            return titleComponent
+        if (id === "search")
+            return searchComponent
+        if (id === "clock")
+            return clockComponent
+        if (id === "control")
+            return controlComponent
+        return null
+    }
+
+    Component {
+        id: workspacesComponent
+
         WorkspaceIndicators {
-            Layout.alignment: Qt.AlignVCenter
             workspaces: window.workspaceItems
         }
+    }
+
+    Component {
+        id: titleComponent
 
         Item {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
+            implicitHeight: Theme.barHeight
 
             FocusedTitle {
                 anchors.fill: parent
                 title: SettingsStore.showFocusedTitle ? window.windowTitle : ""
             }
         }
+    }
+
+    Component {
+        id: searchComponent
 
         MouseArea {
             id: searchButton
-            Layout.alignment: Qt.AlignVCenter
             implicitWidth: searchLabel.implicitWidth
             implicitHeight: Theme.barHeight
             width: implicitWidth
@@ -119,8 +156,8 @@ PanelWindow {
 
             Keys.onPressed: function (event) {
                 if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
-                    window.openLauncher();
-                    event.accepted = true;
+                    window.openLauncher()
+                    event.accepted = true
                 }
             }
 
@@ -128,25 +165,36 @@ PanelWindow {
                 id: searchLabel
                 anchors.centerIn: parent
                 text: "Search"
-                color: searchButton.containsMouse ? Theme.textHover : Theme.textMuted
+                color: searchButton.containsMouse || searchButton.activeFocus ? Theme.textHover : Theme.textMuted
             }
         }
+    }
+
+    Component {
+        id: clockComponent
 
         ClockModule {
             id: clockModule
-            Layout.alignment: Qt.AlignVCenter
             onActivated: {
-                LauncherModel.closeLauncher();
-                popovers.toggle("calendar", clockModule);
+                LauncherModel.closeLauncher()
+                popovers.toggle("calendar", clockModule)
             }
         }
+    }
+
+    Component {
+        id: controlComponent
 
         ControlIndicator {
             id: controlIndicator
-            Layout.alignment: Qt.AlignVCenter
+            Component.onCompleted: window.controlAnchor = controlIndicator
+            Component.onDestruction: {
+                if (window.controlAnchor === controlIndicator)
+                    window.controlAnchor = null
+            }
             onActivated: {
-                LauncherModel.closeLauncher();
-                popovers.toggle("control", controlIndicator);
+                LauncherModel.closeLauncher()
+                popovers.toggle("control", controlIndicator)
             }
         }
     }
@@ -159,7 +207,8 @@ PanelWindow {
     Connections {
         target: LauncherModel
         function onControlRequested() {
-            popovers.toggle("control", controlIndicator);
+            if (window.controlAnchor)
+                popovers.toggle("control", window.controlAnchor)
         }
     }
 }

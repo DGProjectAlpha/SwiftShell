@@ -58,6 +58,10 @@ FloatingWindow {
         window.applyHistory(Settings.reduceAppearanceHistory(history, { type: "reset" }))
     }
 
+    function activePage() {
+        return SettingsStore.settingsWindowCategory === "bar" ? barPage : page
+    }
+
     Component.onCompleted: {
         history = Settings.initialHistory(window.currentAppearance())
         window.width = SettingsStore.settingsWindowWidth
@@ -147,6 +151,13 @@ FloatingWindow {
                 activeFocusOnTab: true
                 clip: true
                 Accessible.name: "Search settings"
+                onTextChanged: {
+                    if (text.trim() === "")
+                        return
+                    var category = Nav.categoryFor(Nav.firstControlId(text))
+                    if (category !== "" && category !== SettingsStore.settingsWindowCategory)
+                        SettingsStore.setSettingsCategory(category)
+                }
 
                 Keys.onEscapePressed: function (event) {
                     if (text !== "") {
@@ -162,12 +173,12 @@ FloatingWindow {
                 Keys.onPressed: function (event) {
                     var alt = (event.modifiers & Qt.AltModifier) !== 0
                     if (alt && event.key === Qt.Key_J) {
-                        page.moveHighlight(1)
+                        window.activePage().moveHighlight(1)
                         event.accepted = true
                         return
                     }
                     if (alt && event.key === Qt.Key_K) {
-                        page.moveHighlight(-1)
+                        window.activePage().moveHighlight(-1)
                         event.accepted = true
                         return
                     }
@@ -182,7 +193,7 @@ FloatingWindow {
                         return
                     }
                     if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                        page.focusHighlight()
+                        window.activePage().focusHighlight()
                         event.accepted = true
                     }
                 }
@@ -225,8 +236,21 @@ FloatingWindow {
                     FlatButton {
                         width: parent.width
                         label: "Appearance"
-                        emphasized: true
-                        onActivated: search.text = ""
+                        emphasized: SettingsStore.settingsWindowCategory !== "bar"
+                        onActivated: {
+                            SettingsStore.setSettingsCategory("appearance")
+                            search.text = ""
+                        }
+                    }
+
+                    FlatButton {
+                        width: parent.width
+                        label: "Top bar"
+                        emphasized: SettingsStore.settingsWindowCategory === "bar"
+                        onActivated: {
+                            SettingsStore.setSettingsCategory("bar")
+                            search.text = ""
+                        }
                     }
                 }
             }
@@ -242,13 +266,28 @@ FloatingWindow {
                 anchors.topMargin: Theme.panelSpacing
                 anchors.bottom: parent.bottom
                 contentWidth: width
-                contentHeight: page.implicitHeight
+                contentHeight: window.activePage().implicitHeight
 
                 AppearancePage {
                     id: page
+                    y: 0
                     width: scroller.width
+                    visible: SettingsStore.settingsWindowCategory !== "bar"
+                    height: visible ? implicitHeight : 0
                     query: search.text
                     onEdited: function (patch) { window.commit(patch) }
+                    onRevealRequested: function (y, itemHeight) {
+                        scroller.contentY = Nav.scrollTarget(scroller.contentY, scroller.height, y, itemHeight)
+                    }
+                }
+
+                BarPage {
+                    id: barPage
+                    y: 0
+                    width: scroller.width
+                    visible: SettingsStore.settingsWindowCategory === "bar"
+                    height: visible ? implicitHeight : 0
+                    query: search.text
                     onRevealRequested: function (y, itemHeight) {
                         scroller.contentY = Nav.scrollTarget(scroller.contentY, scroller.height, y, itemHeight)
                     }

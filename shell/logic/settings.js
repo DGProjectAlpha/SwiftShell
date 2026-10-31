@@ -56,8 +56,54 @@ function workspaceIdsValid(ids) {
     return true;
 }
 
+var BAR_MODULES = ["workspaces", "title", "search", "clock", "control"];
+
+function normalizeModuleOrder(order) {
+    const source = asList(order);
+    const out = [];
+    for (let i = 0; i < source.length; i++) {
+        if (BAR_MODULES.indexOf(source[i]) === -1 || out.indexOf(source[i]) !== -1)
+            continue;
+        out.push(source[i]);
+    }
+    for (let i = 0; i < BAR_MODULES.length; i++) {
+        if (out.indexOf(BAR_MODULES[i]) === -1)
+            out.push(BAR_MODULES[i]);
+    }
+    return out;
+}
+
+function moduleOrderValid(order) {
+    const source = asList(order);
+    if (source.length !== BAR_MODULES.length)
+        return false;
+    const seen = [];
+    for (let i = 0; i < source.length; i++) {
+        if (BAR_MODULES.indexOf(source[i]) === -1 || seen.indexOf(source[i]) !== -1)
+            return false;
+        seen.push(source[i]);
+    }
+    return seen.length === BAR_MODULES.length;
+}
+
+function normalizeHiddenModules(hidden) {
+    const source = asList(hidden);
+    const out = [];
+    for (let i = 0; i < source.length; i++) {
+        if (BAR_MODULES.indexOf(source[i]) === -1 || out.indexOf(source[i]) !== -1)
+            continue;
+        out.push(source[i]);
+    }
+    return out;
+}
+
+function hiddenModulesValid(hidden) {
+    const source = asList(hidden);
+    return normalizeHiddenModules(source).length === source.length;
+}
+
 var DEFAULTS = {
-    version: 2,
+    version: 3,
     clock: {
         use24Hour: true,
         showWeekNumbers: false,
@@ -69,6 +115,9 @@ var DEFAULTS = {
         showFocusedTitle: true,
         workspaceIds: [],
         workspaceDispatch: "auto",
+        height: 28,
+        moduleOrder: ["workspaces", "title", "search", "clock", "control"],
+        hiddenModules: [],
     },
     appearance: {
         mode: "dark",
@@ -176,7 +225,7 @@ function validateSettings(input) {
     if (input != null && !isPlainObject(input))
         errors.push("settings");
 
-    if (source.version !== undefined && source.version !== 1 && source.version !== 2)
+    if (source.version !== undefined && source.version !== 1 && source.version !== 2 && source.version !== 3)
         errors.push("version");
 
     const clock = isPlainObject(source.clock) ? source.clock : {};
@@ -245,6 +294,25 @@ function validateSettings(input) {
         errors,
         "bar.workspaceDispatch"
     );
+    const barHeight = pickInt(bar, "height", 22, 52, DEFAULTS.bar.height, errors, "bar.height");
+    let moduleOrder = DEFAULTS.bar.moduleOrder.slice();
+    if (bar.moduleOrder === undefined) {
+        moduleOrder = DEFAULTS.bar.moduleOrder.slice();
+    } else if (moduleOrderValid(bar.moduleOrder)) {
+        moduleOrder = normalizeModuleOrder(bar.moduleOrder);
+    } else {
+        errors.push("bar.moduleOrder");
+        moduleOrder = normalizeModuleOrder(bar.moduleOrder);
+    }
+    let hiddenModules = DEFAULTS.bar.hiddenModules.slice();
+    if (bar.hiddenModules === undefined) {
+        hiddenModules = DEFAULTS.bar.hiddenModules.slice();
+    } else if (hiddenModulesValid(bar.hiddenModules)) {
+        hiddenModules = normalizeHiddenModules(bar.hiddenModules);
+    } else {
+        errors.push("bar.hiddenModules");
+        hiddenModules = normalizeHiddenModules(bar.hiddenModules);
+    }
 
     const appearance = isPlainObject(source.appearance) ? source.appearance : {};
     if (source.appearance !== undefined && !isPlainObject(source.appearance))
@@ -275,7 +343,7 @@ function validateSettings(input) {
         errors.push("settingsWindow");
     const settingsWindowWidth = pickInt(windowSource, "width", 640, 1600, DEFAULTS.settingsWindow.width, errors, "settingsWindow.width");
     const settingsWindowHeight = pickInt(windowSource, "height", 440, 1200, DEFAULTS.settingsWindow.height, errors, "settingsWindow.height");
-    const settingsWindowCategory = pickEnum(windowSource, "category", ["appearance"], DEFAULTS.settingsWindow.category, errors, "settingsWindow.category");
+    const settingsWindowCategory = pickEnum(windowSource, "category", ["appearance", "bar"], DEFAULTS.settingsWindow.category, errors, "settingsWindow.category");
 
     let pinnedIds = DEFAULTS.launcher.pinnedIds.slice();
     if (!isPlainObject(source.launcher) || launcher.pinnedIds === undefined) {
@@ -305,6 +373,9 @@ function validateSettings(input) {
                 showFocusedTitle: showFocusedTitle,
                 workspaceIds: workspaceIds,
                 workspaceDispatch: workspaceDispatch,
+                height: barHeight,
+                moduleOrder: moduleOrder,
+                hiddenModules: hiddenModules,
             },
             appearance: {
                 mode: appearanceMode,
@@ -430,7 +501,7 @@ function migrationDecision(input) {
     const validated = validateSettings(input);
     if (!validated.ok)
         return { action: "keep", reason: "invalid", errors: validated.errors, settings: validated.settings };
-    if (input.version === 2)
+    if (input.version === 3)
         return { action: "keep", reason: "current", errors: [], settings: validated.settings };
     return {
         action: "migrate",

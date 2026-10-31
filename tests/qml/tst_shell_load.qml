@@ -33,6 +33,7 @@ TestCase {
         "shell/services/SettingsModel.qml",
         "shell/launcher/LauncherWindow.qml",
         "shell/settings/AppearancePage.qml",
+        "shell/settings/BarPage.qml",
         "shell/settings/SettingsWindow.qml"
     ]
 
@@ -56,6 +57,7 @@ TestCase {
         "shell/popovers/ControlCenterPanel.qml",
         "shell/popovers/AudioSection.qml",
         "shell/settings/AppearancePage.qml",
+        "shell/settings/BarPage.qml",
         "shell/settings/SettingsWindow.qml"
     ]
 

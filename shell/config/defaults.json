@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "clock": {
     "use24Hour": true,
     "showWeekNumbers": false,
@@ -10,7 +10,16 @@
     "reserveSpace": true,
     "showFocusedTitle": true,
     "workspaceIds": [],
-    "workspaceDispatch": "auto"
+    "workspaceDispatch": "auto",
+    "height": 28,
+    "moduleOrder": [
+      "workspaces",
+      "title",
+      "search",
+      "clock",
+      "control"
+    ],
+    "hiddenModules": []
   },
   "appearance": {
     "mode": "dark",
