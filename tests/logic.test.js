@@ -272,7 +272,23 @@ test("version 1 settings migrate and unknown keys stay in the extension bag", fu
     assert.equal(missing.settings.clock.use24Hour, false);
     assert.equal(settings.migrationDecision({ version: 3 }).action, "keep");
     assert.equal(settings.migrationDecision("broken").action, "keep");
-    assert.equal(settings.migrationDecision({ version: 1, clock: { use24Hour: "yes" } }).action, "keep");
+    const repairedLegacy = settings.migrationDecision({ version: 1, clock: { use24Hour: "yes" } });
+    assert.equal(repairedLegacy.action, "migrate");
+    assert.equal(repairedLegacy.reason, "invalid-version");
+    assert.equal(repairedLegacy.settings.clock.use24Hour, true);
+    const repairedCurrent = settings.migrationDecision({ version: 3, bar: { height: 999 } });
+    assert.equal(repairedCurrent.action, "repair");
+    assert.equal(repairedCurrent.settings.bar.height, 52);
+    assert.equal(settings.migrationPlan('{"version":3,"bar":{"height":999}}', "").writeSettings, true);
+    assert.equal(settings.migrationDecision({ version: 4 }).reason, "unsupported-version");
+    const nestedExtension = settings.migrationDecision({
+        version: 1,
+        appearance: { mode: "dark", futureTintPolicy: { strength: 0.4 } }
+    });
+    assert.deepEqual(
+        JSON.parse(nestedExtension.settings.extensionsJson).__nested.appearance.futureTintPolicy,
+        { strength: 0.4 }
+    );
     assert.equal(settings.backupPath("/tmp/settings.json"), "/tmp/settings.json.bak-swiftshell");
     assert.equal(settings.backupPath(""), "");
     const sized = settings.validateSettings({
