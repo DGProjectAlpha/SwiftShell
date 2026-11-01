@@ -105,7 +105,7 @@ function popupModel() {
 }
 
 function knownPanel(id) {
-    return id === "calendar" || id === "control";
+    return id === "calendar" || id === "control" || id === "customize";
 }
 
 function clonePopup(state) {

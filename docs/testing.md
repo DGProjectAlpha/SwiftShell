@@ -735,3 +735,34 @@ Existing native bar mode/blur, hidden atomic save/restart and actual global
 Super+Space regressions passed on both monitors. Startup geometry readiness is
 included in diagnostics to avoid sending test clicks during native restore.
 No claim is made about high-GPU-load driver behavior or every physical hotplug case.
+
+## B2 bar ergonomics and frosted panels (2026-11-01)
+
+`scripts/check.sh` passed including new clock/group/visibility logic and bounded
+scrolling QML tests. `scripts/test-settings-save-native.sh` passes real FileView
+duplicate-write and rapid-edit regression with final disk readback, plus backed-up
+v2 migration followed by further edits. The expanded
+`scripts/test-workspaces-native.sh` verifies new clock/group/visibility preferences
+alongside existing named workspaces and surfaces across a process restart.
+
+`python3 tests/live/bar-ergonomics.py --live` passed both connected monitors:
+12/24-hour/date/seconds ticks, non-overlapping centered clock, real right-click and
+per-monitor checkboxes, Escape, Customize, and actual Super+Space focus handoff.
+Calendar/control/module panels passed real compositor blur comparisons against
+an owned checkerboard with observed layer geometry. Final persistence returned
+ready after restoring preferences. See decision 0035 for measured comparisons.
+The real-pointer color picker, eleven Settings pages and actual global shortcut
+regressions were rerun after the writer fix. Test transports guard cursor position
+before sending button presses, retrying only moves that sent no press.
+
+Visual acceptance: right-click each bar and toggle a module; the other output
+should stay unchanged. In Settings → Bar choose clock seconds/date/style and
+module positions, then reopen Calendar and Control Center. Check readable text,
+consistent rounded frost/shadow, no initial size flash and Escape/outside dismissal.
+Color picker drafts should remain inside Settings and only save on Use color.
+Physical hotplug and sustained gaming load remain unperformed.
+
+Runtime log review retained the known Qt Wayland text-input focus warnings; these
+were not suppressed. No QML binding-loop/type errors appeared in the final
+interaction log. Test-owned opacity and visibility overrides were explicitly
+restored from the verified pre-milestone backup and checked on disk.

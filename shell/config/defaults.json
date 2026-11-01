@@ -2,6 +2,9 @@
   "version": 3,
   "clock": {
     "use24Hour": true,
+    "showSeconds": false,
+    "showDate": false,
+    "dateFormat": "short",
     "showWeekNumbers": false,
     "weekStart": "locale"
   },
@@ -25,6 +28,9 @@
       "battery"
     ],
     "hiddenModules": [],
+    "searchLabel": false,
+    "moduleSidesJson": "{}",
+    "hiddenOutputsJson": "{}",
     "surfaceMode": "transparent",
     "surfaceColor": "#161616",
     "surfaceOpacity": 0.75,

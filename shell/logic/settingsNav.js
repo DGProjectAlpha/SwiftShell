@@ -22,6 +22,8 @@ var CONTROLS = [
     { id: "barPlacement", category: "bar", section: "Placement", label: "Bar screens", keywords: ["monitor", "focus", "all", "primary"] },
     { id: "targetMonitor", category: "bar", section: "Placement", label: "Monitor", keywords: ["screen", "output", "display"] },
     { id: "showTitle", category: "bar", section: "Modules", label: "Focused title", keywords: ["window", "title", "app"] },
+    { id: "searchLabel", category:"bar", section:"Modules", label:"Search label", keywords:["icon","glyph","search","label"] },
+    { id: "clockDisplay", category:"bar", section:"Clock", label:"Clock and date", keywords:["seconds","date","format","weekday","time"] },
     { id: "clock24", category: "bar", section: "Modules", label: "24-hour clock", keywords: ["clock", "time", "hour"] },
     { id: "moduleOrder", category: "bar", section: "Modules", label: "Module order", keywords: ["reorder", "hide", "workspaces", "search"] },
     { id: "wallpaperEnabled", category: "wallpaper", section: "Image", label: "Draw wallpaper", keywords: ["background", "hyprpaper", "swww"] },

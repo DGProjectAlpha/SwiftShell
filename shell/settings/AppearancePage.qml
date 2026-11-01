@@ -227,7 +227,7 @@ Item {
             }
         }
 
-        SectionHeader { text:"Window surface"; visible:page.query === "" }
+        SectionHeader { text:"Surfaces"; visible:page.query === "" }
 
         SettingsRow {
             controlId: "panelOpacity"
@@ -290,7 +290,7 @@ Item {
         Text {
             width:parent.width;wrapMode:Text.WordWrap
             visible:page.query === ""
-            text:SettingsModel.shadowAvailable ? "Shadows appear around the window when it is not maximized." : "Window shadows are unavailable on this system."
+            text:SettingsModel.shadowAvailable ? "Radius and shadows apply to Settings and popovers. Bar backgrounds are set in Top bar." : "Window shadows are unavailable on this system."
             color:Theme.settingsMuted;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall
         }
 

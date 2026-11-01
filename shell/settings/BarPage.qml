@@ -17,6 +17,8 @@ Item {
         colorPicker.item.selectedColor=selectedSurface.color
         colorPicker.item.open()
     }
+    property string modulesOutput: ""
+    readonly property bool customVisibility:Object.prototype.hasOwnProperty.call(JSON.parse(SettingsStore.hiddenOutputsJson),modulesOutput)
     property string surfaceOutput: ""
     readonly property var surfaceOverrides: JSON.parse(SettingsStore.barSurfaceOutputsJson)
     readonly property bool hasSurfaceOverride: Object.prototype.hasOwnProperty.call(surfaceOverrides,surfaceOutput)
@@ -56,28 +58,10 @@ Item {
         return null
     }
 
-    function moduleName(id) {
-        if (id === "workspaces")
-            return "Workspaces"
-        if (id === "title")
-            return "Focused title"
-        if (id === "search")
-            return "Search"
-        if (id === "clock")
-            return "Clock"
-        if (id === "control")
-            return "Control center"
-        if (id === "media")
-            return "Media"
-        if (id === "tray")
-            return "Tray"
-        if (id === "battery")
-            return "Battery"
-        return id
-    }
+    function moduleName(id) { return Bar.moduleName(id) }
 
     function hidden(id) {
-        var list = SettingsStore.hiddenModules
+        var list = SettingsStore.hiddenForOutput(modulesOutput)
         if (!list)
             return false
         for (var index = 0; index < list.length; index++) {
@@ -130,7 +114,7 @@ Item {
 
         Text {
             width: parent.width
-            visible: page.query.trim() !== "" && !page.shows("barSurface") && !page.shows("barHeight") && !page.shows("reserveSpace") && !page.shows("targetMonitor") && !page.shows("showTitle") && !page.shows("clock24") && !page.shows("moduleOrder")
+            visible: page.query.trim() !== "" && !page.shows("barSurface") && !page.shows("barHeight") && !page.shows("reserveSpace") && !page.shows("targetMonitor") && !page.shows("showTitle") && !page.shows("clock24") && !page.shows("clockDisplay") && !page.shows("searchLabel") && !page.shows("moduleOrder")
             text: "No matching settings"
             color: Theme.settingsText
             font.family: Theme.settingsFontFamily
@@ -333,6 +317,37 @@ Item {
             onToggled: function (next) { SettingsStore.setUse24Hour(next) }
         }
 
+        SettingsToggle {
+            controlId:"searchLabel"
+            visible:page.shows("searchLabel")
+            label:"Show Search label"
+            checked:SettingsStore.searchLabel
+            onToggled:function(value){SettingsStore.setSearchLabel(value)}
+        }
+        Column {
+            property string controlId:"clockDisplay"
+            width:parent.width;spacing:Theme.settingsSpacing
+            visible:page.shows("clockDisplay")
+            SectionHeader {text:"Clock"}
+            SettingsToggle {
+                label:"Show seconds";checked:SettingsStore.clockSeconds
+                onToggled:function(value){SettingsStore.setClockOptions(value,SettingsStore.clockDate,SettingsStore.clockDateFormat)}
+            }
+            SettingsToggle {
+                label:"Show date";checked:SettingsStore.clockDate
+                onToggled:function(value){SettingsStore.setClockOptions(SettingsStore.clockSeconds,value,SettingsStore.clockDateFormat)}
+            }
+            SettingsRow {
+                width:parent.width;label:"Date style"
+                ChoiceBox {
+                    enabled:SettingsStore.clockDate
+                    choices:[{label:"Day and month",value:"short"},{label:"Weekday and date",value:"weekday"},{label:"Year–month–day",value:"iso"}]
+                    selectedValue:SettingsStore.clockDateFormat
+                    onChosen:function(value){SettingsStore.setClockOptions(SettingsStore.clockSeconds,SettingsStore.clockDate,value)}
+                }
+            }
+        }
+
         Column {
             id: modules
             property string controlId: "moduleOrder"
@@ -349,18 +364,36 @@ Item {
                 font.weight: page.marked("moduleOrder") ? Font.Medium : Font.Normal
             }
 
+            SettingsRow {
+                width:parent.width;label:"Visibility on"
+                ChoiceBox {
+                    choices:[{label:"All screens",value:""}].concat(HyprlandModel.monitorChoices.map(function(m){return {label:m.label,value:m.name}}))
+                    selectedValue:page.modulesOutput
+                    onChosen:function(value){page.modulesOutput=value}
+                }
+            }
+            FlatButton {
+                visible:page.modulesOutput!=="" && page.customVisibility
+                label:"Use all-screen visibility"
+                onActivated:SettingsStore.inheritHidden(page.modulesOutput)
+            }
+            FlatButton {visible:SettingsStore.moduleSidesJson!=="{}";label:"Reset positions";onActivated:SettingsStore.resetModuleSides()}
+            Text {width:parent.width;wrapMode:Text.WordWrap;text:"Position and order apply to all screens. Visibility can be different on each monitor.";color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall}
+            KeyedModel {id:moduleRows;entries:SettingsStore.moduleOrder}
             Repeater {
-                model: SettingsStore.moduleOrder
+                model: moduleRows
 
-                delegate: Row {
+                delegate: Flow {
                     required property int index
-                    required property string modelData
+                    required property var entry
+                    readonly property string modelData:entry
                     width: modules.width
                     spacing: Theme.settingsSpacing
 
                     Text {
-                        width: 120
-                        anchors.verticalCenter: parent.verticalCenter
+                        width: Math.max(90,Math.min(120,modules.width*.25))
+                        height:Theme.controlHeight
+                        verticalAlignment:Text.AlignVCenter
                         text: page.moduleName(modelData)
                         color: Theme.settingsText
                         font.family: Theme.settingsFontFamily
@@ -370,17 +403,25 @@ Item {
 
                     FlatButton {
                         label: page.hidden(modelData) ? "Show" : "Hide"
-                        onActivated: SettingsStore.setHiddenModules(Bar.toggleHidden(SettingsStore.hiddenModules, modelData))
+                        onActivated: SettingsStore.setHiddenForOutput(page.modulesOutput,Bar.toggleHidden(SettingsStore.hiddenForOutput(page.modulesOutput),modelData))
                     }
 
+                    ChoiceBox {
+                        width:100;height:Theme.controlHeight
+                        choices:[{label:"Left",value:"left"},{label:"Center",value:"center"},{label:"Right",value:"right"}]
+                        selectedValue:Bar.moduleSide(modelData,SettingsStore.moduleSidesJson,SettingsStore.moduleOrder)
+                        onChosen:function(value){SettingsStore.setModuleSide(modelData,value)}
+                    }
                     FlatButton {
-                        label: "Earlier"
+                        label: "↑"
+                        Accessible.name:"Move "+page.moduleName(modelData)+" earlier"
                         enabled: index > 0
                         onActivated: SettingsStore.setModuleOrder(Bar.moveModule(SettingsStore.moduleOrder, modelData, -1))
                     }
 
                     FlatButton {
-                        label: "Later"
+                        label: "↓"
+                        Accessible.name:"Move "+page.moduleName(modelData)+" later"
                         enabled: index < SettingsStore.moduleOrder.length - 1
                         onActivated: SettingsStore.setModuleOrder(Bar.moveModule(SettingsStore.moduleOrder, modelData, 1))
                     }

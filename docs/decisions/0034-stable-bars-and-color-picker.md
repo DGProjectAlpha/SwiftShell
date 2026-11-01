@@ -37,7 +37,7 @@ Human visual review under gaming/fullscreen and physical hotplug remain pending.
 
 Backups: verified preferences and geometry in SwiftShell's own state directory,
 backups/20261101T140941Z-flicker. Tests restore the user's current frosted bars and
-0.2 opacity, rather than forcing earlier transparent settings. No OS service,
+persisted opacity, rather than forcing earlier transparent settings. No OS service,
 monitor mode, autostart, Noctalia or user-authored Hyprland file changed. Reverting
 this commit restores the old picker/model implementation; retained backups cover
 preferences if needed. Next: roadmap B2 bar ergonomics and shared frosted popovers.

@@ -16,6 +16,8 @@ TestCase {
         "shell/WorkspaceAudit.qml",
         "shell/bar/BarHost.qml",
         "shell/bar/BarWindow.qml",
+        "shell/bar/ModuleStrip.qml",
+        "shell/bar/BarContextMenu.qml",
         "shell/bar/WorkspaceIndicators.qml",
         "shell/bar/ClockModule.qml",
         "shell/bar/FocusedTitle.qml",
@@ -26,6 +28,7 @@ TestCase {
         "shell/components/BarLabel.qml",
         "shell/components/FlatButton.qml",
         "shell/components/ChoiceBox.qml",
+        "shell/components/SurfaceShadow.qml",
         "shell/components/KeyedModel.qml",
         "shell/components/BackdropEffect.qml",
         "shell/components/CompactSlider.qml",
@@ -96,7 +99,6 @@ TestCase {
         "shell/components/ServiceStatus.qml",
         "shell/components/SettingsRow.qml",
         "shell/components/SettingsToggle.qml",
-        "shell/popovers/PopoverHost.qml",
         "shell/popovers/PopoverSurface.qml",
         "shell/popovers/CalendarPanel.qml",
         "shell/popovers/ControlCenterPanel.qml",
@@ -132,7 +134,7 @@ TestCase {
     }
 
     function expectedUnavailable(path, message) {
-        if (path === "shell/settings/SettingsShadow.qml")
+        if (path === "shell/settings/SettingsShadow.qml" || path === "shell/components/SurfaceShadow.qml")
             return message.indexOf('module "QtQuick.Effects" is not installed') !== -1
                 || message.indexOf('RectangularShadow is not a type') !== -1
         if (path === "shell/settings/ImageDialog.qml"
@@ -148,6 +150,7 @@ TestCase {
         if (path === "shell/shell.qml"
                 || path === "shell/bar/BarHost.qml"
                 || path === "shell/bar/BarWindow.qml"
+                || path === "shell/popovers/PopoverHost.qml"
                 || path === "shell/launcher/LauncherWindow.qml"
                 || path === "shell/wallpaper/WallpaperHost.qml"
                 || path === "shell/wallpaper/WallpaperSurface.qml")
@@ -160,7 +163,8 @@ TestCase {
             return true
         if (message.indexOf("Non-existent attached object") === -1)
             return false
-        return message.indexOf("BarWindow.qml:") !== -1
+        return message.indexOf("PopoverHost.qml:") !== -1
+            || message.indexOf("BarWindow.qml:") !== -1
             || message.indexOf("LauncherWindow.qml:19") !== -1
             || message.indexOf("NotificationHost.qml:24") !== -1
             || message.indexOf("WallpaperSurface.qml:25") !== -1
@@ -275,18 +279,18 @@ TestCase {
 
         var surfaceComponent = componentFor("shell/popovers/PopoverSurface.qml")
         var calendarCard = surfaceComponent.createObject(this)
-        var calendarColumn = calendarCard.children[1].children[0]
+        var calendarColumn = findChild(calendarCard,"popoverBody")
         calendarComponent.createObject(calendarColumn)
         tryVerify(function() { return calendarColumn.implicitWidth >= 196 }, 1000)
         var card = calendarCard.children[1]
-        // Default settings: panel padding 12 on each side, shadow softness 10.
+        // Material padding and a full transparent inset keep the Gaussian shadow unclipped.
         compare(card.width, calendarColumn.implicitWidth + 24)
-        compare(calendarCard.implicitWidth, card.width + 10)
-        compare(calendarCard.implicitHeight, card.height + 10)
+        compare(calendarCard.implicitWidth, card.width + calendarCard.shadowMargin*2)
+        compare(calendarCard.implicitHeight, card.height + calendarCard.shadowMargin*2)
         verify(calendarCard.implicitHeight > calendar.implicitHeight)
 
         var controlCard = surfaceComponent.createObject(this)
-        var controlColumn = controlCard.children[1].children[0]
+        var controlColumn = findChild(controlCard,"popoverBody")
         var loader = Qt.createQmlObject("import QtQuick; Loader {}", controlColumn, "control-loader")
         loader.sourceComponent = controlComponent
         tryVerify(function() { return loader.item !== null && loader.implicitWidth === 248 }, 1000)
@@ -300,22 +304,10 @@ TestCase {
         controlCard.destroy()
     }
 
-    function test_popup_host_tracks_panel_implicit_size() {
-        var bar = Qt.createQmlObject("import QtQuick; Item { property Item contentItem: null; property var screen: null }", this, "bar")
-        bar.contentItem = bar
-        bar.screen = Qt.createQmlObject("import QtQuick; QtObject { property real width: 1920; property real height: 1080 }", this, "screen")
-        var anchor = Qt.createQmlObject("import QtQuick; Item { width: 48; height: 28 }", bar, "anchor")
-        var popup = componentFor("shell/popovers/PopoverHost.qml").createObject(this, { barWindow: bar })
-        verify(popup !== null)
-        popup.toggle("calendar", anchor)
-        tryVerify(function() { return popup.implicitWidth >= 196 + 34 && popup.implicitHeight > 80 }, 1000)
-        var calendarWidth = popup.implicitWidth
-        popup.toggle("control", anchor)
-        tryVerify(function() { return popup.implicitWidth >= 248 + 34 && popup.implicitWidth !== calendarWidth }, 1000)
-        popup.destroy()
-        anchor.destroy()
-        bar.screen.destroy()
-        bar.destroy()
+    function test_popup_host_resolves_native_layer_surface() {
+        const component=componentFor("shell/popovers/PopoverHost.qml")
+        const message=errorText(component)
+        verify(component.status === Component.Ready || expectedUnavailable("shell/popovers/PopoverHost.qml",message),message)
     }
 
     function findText(node, needle, depth) {

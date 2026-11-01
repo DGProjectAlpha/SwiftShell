@@ -20,5 +20,11 @@ and evidence without modifying that external document.
 - Maintenance: bar updates retain module/workspace controls; the color picker
   is a themed in-window draft/commit popup. Native pointer tests passed on both
   scales, and the delegate-lifetime regression quantifies the removed churn.
-- Next: B2 in small independent slices. C1/C2,
+- B2: clock seconds/date/style, icon-only or labeled Search, left/center/right
+  grouping and per-output module visibility are implemented. Real right-click
+  menus, keyboard dismissal and independently frosted calendar/control/module
+  layers passed native interaction and blur comparisons on both scales. Shared
+  shadows, bounded scrolling and theme contrast complete this bar/floater slice.
+  Duplicate/queued settings saves have a native regression. See decision 0035.
+- Next: C1/C2 Spotlight app grid/favorites/quick actions and richer search;
   D and later milestones remain separate work, not hidden inside this increment.

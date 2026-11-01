@@ -7,7 +7,7 @@ Item {
     required property var targetWindow
     required property Item surface
     property real cornerRadius: 0
-    readonly property bool applied: enabled && SurfaceService.blurAvailable && regionApplied
+    readonly property bool applied: enabled && SurfaceService.blurAvailable && regionApplied && surface !== null && surface.width>0 && surface.height>0
     property bool regionApplied: false
     property var region: Region { item: effect.surface; radius:effect.cornerRadius }
     function sync() {

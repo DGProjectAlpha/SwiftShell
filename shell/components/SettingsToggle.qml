@@ -50,7 +50,7 @@ MouseArea {
         Rectangle {
             width:12; height:12; radius:6
             x:control.checked ? 17 : 3; y:3
-            color: control.checked ? (SettingsStore.appearanceMode === "light" ? "white" : "#222222") : Theme.settingsMuted
+            color: control.checked ? (Theme.lightSurface ? "white" : "#222222") : Theme.settingsMuted
         }
     }
 

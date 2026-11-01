@@ -15,6 +15,7 @@ fi
 "$NODE" "$ROOT/tests/workspaces.test.js"
 "$NODE" "$ROOT/tests/displays.test.js"
 "$NODE" "$ROOT/tests/bar-surfaces.test.js"
+"$NODE" "$ROOT/tests/bar-ergonomics.test.js"
 python3 "$ROOT/tests/test_displays.py"
 python3 "$ROOT/tests/test_windowctl.py"
 "$NODE" "$ROOT/tests/settings_files.test.js"

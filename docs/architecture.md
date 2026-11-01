@@ -60,15 +60,25 @@ If the Hyprland socket is absent, the indicators render inactive and clicks log 
 
 ## Panels
 
-Each bar window owns one `PopoverHost`. That host is the only primary popup for its monitor. Its phase is `closed`, `opening`, `open`, or `closing`. The grab and the click mask follow that phase. Opening the clock replaces the control center on that monitor, and the reverse, without starting a second window.
+Each bar owns one `PopoverHost`, an independent transparent `PanelWindow` on
+`WlrLayer.Overlay` with namespace `swiftshell-popover`. Calendar, control center
+and module customization replace one another on that monitor. Content is measured
+before mapping; screen-local margins account for the shadow inset and clamp the
+painted card to available space. Tall content scrolls inside a bounded viewport.
 
-The host is a `PopupWindow`. `anchor.window` is the bar. `anchor.edges` stays `Top | Left` and `anchor.gravity` stays `Bottom | Right`, so a 1×1 anchor rect is the popup's top-left. `PopupAdjustment.Flip` and `PopupAdjustment.Slide` remain as the compositor's own adjustment. The rect is written inside `anchor.onAnchoring`, which is the documented place for a non-reactive map. The map is `contentItem.mapFromItem(anchorItem, 0, 0, anchorItem.width, anchorItem.height)`. Those values are logical pixels. `QsWindow.itemRect` is not used: its documented equivalent is `mapFromItem(item, 0, 0, 0, 0)`, which has no size, so end alignment cannot use it. `shell/logic/popover.js` then clamps the top-left to the screen margin. A zero-size map produces no rect. `updateAnchor()` runs when the anchor item, the bar window, or the panel size changes. There is no timer.
+The surface uses the same theme, real `RectangularShadow`, rounded
+`BackdropEffect` and neutral controls as Settings. Each layer owns its background
+effect; no global compositor rule is inserted. Unsupported effects retain readable
+translucent/opaque surfaces. See decisions 0032–0035 for current capability evidence;
+older Quickshell 0.2 fallback notes are historical, not a native blur claim.
 
-The popup window color is transparent and `surfaceFormat.opaque` is false, so the surface can blend. The visible card is a separate rectangle using the theme scrim. A flat translucent rectangle sits behind that card. It is not a sampled shadow and it is not blur. The card sets a corner radius and leaves `clip` off. Qt Quick's clip is rectangular, so turning it on would not make a rounded blur mask. Long button and switch labels elide when the control is narrower than the text. A 1px border is drawn only while a control has keyboard focus. The display diagram keeps a 1px edge so the rectangles stay readable.
-
-`BackgroundEffect` is not referenced. Quickshell 0.2.0 does not have that type, and a dynamic property lookup does not create the attached object. The 0.3 effect is declarative and needs `ext-background-effect-v1`. A file that names the type would fail to parse on 0.2.0, and version-gated preprocessing is not part of that release. `appearance.panelBlur` stays in the settings file and does not change rendering. The scrim, its opacity, and the flat shadow are the supported surface. Hyprland's blur settings are not modified.
-
-Dismissal uses `HyprlandFocusGrab` from Quickshell 0.2. The grab is active only while the phase is `opening` or `open`. Closing clears the key scope's focus before the grab is set inactive. Active focus is requested on the next frame, and only if the popup is still visible and the grab is active. The key scope is not a text field and does not accept Tab. Setting the grab inactive releases it and does not emit `cleared`. A click outside emits `cleared` only after the compositor has already dropped the grab, then the same close path runs. Escape closes the panel while the key scope is focused. During `closing`, the window can stay visible for the fade, the grab is already off, and `mask` is a `Region` with `Intersection.Xor` over the window content so the fading surface does not keep clicks. `closed` hides the window. Monitor loss, anchor loss, and window close go straight to `closed`. Destruction clears focus and then turns the grab off. Stopping SwiftShell also drops the client, which releases a grab the process did not clear. Noctalia is not part of that grab.
+While visible, the layer requests exclusive keyboard focus. `HyprlandFocusGrab`
+handles outside clicks; Escape releases focus and hides immediately. Opening
+Settings or Spotlight closes bar panels first. Opening motion respects reduced
+motion. Geometry diagnostics use screen origin plus layer margins, not unreliable
+QWindow coordinates; native tests cross-check against Hyprland's observed layers.
+Module and workspace repeaters use keyed models so ordinary role updates retain
+live controls rather than destroying/recreating them.
 
 The bar's layer is `WlrLayer.Top` and its keyboard focus is `WlrKeyboardFocus.None`. Qt's Wayland text-input client still enables and disables the text-input protocol when an item gains or loses active focus. The logged line `Trying to disable ... but 0x0 is focused` is that client talking to a null keyboard-focus surface. The layer surface is not the text-input focus, and an outside click drops the grab before Qt runs the disable. The shell does not filter the message. Whether it still appears after this focus order is a hardware check.
 

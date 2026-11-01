@@ -1,4 +1,4 @@
-/* Live test transport only. The Python harness restricts gestures to Settings. */
+/* Live test transport only. The Python harness restricts gestures to SwiftShell surfaces. */
 #include <wayland-client.h>
 #include <linux/input-event-codes.h>
 #include <stdint.h>
@@ -33,7 +33,9 @@ static int cursor_matches(int x,int y){
     int cx=-999,cy=-999;char *px=strstr(buffer,"\"x\""),*py=strstr(buffer,"\"y\"");
     if(!px||!py)return 0;
     sscanf(px,"\"x\": %d",&cx);sscanf(py,"\"y\": %d",&cy);
-    return abs(cx-x)<=2 && abs(cy-y)<=2;
+    int matches=abs(cx-x)<=2 && abs(cy-y)<=2;
+    if(!matches)fprintf(stderr,"Cursor expected %d,%d; observed %d,%d.\n",x,y,cx,cy);
+    return matches;
 }
 static void global(void *data,struct wl_registry *registry,uint32_t name,const char *interface,uint32_t version) {
     (void)data;
@@ -47,7 +49,9 @@ static void move(struct wl_display *d,struct zwlr_virtual_pointer_v1 *p,int x,in
     zwlr_virtual_pointer_v1_motion_absolute(p,now(),x,y,w,h);zwlr_virtual_pointer_v1_frame(p);wl_display_roundtrip(d);
 }
 int main(int argc,char **argv){
-    if(argc!=10){fprintf(stderr,"Expected local-x local-y output-width output-height delta-x delta-y connector global-x global-y\n");return 2;}
+    if(argc!=10 && argc!=11){fprintf(stderr,"Expected local-x local-y output-width output-height delta-x delta-y connector global-x global-y\n");return 2;}
+    if(argc==11 && strcmp(argv[10],"right") && strcmp(argv[10],"left"))return 2;
+    uint32_t button=argc==11 && !strcmp(argv[10],"right") ? BTN_RIGHT : BTN_LEFT;
     int x=atoi(argv[1]),y=atoi(argv[2]),w=atoi(argv[3]),h=atoi(argv[4]),dx=atoi(argv[5]),dy=atoi(argv[6]);
     if(x<0||y<0||w<1||h<1||x>=w||y>=h||x+dx<0||y+dy<0||x+dx>=w||y+dy>=h)return 2;
     struct wl_display *d=wl_display_connect(NULL);if(!d)return 3;
@@ -58,8 +62,8 @@ int main(int argc,char **argv){
     struct zwlr_virtual_pointer_v1 *p=zwlr_virtual_pointer_manager_v1_create_virtual_pointer_with_output(manager,NULL,output);
     move(d,p,x,y,w,h);usleep(80000);
     if(!cursor_matches(atoi(argv[8]),atoi(argv[9]))){fprintf(stderr,"Pointer mapping mismatch; no button press sent.\n");return 6;}
-    zwlr_virtual_pointer_v1_button(p,now(),BTN_LEFT,WL_POINTER_BUTTON_STATE_PRESSED);zwlr_virtual_pointer_v1_frame(p);wl_display_roundtrip(d);usleep(80000);
+    zwlr_virtual_pointer_v1_button(p,now(),button,WL_POINTER_BUTTON_STATE_PRESSED);zwlr_virtual_pointer_v1_frame(p);wl_display_roundtrip(d);usleep(80000);
     for(int step=1;step<=12;step++){move(d,p,x+dx*step/12,y+dy*step/12,w,h);usleep(15000);}
-    zwlr_virtual_pointer_v1_button(p,now(),BTN_LEFT,WL_POINTER_BUTTON_STATE_RELEASED);zwlr_virtual_pointer_v1_frame(p);wl_display_roundtrip(d);
+    zwlr_virtual_pointer_v1_button(p,now(),button,WL_POINTER_BUTTON_STATE_RELEASED);zwlr_virtual_pointer_v1_frame(p);wl_display_roundtrip(d);
     zwlr_virtual_pointer_v1_destroy(p);zwlr_virtual_pointer_manager_v1_destroy(manager);wl_registry_destroy(r);wl_display_disconnect(d);return 0;
 }

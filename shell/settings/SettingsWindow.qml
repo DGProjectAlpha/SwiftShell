@@ -20,7 +20,7 @@ FloatingWindow {
     property bool placementReady: false
     property int resizeRequests: 0
     property bool lastResizeAccepted: false
-    readonly property int shadowInset: WindowService.maximized ? 0 : 32
+    readonly property int shadowInset: WindowService.maximized ? 0 : Theme.surfaceShadowInset
     property var history: Settings.initialHistory(window.currentAppearance())
     readonly property bool canUndo: history && history.past && history.past.length > 0
 

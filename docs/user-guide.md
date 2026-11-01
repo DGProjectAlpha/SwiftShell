@@ -91,3 +91,12 @@ Color selection stays inside Settings and follows its theme. Drag the color
 square and hue strip, select a neutral swatch, or enter a six-digit hex color.
 Use color applies your choice; Cancel, Escape or clicking outside discards it.
 Draft changes do not affect your bar or wallpaper. Opacity is controlled separately.
+
+### Bar layout and clock
+
+Right-click a bar to choose modules for that monitor, inherit the global choices,
+or open Bar settings. Bar settings also provides per-monitor visibility, compact
+left/center/right placement, module order, optional Search text, 12/24-hour time,
+seconds and date styles. Reset positions restores the arrangement derived from
+module order. Calendar and Control Center share the Settings material; Escape or
+an outside click closes them. Opening Settings or Spotlight dismisses bar panels.

@@ -61,7 +61,7 @@ Item {
 
         SystemClock {
             id: clock
-            precision: SystemClock.Minutes
+            precision:SettingsStore.clockSeconds ? SystemClock.Seconds : SystemClock.Minutes
         }
 
         Row {
@@ -69,14 +69,14 @@ Item {
             spacing: Theme.panelSpacing
 
             FlatButton {
-                label: "Previous"
+                label: "‹"
                 Accessible.name: "Previous month"
                 onActivated: root.shift(-1)
             }
 
             Text {
                 id: title
-                width: Theme.calendarWidth * 0.46
+                width: Theme.calendarWidth-Theme.controlHeight*2-Theme.panelSpacing*2
                 height: Theme.controlHeight
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter
@@ -91,7 +91,7 @@ Item {
             }
 
             FlatButton {
-                label: "Next"
+                label: "›"
                 Accessible.name: "Next month"
                 onActivated: root.shift(1)
             }
@@ -191,7 +191,7 @@ Item {
 
         Text {
             width: parent.width
-            text: Qt.formatDate(clock.date, "dddd d MMMM") + "  " + Clock.formatTime(clock.date, SettingsStore.use24Hour)
+            text: Qt.formatDate(clock.date, "dddd d MMMM") + "  " + Clock.formatTime(clock.date, SettingsStore.use24Hour,SettingsStore.clockSeconds)
             color: Theme.panelMuted
             font.family: Theme.fontFamily
             font.pixelSize: Theme.fontSize

@@ -1,5 +1,6 @@
 import QtQuick
 import QtTest
+import "../../shell/services" as Services
 TestCase {
     name:"StableBarModels"
     when:windowShown
@@ -18,6 +19,32 @@ TestCase {
         compare(repeater.itemAt(0),gaming);compare(repeater.itemAt(2),first)
         compare(repeater.count,3)
         indicators.destroy()
+    }
+    function test_module_settings_are_scoped_and_resettable() {
+        const saved=Services.SettingsStore.snapshot()
+        verify(Services.SettingsStore.setModuleSide("clock","center"))
+        compare(JSON.parse(Services.SettingsStore.moduleSidesJson).clock,"center")
+        verify(!Services.SettingsStore.setModuleSide("clock","bottom"))
+        verify(Services.SettingsStore.setHiddenForOutput("DP-1",["clock"]))
+        compare(Services.SettingsStore.hiddenForOutput("DP-1")[0],"clock")
+        verify(Services.SettingsStore.hiddenForOutput("HDMI-A-1").indexOf("clock")<0)
+        Services.SettingsStore.inheritHidden("DP-1")
+        verify(!Object.prototype.hasOwnProperty.call(JSON.parse(Services.SettingsStore.hiddenOutputsJson),"DP-1"))
+        Services.SettingsStore.resetModuleSides()
+        compare(Services.SettingsStore.moduleSidesJson,"{}")
+        Services.SettingsStore.applyDocument(saved)
+    }
+    function test_tall_popover_scrolls_inside_rounded_surface() {
+        const component=Qt.createComponent("../../shell/popovers/PopoverSurface.qml")
+        const surface=component.createObject(this,{maximumHeight:400})
+        const body=findChild(surface,"popoverBody")
+        Qt.createQmlObject('import QtQuick; Rectangle {width:240;height:1000}',body)
+        tryVerify(function(){return surface.implicitHeight<=400})
+        const scroll=findChild(surface,"popoverScroll")
+        tryVerify(function(){return scroll.contentHeight>scroll.height})
+        surface.scrollBy(150)
+        compare(scroll.contentY,150)
+        surface.destroy()
     }
     function test_module_reorder_preserves_existing_rows() {
         const component=Qt.createComponent("../../shell/components/KeyedModel.qml")

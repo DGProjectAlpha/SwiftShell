@@ -7,7 +7,7 @@ parser=argparse.ArgumentParser();parser.add_argument('--live',action='store_true
 root=Path(__file__).parents[2]
 with tempfile.TemporaryDirectory(prefix='swiftshell-flicker-before-') as folder:
  folder=Path(folder);shutil.copytree(root/'shell',folder/'shell',symlinks=False)
- bar=folder/'shell/bar/BarWindow.qml';text=re.sub(r'                required property var (modelData|entry)', lambda m:'                Component.onCompleted: console.info("AUDIT module created")\n                Component.onDestruction: console.info("AUDIT module destroyed")\n'+m.group(0),bar.read_text(),count=1);bar.write_text(text)
+ bar=folder/'shell/bar/ModuleStrip.qml';text=re.sub(r'                required property var (modelData|entry)', lambda m:'                Component.onCompleted: console.info("AUDIT module created")\n                Component.onDestruction: console.info("AUDIT module destroyed")\n'+m.group(0),bar.read_text(),count=1);bar.write_text(text)
  workspace=folder/'shell/bar/WorkspaceIndicators.qml';workspace.write_text(re.sub(r'            required property var (modelData|entry)',lambda m:'            Component.onCompleted: console.info("AUDIT workspace created")\n            Component.onDestruction: console.info("AUDIT workspace destroyed")\n'+m.group(0),workspace.read_text(),count=1))
  (folder/'shell/Audit.qml').write_text('''//@ pragma ShellId swiftshell-flicker-audit
 import QtQuick

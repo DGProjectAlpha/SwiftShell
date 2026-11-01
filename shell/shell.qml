@@ -24,8 +24,17 @@ ShellRoot {
         target: "swiftshell"
         function diagnostics(): string {
             const w=SettingsModel.nativeWindow
-            return JSON.stringify({barSurfaces:barHost.surfaceDiagnostics(),layerBlurAvailable:SurfaceService.blurAvailable,launcherOpen:LauncherModel.open,launcherOutput:LauncherModel.screen ? LauncherModel.screen.name : "",launcherHasFocus:launcherWindow.searchHasFocus,windowBusy:WindowService.busy || WindowService.queue.length>0 || !!(w && !w.placementReady),settingsOpen:SettingsModel.open,category:SettingsStore.settingsWindowCategory,blurAvailable:WindowService.blurAvailable,blurRegionApplied:WindowService.blurRegionApplied,blurReason:WindowService.blurReason,windowError:WindowService.error,
+            return JSON.stringify({settingsPersistence:SettingsStore.persistenceState,barSurfaces:barHost.surfaceDiagnostics(),layerBlurAvailable:SurfaceService.blurAvailable,launcherOpen:LauncherModel.open,launcherOutput:LauncherModel.screen ? LauncherModel.screen.name : "",launcherHasFocus:launcherWindow.searchHasFocus,windowBusy:WindowService.busy || WindowService.queue.length>0 || !!(w && !w.placementReady),settingsOpen:SettingsModel.open,category:SettingsStore.settingsWindowCategory,blurAvailable:WindowService.blurAvailable,blurRegionApplied:WindowService.blurRegionApplied,blurReason:WindowService.blurReason,windowError:WindowService.error,
                 panelBlur:SettingsStore.panelBlur,shadowOpacity:SettingsStore.shadowOpacity,shadowSoftness:SettingsStore.shadowSoftness,window:w ? {width:w.width,height:w.height,pageStatus:w.pageStatus,searchHasFocus:w.searchHasFocus,colorPickerOpen:w.activePage() && w.activePage().colorPickerOpen === true,colorPicker:w.activePage() && w.activePage().colorPickerGeometry ? w.activePage().colorPickerGeometry() : null,maximized:WindowService.maximized,qtMaximized:w.maximized,shadowInset:w.shadowInset,resizeRequests:w.resizeRequests,lastResizeAccepted:w.lastResizeAccepted} : null})
+        }
+        function moduleSide(id: string, side: string): void { if(side === "inherit")SettingsStore.inheritModuleSide(id);else SettingsStore.setModuleSide(id,side) }
+        function moduleVisibility(output: string, hiddenJson: string): void {
+            try {SettingsStore.setHiddenForOutput(output,JSON.parse(hiddenJson))} catch(error) {}
+        }
+        function moduleInherit(output: string): void { SettingsStore.inheritHidden(output) }
+        function barPanel(output: string, id: string): void { barHost.showPanel(output,id) }
+        function clockOptions(hours24: bool, seconds: bool, date: bool, format: string): void {
+            if(SettingsStore.setClockOptions(seconds,date,format)) SettingsStore.setUse24Hour(hours24)
         }
         function barSurface(output: string, mode: string, color: string, opacity: real): void {
             SettingsStore.setBarSurface(output,mode,color,opacity)
@@ -37,8 +46,13 @@ ShellRoot {
             else if (action === "toggle") LauncherModel.toggleLauncher()
         }
         function appearance(key: string, value: real): void {
-            if (["panelBlur","panelOpacity","radius","shadowOpacity","shadowSoftness"].indexOf(key)>=0)
-                SettingsModel.appearanceEditRequested(key,value)
+            if (["panelBlur","panelOpacity","radius","shadowOpacity","shadowSoftness"].indexOf(key)<0) return
+            if(SettingsModel.nativeWindow) SettingsModel.appearanceEditRequested(key,value)
+            else {
+                const next=SettingsStore.snapshot().appearance
+                next[key]=value
+                SettingsStore.setAppearance(next)
+            }
         }
         function window(action: string): void {
             SettingsModel.windowActionRequested(action)

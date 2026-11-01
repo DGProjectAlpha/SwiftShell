@@ -1,5 +1,5 @@
 import QtQuick
-import QtQuick.Layouts
+import QtQuick.Controls.Basic as Controls
 import Quickshell
 import Quickshell.Wayland
 import "../logic/bar.js" as Bar
@@ -21,6 +21,18 @@ PanelWindow {
     focusable: false
     implicitHeight: Theme.barHeight
     property Item controlAnchor: null
+    property Item calendarAnchor: null
+    property var clockItem: null
+    readonly property var outputHidden:SettingsStore.hiddenForOutput(monitorKey)
+    function modulesOn(side) { return Bar.modulesForSide(SettingsStore.moduleOrder,outputHidden,SettingsStore.moduleSidesJson,side) }
+    function moduleLayout() { return {left:{x:leftModules.x,width:leftModules.width},center:{x:centerModules.x,width:centerModules.width},right:{x:rightModules.x,width:rightModules.width}} }
+    function menuDiagnostics() { return {geometry:popovers.geometry(),blurBounds:popovers.blurBounds,id:popovers.popupState.panelId,visible:popovers.visible,blur:popovers.surfaceBlurApplied,width:popovers.implicitWidth,height:popovers.implicitHeight,x:popovers.placement.x,y:popovers.placement.y} }
+    function showPanel(id) {
+        if(id === "close") {popovers.close();return}
+        if(id === "calendar" && calendarAnchor) popovers.toggle(id,calendarAnchor)
+        else if(id === "control" && controlAnchor) popovers.toggle(id,controlAnchor)
+        else if(id === "customize") {contextAnchor.x=width-100;popovers.toggle(id,contextAnchor)}
+    }
 
     anchors {
         top: true
@@ -115,26 +127,36 @@ PanelWindow {
         }
     }
 
-    RowLayout {
-        anchors.fill: parent
-        anchors.leftMargin: Theme.marginH
-        anchors.rightMargin: Theme.marginH
-        spacing: Theme.moduleSpacing
-
-        KeyedModel { id: stableItems; entries: SettingsStore.visibleModules }
-
-        Repeater {
-            model: stableItems
-
-            delegate: Loader {
-                required property var entry
-                readonly property var modelData: entry
-                Layout.alignment: Qt.AlignVCenter
-                Layout.fillWidth: modelData === "title"
-                Layout.fillHeight: modelData === "title"
-                Layout.preferredHeight: Theme.barHeight
-                sourceComponent: window.componentFor(modelData)
-            }
+    ModuleStrip {
+        id:leftModules
+        barWindow:window;modules:window.modulesOn("left")
+        x:Theme.marginH
+        onWidthChanged:if(popovers)popovers.reposition()
+    }
+    ModuleStrip {
+        id:rightModules
+        barWindow:window;modules:window.modulesOn("right")
+        x:window.width-Theme.marginH-width
+        onXChanged:if(popovers)popovers.reposition()
+    }
+    ModuleStrip {
+        id:centerModules
+        barWindow:window;modules:window.modulesOn("center")
+        readonly property real freeLeft:leftModules.x+leftModules.width+Theme.moduleSpacing
+        readonly property real freeRight:rightModules.x-Theme.moduleSpacing
+        titleWidth:Math.min(480,Math.max(0,freeRight-freeLeft-fixedWidth))
+        x:Math.max(freeLeft,Math.min((window.width-width)/2,freeRight-width))
+        onXChanged:if(popovers)popovers.reposition()
+    }
+    Item { id:contextAnchor;y:0;width:1;height:Theme.barHeight }
+    MouseArea {
+        z:100
+        anchors.fill:parent
+        acceptedButtons:Qt.RightButton
+        onClicked:function(mouse) {
+            LauncherModel.closeLauncher()
+            contextAnchor.x=mouse.x
+            popovers.toggle("customize",contextAnchor)
         }
     }
 
@@ -189,7 +211,7 @@ PanelWindow {
 
         MouseArea {
             id: searchButton
-            implicitWidth: searchLabel.implicitWidth
+            implicitWidth: Math.max(Theme.barHeight,searchContents.implicitWidth)
             implicitHeight: Theme.barHeight
             width: implicitWidth
             height: implicitHeight
@@ -209,12 +231,24 @@ PanelWindow {
                 }
             }
 
-            BarLabel {
-                id: searchLabel
-                anchors.centerIn: parent
-                text: "Search"
-                color: searchButton.containsMouse || searchButton.activeFocus
-                    ? window.outputTextPrimary : window.outputTextMuted
+            Controls.ToolTip.visible:containsMouse
+            Controls.ToolTip.text:"Search"
+            Controls.ToolTip.delay:600
+            Row {
+                id:searchContents
+                anchors.centerIn:parent
+                spacing:6
+                Item {
+                    width:Theme.barIcon;height:Theme.barIcon
+                    readonly property color ink:searchButton.containsMouse || searchButton.activeFocus ? window.outputTextPrimary : window.outputTextMuted
+                    Rectangle {width:parent.width*.6;height:width;radius:width/2;anchors.left:parent.left;anchors.top:parent.top;color:"transparent";border.width:1.5;border.color:parent.ink}
+                    Rectangle {width:parent.width*.48;height:1.5;rotation:45;x:parent.width*.51;y:parent.height*.73;color:parent.ink}
+                }
+                BarLabel {
+                    visible:SettingsStore.searchLabel
+                    text:"Search"
+                    color:searchButton.containsMouse || searchButton.activeFocus ? window.outputTextPrimary : window.outputTextMuted
+                }
             }
         }
     }
@@ -224,6 +258,8 @@ PanelWindow {
 
         ClockModule {
             id: clockModule
+            Component.onCompleted:{window.calendarAnchor=clockModule;window.clockItem=clockModule}
+            Component.onDestruction:{if(window.calendarAnchor===clockModule)window.calendarAnchor=null;if(window.clockItem===clockModule)window.clockItem=null}
             textPrimary: window.outputTextPrimary
             textHover: window.outputTextPrimary
             onActivated: {
@@ -345,9 +381,18 @@ PanelWindow {
         }
     }
 
+    Component {
+        id:contextPanel
+        BarContextMenu {
+            outputName:window.monitorKey
+            onCustomizeRequested:{popovers.close();SettingsStore.setSettingsCategory("bar");SettingsModel.show()}
+        }
+    }
+
     PopoverHost {
         id: popovers
         barWindow: window
+        customPanel:contextPanel
     }
 
     Connections {

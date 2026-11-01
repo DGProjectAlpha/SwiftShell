@@ -21,6 +21,11 @@ ShellRoot {
                     && Services.SettingsStore.settingsWindowCategory === "workspaces"
                     && Services.SettingsStore.barSurfaceMode === "solid"
                     && Services.SettingsStore.barSurfaceColor === "#dedede"
+                    && Services.SettingsStore.clockSeconds && Services.SettingsStore.clockDate
+                    && Services.SettingsStore.clockDateFormat === "iso" && !Services.SettingsStore.use24Hour
+                    && Services.SettingsStore.searchLabel
+                    && JSON.parse(Services.SettingsStore.moduleSidesJson).clock === "center"
+                    && JSON.parse(Services.SettingsStore.hiddenOutputsJson)["DP-1"][0] === "tray"
                     && JSON.parse(Services.SettingsStore.barSurfaceOutputsJson)["DP-1"].mode === "frosted")
                     console.info("Workspace settings audit: restart readback passed");
                 else console.warn("Workspace settings audit: restart readback FAILED");
@@ -29,6 +34,11 @@ ShellRoot {
                 audit.written = true;
                 // Multiple synchronous edits reproduced a stale JsonAdapter cache write.
                 Services.SettingsStore.setSettingsCategory("workspaces");
+                Services.SettingsStore.setClockOptions(true,true,"iso");
+                Services.SettingsStore.setUse24Hour(false);
+                Services.SettingsStore.setSearchLabel(true);
+                Services.SettingsStore.setModuleSide("clock","center");
+                Services.SettingsStore.setHiddenForOutput("DP-1",["tray"]);
                 Services.SettingsStore.setBarSurface("", "solid", "#dedede", .8);
                 Services.SettingsStore.setBarSurface("DP-1", "frosted", "#222222", .4);
                 Services.SettingsStore.setWorkspaceOutput("DP-1", ["1", "2", "3", "gaming"]);
