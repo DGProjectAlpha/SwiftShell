@@ -8,10 +8,10 @@ and evidence without modifying that external document.
   redesign in 8048186, completion and mixed-scale evidence in d7f8182. Actual
   hotplug, comprehensive keyboard accessibility and wallpaper contrast acceptance
   remain on the manual checklist; no blanket completion claim.
-- C0: typed IPC invocation and native input fix implemented and tested on both
-  outputs. Existing Super+Space belongs to Noctalia. One-line persistent command
-  handoff prepared and syntax-checked, awaiting explicit owner approval because
-  it changes user-authored Lua and an existing shortcut. Physical chord/reboot
-  validation remains pending. See docs/launcher-shortcut.md and docs/testing.md.
-- Next: finish approved C0 handoff, then B in small independent slices. C1/C2,
+- C0: complete for the current session. Owner-approved single-line Super+Space
+  handoff was backed up, syntax-checked and loaded without config errors. Native
+  Wayland chord tests passed open/repeat/Escape on both mixed-scale monitors.
+  The persistent Lua command is in place; an actual reboot and physical human
+  keypress remain unperformed. See docs/launcher-shortcut.md and docs/testing.md.
+- Next: B in small independent slices. C1/C2,
   D and later milestones remain separate work, not hidden inside this increment.

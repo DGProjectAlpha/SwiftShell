@@ -1,6 +1,6 @@
 # Super+Space
 
-SwiftShell does not change this shortcut. The running session keeps whatever Super+Space already does until the steps below are done by hand.
+SwiftShell never silently changes this shortcut. A handoff requires explicit approval and a backup. The local owner approved the one-line handoff on 2026-11-01; Super+Space now invokes this checkout’s launcher script.
 
 The launcher opens from the bar’s Search control. Requests now use direct, scoped Quickshell IPC. From a checkout:
 
@@ -40,12 +40,31 @@ Do this only after Search already opens the launcher on the hardware, and only i
 
 Keep the backup until the edited shortcut has been tried. If the edited command cannot be found, the rollback is the backup file, not a new binds file written from memory.
 
-## Local conflict audit, 2026-11-01
+## Approved local handoff, 2026-11-01
 
-The effective Super+Space binding still points at Noctalia's launcher. It was
-not changed by the invocation repair. The prepared local handoff replaces only
-that binding's exec command with the absolute checkout request script. It must
-be explicitly approved, backed up, syntax-checked and verified after compositor
-reload. Reverting that single line restores the previous launcher; no other
-Noctalia binding or service needs to change. The physical Super+Space acceptance
-test remains pending until the handoff is authorized.
+The owner explicitly authorized backups and applying the prepared change. Only
+the existing Super+Space exec command changed, from Noctalia’s launcher command
+to `/home/daniel/SwiftShell/scripts/request-launcher.sh`. No other Noctalia
+binding, process or service changed. An exact timestamped backup is retained at
+`~/.config/hypr/config/binds.lua.bak-swiftshell-launcher-20261101T132508Z`.
+
+The replacement was syntax-checked with `luac -p`, atomically written and loaded
+by Hyprland’s automatic configuration reload. Configuration errors stayed empty.
+Both output modes, transforms, scales and positions stayed unchanged. All 94
+binding descriptions, chords, flags, dispatcher kinds and submaps were preserved.
+Opaque Lua callback addresses change during reload and were compared by callback
+kind after an initial strict check detected that expected address change and
+safely rolled back.
+
+`python3 tests/live/launcher-shortcut.py --live` injects real Wayland Super+Space
+key events through the effective compositor binding: opening on the focused
+output, repeated toggling and Escape passed on both connected monitors. This
+exercises the actual global binding, rather than calling launcher IPC directly.
+It does not claim a human physical-keypress or reboot test.
+
+For rollback, restore the old exec command from the timestamped backup, preserve
+any subsequent edits, syntax-check and allow Hyprland to reload. If no subsequent
+changes exist, the full backup is also an exact restoration. Do not overwrite
+newer unrelated binding edits with an old whole-file backup. This checkout must
+remain at its current location; moving or removing it requires updating that
+explicit command or restoring the previous launcher binding.

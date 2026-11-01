@@ -660,3 +660,27 @@ prepared separately and passed `luac -p`; applying it needs explicit approval.
 C0's physical Super+Space handoff and reboot persistence acceptance are pending
 approval. This increment does not claim that changing the request command alone
 changes the existing compositor binding. Full Spotlight redesign belongs to C1.
+
+
+## Approved Super+Space handoff (2026-11-01, roadmap C0)
+
+Owner approval covered backup and the prepared single-line command change. The
+original binds.lua was copied and byte-verified before any write. The final backup
+is `binds.lua.bak-swiftshell-launcher-20261101T132508Z` in the same user config
+directory. Lua syntax validation passed before atomic replacement. Automatic
+Hyprland reload reported no errors, preserved all 94 binding metadata records
+(normalizing opaque Lua callback addresses only), and preserved both output modes,
+transforms, scales and positions. Two initial strict comparison attempts restored
+the original command before the harmless callback-address difference was explained.
+
+`python3 tests/live/launcher-shortcut.py --live` passed actual compositor binding
+invocation through native virtual-keyboard events on HDMI-A-1 and DP-1. Each output
+passed two open/repeat-toggle cycles plus open/Escape. No duplicate Super+Space
+binding exists. The test closes only SwiftShell’s launcher and restores original
+monitor focus. New C transport compiles with `-Wall -Wextra -Werror`; the upstream
+wlroots protocol retains its copyright and license. No virtual keyboard daemon,
+system service, package installation or administrator privileges were needed.
+
+The command is persisted in the approved user file and survives configuration
+reload. Reboot and a human physical-keypress were not performed. No Noctalia
+process/configuration, other shortcut, autostart, service or core OS file changed.
