@@ -1,36 +1,54 @@
 import QtQuick
 import Quickshell
 import Quickshell.Hyprland
+import Quickshell.Wayland
 import "../logic/popover.js" as Popover
 import "../themes"
+import "../components"
+import "../services"
 
-PopupWindow {
+PanelWindow {
     id: popup
 
     required property var barWindow
 
+    readonly property bool surfaceBlurApplied:backdrop.applied
+    readonly property var blurBounds:({width:backdrop.surface ? backdrop.surface.width : 0,height:backdrop.surface ? backdrop.surface.height : 0})
+    property Component customPanel: null
     property Item anchorItem: null
     property var popupState: Popover.popupModel()
     property bool applyingAnchor: false
+    property bool readyToShow: false
+    property int showTicket: 0
 
-    visible: popupState.visible
+    visible: popupState.visible && readyToShow
     color: Theme.transparent
     surfaceFormat.opaque: false
-    implicitWidth: keyScope.implicitWidth
-    implicitHeight: keyScope.implicitHeight
+    implicitWidth: Math.ceil(keyScope.implicitWidth)
+    implicitHeight: Math.ceil(keyScope.implicitHeight)
     mask: popupState.interactive ? null : passThrough
 
-    // Rect is in the bar window's logical coordinates. itemRect() is a 0×0 map,
-    // so the anchor is measured with contentItem.mapFromItem and the item's size.
-    anchor.window: barWindow
-    anchor.edges: Edges.Top | Edges.Left
-    anchor.gravity: Edges.Bottom | Edges.Right
-    anchor.adjustment: PopupAdjustment.Flip | PopupAdjustment.Slide
+    // Independent layer surfaces support real background effects on Hyprland;
+    // each floater owns its rounded blur region, placement, and keyboard focus.
+    screen:barWindow ? barWindow.screen : null
+    exclusionMode:ExclusionMode.Ignore
+    anchors { top:true;left:true }
+    property point placement:Qt.point(0,0)
+    margins.left:Math.round(placement.x)
+    margins.top:Math.round(placement.y)
+    WlrLayershell.namespace:"swiftshell-popover"
+    WlrLayershell.layer:WlrLayer.Overlay
+    WlrLayershell.keyboardFocus:popup.popupState.interactive && visible ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+
+    function geometry() {
+        return {x:popup.screen ? popup.screen.x+Math.round(popup.placement.x) : 0,y:popup.screen ? popup.screen.y+Math.round(popup.placement.y) : 0,width:popup.width,height:popup.height,
+            items:bodyLoader.item && bodyLoader.item.geometry ? bodyLoader.item.geometry() : []}
+    }
 
     function motionOptions() {
-        return Popover.dismissalMotion(surface ? surface.opacity : 0, {
+        return Popover.dismissalMotion(panelSurface ? panelSurface.opacity : 0, {
             instantOpen: Theme.motionOpen === 0,
-            instantClose: Theme.motionClose === 0,
+            instantClose: true,
         })
     }
 
@@ -38,29 +56,27 @@ PopupWindow {
         const step = Popover.focusTransition(popupState, next);
         if (step.clearFocusBeforeGrab || !step.takeFocus)
             keyScope.focus = false;
+        if(!next.visible) {readyToShow=false;showTicket++}
         popupState = next;
-        focusGrab.active = step.grab === true;
+        focusGrab.active = step.grab === true && readyToShow;
+        keyScope.focus = step.takeFocus;
     }
 
     function toggle(id, item) {
-        const previous = popupState.panelId
-        const next = Popover.reducePopup(popupState, { type: "toggle", id: id }, motionOptions())
-        if (next.phase === "opening" || next.phase === "open")
-            anchorItem = item
+        const next=Popover.reducePopup(popupState,{type:"toggle",id:id},motionOptions())
+        const opening=next.phase === "opening" || next.phase === "open"
+        if(opening) {anchorItem=item;readyToShow=false}
         commit(next)
-        if (next.phase === "opening" || next.phase === "open") {
-            Qt.callLater(function () {
-                popup.reposition()
-                if (!popup.visible)
-                    return
-                if (popup.popupState.phase !== "opening" && popup.popupState.phase !== "open")
-                    return
-                if (!focusGrab.active)
-                    return
-                if (popup.popupState.panelId !== previous || popup.popupState.phase === "opening")
-                    keyScope.forceActiveFocus()
-            })
-        }
+        if(!opening) return
+        const ticket=++showTicket
+        Qt.callLater(function() {
+            if(ticket!==showTicket || !popup.popupState.visible) return
+            panelSurface.prepareLayout()
+            popup.reposition()
+            readyToShow=true
+            focusGrab.active=popup.popupState.grab === true
+            Qt.callLater(function() {if(popup.visible && popup.popupState.interactive)keyScope.forceActiveFocus()})
+        })
     }
 
     function close() {
@@ -70,14 +86,14 @@ PopupWindow {
     function finishMotion() {
         commit(Popover.reducePopup(popupState, {
             type: "animationFinished",
-            opacity: surface.opacity,
+            opacity: panelSurface.opacity,
         }, motionOptions()))
     }
 
     function reposition() {
         if (!anchorItem || popupState.phase === "closed")
             return
-        anchor.updateAnchor()
+        applyAnchor()
     }
 
     function applyAnchor() {
@@ -86,21 +102,17 @@ PopupWindow {
         applyingAnchor = true
         try {
             const mapped = barWindow.contentItem.mapFromItem(anchorItem, 0, 0, anchorItem.width, anchorItem.height)
-            const placed = Popover.anchorFromItemMap(mapped, {
-                popupWidth: Math.max(1, keyScope.implicitWidth),
-                popupHeight: Math.max(1, keyScope.implicitHeight),
+            const materialAnchor={x:mapped.x+panelSurface.shadowMargin,y:mapped.y-panelSurface.shadowMargin,width:mapped.width,height:mapped.height}
+            const placed = Popover.anchorFromItemMap(materialAnchor, {
+                popupWidth: Math.max(1, popup.implicitWidth),
+                popupHeight: Math.max(1, popup.implicitHeight),
                 screenWidth: barWindow.screen.width,
                 screenHeight: barWindow.screen.height,
                 margin: Theme.panelMargin,
                 gap: Theme.panelGap,
                 align: "end",
             })
-            if (placed) {
-                anchor.rect.x = placed.x
-                anchor.rect.y = placed.y
-                anchor.rect.width = placed.width
-                anchor.rect.height = placed.height
-            }
+            if (placed) popup.placement=Qt.point(placed.x,placed.y)
         } finally {
             applyingAnchor = false
         }
@@ -119,7 +131,6 @@ PopupWindow {
         keyScope.focus = false
         focusGrab.active = false
     }
-    anchor.onAnchoring: applyAnchor()
     onClosed: commit(Popover.reducePopup(popupState, { type: "destroy" }, motionOptions()))
 
     onAnchorItemChanged: {
@@ -142,6 +153,16 @@ PopupWindow {
         function onHeightChanged() { popup.reposition() }
     }
 
+    Connections {
+        target:LauncherModel
+        function onOpenChanged() {if(LauncherModel.open)popup.close()}
+    }
+
+    Connections {
+        target:SettingsModel
+        function onOpenChanged() { if(SettingsModel.open) popup.close() }
+    }
+
     Region {
         id: passThrough
         intersection: Intersection.Xor
@@ -159,24 +180,48 @@ PopupWindow {
         }
     }
 
+    MouseArea {
+        z:-1
+        anchors.fill:parent
+        acceptedButtons:Qt.LeftButton | Qt.RightButton
+        onClicked:popup.close()
+    }
+
+    BackdropEffect {
+        id:backdrop
+        targetWindow:popup
+        surface:panelSurface.blurSurface
+        cornerRadius:Theme.radius
+        enabled:popup.visible && SettingsStore.panelBlur>0
+    }
+
     Item {
         id: keyScope
 
         focus: false
         activeFocusOnTab: false
-        implicitWidth: surface.implicitWidth
-        implicitHeight: surface.implicitHeight + 4
+        implicitWidth: panelSurface.implicitWidth
+        implicitHeight: panelSurface.implicitHeight + 4
 
         Keys.onEscapePressed: function (event) {
             popup.close()
             event.accepted = true
         }
 
+        Keys.onPressed:function(event) {
+            const alt=(event.modifiers & Qt.AltModifier)!==0
+            if(event.key===Qt.Key_PageDown || (alt && event.key===Qt.Key_J)) panelSurface.scrollBy(Theme.controlHeight*4)
+            else if(event.key===Qt.Key_PageUp || (alt && event.key===Qt.Key_K)) panelSurface.scrollBy(-Theme.controlHeight*4)
+            else return
+            event.accepted=true
+        }
+
         onImplicitWidthChanged: popup.reposition()
         onImplicitHeightChanged: popup.reposition()
 
         PopoverSurface {
-            id: surface
+            id: panelSurface
+            maximumHeight:popup.barWindow && popup.barWindow.screen ? popup.barWindow.screen.height-Theme.barHeight-Theme.panelGap-Theme.panelMargin*2 : 10000
 
             opacity: popup.popupState.opacity
             y: popup.popupState.offset
@@ -201,9 +246,10 @@ PopupWindow {
             // Loader adopts the loaded item's implicit size. Assigning
             // implicitWidth or implicitHeight here is a startup error.
             Loader {
+                id:bodyLoader
                 sourceComponent: popup.popupState.panelId === "control"
                     ? controlPanel
-                    : popup.popupState.panelId === "calendar" ? calendarPanel : null
+                    : popup.popupState.panelId === "calendar" ? calendarPanel : popup.popupState.panelId === "customize" ? popup.customPanel : null
             }
         }
     }
@@ -215,6 +261,6 @@ PopupWindow {
 
     Component {
         id: controlPanel
-        ControlCenterPanel {}
+        ControlCenterPanel {onSettingsRequested:{popup.close();SettingsModel.show()}}
     }
 }

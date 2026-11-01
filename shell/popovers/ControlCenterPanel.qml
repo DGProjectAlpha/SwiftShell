@@ -5,6 +5,7 @@ import "../themes"
 
 Item {
     id: root
+    signal settingsRequested()
 
     implicitWidth: Theme.controlWidth
     implicitHeight: column.implicitHeight
@@ -43,7 +44,7 @@ Item {
         Text {
             width: parent.width
             wrapMode: Text.WordWrap
-            text: "Network and brightness are unavailable on this Quickshell floor. No scan is running, and the picture is not dimmed."
+            text: "Network and brightness controls are unavailable on this system."
             color: Theme.panelMuted
             font.family: Theme.fontFamily
             font.pixelSize: Theme.fontSizeSmall
@@ -107,6 +108,7 @@ Item {
 
         SettingsToggle {
             label: "Do not disturb"
+            enabled:SettingsStore.notificationOwnership === "on"
             checked: SettingsStore.notificationDnd
             onToggled: function (next) { SettingsStore.setNotificationDnd(next) }
         }
@@ -114,7 +116,7 @@ Item {
         Text {
             width: parent.width
             wrapMode: Text.WordWrap
-            text: SettingsStore.notificationOwnership === "on" ? "Critical banners still show." : "Saved for when SwiftShell owns notifications. It does not own them now."
+            text: SettingsStore.notificationOwnership === "on" ? "Critical banners still show." : "Enable SwiftShell notifications in Settings to use Do not disturb."
             color: Theme.panelMuted
             font.family: Theme.fontFamily
             font.pixelSize: Theme.fontSizeSmall
@@ -155,7 +157,7 @@ Item {
             visible: Theme.adaptiveReason !== ""
             width: parent.width
             wrapMode: Text.WordWrap
-            text: Theme.adaptiveReason
+            text: "Using a neutral surface."
             color: Theme.panelMuted
             font.family: Theme.fontFamily
             font.pixelSize: Theme.fontSizeSmall
@@ -168,7 +170,7 @@ Item {
 
         FlatButton {
             label: "Settings"
-            onActivated: SettingsModel.show()
+            onActivated:root.settingsRequested()
         }
 
         Loader {

@@ -2,6 +2,9 @@
   "version": 3,
   "clock": {
     "use24Hour": true,
+    "showSeconds": false,
+    "showDate": false,
+    "dateFormat": "short",
     "showWeekNumbers": false,
     "weekStart": "locale"
   },
@@ -10,6 +13,7 @@
     "reserveSpace": true,
     "showFocusedTitle": true,
     "workspaceIds": [],
+    "workspaceOutputsJson": "{}",
     "workspaceDispatch": "auto",
     "placement": "focused",
     "height": 28,
@@ -23,7 +27,14 @@
       "tray",
       "battery"
     ],
-    "hiddenModules": []
+    "hiddenModules": [],
+    "searchLabel": false,
+    "moduleSidesJson": "{}",
+    "hiddenOutputsJson": "{}",
+    "surfaceMode": "transparent",
+    "surfaceColor": "#161616",
+    "surfaceOpacity": 0.75,
+    "surfaceOutputsJson": "{}"
   },
   "appearance": {
     "mode": "dark",
@@ -37,7 +48,7 @@
     "reducedMotion": false,
     "panelPadding": 12,
     "panelSpacing": 8,
-    "fontSize": 12,
+    "fontSize": 13,
     "fontWeight": "regular",
     "iconScale": 1,
     "topGradient": false,
@@ -64,8 +75,8 @@
     "slidesJson": "[]"
   },
   "settingsWindow": {
-    "width": 900,
-    "height": 620,
+    "width": 1000,
+    "height": 700,
     "category": "appearance"
   },
   "shortcutsJson": "{}",

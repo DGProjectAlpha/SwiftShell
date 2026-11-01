@@ -63,24 +63,24 @@ Item {
     Column {
         id: column
         width: page.width
-        spacing: Theme.panelSpacing
+        spacing: Theme.settingsSpacing
 
         Text {
             width: parent.width
             text: "Shortcuts"
-            color: Theme.panelText
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.fontSize + 4
+            color: Theme.settingsText
+            font.family: Theme.settingsFontFamily
+            font.pixelSize: Theme.settingsFontSize + 4
             font.weight: Font.Medium
         }
 
         Text {
             width: parent.width
             wrapMode: Text.WordWrap
-            text: "These are preferred chords for SwiftShell actions. Saving one does not install it. Compositor binds are not read and are not changed. Super+Space stays on the documented handoff."
-            color: Theme.panelMuted
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.fontSizeSmall
+            text: "Save your preferred keyboard shortcuts. They are not installed automatically; your existing keyboard bindings stay unchanged."
+            color: Theme.settingsMuted
+            font.family: Theme.settingsFontFamily
+            font.pixelSize: Theme.settingsFontSizeSmall
         }
 
         Repeater {
@@ -92,15 +92,15 @@ Item {
                 label: modelData.label
 
                 Row {
-                    spacing: Theme.panelSpacing
+                    spacing: Theme.settingsSpacing
 
                     Text {
                         width: 140
                         elide: Text.ElideRight
                         text: Shortcuts.chordText(page.map()[modelData.id])
-                        color: Theme.panelText
-                        font.family: Theme.fontFamily
-                        font.pixelSize: Theme.fontSizeSmall
+                        color: Theme.settingsText
+                        font.family: Theme.settingsFontFamily
+                        font.pixelSize: Theme.settingsFontSizeSmall
                     }
 
                     FlatButton {
@@ -157,9 +157,9 @@ Item {
             wrapMode: Text.WordWrap
             visible: page.recorder.phase === "recording"
             text: page.recorder.error !== "" ? page.recorder.error : "Press the chord, then Enter. Escape cancels. " + Shortcuts.chordText({ modifiers: page.recorder.modifiers, key: page.recorder.key })
-            color: Theme.panelText
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.fontSizeSmall
+            color: Theme.settingsText
+            font.family: Theme.settingsFontFamily
+            font.pixelSize: Theme.settingsFontSizeSmall
         }
     }
 }

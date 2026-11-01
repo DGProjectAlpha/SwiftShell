@@ -26,7 +26,7 @@ Item {
     Column {
         id: column
         width: page.width
-        spacing: Theme.panelSpacing
+        spacing: Theme.settingsSpacing
 
         Loader {
             id: batteryLoader
@@ -41,9 +41,9 @@ Item {
             visible: batteryLoader.status === Loader.Error
             wrapMode: Text.WordWrap
             text: "Battery is unavailable."
-            color: Theme.panelMuted
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.fontSizeSmall
+            color: Theme.settingsMuted
+            font.family: Theme.settingsFontFamily
+            font.pixelSize: Theme.settingsFontSizeSmall
         }
 
         Loader {

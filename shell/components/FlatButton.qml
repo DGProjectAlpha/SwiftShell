@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Controls.Basic as Controls
 import "../themes"
 
 MouseArea {
@@ -6,9 +7,10 @@ MouseArea {
 
     property string label: ""
     property bool emphasized: false
+    property bool navigation: false
     signal activated()
 
-    implicitWidth: Math.max(labelText.implicitWidth + Theme.panelPadding, Theme.controlHeight)
+    implicitWidth: Math.max(labelText.implicitWidth + Theme.panelPadding + 8, Theme.controlHeight)
     implicitHeight: Theme.controlHeight
     width: implicitWidth
     height: implicitHeight
@@ -19,6 +21,9 @@ MouseArea {
     opacity: enabled ? 1 : 0.45
     Accessible.role: Accessible.Button
     Accessible.name: label
+    Controls.ToolTip.visible: navigation && (containsMouse || activeFocus)
+    Controls.ToolTip.text: Accessible.name
+    Controls.ToolTip.delay: 600
 
     onClicked: {
         if (enabled)
@@ -36,26 +41,32 @@ MouseArea {
 
     Rectangle {
         anchors.fill: parent
-        color: Theme.transparent
+        color: control.emphasized ? Theme.settingsSelected : (control.containsMouse ? Theme.settingsHover : Theme.transparent)
         radius: Theme.controlRadius
         border.width: control.activeFocus ? 1 : 0
-        border.color: Theme.panelText
+        border.color: Theme.settingsText
+    }
+
+    Rectangle {
+        visible:control.navigation && control.emphasized
+        anchors.left:parent.left;anchors.verticalCenter:parent.verticalCenter
+        width:2;height:16;radius:1;color:Theme.settingsText
     }
 
     Text {
         id: labelText
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.leftMargin: Theme.panelPadding / 2
+        anchors.leftMargin: control.navigation ? 12 : Theme.panelPadding / 2
         anchors.rightMargin: Theme.panelPadding / 2
         anchors.verticalCenter: parent.verticalCenter
-        horizontalAlignment: Text.AlignHCenter
+        horizontalAlignment: control.navigation ? Text.AlignLeft : Text.AlignHCenter
         elide: Text.ElideRight
         text: control.label
-        font.family: Theme.fontFamily
-        font.pixelSize: Theme.fontSize
-        font.weight: control.emphasized ? Font.Medium : Font.Normal
-        color: control.enabled && (control.containsMouse || control.activeFocus) ? Theme.panelHover : Theme.panelText
+        font.family: Theme.settingsFontFamily
+        font.pixelSize: Theme.settingsFontSize
+        font.weight: control.emphasized ? Font.Medium : Theme.fontWeight
+        color: Theme.settingsText
 
         Behavior on color {
             enabled: Theme.motionHover > 0

@@ -70,24 +70,24 @@ Item {
     Column {
         id: column
         width: page.width
-        spacing: Theme.panelSpacing
+        spacing: Theme.settingsSpacing
 
         Text {
             width: parent.width
             text: "Appearance"
-            color: Theme.panelText
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.fontSize + 4
+            color: Theme.settingsText
+            font.family: Theme.settingsFontFamily
+            font.pixelSize: Theme.settingsFontSize + 4
             font.weight: Font.Medium
         }
 
         Text {
             width: parent.width
             wrapMode: Text.WordWrap
-            text: "Changes apply immediately and are saved. Search finds these controls only."
-            color: Theme.panelMuted
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.fontSizeSmall
+            text: "Make SwiftShell feel at home. Changes are saved automatically."
+            color: Theme.settingsMuted
+            font.family: Theme.settingsFontFamily
+            font.pixelSize: Theme.settingsFontSizeSmall
         }
 
         Text {
@@ -95,9 +95,9 @@ Item {
             visible: page.query.trim() !== "" && Nav.filterControls(page.query).length === 0
             wrapMode: Text.WordWrap
             text: "No matching settings"
-            color: Theme.panelText
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.fontSize
+            color: Theme.settingsText
+            font.family: Theme.settingsFontFamily
+            font.pixelSize: Theme.settingsFontSize
         }
 
         Item {
@@ -114,13 +114,15 @@ Item {
                 Text {
                     anchors.centerIn: parent
                     text: "Preview"
-                    color: Theme.panelText
-                    font.family: Theme.fontFamily
-                    font.pixelSize: Theme.fontSize
+                    color: Theme.settingsText
+                    font.family: Theme.settingsFontFamily
+                    font.pixelSize: Theme.settingsFontSize
                     font.weight: page.marked("preview") ? Font.Medium : Font.Normal
                 }
             }
         }
+
+        SectionHeader { text:"Interface"; visible:page.query === "" }
 
         SettingsRow {
             controlId: "mode"
@@ -130,7 +132,7 @@ Item {
             label: "Theme"
 
             Row {
-                spacing: Theme.panelSpacing
+                spacing: Theme.settingsSpacing
 
                 FlatButton {
                     label: "Dark"
@@ -154,14 +156,14 @@ Item {
             label: "Text size"
 
             Row {
-                spacing: Theme.panelSpacing
+                spacing: Theme.settingsSpacing
 
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     text: SettingsStore.fontSize + " px"
-                    color: Theme.panelMuted
-                    font.family: Theme.fontFamily
-                    font.pixelSize: Theme.fontSizeSmall
+                    color: Theme.settingsMuted
+                    font.family: Theme.settingsFontFamily
+                    font.pixelSize: Theme.settingsFontSizeSmall
                 }
 
                 CompactSlider {
@@ -180,7 +182,7 @@ Item {
             label: "Text weight"
 
             Row {
-                spacing: Theme.panelSpacing
+                spacing: Theme.settingsSpacing
 
                 FlatButton {
                     label: "Regular"
@@ -204,14 +206,14 @@ Item {
             label: "Density"
 
             Row {
-                spacing: Theme.panelSpacing
+                spacing: Theme.settingsSpacing
 
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
-                    text: SettingsStore.panelPadding + " / " + SettingsStore.panelSpacing
-                    color: Theme.panelMuted
-                    font.family: Theme.fontFamily
-                    font.pixelSize: Theme.fontSizeSmall
+                    text: SettingsStore.panelPadding < 11 ? "Compact" : (SettingsStore.panelPadding < 17 ? "Comfortable" : "Spacious")
+                    color: Theme.settingsMuted
+                    font.family: Theme.settingsFontFamily
+                    font.pixelSize: Theme.settingsFontSizeSmall
                 }
 
                 CompactSlider {
@@ -225,12 +227,14 @@ Item {
             }
         }
 
+        SectionHeader { text:"Surfaces"; visible:page.query === "" }
+
         SettingsRow {
             controlId: "panelOpacity"
             visible: page.shows("panelOpacity")
             marked: page.marked("panelOpacity")
             width: parent.width
-            label: "Panel opacity"
+            label: "Surface opacity"
 
             CompactSlider {
                 valueName: "Panel opacity"
@@ -255,6 +259,7 @@ Item {
 
         SettingsRow {
             controlId: "shadowOpacity"
+            enabled: SettingsModel.shadowAvailable
             visible: page.shows("shadowOpacity")
             marked: page.marked("shadowOpacity")
             width: parent.width
@@ -269,6 +274,7 @@ Item {
 
         SettingsRow {
             controlId: "shadowSoftness"
+            enabled: SettingsModel.shadowAvailable
             visible: page.shows("shadowSoftness")
             marked: page.marked("shadowSoftness")
             width: parent.width
@@ -280,6 +286,15 @@ Item {
                 onMoved: function (next) { page.edited({ shadowSoftness: Nav.shadowSoftnessFromUnit(next) }) }
             }
         }
+
+        Text {
+            width:parent.width;wrapMode:Text.WordWrap
+            visible:page.query === ""
+            text:SettingsModel.shadowAvailable ? "Radius and shadows apply to Settings and popovers. Bar backgrounds are set in Top bar." : "Window shadows are unavailable on this system."
+            color:Theme.settingsMuted;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall
+        }
+
+        SectionHeader { text:"Motion & readability"; visible:page.query === "" }
 
         SettingsRow {
             controlId: "iconScale"
@@ -300,7 +315,7 @@ Item {
             visible: page.shows("motionScale")
             marked: page.marked("motionScale")
             width: parent.width
-            label: "Motion scale"
+            label: "Animation speed"
 
             Column {
                 spacing: 2
@@ -316,9 +331,9 @@ Item {
                     wrapMode: Text.WordWrap
                     visible: SettingsStore.reducedMotion
                     text: "Paused while reduced motion is on."
-                    color: Theme.panelMuted
-                    font.family: Theme.fontFamily
-                    font.pixelSize: Theme.fontSizeSmall
+                    color: Theme.settingsMuted
+                    font.family: Theme.settingsFontFamily
+                    font.pixelSize: Theme.settingsFontSizeSmall
                 }
             }
         }
@@ -350,38 +365,22 @@ Item {
             onToggled: function (next) { page.edited({ topGradient: next }) }
         }
 
-        SettingsRow {
-            controlId: "wallpaperTint"
-            visible: page.shows("wallpaperTint")
-            marked: page.marked("wallpaperTint")
-            width: parent.width
-            label: "Wallpaper tint"
-
-            Text {
-                text: "Not sampled yet"
-                color: Theme.panelMuted
-                font.family: Theme.fontFamily
-                font.pixelSize: Theme.fontSizeSmall
-            }
-        }
-
-        Item {
-            property string controlId: "backdropBlur"
+        SettingsToggle {
+            controlId: "backdropBlur"
             visible: page.shows("backdropBlur")
+            label: "Backdrop blur"
+            enabled: WindowService.blurAvailable
+            checked: WindowService.blurAvailable && SettingsStore.panelBlur > 0
+            onToggled: function(next) { page.edited({panelBlur:next ? 1 : 0}) }
+        }
+        Text {
             width: parent.width
-            implicitHeight: blurText.implicitHeight
-            height: implicitHeight
-
-            Text {
-                id: blurText
-                width: parent.width
-                wrapMode: Text.WordWrap
-                text: Material.materialReport().backdropBlur.reason + " " + Material.CLIP_REASON
-                color: page.marked("backdropBlur") ? Theme.panelText : Theme.panelMuted
-                font.family: Theme.fontFamily
-                font.pixelSize: Theme.fontSizeSmall
-                font.weight: page.marked("backdropBlur") ? Font.Medium : Font.Normal
-            }
+            visible: page.shows("backdropBlur")
+            text: WindowService.blurAvailable ? "Blurs the desktop behind this window." : WindowService.blurReason
+            color: Theme.settingsMuted
+            wrapMode: Text.WordWrap
+            font.family: Theme.settingsFontFamily
+            font.pixelSize: Theme.settingsFontSizeSmall
         }
     }
 }

@@ -6,6 +6,13 @@ import "../services"
 Scope {
     id: root
 
+    function surfaceDiagnostics() {
+        return bars.instances.map(function(w){return {output:w.monitorKey,mode:w.barSurface.mode,color:w.barSurface.color,alpha:w.barSurface.alpha,blurApplied:w.surfaceBlurApplied,height:w.height,clock:w.clockItem ? w.clockItem.labelText : "",clockPrecision:w.clockItem ? w.clockItem.updatePrecision : -1,layout:w.moduleLayout(),modules:{left:w.modulesOn("left"),center:w.modulesOn("center"),right:w.modulesOn("right")},menu:w.menuDiagnostics()}})
+    }
+    function showPanel(output,id) {
+        const selected=bars.instances.find(function(w){return w.monitorKey===output})
+        if(selected) selected.showPanel(id)
+    }
     property bool refreshingScreens: false
     property var targetScreens: []
     property string announcedPlacement: ""
@@ -50,6 +57,10 @@ Scope {
             console.info("SwiftShell: bar placed on preferred monitor", placement.label);
         else if (placement.mode === "focused")
             console.info("SwiftShell: bar placed on focused monitor", placement.label);
+        else if (placement.mode === "all")
+            console.info("SwiftShell: bars placed on all connected monitors");
+        else if (placement.mode === "primary")
+            console.info("SwiftShell: bar placed on primary screen", placement.label);
         else
             console.info("SwiftShell: bar placed on fallback monitor", placement.label);
     }
@@ -90,6 +101,7 @@ Scope {
     }
 
     Variants {
+        id: bars
         model: root.targetScreens
         BarWindow {}
     }

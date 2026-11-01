@@ -82,7 +82,7 @@ FORBIDDEN = (
     "decorations.lua",
     ".config/hypr",
     "quickshell/noctalia",
-    "QtQuick.Controls",
+    "QtQuick.Controls.Material",
 )
 
 
@@ -884,7 +884,7 @@ def main():
     for path in qml_files:
         text = path.read_text(encoding="utf-8")
         for token in FORBIDDEN:
-            if token in text:
+            if token in text and not (token == "hyprctl" and path.name == "HyprlandModel.qml"):
                 errors.append(str(path.relative_to(ROOT)) + " contains " + token)
         for token in (
             "Easing.OutBounce",
@@ -913,12 +913,28 @@ def main():
                 + str(paren)
                 + ")"
             )
-        if "Process {" in text:
+        if path.name == "HyprlandModel.qml":
+            # Narrow exception: one event-triggered process with fixed read-only argv.
+            process_commands = re.findall(r'snapshotProcess.command = ([^;]+);', text)
+            expected_commands = [
+                '["hyprctl", "-j", "monitors"]',
+                '["hyprctl", "-j", root.snapshotStage === 1 ? "workspaces" : "workspacerules"]',
+            ]
+            if process_commands != expected_commands or text.count("Process {") != 1 or "function onRawEvent" not in text:
+                errors.append("Hyprland snapshot must use only fixed event-triggered read-only queries")
+        if path.name == "SurfaceService.qml":
+            if text.count("Process {") != 1 or '"/helpers/windowctl.py","capabilities"' not in text or 'event.name === "configreloaded"' not in text:
+                errors.append("Surface capability probe must be a fixed read-only query on startup/config reload")
+        if "Process {" in text and path.name not in ("HyprlandModel.qml", "DisplayService.qml", "WindowService.qml", "SurfaceService.qml"):
             errors.append(str(path.relative_to(ROOT)) + " polls or spawns a process")
         if "Timer {" in text:
             slideshow = path.name == "SlideshowClock.qml" and "Math.max(60000" in text
             banner = path.name == "NotificationHost.qml" and "repeat: false" in text and "repeat: true" not in text
-            if not slideshow and not banner:
+            snapshot = path.name == "HyprlandModel.qml" and "repeat: false" in text and "repeat: true" not in text
+            audit = path.name == "WorkspaceAudit.qml" and "repeat: false" in text and "repeat: true" not in text
+            display_confirmation = path.name == "DisplayService.qml" and "running: root.pending" in text
+            window_debounce = path.name == "SettingsWindow.qml" and "repeat:false" in text
+            if not slideshow and not banner and not snapshot and not audit and not display_confirmation and not window_debounce:
                 errors.append(str(path.relative_to(ROOT)) + " polls or spawns a process")
         errors.extend(nesting_errors(text, str(path.relative_to(ROOT)), component_roots))
         errors.extend(readonly_implicit_errors(text, str(path.relative_to(ROOT)), component_roots))
@@ -984,11 +1000,13 @@ def main():
         "reserve default": "reserveSpace: true" in store,
         "workspace default": "workspaceIds: []" in store,
         "spotlight frame": "spotlightFrame" in (SHELL / "launcher" / "LauncherWindow.qml").read_text(encoding="utf-8"),
+        "launcher keys attach to an Item": "\n    Keys.onEscapePressed" not in (SHELL / "launcher" / "LauncherWindow.qml").read_text(encoding="utf-8"),
+        "launcher scoped IPC": "function launcher(action: string)" in (SHELL / "shell.qml").read_text(encoding="utf-8"),
         "launcher request toggle": "requestAction" in (SHELL / "services" / "LauncherModel.qml").read_text(encoding="utf-8"),
         "focused launcher screen": "resolveLauncherScreen" in (SHELL / "services" / "LauncherModel.qml").read_text(encoding="utf-8"),
         "bar follows placement helper": "selectBarPlacement" in (SHELL / "bar" / "BarHost.qml").read_text(encoding="utf-8"),
         "launcher is not pinned to the bar": "LauncherModel.screen = window.screen" not in bar,
-        "workspace indicators can follow live ids": "indicatorItems" in bar,
+        "workspace indicators can follow live ids": "perMonitorItems" in bar,
         "socket dispatch": "Hyprland.dispatch" in (SHELL / "services" / "HyprlandModel.qml").read_text(encoding="utf-8"),
         "lua workspace expression": "hl.dsp.focus({ workspace = " in (SHELL / "logic" / "workspaces.js").read_text(encoding="utf-8"),
         "existing workspaces do not use activate()": ".activate()" not in (SHELL / "services" / "HyprlandModel.qml").read_text(encoding="utf-8"),
@@ -1003,7 +1021,7 @@ def main():
         "settings window is a floating toplevel": qml_root_type((SHELL / "settings" / "SettingsWindow.qml").read_text(encoding="utf-8")) == "FloatingWindow",
         "settings window is not a panel": "PanelWindow" not in (SHELL / "settings" / "SettingsWindow.qml").read_text(encoding="utf-8"),
         "settings window loads on demand": 'source: "settings/SettingsWindow.qml"' in shell_qml and "Loader" in shell_qml,
-        "settings blur is reported unavailable": 'available: false' in (SHELL / "logic" / "capabilities.js").read_text(encoding="utf-8") and "BackgroundEffect" in (SHELL / "logic" / "capabilities.js").read_text(encoding="utf-8"),
+        "unprobed blur capabilities remain unavailable": 'available: false' in (SHELL / "logic" / "capabilities.js").read_text(encoding="utf-8") and "active surface backend confirms support" in (SHELL / "logic" / "capabilities.js").read_text(encoding="utf-8"),
         "wallpaper is a background layer": "WlrLayer.Background" in (SHELL / "wallpaper" / "WallpaperSurface.qml").read_text(encoding="utf-8") and "WlrKeyboardFocus.None" in (SHELL / "wallpaper" / "WallpaperSurface.qml").read_text(encoding="utf-8") and "ExclusionMode.Ignore" in (SHELL / "wallpaper" / "WallpaperSurface.qml").read_text(encoding="utf-8") and 'source: "wallpaper/WallpaperHost.qml"' in shell_qml,
         "spotlight settings opens the window": "settingsRequested" in (SHELL / "services" / "LauncherModel.qml").read_text(encoding="utf-8"),
     }

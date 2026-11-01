@@ -28,14 +28,14 @@ Item {
     Column {
         id: column
         width: page.width
-        spacing: Theme.panelSpacing
+        spacing: Theme.settingsSpacing
 
         Text {
             width: parent.width
             text: "Network"
-            color: Theme.panelText
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.fontSize + 4
+            color: Theme.settingsText
+            font.family: Theme.settingsFontFamily
+            font.pixelSize: Theme.settingsFontSize + 4
             font.weight: Font.Medium
         }
 
@@ -47,18 +47,18 @@ Item {
         Text {
             width: parent.width
             wrapMode: Text.WordWrap
-            text: Link.NETWORK_REASON
-            color: Theme.panelMuted
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.fontSizeSmall
+            text: "Network controls are not available in SwiftShell yet. Use your system network settings."
+            color: Theme.settingsMuted
+            font.family: Theme.settingsFontFamily
+            font.pixelSize: Theme.settingsFontSizeSmall
         }
 
         Text {
             width: parent.width
             text: "Brightness"
-            color: Theme.panelText
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.fontSize + 2
+            color: Theme.settingsText
+            font.family: Theme.settingsFontFamily
+            font.pixelSize: Theme.settingsFontSize + 2
             font.weight: Font.Medium
         }
 
@@ -70,10 +70,10 @@ Item {
         Text {
             width: parent.width
             wrapMode: Text.WordWrap
-            text: Link.BRIGHTNESS_REASON
-            color: Theme.panelMuted
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.fontSizeSmall
+            text: "Brightness control is not available for these displays."
+            color: Theme.settingsMuted
+            font.family: Theme.settingsFontFamily
+            font.pixelSize: Theme.settingsFontSizeSmall
         }
     }
 }

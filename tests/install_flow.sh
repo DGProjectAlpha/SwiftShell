@@ -54,8 +54,9 @@ write_stubs() {
 #!/bin/sh
 printf '%s\n' "$*" >>"${SWIFTSHELL_QS_LOG:-/dev/null}"
 case ${1:-} in
+    ipc) exit "${SWIFTSHELL_TEST_IPC_RESULT:-0}" ;;
     -V|--version)
-        printf '%s\n' "quickshell 0.3.0"
+        printf '%s\n' "quickshell 0.3.2"
         exit 0
         ;;
     kill)
@@ -71,7 +72,7 @@ EOF
     cat >"$dir/Hyprland" <<'EOF'
 #!/bin/sh
 if [ "${1:-}" = "--version" ]; then
-    printf '%s\n' "Hyprland 0.45.2 built from branch test"
+    printf '%s\n' "Hyprland 0.57.0 built from branch test"
     exit 0
 fi
 exit 0
@@ -190,9 +191,9 @@ test_versions() {
     if swiftshell_version_ge 0.1.9 0.2.0; then
         fail "0.1.9 should be below 0.2.0"
     fi
-    [ "$(swiftshell_extract_version "quickshell 0.3.0")" = "0.3.0" ] || fail "parse quickshell"
+    [ "$(swiftshell_extract_version "quickshell 0.3.2")" = "0.3.2" ] || fail "parse quickshell"
     [ "$(swiftshell_extract_version "Tag: v0.41.2")" = "0.41.2" ] || fail "parse tag"
-    [ "$(swiftshell_extract_version "Hyprland 0.45.2 built from branch test")" = "0.45.2" ] || fail "parse hyprland"
+    [ "$(swiftshell_extract_version "Hyprland 0.57.0 built from branch test")" = "0.57.0" ] || fail "parse hyprland"
     ok "version parsing"
 }
 
@@ -472,7 +473,7 @@ test_doctor_and_rollback() {
     decoy=$(mktemp -d)
     write_decoy_commands "$decoy"
     PATH="$STUBS:$decoy:$BASE_PATH" "$HOME/.local/bin/swiftshell" doctor >"$HOME/doctor.out" 2>"$HOME/doctor.err"
-    grep -q 'blur: unavailable' "$HOME/doctor.out" || fail "doctor did not report blur"
+    grep -q 'blur: check Settings' "$HOME/doctor.out" || fail "doctor did not report blur"
     grep -q 'notification ownership: on' "$HOME/doctor.out" || fail "doctor did not report ownership"
     grep -q 'settings backup: present' "$HOME/doctor.out" || fail "doctor missed the backup"
     grep -q 'were not read or written' "$HOME/doctor.out" || fail "doctor did not state the file boundary"
@@ -530,8 +531,14 @@ test_request_launcher() {
     new_home
     binds_sum=$(checksum "$HOME/.config/hypr/config/binds.lua")
     "$ROOT/scripts/swiftshell" request-launcher >/dev/null
-    [ -s "$XDG_STATE_HOME/swiftshell/launcher.request" ] || fail "launcher request was not written"
-    grep -q '"text"' "$XDG_STATE_HOME/swiftshell/launcher.request" || fail "launcher request is not json"
+    grep -q 'call swiftshell launcher toggle' "$SWIFTSHELL_QS_LOG" || fail "launcher request did not use scoped IPC"
+    [ ! -e "$XDG_STATE_HOME/swiftshell/launcher.request" ] || fail "IPC request wrote a stale file token"
+    if SWIFTSHELL_TEST_IPC_RESULT=1 "$ROOT/scripts/swiftshell" request-launcher >"$HOME/request.out" 2>"$HOME/request.err"; then
+        fail "missing shell reported a successful invocation"
+    fi
+    grep -q 'not running' "$HOME/request.err" || fail "missing shell lacks actionable feedback"
+    "$ROOT/scripts/request-launcher.sh"
+    grep -q "ipc -p $ROOT/shell call swiftshell launcher toggle" "$SWIFTSHELL_QS_LOG" || fail "checkout request targeted a different config"
     [ "$(checksum "$HOME/.config/hypr/config/binds.lua")" = "$binds_sum" ] || fail "launcher request edited hypr binds"
     [ ! -e "$HOME/.config/hypr/hyprland.conf" ] || fail "launcher request wrote a hyprland config"
     ok "launcher request does not touch Hyprland"

@@ -13,6 +13,7 @@ Item {
     property string query: ""
     property string highlightId: ""
     property string dialogReason: ""
+    property string pickerOutput: ""
     property string folderReason: ""
     property string selectedFolder: ""
     property string pathNote: ""
@@ -95,17 +96,35 @@ Item {
 
     onPreviewChoiceChanged: previewFailed = false
 
+    function pickColor(field,current) {
+        if(colorPicker.status === Loader.Ready) {
+            colorPicker.item.field=field
+            colorPicker.item.selectedColor=current || (field === "manualText" ? Theme.settingsText : Theme.panelColor)
+            colorPicker.item.open()
+        } else { page.colorField=field;colorPicker.active=true }
+    }
+    property string colorField: ""
+    Loader {
+        id:colorPicker
+        active:false
+        source:"ColorPicker.qml"
+        onLoaded: {
+            item.colorChosen.connect(function(field,value){const patch={};patch[field]=value;page.edited(patch)})
+            page.pickColor(page.colorField,page.colorField === "manualText" ? SettingsStore.manualText : SettingsStore.manualPanel)
+        }
+        onStatusChanged:if(status === Loader.Error) page.pathNote="Color picker unavailable."
+    }
+
     Loader {
         id: dialogLoader
         active: false
         source: "ImageDialog.qml"
         onStatusChanged: {
             if (status === Loader.Error) {
-                page.dialogReason = "The native file dialog is not available in this Qt build. Enter a path instead."
+                page.dialogReason = "Image picker unavailable. You can enter an image path."
                 active = false
             }
-            if (status === Loader.Ready && item)
-                item.open()
+            if (status === Loader.Ready && item) { item.outputName=page.pickerOutput;item.open() }
         }
     }
 
@@ -115,7 +134,7 @@ Item {
         source: "FolderPicker.qml"
         onStatusChanged: {
             if (status === Loader.Error) {
-                page.folderReason = "The native folder dialog is not available in this Qt build."
+                page.folderReason = "Folder picker unavailable. Add images individually."
                 active = false
             } else if (status === Loader.Ready && item) {
                 item.folderSelected.connect(page.scanFolder)
@@ -130,7 +149,7 @@ Item {
         source: "FolderScanner.qml"
         onStatusChanged: {
             if (status === Loader.Error) {
-                page.folderReason = "Folder enumeration is not available in this Qt build."
+                page.folderReason = "This folder could not be read."
                 active = false
             } else if (status === Loader.Ready && item) {
                 item.scanFinished.connect(page.folderScanned)
@@ -142,24 +161,24 @@ Item {
     Column {
         id: column
         width: page.width
-        spacing: Theme.panelSpacing
+        spacing: Theme.settingsSpacing
 
         Text {
             width: parent.width
             text: "Wallpaper"
-            color: Theme.panelText
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.fontSize + 4
+            color: Theme.settingsText
+            font.family: Theme.settingsFontFamily
+            font.pixelSize: Theme.settingsFontSize + 4
             font.weight: Font.Medium
         }
 
         Text {
             width: parent.width
             wrapMode: Text.WordWrap
-            text: "One background is drawn on each output. An empty path uses the packaged crimson image. Turning this off leaves the background to another program. SwiftShell does not stop that program. Pictures are requested at most " + Wallpaper.MAX_EDGE + " pixels wide."
-            color: Theme.panelMuted
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.fontSizeSmall
+            text: "Choose a shared background or a different image for each screen. Images are limited to " + Wallpaper.MAX_EDGE + " pixels wide."
+            color: Theme.settingsMuted
+            font.family: Theme.settingsFontFamily
+            font.pixelSize: Theme.settingsFontSizeSmall
         }
 
         Image {
@@ -179,9 +198,9 @@ Item {
             width: parent.width
             wrapMode: Text.WordWrap
             text: page.previewChoice.source === "file" ? page.previewChoice.path : "Packaged crimson image"
-            color: Theme.panelMuted
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.fontSizeSmall
+            color: Theme.settingsMuted
+            font.family: Theme.settingsFontFamily
+            font.pixelSize: Theme.settingsFontSizeSmall
             elide: Text.ElideRight
         }
 
@@ -202,7 +221,7 @@ Item {
             label: "Fit"
 
             Row {
-                spacing: Theme.panelSpacing
+                spacing: Theme.settingsSpacing
 
                 FlatButton {
                     label: "Cover"
@@ -223,9 +242,9 @@ Item {
             wrapMode: Text.WordWrap
             visible: page.shows("wallpaperFit")
             text: SettingsStore.wallpaperFit === "contain" ? "Contain keeps the whole picture and fills the extra with black." : "Cover fills the output and crops the extra."
-            color: Theme.panelMuted
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.fontSizeSmall
+            color: Theme.settingsMuted
+            font.family: Theme.settingsFontFamily
+            font.pixelSize: Theme.settingsFontSizeSmall
         }
 
         SettingsRow {
@@ -235,17 +254,19 @@ Item {
             width: parent.width
             label: "Image"
 
-            Row {
-                spacing: Theme.panelSpacing
+            Flow {
+                objectName:"wallpaperImageChoices"
+                width:page.width
+                spacing: Theme.settingsSpacing
 
                 TextInput {
                     id: pathField
                     width: 220
                     height: Theme.controlHeight
                     text: SettingsStore.wallpaperPath
-                    color: Theme.panelText
-                    font.family: Theme.fontFamily
-                    font.pixelSize: Theme.fontSizeSmall
+                    color: Theme.settingsText
+                    font.family: Theme.settingsFontFamily
+                    font.pixelSize: Theme.settingsFontSizeSmall
                     selectByMouse: true
                     activeFocusOnTab: true
                     clip: true
@@ -268,6 +289,8 @@ Item {
                 FlatButton {
                     label: "Choose image"
                     onActivated: {
+                        page.pickerOutput=""
+                        if(dialogLoader.item) dialogLoader.item.outputName=""
                         page.dialogReason = ""
                         if (dialogLoader.status === Loader.Ready && dialogLoader.item)
                             dialogLoader.item.open()
@@ -292,9 +315,9 @@ Item {
             wrapMode: Text.WordWrap
             visible: page.dialogReason !== ""
             text: page.dialogReason
-            color: Theme.panelText
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.fontSizeSmall
+            color: Theme.settingsText
+            font.family: Theme.settingsFontFamily
+            font.pixelSize: Theme.settingsFontSizeSmall
         }
 
         Text {
@@ -302,9 +325,9 @@ Item {
             wrapMode: Text.WordWrap
             visible: page.pathNote !== ""
             text: page.pathNote
-            color: Theme.panelText
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.fontSizeSmall
+            color: Theme.settingsText
+            font.family: Theme.settingsFontFamily
+            font.pixelSize: Theme.settingsFontSizeSmall
         }
 
         Text {
@@ -312,9 +335,9 @@ Item {
             wrapMode: Text.WordWrap
             visible: page.previewFailed
             text: "That image could not be decoded. The packaged image is used instead."
-            color: Theme.panelText
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.fontSizeSmall
+            color: Theme.settingsText
+            font.family: Theme.settingsFontFamily
+            font.pixelSize: Theme.settingsFontSizeSmall
         }
 
         SettingsRow {
@@ -328,9 +351,9 @@ Item {
                 width: 220
                 wrapMode: Text.WordWrap
                 text: "A path here replaces the shared image on that output. Clear it to use the shared image."
-                color: Theme.panelMuted
-                font.family: Theme.fontFamily
-                font.pixelSize: Theme.fontSizeSmall
+                color: Theme.settingsMuted
+                font.family: Theme.settingsFontFamily
+                font.pixelSize: Theme.settingsFontSizeSmall
             }
         }
 
@@ -338,10 +361,10 @@ Item {
             width: parent.width
             wrapMode: Text.WordWrap
             visible: page.shows("wallpaperOutput") && (!Quickshell.screens || Quickshell.screens.length === 0)
-            text: "No outputs are connected to this process. Each connected screen gets its own background when the shell is running."
-            color: Theme.panelMuted
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.fontSizeSmall
+            text: "No outputs are connected."
+            color: Theme.settingsMuted
+            font.family: Theme.settingsFontFamily
+            font.pixelSize: Theme.settingsFontSizeSmall
         }
 
         Repeater {
@@ -351,7 +374,7 @@ Item {
             delegate: Column {
                 required property var modelData
                 width: column.width
-                spacing: Theme.panelSpacing
+                spacing: Theme.settingsSpacing
 
                 Image {
                     width: 160
@@ -366,35 +389,17 @@ Item {
                     width: parent.width
                     label: modelData.name ? modelData.name : "Output"
 
-                    TextInput {
-                        id: outputField
-                        property string outputName: modelData && modelData.name ? modelData.name : ""
-                        width: 220
-                        height: Theme.controlHeight
-                        color: Theme.panelText
-                        font.family: Theme.fontFamily
-                        font.pixelSize: Theme.fontSizeSmall
-                        selectByMouse: true
-                        activeFocusOnTab: true
-                        clip: true
-                        Accessible.name: "Wallpaper for " + (outputName !== "" ? outputName : "output")
-                        Component.onCompleted: text = page.outputPath(outputName)
-                        onEditingFinished: {
-                            var choice = Wallpaper.resolveSource(text)
-                            if (text !== "" && choice.reason !== "")
-                                page.pathNote = choice.reason
-                            SettingsStore.setOutputWallpaper(outputName, text)
-                            if (!activeFocus)
-                                text = page.outputPath(outputName)
-                        }
-
-                        Connections {
-                            target: SettingsStore
-                            function onWallpaperOutputsJsonChanged() {
-                                if (!outputField.activeFocus)
-                                    outputField.text = page.outputPath(outputField.outputName)
+                    Row {
+                        spacing:6
+                        FlatButton {
+                            label:"Choose image"
+                            onActivated: {
+                                page.pickerOutput=modelData.name
+                                if(dialogLoader.item) {dialogLoader.item.outputName=modelData.name;dialogLoader.item.open()}
+                                else dialogLoader.active=true
                             }
                         }
+                        FlatButton {label:"Use shared";enabled:page.outputPath(modelData.name)!=="";onActivated:SettingsStore.setOutputWallpaper(modelData.name,"")}
                     }
                 }
             }
@@ -413,15 +418,15 @@ Item {
             width: parent.width
             wrapMode: Text.WordWrap
             visible: page.shows("slideshow")
-            text: "Choose a folder when the Qt dialog and folder model are installed, or add png, jpeg, and webp files individually. A folder scan is capped at 64 sorted images. Shuffle does not repeat the current image when another file is listed."
-            color: Theme.panelMuted
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.fontSizeSmall
+            text: "Choose a folder or add images. Shuffle avoids showing the same image twice in a row."
+            color: Theme.settingsMuted
+            font.family: Theme.settingsFontFamily
+            font.pixelSize: Theme.settingsFontSizeSmall
         }
 
         Row {
             visible: page.shows("slideshow")
-            spacing: Theme.panelSpacing
+            spacing: Theme.settingsSpacing
 
             FlatButton {
                 label: "Choose folder"
@@ -438,9 +443,9 @@ Item {
                 width: 360
                 elide: Text.ElideMiddle
                 text: page.selectedFolder === "" ? "No folder selected" : page.selectedFolder
-                color: Theme.panelMuted
-                font.family: Theme.fontFamily
-                font.pixelSize: Theme.fontSizeSmall
+                color: Theme.settingsMuted
+                font.family: Theme.settingsFontFamily
+                font.pixelSize: Theme.settingsFontSizeSmall
             }
         }
 
@@ -449,9 +454,9 @@ Item {
             width: parent.width
             wrapMode: Text.WordWrap
             text: page.folderReason
-            color: Theme.panelText
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.fontSizeSmall
+            color: Theme.settingsText
+            font.family: Theme.settingsFontFamily
+            font.pixelSize: Theme.settingsFontSizeSmall
         }
 
         SettingsRow {
@@ -459,17 +464,12 @@ Item {
             width: parent.width
             label: "Every"
 
-            TextInput {
-                width: 80
-                height: Theme.controlHeight
-                text: String(SettingsStore.intervalMinutes)
-                color: Theme.panelText
-                font.family: Theme.fontFamily
-                font.pixelSize: Theme.fontSizeSmall
-                selectByMouse: true
-                activeFocusOnTab: true
-                Accessible.name: "Slideshow minutes"
-                onEditingFinished: SettingsStore.setIntervalMinutes(parseInt(text, 10))
+            ChoiceBox {
+                choices:[1,5,10,15,30,60,120].map(function(value){return {label:value<60 ? value+" minutes" : value/60+" hours",value:value}})
+                customLabel:SettingsStore.intervalMinutes+" minutes"
+                selectedValue:SettingsStore.intervalMinutes
+                onChosen:function(value){SettingsStore.setIntervalMinutes(value)}
+                Accessible.name:"Slideshow interval"
             }
         }
 
@@ -479,7 +479,7 @@ Item {
             label: "Order"
 
             Row {
-                spacing: Theme.panelSpacing
+                spacing: Theme.settingsSpacing
 
                 FlatButton {
                     label: "In order"
@@ -500,17 +500,12 @@ Item {
             width: parent.width
             label: "Fade"
 
-            TextInput {
-                width: 80
-                height: Theme.controlHeight
-                text: String(SettingsStore.transitionMs)
-                color: Theme.panelText
-                font.family: Theme.fontFamily
-                font.pixelSize: Theme.fontSizeSmall
-                selectByMouse: true
-                activeFocusOnTab: true
-                Accessible.name: "Fade milliseconds"
-                onEditingFinished: SettingsStore.setTransitionMs(parseInt(text, 10))
+            ChoiceBox {
+                choices:[0,150,300,500,1000].map(function(value){return {label:value===0 ? "None" : value+" ms",value:value}})
+                customLabel:SettingsStore.transitionMs+" ms"
+                selectedValue:SettingsStore.transitionMs
+                onChosen:function(value){SettingsStore.setTransitionMs(value)}
+                Accessible.name:"Wallpaper transition"
             }
         }
 
@@ -520,15 +515,15 @@ Item {
             label: "Add image"
 
             Row {
-                spacing: Theme.panelSpacing
+                spacing: Theme.settingsSpacing
 
                 TextInput {
                     id: slideField
                     width: 220
                     height: Theme.controlHeight
-                    color: Theme.panelText
-                    font.family: Theme.fontFamily
-                    font.pixelSize: Theme.fontSizeSmall
+                    color: Theme.settingsText
+                    font.family: Theme.settingsFontFamily
+                    font.pixelSize: Theme.settingsFontSizeSmall
                     selectByMouse: true
                     activeFocusOnTab: true
                     Accessible.name: "Slideshow image"
@@ -547,9 +542,9 @@ Item {
             wrapMode: Text.WordWrap
             visible: page.shows("slideshow")
             text: WallpaperModel.slideError !== "" ? WallpaperModel.slideError : (WallpaperModel.slideCount + " images, " + WallpaperModel.unreadable + " skipped")
-            color: Theme.panelMuted
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.fontSizeSmall
+            color: Theme.settingsMuted
+            font.family: Theme.settingsFontFamily
+            font.pixelSize: Theme.settingsFontSizeSmall
         }
 
         Repeater {
@@ -588,10 +583,10 @@ Item {
             width: parent.width
             wrapMode: Text.WordWrap
             visible: page.shows("automaticText")
-            text: Theme.contrastReason !== "" ? Theme.contrastReason : "Automatic text reads the top of a png. Jpeg and webp still display. Manual colors stay stored when automatic is off."
-            color: Theme.panelMuted
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.fontSizeSmall
+            text: Theme.contrastReason !== "" ? Theme.contrastReason : "Adjust bar text for your wallpaper. Manual colors are remembered when automatic mode is off."
+            color: Theme.settingsMuted
+            font.family: Theme.settingsFontFamily
+            font.pixelSize: Theme.settingsFontSizeSmall
         }
 
         Text {
@@ -599,9 +594,9 @@ Item {
             wrapMode: Text.WordWrap
             visible: page.shows("manualText") && Theme.contrastWarning !== ""
             text: Theme.contrastWarning
-            color: Theme.panelText
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.fontSizeSmall
+            color: Theme.settingsText
+            font.family: Theme.settingsFontFamily
+            font.pixelSize: Theme.settingsFontSizeSmall
         }
 
         SettingsRow {
@@ -611,17 +606,14 @@ Item {
             width: parent.width
             label: "Text"
 
-            TextInput {
-                width: 120
-                height: Theme.controlHeight
-                text: SettingsStore.manualText
-                color: Theme.panelText
-                font.family: Theme.fontFamily
-                font.pixelSize: Theme.fontSizeSmall
-                selectByMouse: true
-                activeFocusOnTab: true
-                Accessible.name: "Manual text color"
-                onEditingFinished: page.edited({ manualText: text })
+            Row {
+                spacing:8
+                FlatButton {
+                    label:SettingsStore.manualText || "Choose color"
+                    onActivated:page.pickColor("manualText",SettingsStore.manualText)
+                    Accessible.name:"Choose text color"
+                }
+                FlatButton { label:"Reset";enabled:SettingsStore.manualText !== "";onActivated:page.edited({manualText:""}) }
             }
         }
 
@@ -630,17 +622,14 @@ Item {
             width: parent.width
             label: "Panel"
 
-            TextInput {
-                width: 120
-                height: Theme.controlHeight
-                text: SettingsStore.manualPanel
-                color: Theme.panelText
-                font.family: Theme.fontFamily
-                font.pixelSize: Theme.fontSizeSmall
-                selectByMouse: true
-                activeFocusOnTab: true
-                Accessible.name: "Manual panel color"
-                onEditingFinished: page.edited({ manualPanel: text })
+            Row {
+                spacing:8
+                FlatButton {
+                    label:SettingsStore.manualPanel || "Choose color"
+                    onActivated:page.pickColor("manualPanel",SettingsStore.manualPanel)
+                    Accessible.name:"Choose panel color"
+                }
+                FlatButton { label:"Reset";enabled:SettingsStore.manualPanel !== "";onActivated:page.edited({manualPanel:""}) }
             }
         }
     }

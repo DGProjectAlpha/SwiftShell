@@ -195,6 +195,11 @@ Singleton {
         console.info("SwiftShell: launcher opened on", resolved.mode, resolved.label);
     }
 
+    function toggleLauncher() {
+        if (root.open) root.closeLauncher();
+        else root.openLauncher();
+    }
+
     function closeLauncher() {
         if (!root.open && root.query === "" && root.notice === "")
             return;

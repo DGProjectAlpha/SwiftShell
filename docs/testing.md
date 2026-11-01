@@ -509,3 +509,269 @@ Clock format is `clock.use24Hour` in the same file. `true` prints `09:04`. `fals
 ## Recovery
 
 Stopping SwiftShell releases its layer surface. These milestones do not write Hyprland or another shell's files, so there is no compositor config to roll back. If a bar remains after stop, run `qs list --all` and kill only the instance whose config path is this checkout's `shell/shell.qml` or the installed `swiftshell/app` directory.
+
+## Local per-monitor workspace repair (2026-10-31)
+
+Verified on CachyOS: Quickshell 0.3.2, Qt 6.12.0, Hyprland 0.57.0.
+DP-1: HP X32, scale 1; HDMI-A-1: PM161Q C, scale 1.25.
+
+- `scripts/check.sh`: static checks, logic and observed-workspace regressions,
+  settings file tests, 17 install tests, and Qt 6 QML suites pass. The checker
+  now prefers the explicit Qt 6 runner over `/usr/bin/qmltestrunner` (Qt 5 here).
+  Native notification plugin absence in qmltestrunner remains an explicitly
+  recognized unavailable dependency; that component is not thereby runtime-tested.
+- `qs -p shell/WorkspaceAudit.qml`: a windowless read-only audit reports
+  DP-1 `1,2,3,gaming`, active `gaming`; HDMI-A-1 `4,5,6`, active `4`;
+  focused DP-1. The probe exits itself and never dispatches a workspace action.
+- `scripts/test-workspaces-native.sh`: hidden native SettingsWindow instantiates;
+  real atomic save and subsequent process restart/readback pass using temporary
+  XDG settings. This caught and regresses a synchronous JsonAdapter stale write.
+- With owner approval only SwiftShell was restarted. Its actual root loaded,
+  both output bars were instantiated, and diagnostics showed no new workspace
+  snapshot failures or QML load failures. Existing launcher Keys/non-Item,
+  missing launcher-request file, and deprecated Settings sizing warnings are
+  separate known diagnostics, not suppressed or repaired here.
+
+Visual checks still required on the running desktop:
+
+1. Open Settings → Top bar → All. Open Workspaces and choose Automatic for
+   each output, especially if an old global ID selection exists. DP-1 should
+   show 1, 2, 3, gaming; HDMI-A-1 should show 4, 5, 6. Confirm readable labels
+   and sensible spacing at scales 1 and 1.25.
+2. Click numeric, named and empty workspaces on both bars. Each monitor should
+   keep its own active mark even when focus is on the other monitor. Existing
+   assignments must stay on their original outputs. Use Tab/Enter through the
+   Settings controls; the transparent bars deliberately do not grab keyboard focus.
+3. On DP-1 choose Override, save `1, 3, gaming`, and verify only its row changes.
+   Save an empty list to hide that row, then Automatic to restore discovery.
+   Duplicate entries should produce an error. Editing while focus/workspace
+   events occur must not discard the draft or steal editor focus.
+4. Top bar → Focused should follow the monitor receiving focus. Select an actual
+   named monitor, then All; the old explicit selection must no longer override
+   All. Primary means the first Qt screen, not an invented compositor primary.
+5. After an owner-controlled restart, confirm the override and placement remain.
+   Automatic follows actual ownership when a workspace moves externally. If
+   convenient and safe, unplug/reconnect an output and verify its preference is
+   retained and the remaining output's row remains correct.
+
+These click, rendering, focus-follow and hotplug checks have **not** been automated
+or claimed as visual passes. The native hidden-window test does not prove them.
+
+Recovery: stop only this checkout with `scripts/stop.sh`. Revert the workspace
+repair commit (do not hard reset), then `scripts/launch.sh`. The additive preference
+can remain: old code preserves unknown keys in its extension bag. No compositor
+configuration needs restoring. A pre-repair source copy was also retained in
+`/tmp/swiftshell-before-workspaces/shell` for this session; it is not a durable backup.
+
+## Live Displays transactions (2026-10-31)
+
+Phase 1 verified with `python3 tests/live/display-transactions.py --live` on both
+connected outputs. Passed Apply/Keep, explicit Revert, advertised 1280×720@60
+mode changes, scale changes, 90-degree rotation, 15-second timeout recovery, and
+recovery after the controlling process exited. Original monitor modes, scales,
+positions, orientation and color formats were checked after every test and
+restored at completion. No user Hyprland Lua file was written.
+
+`scripts/check.sh` passes, including seven Python validation/journal tests,
+logical mixed-scale geometry, and a QML pointer-drag regression that loads the
+actual DisplaysPage and asserts rectangles retain their dimensions during a drag.
+The native page was opened via `qs ipc -p shell call swiftshell settings displays`;
+a window-bounded capture confirmed discovery, friendly names, mode lists and the
+arrangement. This initial window remained tiled; floating behavior belongs to
+Phase 2. Hardware APIs were checked against installed stubs and exact Hyprland
+0.57.0 source (monitor-rule parser preserves unspecified fields on exact rules).
+
+The external Python watchdog owns the confirmation deadline and fsyncs the
+original state before applying. It survives Quickshell exit, watches the owner's
+PID/start time, and reverts on timeout, owner death or failed verification. A
+pending journal is recovered before accepting new work. Revert failures retain
+the snapshot and retry; disconnected outputs cannot be restored until reconnected.
+Do not delete the journal during recovery. `python3 shell/helpers/displayctl.py
+revert` explicitly asks the watchdog to recover a pending transaction.
+
+Kept layouts are in SwiftShell's own state directory and restored explicitly
+with **Restore saved layout**. They are not automatically applied at login or
+written into Hyprland configuration. HDR/color/ICC/reservations stay under the
+existing compositor configuration; mirrored displays cannot be edited here.
+
+## Native Settings redesign completion (2026-11-01)
+
+Target: CachyOS, RTX 4070, Quickshell 0.3.2, Qt 6.12.0, Hyprland
+0.57.0 Lua. DP-1 scale 1 and HDMI-A-1 scale 1.25. This is local desktop
+execution, not a mocked compositor pass.
+
+- `scripts/check.sh`: passed; 62 QML files checked, JavaScript suites, display
+  and scoped-window Python tests, 17 installer checks, QML suites 6/13/5/4/4
+  passed with zero failures or skips. Output `/tmp/swiftshell-final-check.log`.
+- `python3 tests/live/settings-pages.py --live`: all eleven actual Settings
+  categories reached Loader.Ready, with no native integration errors.
+- `python3 tests/live/settings-window.py --live --output HDMI-A-1`: native title
+  drag preserved size; all four edges and four corners resized; real maximize
+  and restore, minimize and reactivation, close/reopen and saved geometry passed.
+  DP-1 passed the same native gestures during the preceding implementation run.
+  Tests restore the window's original geometry and fit the test window to the
+  smaller logical display before exercising outward resize gestures.
+- `python3 tests/live/settings-blur.py --live`: controlled checkerboard fixture
+  fully covered each bounded capture. Actual blur on/off mean horizontal edge
+  contrast: HDMI-A-1 0.016/2.142; DP-1 0.052/2.015. Radius 6/12, shadow opacity
+  0/0.4 and softness 4/24 each produced measured pixel changes on both outputs.
+  Private desktop pixels were not captured. Original appearance preferences and
+  window position were restored. Captures are ephemeral `/tmp` artifacts.
+- `scripts/test-workspaces-native.sh`: hidden real SettingsWindow loaded; atomic
+  per-output workspace save and independent-process restart readback passed in
+  temporary XDG directories. No user settings were replaced.
+- `qs log -i qe1ejptnt --tail 100 --no-color`: no Settings TypeError,
+  ReferenceError or failed component loads. Existing launcher non-Item Keys,
+  missing launcher request file and Qt Wayland text-input warnings remain; this
+  milestone does not claim they are repaired.
+
+User visual acceptance: open every sidebar page, check readability over your
+wallpaper, resize between compact and full navigation, use keyboard Tab and
+search, and compare Appearance blur/radius/shadow extremes. In Displays, drag a
+monitor and confirm it moves without distortion; Apply a desired supported layout,
+then test Revert or leave the countdown unconfirmed before using Keep. Reopen
+Settings after − to restore it. Hotplug, HDR/ICC editing, mirroring, full keyboard
+accessibility audit, other drivers/compositors and notification ownership takeover
+were not validated by this Settings milestone. User-authored Lua, Noctalia,
+autostart and system services were left unchanged.
+
+## Launcher invocation foundation (2026-11-01, roadmap C0)
+
+The read-only effective binding audit found one ordinary Super+Space binding:
+`Toggle application launcher`, executing the user's existing Noctalia command.
+No bind, user Lua file or Noctalia process was changed. A one-line handoff was
+prepared separately and passed `luac -p`; applying it needs explicit approval.
+
+- `scripts/check.sh` passed after the direct IPC and Item keyboard-handler fix.
+  Installer regression covers scoped checkout IPC, installed selection, failure
+  when no shell responds, no stale token write, and unchanged Hyprland files.
+- `python3 tests/live/launcher-invocation.py --live`: three open/close cycles on
+  each output passed, with the actual input focused and correct focused monitor.
+  The test restored monitor focus and closed only SwiftShell's launcher.
+- `scripts/test-launcher-native.sh` executed on both HDMI-A-1 and DP-1: a real
+  native LauncherWindow accepted typing and Escape dismissed it. QtTest sends
+  keyboard events to the real native input; this is not a physical global-chord
+  test. Temporary XDG settings isolated the audit from user preferences.
+- Only SwiftShell instance qe1ejptnt was stopped; updated instance 6f8i1qtnt
+  launched successfully. The previous non-Item Keys warning is gone. The legacy
+  missing launcher.request warning remains because older token callers remain
+  supported. Qt Wayland text-input warnings remain under investigation.
+
+C0's physical Super+Space handoff and reboot persistence acceptance are pending
+approval. This increment does not claim that changing the request command alone
+changes the existing compositor binding. Full Spotlight redesign belongs to C1.
+
+
+## Approved Super+Space handoff (2026-11-01, roadmap C0)
+
+Owner approval covered backup and the prepared single-line command change. The
+original binds.lua was copied and byte-verified before any write. The final backup
+is `binds.lua.bak-swiftshell-launcher-20261101T132508Z` in the same user config
+directory. Lua syntax validation passed before atomic replacement. Automatic
+Hyprland reload reported no errors, preserved all 94 binding metadata records
+(normalizing opaque Lua callback addresses only), and preserved both output modes,
+transforms, scales and positions. Two initial strict comparison attempts restored
+the original command before the harmless callback-address difference was explained.
+
+`python3 tests/live/launcher-shortcut.py --live` passed actual compositor binding
+invocation through native virtual-keyboard events on HDMI-A-1 and DP-1. Each output
+passed two open/repeat-toggle cycles plus open/Escape. No duplicate Super+Space
+binding exists. The test closes only SwiftShell’s launcher and restores original
+monitor focus. New C transport compiles with `-Wall -Wextra -Werror`; the upstream
+wlroots protocol retains its copyright and license. No virtual keyboard daemon,
+system service, package installation or administrator privileges were needed.
+
+The command is persisted in the approved user file and survives configuration
+reload. Reboot and a human physical-keypress were not performed. No Noctalia
+process/configuration, other shortcut, autostart, service or core OS file changed.
+
+## Bar surface modes (2026-11-01, roadmap B1)
+
+`scripts/check.sh` passed: 64 QML files; all JavaScript suites, 8 display and 7
+window-helper Python cases, 17 installer checks, QML totals 6/13/6/4/4, zero
+failures/skips. `scripts/test-workspaces-native.sh` now also verifies global and
+per-output bar appearance across an actual independent-process restart in temporary
+XDG directories. This caught and regresses the JsonAdapter serialization timing
+issue when several surface/workspace settings change synchronously.
+
+`python3 tests/live/bar-surfaces.py --live` passed all three actual modes on both
+outputs, asserted other bars stayed unchanged, and restored original overrides.
+A raised controlled checkerboard fully shielded the bounded capture behind the
+real production bar. Mean horizontal edge contrast, transparent/solid/frosted:
+HDMI-A-1 19.786/13.386/3.341; DP-1 29.880/19.941/6.009. The real layer blur is
+observable while foreground remains sharp. No layer rule or global compositor
+blur setting was required. Crops are `/tmp/swiftshell-bar-<output>-<mode>.png`.
+Native Settings category loading and actual Super+Space/repeat/Escape passed
+again on both outputs. Settings activation requests were allowed to drain before
+changing test monitor focus; otherwise an earlier asynchronous show request can
+legitimately reactivate its own output during the chord test.
+
+Native mode/blur tests use temporary overrides and leave the user's transparent
+bars, heights, workspace lists, modules and per-output monitor choices intact.
+Normal capability checks never capture desktop pixels. Missing-tool fallback is
+unit-tested, rather than uninstalling user software or disabling global blur.
+Physical hotplug and full wallpaper/opacity accessibility review remain NOT RUN.
+
+## Bar flicker and themed color picker (2026-11-01)
+
+Native before/after hidden-bar lifecycle audit: old 23 module / 68 workspace
+creations; new 9 / 4 under 15 preference/urgency updates and module hide/show.
+`python3 tests/live/bar-stability.py --live` retains this regression in temporary
+XDG directories. Role updates and reorder preserve existing workspace controls;
+QML tests verify object identity and active/urgent values, not just item counts.
+
+`python3 tests/live/color-picker.py --live` and `--output HDMI-A-1` passed real
+pointer hue/saturation/value editing, two cancels and one commit, no preference
+writes while drafting, no extra native client and no Settings geometry movement.
+The original global bar color/mode/opacity and prior Settings open/category state
+were restored. A separate bounded capture over the owned checkerboard fixture
+was visually inspected at `/tmp/swiftshell-themed-color-picker.png`.
+
+New always-run QML suites: keyed models 4 passed, color picker 8 passed. The latter
+covers cancel, invalid hex, one accepted value, Escape, keyboard edits, dark/light
+shared theme and pointer dragging. Color selection no longer depends on
+QtQuick.Dialogs; native image/folder selection remains separately gated.
+Existing native bar mode/blur, hidden atomic save/restart and actual global
+Super+Space regressions passed on both monitors. Startup geometry readiness is
+included in diagnostics to avoid sending test clicks during native restore.
+No claim is made about high-GPU-load driver behavior or every physical hotplug case.
+
+## B2 bar ergonomics and frosted panels (2026-11-01)
+
+`scripts/check.sh` passed including new clock/group/visibility logic and bounded
+scrolling QML tests. `scripts/test-settings-save-native.sh` passes real FileView
+duplicate-write and rapid-edit regression with final disk readback, plus backed-up
+v2 migration followed by further edits. The expanded
+`scripts/test-workspaces-native.sh` verifies new clock/group/visibility preferences
+alongside existing named workspaces and surfaces across a process restart.
+
+`python3 tests/live/bar-ergonomics.py --live` passed both connected monitors:
+12/24-hour/date/seconds ticks, non-overlapping centered clock, real right-click and
+per-monitor checkboxes, Escape, Customize, and actual Super+Space focus handoff.
+Calendar/control/module panels passed real compositor blur comparisons against
+an owned checkerboard with observed layer geometry. Final persistence returned
+ready after restoring preferences. See decision 0035 for measured comparisons.
+The real-pointer color picker, eleven Settings pages and actual global shortcut
+regressions were rerun after the writer fix. Test transports guard cursor position
+before sending button presses, retrying only moves that sent no press.
+
+Visual acceptance: right-click each bar and toggle a module; the other output
+should stay unchanged. In Settings → Bar choose clock seconds/date/style and
+module positions, then reopen Calendar and Control Center. Check readable text,
+consistent rounded frost/shadow, no initial size flash and Escape/outside dismissal.
+Color picker drafts should remain inside Settings and only save on Use color.
+Physical hotplug and sustained gaming load remain unperformed.
+
+Runtime log review retained the known Qt Wayland text-input focus warnings; these
+were not suppressed. No QML binding-loop/type errors appeared in the final
+interaction log. Test-owned opacity and visibility overrides were explicitly
+restored from the verified pre-milestone backup and checked on disk.
+
+## PR 41 Qt 6.4 compatibility
+
+GitHub's Ubuntu Qt 6.4 runner exposed an unavailable Overlay lookup through the
+Basic style namespace. The picker now imports the base Controls attached type
+explicitly while keeping Basic styling. The pointer regression asserts a real
+window overlay with the expected width. KeyedModel uses explicit dynamic roles
+so older Qt retains object rows without nested-list role type warnings.
+The complete local check suite passed after both corrections.

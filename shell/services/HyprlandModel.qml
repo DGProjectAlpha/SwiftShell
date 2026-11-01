@@ -2,6 +2,7 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import Quickshell.Hyprland
 import "../logic/workspaces.js" as Workspaces
 
@@ -10,21 +11,79 @@ Singleton {
 
     readonly property bool connected: Hyprland.eventSocketPath !== ""
 
-    readonly property var liveWorkspaces: {
-        const values = Hyprland.workspaces.values;
-        const out = [];
-        for (let i = 0; i < values.length; i++) {
-            const workspace = values[i];
-            out.push({
-                id: workspace.id,
-                name: workspace.name,
-                monitorName: workspace.monitor && workspace.monitor.name ? workspace.monitor.name : "",
-                active: workspace.active === true,
-                focused: workspace.focused === true,
-                urgent: workspace.urgent === true
-            });
+    // Read raw JSON: 0.57 string addresses cannot be reconstructed from legacy ids.
+    property var monitorSnapshot: []
+    property var liveWorkspaces: []
+    property string workspaceError: ""
+    property bool snapshotPending: false
+    property int snapshotStage: 0
+    property var stagedMonitors: []
+    property var stagedWorkspaces: []
+    property var monitorChoices: []
+
+    function requestSnapshot() {
+        if (!root.connected) return;
+        if (snapshotProcess.running) { root.snapshotPending = true; return; }
+        root.snapshotStage = 0;
+        snapshotProcess.command = ["hyprctl", "-j", "monitors"];
+        snapshotProcess.running = true;
+    }
+
+    function finishSnapshot(code) {
+        try {
+            if (code !== 0) throw new Error();
+            const data = JSON.parse(snapshotOutput.text);
+            if (!Array.isArray(data)) throw new Error();
+            if (root.snapshotStage === 0) root.stagedMonitors = data;
+            else if (root.snapshotStage === 1) root.stagedWorkspaces = data;
+            else {
+                root.liveWorkspaces = Workspaces.snapshotItems(root.stagedMonitors, root.stagedWorkspaces, data);
+                root.monitorSnapshot = root.stagedMonitors;
+                const choices = root.monitorSnapshot.filter(function (m) { return !m.disabled; }).map(function (m) {
+                    return { name: m.name, label: (m.model || m.description || m.name) + " · " + m.name, scale: m.scale };
+                });
+                // Preserve settings editor focus while workspace/focus events arrive.
+                if (JSON.stringify(choices) !== JSON.stringify(root.monitorChoices)) root.monitorChoices = choices;
+                root.workspaceError = "";
+                root.outputRevision += 1;
+            }
+            if (root.snapshotStage < 2) {
+                root.snapshotStage += 1;
+                snapshotProcess.command = ["hyprctl", "-j", root.snapshotStage === 1 ? "workspaces" : "workspacerules"];
+                snapshotProcess.running = true;
+                return;
+            }
+        } catch (error) {
+            root.workspaceError = "Workspace discovery failed; showing the last successful snapshot.";
+            console.warn("SwiftShell: workspace IPC snapshot failed");
         }
-        return out;
+        if (root.snapshotPending) {
+            root.snapshotPending = false;
+            snapshotDebounce.restart();
+        }
+    }
+
+    Process {
+        id: snapshotProcess
+        stdout: StdioCollector { id: snapshotOutput; waitForEnd: true }
+        // Do not forward stderr: compositor diagnostics may contain private data.
+        onExited: function (exitCode, exitStatus) { root.finishSnapshot(exitCode); }
+    }
+
+    Timer {
+        id: snapshotDebounce
+        interval: 80
+        repeat: false
+        onTriggered: root.requestSnapshot()
+    }
+
+    Connections {
+        target: Hyprland
+        function onRawEvent(event) {
+            // Event-triggered, coalesced reads, never periodic polling.
+            if (/^(workspace|focusedmon|monitor|createworkspace|destroyworkspace|moveworkspace|renameworkspace|configreloaded|openwindow|closewindow|movewindow|urgent)/.test(event.name))
+                snapshotDebounce.restart();
+        }
     }
 
     readonly property var liveToplevels: {
@@ -114,10 +173,12 @@ Singleton {
 
     function hyprlandNameForScreen(screen) {
         const monitor = root.monitorObjectForScreen(screen);
-        return monitor && monitor.name ? monitor.name : "";
+        return monitor && monitor.name ? monitor.name : (screen && screen.name ? screen.name : "");
     }
 
     function descriptionForScreen(screen) {
+        const observed = root.monitorSnapshot.find(function (m) { return screen && m.name === screen.name; });
+        if (observed) return observed.description || "";
         const monitor = root.monitorObjectForScreen(screen);
         try {
             return monitor && monitor.description ? String(monitor.description) : "";
@@ -127,39 +188,10 @@ Singleton {
     }
 
     function readFocusedOutput() {
-        let monitor = null;
-        try {
-            monitor = Hyprland.focusedMonitor;
-        } catch (error) {
-            return null;
+        for (const monitor of root.monitorSnapshot) {
+            if (monitor.focused) return { name: monitor.name, description: monitor.description || "", id: monitor.id };
         }
-        if (!monitor)
-            return null;
-
-        let name = "";
-        let description = "";
-        let id = -1;
-        try {
-            if (monitor.name)
-                name = String(monitor.name);
-        } catch (error) {
-            name = "";
-        }
-        try {
-            if (monitor.description)
-                description = String(monitor.description);
-        } catch (error) {
-            description = "";
-        }
-        try {
-            if (monitor.id !== undefined && monitor.id !== null)
-                id = monitor.id;
-        } catch (error) {
-            id = -1;
-        }
-        if (name === "" && description === "")
-            return null;
-        return { name: name, description: description, id: id };
+        return null;
     }
 
     readonly property var focusedOutput: readFocusedOutput()
@@ -181,7 +213,7 @@ Singleton {
         return null;
     }
 
-    function activateWorkspace(id, configuredMode) {
+    function activateWorkspace(id, configuredMode, monitorName) {
         if (!root.connected) {
             if (!root.warnedDispatchDown) {
                 console.warn("SwiftShell: Hyprland IPC is unavailable; workspace activation was not sent");
@@ -192,7 +224,7 @@ Singleton {
 
         root.warnedDispatchDown = false;
         const mode = Workspaces.resolveDispatchMode(configuredMode, root.detectedLua());
-        const command = Workspaces.dispatchWorkspaceCommand(id, configuredMode, root.detectedLua());
+        const command = Workspaces.dispatchAddressCommand(id, configuredMode, root.detectedLua());
         if (command === "") {
             console.warn("SwiftShell: ignored workspace activation for", id);
             return;
@@ -204,6 +236,8 @@ Singleton {
         }
 
         try {
+            const focusMonitor = Workspaces.dispatchMonitorCommand(monitorName, configuredMode, root.detectedLua());
+            if (focusMonitor !== "") Hyprland.dispatch(focusMonitor);
             Hyprland.dispatch(command);
         } catch (error) {
             console.warn("SwiftShell: workspace", id, "was not activated");
@@ -214,6 +248,7 @@ Singleton {
     }
 
     function refresh() {
+        snapshotDebounce.restart();
         Hyprland.refreshMonitors();
         Hyprland.refreshWorkspaces();
         Hyprland.refreshToplevels();

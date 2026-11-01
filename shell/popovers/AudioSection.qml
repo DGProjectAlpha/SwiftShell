@@ -160,9 +160,9 @@ Column {
         Text {
             width: parent.width
             text: Audio.outputLabel(root.ready ? root.sink.description : "")
-            color: Theme.panelText
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.fontSize
+            color: Theme.settingsText
+            font.family: Theme.settingsFontFamily
+            font.pixelSize: Theme.settingsFontSize
             elide: Text.ElideRight
         }
 
@@ -178,9 +178,9 @@ Column {
             Text {
                 anchors.verticalCenter: parent.verticalCenter
                 text: root.percentText()
-                color: Theme.panelMuted
-                font.family: Theme.fontFamily
-                font.pixelSize: Theme.fontSize
+                color: Theme.settingsMuted
+                font.family: Theme.settingsFontFamily
+                font.pixelSize: Theme.settingsFontSize
                 Accessible.role: Accessible.StaticText
                 Accessible.name: "Volume " + text
             }
@@ -225,9 +225,9 @@ Column {
         Text {
             width: parent.width
             text: Audio.nodeName(root.sourceNode)
-            color: Theme.panelText
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.fontSize
+            color: Theme.settingsText
+            font.family: Theme.settingsFontFamily
+            font.pixelSize: Theme.settingsFontSize
             elide: Text.ElideRight
         }
 
@@ -288,9 +288,9 @@ Column {
                 width: 120
                 anchors.verticalCenter: parent.verticalCenter
                 text: modelData.label
-                color: Theme.panelText
-                font.family: Theme.fontFamily
-                font.pixelSize: Theme.fontSizeSmall
+                color: Theme.settingsText
+                font.family: Theme.settingsFontFamily
+                font.pixelSize: Theme.settingsFontSizeSmall
                 elide: Text.ElideRight
             }
 

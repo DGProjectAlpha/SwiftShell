@@ -1,7 +1,7 @@
 # Dependency detection and optional Arch package installation.
 
-SWIFTSHELL_MIN_QUICKSHELL=0.2.0
-SWIFTSHELL_MIN_HYPRLAND=0.40.0
+SWIFTSHELL_MIN_QUICKSHELL=0.3.2
+SWIFTSHELL_MIN_HYPRLAND=0.57.0
 
 swiftshell_extract_version() {
     printf '%s\n' "$1" | tr ' ' '\n' | sed -n 's/^[vV]\{0,1\}\([0-9][0-9]*\.[0-9][0-9]*\(\.[0-9][0-9]*\)\{0,1\}\).*/\1/p' | head -n 1

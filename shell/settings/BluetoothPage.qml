@@ -39,8 +39,8 @@ Item {
         visible: loader.status === Loader.Error
         wrapMode: Text.WordWrap
         text: "Bluetooth is unavailable."
-        color: Theme.panelMuted
-        font.family: Theme.fontFamily
-        font.pixelSize: Theme.fontSizeSmall
+        color: Theme.settingsMuted
+        font.family: Theme.settingsFontFamily
+        font.pixelSize: Theme.settingsFontSizeSmall
     }
 }

@@ -55,10 +55,10 @@ Column {
     Text {
         width: parent.width
         wrapMode: Text.WordWrap
-        text: "Devices BlueZ already knows are listed. This shell does not start a scan."
-        color: Theme.panelMuted
-        font.family: Theme.fontFamily
-        font.pixelSize: Theme.fontSizeSmall
+        text: "Known devices"
+        color: Theme.settingsMuted
+        font.family: Theme.settingsFontFamily
+        font.pixelSize: Theme.settingsFontSizeSmall
     }
 
     ServiceStatus {
@@ -94,9 +94,9 @@ Column {
             Text {
                 width: parent.width
                 text: modelData.name + (modelData.battery == null ? "" : " " + modelData.battery + "%")
-                color: Theme.panelText
-                font.family: Theme.fontFamily
-                font.pixelSize: Theme.fontSize
+                color: Theme.settingsText
+                font.family: Theme.settingsFontFamily
+                font.pixelSize: Theme.settingsFontSize
                 elide: Text.ElideRight
             }
 
@@ -141,8 +141,8 @@ Column {
         width: parent.width
         wrapMode: Text.WordWrap
         text: root.notice
-        color: Theme.panelText
-        font.family: Theme.fontFamily
-        font.pixelSize: Theme.fontSizeSmall
+        color: Theme.settingsText
+        font.family: Theme.settingsFontFamily
+        font.pixelSize: Theme.settingsFontSizeSmall
     }
 }

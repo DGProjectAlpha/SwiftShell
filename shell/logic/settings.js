@@ -102,10 +102,57 @@ function hiddenModulesValid(hidden) {
     return normalizeHiddenModules(source).length === source.length;
 }
 
+function barSurfaceOutputsValue(value, errors) {
+    if (value === undefined) return "{}";
+    try {
+        if (typeof value !== "string" || value.length > 16384) throw new Error();
+        const outputs = JSON.parse(value);
+        if (!isPlainObject(outputs) || Object.keys(outputs).length > 32) throw new Error();
+        const clean = {};
+        for (const key of Object.keys(outputs)) {
+            const item = outputs[key];
+            if (!key.trim() || key.length > 256 || ["__proto__","constructor","prototype"].indexOf(key)>=0 || /[\x00-\x1f]/.test(key) || !isPlainObject(item)) throw new Error();
+            if (["transparent", "solid", "frosted"].indexOf(item.mode) < 0
+                || typeof item.color !== "string" || !/^#[0-9a-fA-F]{6}$/.test(item.color)
+                || typeof item.opacity !== "number" || !Number.isFinite(item.opacity) || item.opacity < 0 || item.opacity > 1) throw new Error();
+            clean[key] = {mode:item.mode,color:item.color.toLowerCase(),opacity:item.opacity};
+        }
+        return JSON.stringify(clean);
+    } catch (error) { errors.push("bar.surfaceOutputsJson"); return "{}"; }
+}
+
+function moduleSidesValue(value, errors) {
+    if(value === undefined) return "{}";
+    try {
+        if(typeof value!=="string" || value.length>1024) throw new Error();
+        const source=JSON.parse(value);
+        if(!isPlainObject(source)) throw new Error();
+        for(const key of Object.keys(source)) if(BAR_MODULES.indexOf(key)<0 || ["left","center","right"].indexOf(source[key])<0) throw new Error();
+        return JSON.stringify(source);
+    } catch(error) {errors.push("bar.moduleSidesJson");return "{}";}
+}
+
+function hiddenOutputsValue(value, errors) {
+    if(value === undefined) return "{}";
+    try {
+        if(typeof value!=="string" || value.length>8192) throw new Error();
+        const source=JSON.parse(value);
+        if(!isPlainObject(source) || Object.keys(source).length>32) throw new Error();
+        for(const key of Object.keys(source)) {
+            if(!key.trim() || key.length>256 || /[\x00-\x1f]/.test(key) || ["__proto__","constructor","prototype"].indexOf(key)>=0
+                || !Array.isArray(source[key]) || !hiddenModulesValid(source[key])) throw new Error();
+        }
+        return JSON.stringify(source);
+    } catch(error) {errors.push("bar.hiddenOutputsJson");return "{}";}
+}
+
 var DEFAULTS = {
     version: 3,
     clock: {
         use24Hour: true,
+        showSeconds: false,
+        showDate: false,
+        dateFormat: "short",
         showWeekNumbers: false,
         weekStart: "locale",
     },
@@ -114,11 +161,19 @@ var DEFAULTS = {
         reserveSpace: true,
         showFocusedTitle: true,
         workspaceIds: [],
+        workspaceOutputsJson: "{}",
         workspaceDispatch: "auto",
         placement: "focused",
         height: 28,
         moduleOrder: ["workspaces", "title", "search", "clock", "control", "media", "tray", "battery"],
         hiddenModules: [],
+        searchLabel: false,
+        moduleSidesJson: "{}",
+        hiddenOutputsJson: "{}",
+        surfaceMode: "transparent",
+        surfaceColor: "#161616",
+        surfaceOpacity: 0.75,
+        surfaceOutputsJson: "{}",
     },
     appearance: {
         mode: "dark",
@@ -132,7 +187,7 @@ var DEFAULTS = {
         reducedMotion: false,
         panelPadding: 12,
         panelSpacing: 8,
-        fontSize: 12,
+        fontSize: 13,
         fontWeight: "regular",
         iconScale: 1,
         topGradient: false,
@@ -159,8 +214,8 @@ var DEFAULTS = {
         slidesJson: "[]",
     },
     settingsWindow: {
-        width: 900,
-        height: 620,
+        width: 1000,
+        height: 700,
         category: "appearance",
     },
     shortcutsJson: "{}",
@@ -266,6 +321,9 @@ function validateSettings(input) {
         errors.push("clock.use24Hour");
     }
 
+    const showSeconds=pickBoolean(clock,"showSeconds",DEFAULTS.clock.showSeconds,errors,"clock.showSeconds");
+    const showDate=pickBoolean(clock,"showDate",DEFAULTS.clock.showDate,errors,"clock.showDate");
+    const dateFormat=pickEnum(clock,"dateFormat",["short","weekday","iso"],DEFAULTS.clock.dateFormat,errors,"clock.dateFormat");
     const showWeekNumbers = pickBoolean(clock, "showWeekNumbers", DEFAULTS.clock.showWeekNumbers, errors, "clock.showWeekNumbers");
     const weekStart = pickEnum(clock, "weekStart", ["locale", "monday", "sunday"], DEFAULTS.clock.weekStart, errors, "clock.weekStart");
 
@@ -311,6 +369,20 @@ function validateSettings(input) {
         workspaceIds = normalizeWorkspaceIds(bar.workspaceIds);
     }
 
+    let workspaceOutputsJson = "{}";
+    if (bar.workspaceOutputsJson !== undefined) {
+        try {
+            const outputs = JSON.parse(bar.workspaceOutputsJson);
+            if (!outputs || typeof outputs !== "object" || Array.isArray(outputs)) throw new Error();
+            for (const key of Object.keys(outputs)) {
+                if (!key.trim() || key.length > 256) throw new Error();
+                if (outputs[key] === null) continue;
+                if (!Array.isArray(outputs[key]) || outputs[key].length > 32) throw new Error();
+                if (outputs[key].some(function (v) { return typeof v !== "string" || !v.trim() || v !== v.trim() || v.length > 128 || /[\x00-\x1f,]/.test(v) || v.indexOf("special:") === 0 || v.indexOf("name:") === 0; }) || new Set(outputs[key]).size !== outputs[key].length) throw new Error();
+            }
+            workspaceOutputsJson = JSON.stringify(outputs);
+        } catch (error) { errors.push("bar.workspaceOutputsJson"); }
+    }
     const workspaceDispatch = pickEnum(
         bar,
         "workspaceDispatch",
@@ -321,6 +393,17 @@ function validateSettings(input) {
     );
     const barPlacement = pickEnum(bar, "placement", ["focused", "primary", "all"], DEFAULTS.bar.placement, errors, "bar.placement");
     const barHeight = pickInt(bar, "height", 22, 52, DEFAULTS.bar.height, errors, "bar.height");
+    const searchLabel=pickBoolean(bar,"searchLabel",DEFAULTS.bar.searchLabel,errors,"bar.searchLabel");
+    const moduleSidesJson=moduleSidesValue(bar.moduleSidesJson,errors);
+    const hiddenOutputsJson=hiddenOutputsValue(bar.hiddenOutputsJson,errors);
+    const surfaceMode = pickEnum(bar, "surfaceMode", ["transparent","solid","frosted"], DEFAULTS.bar.surfaceMode, errors, "bar.surfaceMode");
+    let surfaceColor = DEFAULTS.bar.surfaceColor;
+    if (bar.surfaceColor !== undefined) {
+        if (typeof bar.surfaceColor === "string" && /^#[0-9a-fA-F]{6}$/.test(bar.surfaceColor)) surfaceColor=bar.surfaceColor.toLowerCase();
+        else errors.push("bar.surfaceColor");
+    }
+    const surfaceOpacity = pickNumber(bar,"surfaceOpacity",0,1,DEFAULTS.bar.surfaceOpacity,errors,"bar.surfaceOpacity");
+    const surfaceOutputsJson = barSurfaceOutputsValue(bar.surfaceOutputsJson,errors);
     let moduleOrder = DEFAULTS.bar.moduleOrder.slice();
     if (bar.moduleOrder === undefined) {
         moduleOrder = DEFAULTS.bar.moduleOrder.slice();
@@ -376,7 +459,7 @@ function validateSettings(input) {
         errors.push("settingsWindow");
     const settingsWindowWidth = pickInt(windowSource, "width", 640, 1600, DEFAULTS.settingsWindow.width, errors, "settingsWindow.width");
     const settingsWindowHeight = pickInt(windowSource, "height", 440, 1200, DEFAULTS.settingsWindow.height, errors, "settingsWindow.height");
-    const settingsWindowCategory = pickEnum(windowSource, "category", ["appearance", "bar", "wallpaper", "displays", "shortcuts", "audio", "network", "bluetooth", "power", "notifications"], DEFAULTS.settingsWindow.category, errors, "settingsWindow.category");
+    const settingsWindowCategory = pickEnum(windowSource, "category", ["appearance", "bar", "workspaces", "wallpaper", "displays", "shortcuts", "audio", "network", "bluetooth", "power", "notifications"], DEFAULTS.settingsWindow.category, errors, "settingsWindow.category");
     const noteSource = isPlainObject(source.notifications) ? source.notifications : {};
     if (source.notifications !== undefined && !isPlainObject(source.notifications))
         errors.push("notifications");
@@ -417,6 +500,9 @@ function validateSettings(input) {
             version: DEFAULTS.version,
             clock: {
                 use24Hour: use24Hour,
+                showSeconds: showSeconds,
+                showDate: showDate,
+                dateFormat: dateFormat,
                 showWeekNumbers: showWeekNumbers,
                 weekStart: weekStart,
             },
@@ -425,11 +511,19 @@ function validateSettings(input) {
                 reserveSpace: reserveSpace,
                 showFocusedTitle: showFocusedTitle,
                 workspaceIds: workspaceIds,
+                workspaceOutputsJson: workspaceOutputsJson,
                 workspaceDispatch: workspaceDispatch,
                 placement: barPlacement,
                 height: barHeight,
                 moduleOrder: moduleOrder,
                 hiddenModules: hiddenModules,
+                searchLabel: searchLabel,
+                moduleSidesJson: moduleSidesJson,
+                hiddenOutputsJson: hiddenOutputsJson,
+                surfaceMode: surfaceMode,
+                surfaceColor: surfaceColor,
+                surfaceOpacity: surfaceOpacity,
+                surfaceOutputsJson: surfaceOutputsJson,
             },
             appearance: {
                 mode: appearanceMode,
@@ -732,8 +826,8 @@ function extensionsText(source, errors) {
     }
 
     const domainKeys = {
-        clock: { use24Hour: true, showWeekNumbers: true, weekStart: true },
-        bar: { targetMonitor: true, reserveSpace: true, showFocusedTitle: true, workspaceIds: true, workspaceDispatch: true, placement: true, height: true, moduleOrder: true, hiddenModules: true },
+        clock: { use24Hour: true, showSeconds:true, showDate:true, dateFormat:true, showWeekNumbers: true, weekStart: true },
+        bar: { targetMonitor: true, reserveSpace: true, showFocusedTitle: true, workspaceIds: true, workspaceOutputsJson: true, workspaceDispatch: true, placement: true, height: true, moduleOrder: true, hiddenModules: true, searchLabel:true, moduleSidesJson:true, hiddenOutputsJson:true, surfaceMode:true, surfaceColor:true, surfaceOpacity:true, surfaceOutputsJson:true },
         appearance: { mode: true, tint: true, panelOpacity: true, panelBlur: true, radius: true, shadowOpacity: true, shadowSoftness: true, motionScale: true, reducedMotion: true, panelPadding: true, panelSpacing: true, fontSize: true, fontWeight: true, iconScale: true, topGradient: true, contrast: true, automaticText: true, automaticGradient: true, manualText: true, manualMuted: true, manualPanel: true, manualGradient: true },
         launcher: { pinnedIds: true },
         wallpaper: { enabled: true, fit: true, path: true, outputsJson: true, slideshow: true, intervalMinutes: true, order: true, transitionMs: true, slidesJson: true },

@@ -1,6 +1,7 @@
 import QtQuick
 
 Item {
+    property bool grabFocus: false
     property color color: "transparent"
     property var mask: null
     property var screen: null

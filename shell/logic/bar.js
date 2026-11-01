@@ -143,7 +143,44 @@ function layerForBar() {
     return "top";
 }
 
+function surfaceForOutput(mode, color, opacity, outputsJson, output, blurAvailable) {
+    let selected = {mode:mode,color:color,opacity:opacity};
+    try {
+        const outputs=JSON.parse(outputsJson);
+        if (outputs && Object.prototype.hasOwnProperty.call(outputs,output)) selected=outputs[output];
+    } catch (error) {}
+    const visible=selected.mode !== "transparent";
+    const blur=selected.mode === "frosted" && blurAvailable === true;
+    return {mode:selected.mode,color:selected.color,opacity:selected.opacity,visible:visible,blur:blur,
+        alpha:!visible ? 0 : (selected.mode === "frosted" && !blur ? Math.max(.95,selected.opacity) : selected.opacity)};
+}
+
+function hiddenForOutput(globalHidden, outputsJson, output) {
+    try {
+        const overrides=JSON.parse(outputsJson || "{}");
+        if(Object.prototype.hasOwnProperty.call(overrides,output)) return normalizeHiddenModules(overrides[output]);
+    } catch(error) {}
+    return normalizeHiddenModules(globalHidden);
+}
+function moduleSide(id,sidesJson,order) {
+    try { const sides=JSON.parse(sidesJson || "{}");if(["left","center","right"].indexOf(sides[id])>=0) return sides[id]; } catch(error) {}
+    const sequence=normalizeModuleOrder(order),title=sequence.indexOf("title"),index=sequence.indexOf(id);
+    if(id==="title") return "center";
+    return title>=0 && index<title ? "left" : "right";
+}
+function modulesForSide(order,hidden,sidesJson,side) {
+    return visibleModules(order,hidden).filter(function(id){return moduleSide(id,sidesJson,order)===side;});
+}
+function moduleName(id) {
+    return ({workspaces:"Workspaces",title:"Focused title",search:"Search",clock:"Clock",control:"Control center",media:"Media",tray:"Tray",battery:"Battery"})[id] || id;
+}
+
 var swiftshellBar = {
+    surfaceForOutput: surfaceForOutput,
+    hiddenForOutput:hiddenForOutput,
+    moduleSide:moduleSide,
+    modulesForSide:modulesForSide,
+    moduleName:moduleName,
     BAR_MODULES: BAR_MODULES,
     barMetrics: barMetrics,
     heightFromUnit: heightFromUnit,

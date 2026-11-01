@@ -58,3 +58,45 @@ Ownership stays off until Settings asks a second time. The preview card is label
 `swiftshell rollback-settings` restores `settings.json` from `settings.json.bak-swiftshell` only. Copy the settings file aside before the first launch of a new version if it contains keys the settings window does not know.
 
 `swiftshell uninstall` removes the installed copy and keeps settings. `--purge-settings` removes `~/.config/swiftshell` and nothing else under `~/.config`.
+
+## Native Settings window
+
+Drag the title bar to move Settings and its edges or corners to resize it.
+Double-click the title bar or use □ to maximize/restore. − minimizes Settings;
+open Settings again to bring it back. × closes it. Normal size and position are
+remembered. The sidebar contains every page, including Workspaces between
+Displays and Shortcuts. Search also opens matching pages.
+
+Appearance controls surface transparency, compositor blur, corner radius and
+soft shadows. Unavailable effects are disabled. Displays edits are staged until
+Apply; use Keep before the countdown expires, or Revert. An independent watchdog
+restores an unconfirmed layout even if Settings or SwiftShell exits. Kept layouts
+can be restored explicitly without changing your Hyprland Lua files.
+
+## Bar background
+
+In Top bar → Background, choose Transparent, Solid or Frosted. Color and opacity
+change the painted surface. Frosted uses actual compositor blur when available;
+otherwise SwiftShell shows a readable solid fallback. The optional readability
+gradient remains independent in Appearance. Corner radius follows Appearance.
+
+Apply to All screens changes the shared background. To customize one output,
+choose its monitor name and turn off Use all-screen background. Turn that switch
+back on to inherit again. Reset background restores the shared transparent style;
+individual overrides remain until you return those monitors to inheritance.
+
+## Choosing colors
+
+Color selection stays inside Settings and follows its theme. Drag the color
+square and hue strip, select a neutral swatch, or enter a six-digit hex color.
+Use color applies your choice; Cancel, Escape or clicking outside discards it.
+Draft changes do not affect your bar or wallpaper. Opacity is controlled separately.
+
+### Bar layout and clock
+
+Right-click a bar to choose modules for that monitor, inherit the global choices,
+or open Bar settings. Bar settings also provides per-monitor visibility, compact
+left/center/right placement, module order, optional Search text, 12/24-hour time,
+seconds and date styles. Reset positions restores the arrangement derived from
+module order. Calendar and Control Center share the Settings material; Escape or
+an outside click closes them. Opening Settings or Spotlight dismisses bar panels.

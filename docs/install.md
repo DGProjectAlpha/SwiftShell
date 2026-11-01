@@ -8,7 +8,7 @@ These steps were exercised in a temporary home directory with stub commands. The
 
 Automatic package installation is implemented for Arch-based systems that have `pacman`, including Arch Linux and CachyOS. On any other system the installer still copies files and tells you which packages are missing.
 
-The Quickshell APIs used by the bar were written against the 0.2 and 0.3 documentation. The checker treats Quickshell older than 0.2.0 as too old. Hyprland older than 0.40.0 produces a warning. Those floors are assumptions until a real session confirms them.
+The Quickshell APIs used by the bar were written against the 0.2 and 0.3 documentation. The current checker requires Quickshell 0.3.2 and Hyprland 0.57 for the locally verified native Settings and Lua display APIs. Settings shadows use Qt 6.9 or later. Python 3 and wayland-utils provide the scoped helpers and read-only blur capability probe.
 
 Qt 6 Quick and Quick Layouts are required. `QtQuick.Dialogs` and `Qt.labs.folderlistmodel` provide native wallpaper image/folder selection and slideshow enumeration; on Arch/CachyOS both are shipped by `qt6-declarative`. If either QML module is absent, SwiftShell keeps the explicitly tested individual path-entry fallback and `swiftshell doctor` reports the missing module.
 
@@ -42,7 +42,7 @@ swiftshell start
 swiftshell stop
 ```
 
-`swiftshell doctor` prints versions, says blur is unavailable, and reports whether a settings file and its SwiftShell backup exist. It prints notification ownership as `off`, `on`, `absent`, or `unreadable`. It does not print the settings file. It does not read or write Hyprland or Noctalia files.
+`swiftshell doctor` prints versions, directs you to the live Appearance capability status, and reports whether a settings file and its SwiftShell backup exist. It prints notification ownership as `off`, `on`, `absent`, or `unreadable`. It does not print the settings file. It does not read or write Hyprland or Noctalia files.
 
 ```sh
 swiftshell rollback-settings

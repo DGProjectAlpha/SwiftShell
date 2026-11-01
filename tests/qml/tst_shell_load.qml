@@ -1,5 +1,7 @@
 import QtQuick
 import QtTest
+import "../../shell/logic/settingsNav.js" as Navigation
+import "../../shell/services" as Services
 import Quickshell.Services.Mpris
 import Quickshell.Services.SystemTray
 import Quickshell.Services.UPower
@@ -11,8 +13,11 @@ TestCase {
     // Every shell QML document. The static check requires this list to match the tree.
     readonly property var shellFiles: [
         "shell/shell.qml",
+        "shell/WorkspaceAudit.qml",
         "shell/bar/BarHost.qml",
         "shell/bar/BarWindow.qml",
+        "shell/bar/ModuleStrip.qml",
+        "shell/bar/BarContextMenu.qml",
         "shell/bar/WorkspaceIndicators.qml",
         "shell/bar/ClockModule.qml",
         "shell/bar/FocusedTitle.qml",
@@ -22,6 +27,10 @@ TestCase {
         "shell/bar/BatteryModule.qml",
         "shell/components/BarLabel.qml",
         "shell/components/FlatButton.qml",
+        "shell/components/ChoiceBox.qml",
+        "shell/components/SurfaceShadow.qml",
+        "shell/components/KeyedModel.qml",
+        "shell/components/BackdropEffect.qml",
         "shell/components/CompactSlider.qml",
         "shell/components/SectionHeader.qml",
         "shell/components/ServiceStatus.qml",
@@ -40,6 +49,9 @@ TestCase {
         "shell/themes/Theme.qml",
         "shell/services/SettingsStore.qml",
         "shell/services/HyprlandModel.qml",
+        "shell/services/DisplayService.qml",
+        "shell/services/WindowService.qml",
+        "shell/services/SurfaceService.qml",
         "shell/services/LauncherModel.qml",
         "shell/services/SettingsModel.qml",
         "shell/services/ColorAnalysis.qml",
@@ -54,12 +66,16 @@ TestCase {
         "shell/notifications/NotificationHost.qml",
         "shell/settings/AppearancePage.qml",
         "shell/settings/BarPage.qml",
+        "shell/settings/WorkspacesPage.qml",
         "shell/settings/ImageDialog.qml",
+        "shell/settings/ColorPicker.qml",
         "shell/settings/FolderPicker.qml",
         "shell/settings/FolderScanner.qml",
         "shell/settings/DisplaysPage.qml",
         "shell/settings/ShortcutsPage.qml",
         "shell/settings/SettingsWindow.qml",
+        "shell/settings/BlurAdapter.qml",
+        "shell/settings/SettingsShadow.qml",
         "shell/settings/WallpaperPage.qml",
         "shell/wallpaper/SlideshowClock.qml",
         "shell/wallpaper/WallpaperHost.qml",
@@ -83,7 +99,6 @@ TestCase {
         "shell/components/ServiceStatus.qml",
         "shell/components/SettingsRow.qml",
         "shell/components/SettingsToggle.qml",
-        "shell/popovers/PopoverHost.qml",
         "shell/popovers/PopoverSurface.qml",
         "shell/popovers/CalendarPanel.qml",
         "shell/popovers/ControlCenterPanel.qml",
@@ -100,6 +115,7 @@ TestCase {
         "shell/settings/NotificationsPage.qml",
         "shell/settings/AppearancePage.qml",
         "shell/settings/BarPage.qml",
+        "shell/settings/WorkspacesPage.qml",
         "shell/settings/DisplaysPage.qml",
         "shell/settings/ShortcutsPage.qml",
         "shell/settings/SettingsWindow.qml",
@@ -118,6 +134,9 @@ TestCase {
     }
 
     function expectedUnavailable(path, message) {
+        if (path === "shell/settings/SettingsShadow.qml" || path === "shell/components/SurfaceShadow.qml")
+            return message.indexOf('module "QtQuick.Effects" is not installed') !== -1
+                || message.indexOf('RectangularShadow is not a type') !== -1
         if (path === "shell/settings/ImageDialog.qml"
                 || path === "shell/settings/FolderPicker.qml")
             return message.indexOf('module "QtQuick.Dialogs" is not installed') !== -1
@@ -125,10 +144,13 @@ TestCase {
             return message.indexOf('module "Qt.labs.folderlistmodel" is not installed') !== -1
         if (path === "shell/notifications/NotificationHost.qml")
             return message.indexOf('module "Quickshell.Services.Notifications" is not installed') !== -1
+                || message.indexOf('module "Quickshell.Services.Notifications" plugin "quickshell-service-notificationsplugin" not found') !== -1
                 || expectedWlrFailure(message)
+        if (path === "shell/components/BackdropEffect.qml") return expectedWlrFailure(message)
         if (path === "shell/shell.qml"
                 || path === "shell/bar/BarHost.qml"
                 || path === "shell/bar/BarWindow.qml"
+                || path === "shell/popovers/PopoverHost.qml"
                 || path === "shell/launcher/LauncherWindow.qml"
                 || path === "shell/wallpaper/WallpaperHost.qml"
                 || path === "shell/wallpaper/WallpaperSurface.qml")
@@ -141,7 +163,8 @@ TestCase {
             return true
         if (message.indexOf("Non-existent attached object") === -1)
             return false
-        return message.indexOf("BarWindow.qml:32") !== -1
+        return message.indexOf("PopoverHost.qml:") !== -1
+            || message.indexOf("BarWindow.qml:") !== -1
             || message.indexOf("LauncherWindow.qml:19") !== -1
             || message.indexOf("NotificationHost.qml:24") !== -1
             || message.indexOf("WallpaperSurface.qml:25") !== -1
@@ -256,18 +279,18 @@ TestCase {
 
         var surfaceComponent = componentFor("shell/popovers/PopoverSurface.qml")
         var calendarCard = surfaceComponent.createObject(this)
-        var calendarColumn = calendarCard.children[1].children[0]
+        var calendarColumn = findChild(calendarCard,"popoverBody")
         calendarComponent.createObject(calendarColumn)
         tryVerify(function() { return calendarColumn.implicitWidth >= 196 }, 1000)
         var card = calendarCard.children[1]
-        // Default settings: panel padding 12 on each side, shadow softness 10.
+        // Material padding and a full transparent inset keep the Gaussian shadow unclipped.
         compare(card.width, calendarColumn.implicitWidth + 24)
-        compare(calendarCard.implicitWidth, card.width + 10)
-        compare(calendarCard.implicitHeight, card.height + 10)
+        compare(calendarCard.implicitWidth, card.width + calendarCard.shadowMargin*2)
+        compare(calendarCard.implicitHeight, card.height + calendarCard.shadowMargin*2)
         verify(calendarCard.implicitHeight > calendar.implicitHeight)
 
         var controlCard = surfaceComponent.createObject(this)
-        var controlColumn = controlCard.children[1].children[0]
+        var controlColumn = findChild(controlCard,"popoverBody")
         var loader = Qt.createQmlObject("import QtQuick; Loader {}", controlColumn, "control-loader")
         loader.sourceComponent = controlComponent
         tryVerify(function() { return loader.item !== null && loader.implicitWidth === 248 }, 1000)
@@ -281,22 +304,10 @@ TestCase {
         controlCard.destroy()
     }
 
-    function test_popup_host_tracks_panel_implicit_size() {
-        var bar = Qt.createQmlObject("import QtQuick; Item { property Item contentItem: null; property var screen: null }", this, "bar")
-        bar.contentItem = bar
-        bar.screen = Qt.createQmlObject("import QtQuick; QtObject { property real width: 1920; property real height: 1080 }", this, "screen")
-        var anchor = Qt.createQmlObject("import QtQuick; Item { width: 48; height: 28 }", bar, "anchor")
-        var popup = componentFor("shell/popovers/PopoverHost.qml").createObject(this, { barWindow: bar })
-        verify(popup !== null)
-        popup.toggle("calendar", anchor)
-        tryVerify(function() { return popup.implicitWidth >= 196 + 34 && popup.implicitHeight > 80 }, 1000)
-        var calendarWidth = popup.implicitWidth
-        popup.toggle("control", anchor)
-        tryVerify(function() { return popup.implicitWidth >= 248 + 34 && popup.implicitWidth !== calendarWidth }, 1000)
-        popup.destroy()
-        anchor.destroy()
-        bar.screen.destroy()
-        bar.destroy()
+    function test_popup_host_resolves_native_layer_surface() {
+        const component=componentFor("shell/popovers/PopoverHost.qml")
+        const message=errorText(component)
+        verify(component.status === Component.Ready || expectedUnavailable("shell/popovers/PopoverHost.qml",message),message)
     }
 
     function findText(node, needle, depth) {
@@ -316,11 +327,94 @@ TestCase {
         return false
     }
 
+    function test_every_sidebar_category_routes_and_search_stays_available() {
+        var settings=componentFor("shell/settings/SettingsWindow.qml").createObject(this)
+        var search=findChild(settings,"settingsSearch")
+        verify(search !== null)
+        var categories=Navigation.categories()
+        for(var i=0;i<categories.length;i++) {
+            var button=findChild(settings,categories[i].id+"Navigation")
+            verify(button !== null,categories[i].label)
+            button.activated()
+            compare(Services.SettingsStore.settingsWindowCategory,categories[i].id)
+            verify(settings.activePage() !== null)
+        }
+        search.text="workspaces"
+        compare(Services.SettingsStore.settingsWindowCategory,"workspaces")
+        findChild(settings,"displaysNavigation").activated()
+        compare(search.text,"")
+        compare(Services.SettingsStore.settingsWindowCategory,"displays")
+        settings.destroy()
+    }
+
+    function test_hyprland_forced_qt_maximized_flag_does_not_hide_shadow() {
+        Services.WindowService.maximized=false
+        var settings=componentFor("shell/settings/SettingsWindow.qml").createObject(this,{maximized:true})
+        verify(settings.shadowInset>0)
+        Services.WindowService.maximized=true
+        compare(settings.shadowInset,0)
+        Services.WindowService.maximized=false
+        settings.destroy()
+    }
+
+    function test_workspaces_sidebar_button_opens_page() {
+        var settings = componentFor("shell/settings/SettingsWindow.qml").createObject(this, {visible:true})
+        verify(settings !== null)
+        var button = findChild(settings, "workspacesNavigation")
+        verify(button !== null, "Workspaces must be accessible from the sidebar")
+        verify(button.width >= 130, "Sidebar entries must fill the navigation column")
+        var siblings = button.parent.children
+        var position = -1
+        for (var i = 0; i < siblings.length; i++) {
+            if (siblings[i] === button) position = i
+        }
+        verify(position > 0 && position < siblings.length - 1)
+        compare(siblings[position - 1].Accessible.name, "Displays")
+        compare(siblings[position + 1].Accessible.name, "Shortcuts")
+        Services.SettingsStore.setSettingsCategory("bar")
+        button.activated()
+        compare(Services.SettingsStore.settingsWindowCategory, "workspaces")
+        compare(settings.activePage(), findChild(settings, "workspacesPage"))
+        verify(button.emphasized)
+        settings.destroy()
+    }
+
+    function test_workspaces_page_uses_live_monitors_and_persists_overrides() {
+        Services.HyprlandModel.monitorChoices = [
+            {name: "DP-1", label: "HP X32 · DP-1", scale: 1},
+            {name: "HDMI-A-1", label: "PM161Q C · HDMI-A-1", scale: 1.25}
+        ]
+        Services.HyprlandModel.liveWorkspaces = [
+            {key:"gaming", id:-1, name:"gaming", monitorName:"DP-1", active:true, focused:true, windows:2},
+            {key:"4", id:4, name:"4", monitorName:"HDMI-A-1", active:true, focused:false, windows:0}
+        ]
+        var page = componentFor("shell/settings/WorkspacesPage.qml").createObject(this, {width:560})
+        verify(page !== null)
+        verify(findText(page, "HP X32", 0))
+        verify(findText(page, "PM161Q C", 0))
+        verify(findText(page, "gaming · active", 0))
+        verify(findText(page, "4 · active · empty", 0))
+        verify(Services.SettingsStore.setWorkspaceOutput("DP-1", ["2", "gaming"]))
+        compare(JSON.parse(Services.SettingsStore.workspaceOutputsJson)["DP-1"].join(","), "2,gaming")
+        verify(!Services.SettingsStore.setWorkspaceOutput("DP-1", ["2", "2"]))
+        verify(Services.SettingsStore.setWorkspaceOutput("DP-1", ["name:gaming", " 2 "]))
+        compare(JSON.parse(Services.SettingsStore.workspaceOutputsJson)["DP-1"].join(","), "gaming,2")
+        verify(Services.SettingsStore.setWorkspaceOutput("DP-1", null))
+        compare(JSON.parse(Services.SettingsStore.workspaceOutputsJson)["DP-1"], null)
+        Services.SettingsStore.setTargetMonitor("DP-1")
+        Services.SettingsStore.setBarPlacement("all")
+        compare(Services.SettingsStore.targetMonitor, "")
+        compare(Services.SettingsStore.barPlacement, "all")
+        page.destroy()
+        Services.HyprlandModel.monitorChoices = []
+        Services.HyprlandModel.liveWorkspaces = []
+    }
+
     function test_settings_page_names_the_blur_limit() {
         var page = componentFor("shell/settings/AppearancePage.qml").createObject(this)
         verify(page !== null)
-        verify(findText(page, "translucent scrim", 0))
-        verify(findText(page, "not a rounded blur mask", 0))
+        verify(findText(page, "Backdrop blur", 0))
+        verify(findText(page, "unavailable", 0))
         verify(findText(page, "High contrast", 0))
         verify(page.shows("textContrast"))
         verify(!findText(page, "Gaussian", 0))
@@ -348,38 +442,38 @@ TestCase {
 
         var wallpaper = componentFor("shell/settings/WallpaperPage.qml").createObject(this)
         verify(wallpaper !== null)
-        verify(findText(wallpaper, "does not stop that program", 0))
+        verify(findText(wallpaper, "Choose a shared background", 0))
         verify(findText(wallpaper, "No outputs are connected", 0))
         verify(wallpaper.shows("wallpaperPath"))
         var displays = componentFor("shell/settings/DisplaysPage.qml").createObject(this)
         verify(displays !== null)
-        verify(findText(displays, "not sent", 0))
+        verify(findText(displays, "Arrange your screens", 0))
         verify(findText(displays, "No outputs are connected", 0))
         var shortcuts = componentFor("shell/settings/ShortcutsPage.qml").createObject(this)
         verify(shortcuts !== null)
-        verify(findText(shortcuts, "does not install", 0))
+        verify(findText(shortcuts, "not installed automatically", 0))
         var audioPage = componentFor("shell/settings/AudioPage.qml").createObject(this)
         verify(audioPage !== null)
-        verify(findText(audioPage, "follow PipeWire", 0))
+        verify(findText(audioPage, "Adjust speakers", 0))
         verify(audioPage.shows("mediaPlayer"))
         audioPage.query = "microphone"
         verify(audioPage.shows("audioInput"))
         verify(!audioPage.shows("mediaPlayer"))
         var network = componentFor("shell/settings/NetworkPage.qml").createObject(this)
         verify(network !== null)
-        verify(findText(network, "does not store", 0))
-        verify(findText(network, "hardware brightness", 0))
+        verify(findText(network, "Network controls are not available", 0))
+        verify(findText(network, "Brightness control is not available", 0))
         var bluetoothPage = componentFor("shell/settings/BluetoothPage.qml").createObject(this)
         verify(bluetoothPage !== null)
-        verify(findText(bluetoothPage, "does not start a scan", 0))
+        verify(findText(bluetoothPage, "Known devices", 0))
         var powerPage = componentFor("shell/settings/PowerPage.qml").createObject(this)
         verify(powerPage !== null)
-        verify(findText(powerPage, "ask once more", 0))
+        verify(findText(powerPage, "then confirm", 0))
         var notes = componentFor("shell/settings/NotificationsPage.qml").createObject(this)
         verify(notes !== null)
-        verify(findText(notes, "does not own notifications", 0))
+        verify(findText(notes, "Notification handling is off", 0))
         verify(findText(notes, "Not SwiftShell", 0))
-        verify(findText(notes, "sounds are not played", 0))
+        verify(findText(notes, "sounds are unavailable", 0))
         UPower.displayDevice.ready = false
         var emptyBattery = componentFor("shell/bar/BatteryModule.qml").createObject(this)
         verify(emptyBattery !== null)

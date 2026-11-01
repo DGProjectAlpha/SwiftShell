@@ -12,11 +12,18 @@ else
 fi
 
 "$NODE" "$ROOT/tests/logic.test.js"
+"$NODE" "$ROOT/tests/workspaces.test.js"
+"$NODE" "$ROOT/tests/displays.test.js"
+"$NODE" "$ROOT/tests/bar-surfaces.test.js"
+"$NODE" "$ROOT/tests/bar-ergonomics.test.js"
+python3 "$ROOT/tests/test_displays.py"
+python3 "$ROOT/tests/test_windowctl.py"
 "$NODE" "$ROOT/tests/settings_files.test.js"
 sh "$ROOT/tests/install_flow.sh"
 
 QMLTESTRUNNER=""
-for candidate in qmltestrunner qml6testrunner; do
+# Prefer Qt 6 explicitly: /usr/bin/qmltestrunner may belong to Qt 5 on CachyOS.
+for candidate in /usr/lib/qt6/bin/qmltestrunner /usr/lib/qt6/bin/qml6testrunner qml6testrunner qmltestrunner; do
     if command -v "$candidate" >/dev/null 2>&1; then
         QMLTESTRUNNER=$(command -v "$candidate")
         break
@@ -52,6 +59,9 @@ export QML_IMPORT_PATH="$IMPORTS"
 
 QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_implicit_size.qml" -platform offscreen
 QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_shell_load.qml" -platform offscreen
+QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_displays.qml" -platform offscreen
+QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_keyed_models.qml" -platform offscreen
+QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_color_picker.qml" -platform offscreen
 
 DIALOGS_AVAILABLE=0
 FOLDER_MODEL_AVAILABLE=0

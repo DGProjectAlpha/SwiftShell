@@ -1,0 +1,21 @@
+const assert=require('node:assert/strict');
+const S=require('../shell/logic/settings.js');
+const B=require('../shell/logic/bar.js');
+const previous=S.validateSettings({bar:{workspaceOutputsJson:'{"DP-1":["1","gaming"],"HDMI-A-1":["4","5","6"]}',height:30}});
+assert.equal(previous.ok,true);
+assert.equal(previous.settings.bar.surfaceMode,'transparent');
+assert.equal(previous.settings.bar.height,30);
+assert.deepEqual(JSON.parse(previous.settings.bar.workspaceOutputsJson)['DP-1'],['1','gaming']);
+const overrides='{"DP-1":{"mode":"frosted","color":"#222222","opacity":0.4}}';
+const valid=S.validateSettings({bar:{surfaceMode:'solid',surfaceColor:'#ABCDEF',surfaceOpacity:0,surfaceOutputsJson:overrides}});
+assert.equal(valid.ok,true);
+assert.equal(valid.settings.bar.surfaceColor,'#abcdef');
+const own=B.surfaceForOutput('solid','#abcdef',.8,overrides,'DP-1',true);
+assert.equal(own.blur,true);assert.equal(own.alpha,.4);
+const other=B.surfaceForOutput('solid','#abcdef',.8,overrides,'HDMI-A-1',true);
+assert.equal(other.mode,'solid');assert.equal(other.alpha,.8);assert.equal(other.blur,false);
+assert.equal(B.surfaceForOutput('transparent','#000000',.8,'{}','DP-1',true).alpha,0);
+assert.equal(B.surfaceForOutput('frosted','#000000',.4,'{}','DP-1',false).alpha,.95);
+for(const surfaceOutputsJson of ['[]','null','{"DP-1":{"mode":"frosted","color":"red","opacity":0.4}}','{"DP-1":{"mode":"frosted","color":"#222222","opacity":2}}'])
+ assert.ok(S.validateSettings({bar:{surfaceOutputsJson}}).errors.includes('bar.surfaceOutputsJson'));
+console.log('bar surface migration, per-output isolation and unavailable-blur fallback passed');

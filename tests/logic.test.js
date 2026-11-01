@@ -306,11 +306,11 @@ test("version 1 settings migrate and unknown keys stay in the extension bag", fu
     assert.equal(brokenBag.settings.extensionsJson, "{}");
 });
 
-test("settings window stays one instance and blur is not available", function () {
+test("settings window lifecycle and unprobed blur capabilities remain honest", function () {
     const report = capabilities.capabilityReport();
     assert.equal(report.settingsToplevel.available, true);
     assert.equal(report.settingsToplevel.hardwareVerified, false);
-    assert.equal(report.settingsToplevel.clientMove, false);
+    assert.equal(report.settingsToplevel.clientMove, true);
     assert.equal(report.backdropBlur.available, false);
     assert.equal(report.backdropBlur.hardwareVerified, false);
     const surface = material.materialReport().backdropBlur;
@@ -342,17 +342,10 @@ test("settings window stays one instance and blur is not available", function ()
 test("settings search, density, and undo stay on real appearance fields", function () {
     assert.equal(settingsNav.navigationLayout(719), "stacked");
     assert.equal(settingsNav.navigationLayout(720), "columns");
-    assert.equal(settingsNav.categories().length, 10);
+    assert.equal(settingsNav.categories().length, 11);
     assert.equal(settingsNav.categories()[0].id, "appearance");
     assert.equal(settingsNav.categories()[1].id, "bar");
-    assert.equal(settingsNav.categories()[2].id, "wallpaper");
-    assert.equal(settingsNav.categories()[3].id, "displays");
-    assert.equal(settingsNav.categories()[4].id, "shortcuts");
-    assert.equal(settingsNav.categories()[5].id, "audio");
-    assert.equal(settingsNav.categories()[6].id, "network");
-    assert.equal(settingsNav.categories()[7].id, "bluetooth");
-    assert.equal(settingsNav.categories()[8].id, "power");
-    assert.equal(settingsNav.categories()[9].id, "notifications");
+    assert.deepEqual(settingsNav.categories().slice(2).map(c => c.id), ["wallpaper", "displays", "workspaces", "shortcuts", "audio", "network", "bluetooth", "power", "notifications"]);
     assert.equal(settingsNav.categoryFor(settingsNav.firstControlId("cover")), "wallpaper");
     assert.equal(settingsNav.filterControls("").length, settingsNav.CONTROLS.length);
     assert.equal(settingsNav.filterControls("not-a-setting").length, 0);
@@ -384,7 +377,7 @@ test("settings search, density, and undo stay on real appearance fields", functi
     assert.equal(history.past[0].mode, "dark");
     history = settings.reduceAppearanceHistory(history, { type: "undo" });
     assert.equal(history.present.mode, "dark");
-    assert.equal(history.present.fontSize, 12);
+    assert.equal(history.present.fontSize, settings.DEFAULTS.appearance.fontSize);
     assert.equal(history.past.length, 0);
     history = settings.reduceAppearanceHistory(history, { type: "undo" });
     assert.equal(history.present.mode, "dark");
@@ -740,7 +733,7 @@ test("display preview math keeps aspect and refuses the last output", function (
     assert.equal(displays.needsRow(dual), false);
     const box = displays.bounds(dual);
     assert.equal(box.x, 0);
-    assert.equal(box.width, 2560 + 1920);
+    assert.equal(box.width, 2560 + 1920 / 1.5);
     const fitted = displays.project(dual, 480, 270, 12);
     assert.equal(fitted.length, 2);
     assert.ok(fitted[0].width > 8 && fitted[1].width > 8);
@@ -773,7 +766,7 @@ test("display preview math keeps aspect and refuses the last output", function (
         displays.fromScreen({ name: "DP-1", width: 2560, height: 1440 }, null),
     ]);
     assert.equal(row[1].x, 1920);
-    assert.ok(displays.APPLY_REASON.indexOf("not sent") !== -1);
+
 });
 
 test("blank monitor text means automatic placement", function () {

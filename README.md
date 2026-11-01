@@ -1,6 +1,6 @@
 # SwiftShell
 
-> **Status:** M2 and the M3 launcher are in `shell/`. On the CachyOS Hyprland session, with Noctalia stopped, SwiftShell has loaded and the bar has rendered. Workspace switching works after the Lua dispatch fix. The launcher has opened and did not find Dolphin or Helium; that discovery path is changed and has not been relaunched. Cloud checks do not show pixels and do not launch applications. Noctalia is its own `noctalia` executable, not a `qs` process.
+> **Status:** Local CachyOS development has verified per-monitor numeric/named workspaces, transactional Displays, native floating Settings and real compositor blur on mixed-scale monitors. The approved Super+Space handoff invokes SwiftShell, with repeat-toggle and Escape tested on both outputs. Opt-in bar backgrounds support transparent, solid and native frost per monitor. Bars now offer per-monitor right-click module menus, left/center/right grouping, optional Search labels and clock date/seconds. Calendar and control panels share the Settings material with native rounded blur. This remains an alpha; see dated evidence and unperformed checks in `docs/testing.md`.
 >
 > **Purpose:** A clean, understated, keyboard-first, fully integrated desktop shell built with **Quickshell + Qt 6/QML** for **Hyprland on Arch-based systems**. The reference workstation is CachyOS; the installer is not limited to that one machine.
 >
@@ -545,7 +545,7 @@ scripts/launch.sh
 scripts/stop.sh
 ```
 
-`scripts/launch.sh` runs `qs --path` against `shell/` and does not edit Hyprland or Noctalia. `scripts/stop.sh` kills that path only. Noctalia is the `noctalia` executable. Do not stop it with a `qs` kill. A new settings file puts the bar on the focused monitor, or the first screen if focus cannot be read, and shows the workspaces Hyprland reports on that monitor. An existing `~/.config/swiftshell/settings.json` is not rewritten: a file that still names `HDMI-A-1` and workspaces 4–6 keeps that layout, and a file that still has `"reserveSpace": false` stays an overlay until that key is set to `true`. Leave `reserveSpace` `false` while Noctalia is also drawing on that output. The clock opens the calendar. The mark at the right opens the control center. Search opens Spotlight on the monitor focused at that moment. `scripts/request-launcher.sh` does the same through the existing request file and toggles it closed. None of those capture a global shortcut. Super+Space stays unchanged until `docs/launcher-shortcut.md` is applied by hand.
+`scripts/launch.sh` runs `qs --path` against `shell/` and does not edit Hyprland or Noctalia. `scripts/stop.sh` kills that path only. Noctalia is the `noctalia` executable. Do not stop it with a `qs` kill. A new settings file puts the bar on the focused monitor, or the first screen if focus cannot be read, and shows the workspaces Hyprland reports on that monitor. An existing `~/.config/swiftshell/settings.json` is not rewritten: a file that still names `HDMI-A-1` and workspaces 4–6 keeps that layout, and a file that still has `"reserveSpace": false` stays an overlay until that key is set to `true`. Leave `reserveSpace` `false` while Noctalia is also drawing on that output. The clock opens the calendar. The mark at the right opens the control center. Search opens Spotlight on the monitor focused at that moment. `scripts/request-launcher.sh` does the same through scoped Quickshell IPC and toggles it closed. None of those capture a global shortcut. Super+Space stays unchanged until `docs/launcher-shortcut.md` is applied by hand.
 
 If this checkout already has a local `import "../components"` in `shell/bar/BarWindow.qml`, that line is on `main`. See `docs/testing.md` before pulling so the local edit is not lost or duplicated.
 
@@ -564,3 +564,31 @@ swiftshell start
 `./install.sh` copies SwiftShell into `$XDG_DATA_HOME/swiftshell` and adds a user launcher. It does not replace another Quickshell config. `swiftshell activate` registers a free config name and a desktop entry. `swiftshell deactivate` reverses that registration. `swiftshell doctor` reports versions, blur, and notification ownership without printing the settings file. `swiftshell rollback-settings` restores only `settings.json.bak-swiftshell`. `swiftshell uninstall` removes the installed files and keeps `~/.config/swiftshell` unless `--purge-settings` is passed.
 
 None of these commands edit Hyprland startup, keyboard shortcuts, or system services. Details, the manual copy steps, and the draft AUR package are in `docs/install.md` and `packaging/README.md`. The first-run guide is `docs/user-guide.md`. The session checklist is `docs/first-run.md`. Recovery is `docs/troubleshooting.md`. The installer has been exercised with stub commands in a temporary home directory. It has not been run on a Hyprland session. This checkout is an alpha, not a stable release.
+
+The local workspace repair adds **Settings → Workspaces**: automatic discovery
+and independently saved numeric/named indicator lists for each connected monitor.
+Top bar output selection uses discovered model/connector controls. Hyprland 0.57
+workspace addresses and per-output active state are read through event-triggered
+IPC snapshots. Existing global IDs remain preserved and are scoped by ownership.
+The native hidden Settings save/restart regression and live read-only workspace
+audit passed locally; visual switching, focus-follow, mixed-scale layout and
+hotplug still need the checklist in [testing](docs/testing.md#local-per-monitor-workspace-repair-2026-10-31).
+
+Displays now supports staged arrangement, advertised resolutions/refresh rates,
+scale, orientation, enable/disable, and Apply/Keep/Revert on verified Hyprland
+0.57 Lua sessions. An independent watchdog restores unconfirmed changes even if
+SwiftShell exits. Kept layouts can be restored explicitly; your Hyprland Lua
+files remain unchanged. See the live transaction evidence in `docs/testing.md`.
+
+Settings now uses a compact monochrome floating window with native drag/resize,
+minimize, maximize/restore and saved geometry. All eleven pages share consistent
+controls and navigation. Rounded compositor backdrop blur and adjustable soft
+shadows are verified on the local mixed-scale monitors; unsupported effects have
+explicit fallbacks. Reopen Settings to restore its minimized window. See
+[the native integration decision](docs/decisions/0032-native-settings-glass.md).
+
+Top bar → Background now offers Transparent, Solid and Frosted surfaces with
+color/opacity and optional per-monitor overrides. Transparent stays the default.
+Native layer blur is verified on both connected outputs without compositor rules;
+unsupported systems use a readable fallback. Scope and recovery are documented in
+[decision 0033](docs/decisions/0033-bar-surface-modes.md).
