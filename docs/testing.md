@@ -766,3 +766,12 @@ Runtime log review retained the known Qt Wayland text-input focus warnings; thes
 were not suppressed. No QML binding-loop/type errors appeared in the final
 interaction log. Test-owned opacity and visibility overrides were explicitly
 restored from the verified pre-milestone backup and checked on disk.
+
+## PR 41 Qt 6.4 compatibility
+
+GitHub's Ubuntu Qt 6.4 runner exposed an unavailable Overlay lookup through the
+Basic style namespace. The picker now imports the base Controls attached type
+explicitly while keeping Basic styling. The pointer regression asserts a real
+window overlay with the expected width. KeyedModel uses explicit dynamic roles
+so older Qt retains object rows without nested-list role type warnings.
+The complete local check suite passed after both corrections.

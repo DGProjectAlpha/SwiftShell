@@ -3,6 +3,8 @@ import QtQuick
 // Update roles in place; a fresh IPC array must not destroy live controls.
 ListModel {
     id: root
+    // Older Qt otherwise infers object roles as nested lists on insertion.
+    dynamicRoles: true
     property var entries: []
     property string keyRole: "key"
     property string fallbackKeyRole: "id"

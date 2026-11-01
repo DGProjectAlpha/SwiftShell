@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls.Basic as Controls
+import QtQuick.Controls as ControlTypes
 import "../components"
 import "../services"
 import "../themes"
@@ -53,7 +54,7 @@ Item {
     Controls.Popup {
         id: dialog
         objectName:"colorPickerPopup"
-        parent: Controls.Overlay.overlay
+        parent: ControlTypes.Overlay.overlay
         // Item is the default on older Qt; explicitly retain it on Qt 6.8+.
         Component.onCompleted: { if(dialog["popupType"] !== undefined) dialog["popupType"]=Controls.Popup.Item }
         x: parent ? Math.round((parent.width-width)/2) : 0

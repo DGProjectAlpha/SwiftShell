@@ -22,6 +22,9 @@ TestCase {
     function test_drag_drafts_without_saving_cancel_preserves_original() {
         picker.open();tryCompare(picker,"opened",true)
         const before=picker.selectedColor
+        const popup=findChild(picker,"colorPickerPopup")
+        verify(popup.parent !== null, "Color picker must attach to its window overlay")
+        compare(popup.parent.width,640)
         const square=findChild(picker,"colorSpectrum")
         mousePress(square,20,20,Qt.LeftButton)
         mouseMove(square,square.width-12,square.height-12,20)
