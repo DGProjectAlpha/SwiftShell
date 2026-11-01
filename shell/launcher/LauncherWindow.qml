@@ -20,6 +20,7 @@ PanelWindow {
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.keyboardFocus: visible ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
+    readonly property bool searchHasFocus: field.activeFocus
     property var rows: []
     property bool queryMiss: false
     property bool noApplications: false
@@ -162,10 +163,6 @@ PanelWindow {
     Component.onCompleted: rebuild()
     Component.onDestruction: window.releaseInput()
 
-    Keys.onEscapePressed: function (event) {
-        window.dismiss();
-        event.accepted = true;
-    }
 
     HyprlandFocusGrab {
         id: focusGrab
@@ -180,6 +177,11 @@ PanelWindow {
 
     Rectangle {
         id: card
+        // Keys must attach to an Item, not the PanelWindow's QsWindow object.
+        Keys.onEscapePressed: function (event) {
+            window.dismiss();
+            event.accepted = true;
+        }
         z: 1
         x: window.frame.x
         y: window.frame.y
@@ -214,6 +216,7 @@ PanelWindow {
 
             TextInput {
                 id: field
+                objectName: "launcherSearchInput"
                 width: parent.width
                 height: Theme.controlHeight
                 focus: true

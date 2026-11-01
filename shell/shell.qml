@@ -24,8 +24,13 @@ ShellRoot {
         target: "swiftshell"
         function diagnostics(): string {
             const w=SettingsModel.nativeWindow
-            return JSON.stringify({settingsOpen:SettingsModel.open,category:SettingsStore.settingsWindowCategory,blurAvailable:WindowService.blurAvailable,blurRegionApplied:WindowService.blurRegionApplied,blurReason:WindowService.blurReason,windowError:WindowService.error,
+            return JSON.stringify({launcherOpen:LauncherModel.open,launcherOutput:LauncherModel.screen ? LauncherModel.screen.name : "",launcherHasFocus:launcherWindow.searchHasFocus,settingsOpen:SettingsModel.open,category:SettingsStore.settingsWindowCategory,blurAvailable:WindowService.blurAvailable,blurRegionApplied:WindowService.blurRegionApplied,blurReason:WindowService.blurReason,windowError:WindowService.error,
                 panelBlur:SettingsStore.panelBlur,shadowOpacity:SettingsStore.shadowOpacity,shadowSoftness:SettingsStore.shadowSoftness,window:w ? {width:w.width,height:w.height,pageStatus:w.pageStatus,searchHasFocus:w.searchHasFocus,maximized:WindowService.maximized,qtMaximized:w.maximized,shadowInset:w.shadowInset,resizeRequests:w.resizeRequests,lastResizeAccepted:w.lastResizeAccepted} : null})
+        }
+        function launcher(action: string): void {
+            if (action === "open") LauncherModel.openLauncher()
+            else if (action === "close") LauncherModel.closeLauncher()
+            else if (action === "toggle") LauncherModel.toggleLauncher()
         }
         function appearance(key: string, value: real): void {
             if (["panelBlur","panelOpacity","radius","shadowOpacity","shadowSoftness"].indexOf(key)>=0)
@@ -43,7 +48,7 @@ ShellRoot {
     }
 
     BarHost {}
-    LauncherWindow {}
+    LauncherWindow { id: launcherWindow }
 
     Connections {
         target: LauncherModel

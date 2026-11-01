@@ -161,7 +161,7 @@ The Shortcuts page lists Spotlight, Settings, and the control center. Record lis
 
 ## Launcher
 
-The Search control on the bar closes any open panel and asks `LauncherModel` to open `LauncherWindow`. `scripts/request-launcher.sh` and `swiftshell request-launcher` write a JSON token under the XDG state directory. The shell watches that file. The token already present at startup does not open the launcher. A later token opens it, and another token while it is open closes it. Neither command edits Hyprland or starts a second process. Super+Space is documented in `docs/launcher-shortcut.md` and is not changed by this repository.
+The Search control on the bar closes any open panel and asks `LauncherModel` to open `LauncherWindow`. `scripts/request-launcher.sh` and `swiftshell request-launcher` call the selected shell’s typed IPC launcher toggle. Missing instances return an error. The old watched JSON-token channel remains only for compatibility. Neither command edits Hyprland or starts a second process. Super+Space is documented in `docs/launcher-shortcut.md` and is not changed by this repository.
 
 Both paths resolve the screen when the request happens. The match is `Hyprland.focusedMonitor` against the Quickshell screen's name, Hyprland connector name, or Hyprland description. The bar's screen is not the target. If that focused monitor cannot be read, the first connected screen is used. The card stays on the screen chosen at open. A focus change while it remains open does not move it. If that screen leaves `Quickshell.screens`, the launcher closes.
 

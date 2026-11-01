@@ -177,7 +177,11 @@ case $cmd in
         exec "$lib/uninstall.sh"
         ;;
     request-launcher)
-        swiftshell_request_launcher
+        if [ -f "$HERE/../shell/shell.qml" ]; then
+            swiftshell_request_launcher "$HERE/../shell"
+        else
+            swiftshell_request_launcher
+        fi
         ;;
     *)
         swiftshell_die "unknown command: $cmd"

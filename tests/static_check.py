@@ -997,6 +997,8 @@ def main():
         "reserve default": "reserveSpace: true" in store,
         "workspace default": "workspaceIds: []" in store,
         "spotlight frame": "spotlightFrame" in (SHELL / "launcher" / "LauncherWindow.qml").read_text(encoding="utf-8"),
+        "launcher keys attach to an Item": "\n    Keys.onEscapePressed" not in (SHELL / "launcher" / "LauncherWindow.qml").read_text(encoding="utf-8"),
+        "launcher scoped IPC": "function launcher(action: string)" in (SHELL / "shell.qml").read_text(encoding="utf-8"),
         "launcher request toggle": "requestAction" in (SHELL / "services" / "LauncherModel.qml").read_text(encoding="utf-8"),
         "focused launcher screen": "resolveLauncherScreen" in (SHELL / "services" / "LauncherModel.qml").read_text(encoding="utf-8"),
         "bar follows placement helper": "selectBarPlacement" in (SHELL / "bar" / "BarHost.qml").read_text(encoding="utf-8"),

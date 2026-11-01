@@ -634,3 +634,29 @@ Settings after − to restore it. Hotplug, HDR/ICC editing, mirroring, full keyb
 accessibility audit, other drivers/compositors and notification ownership takeover
 were not validated by this Settings milestone. User-authored Lua, Noctalia,
 autostart and system services were left unchanged.
+
+## Launcher invocation foundation (2026-11-01, roadmap C0)
+
+The read-only effective binding audit found one ordinary Super+Space binding:
+`Toggle application launcher`, executing the user's existing Noctalia command.
+No bind, user Lua file or Noctalia process was changed. A one-line handoff was
+prepared separately and passed `luac -p`; applying it needs explicit approval.
+
+- `scripts/check.sh` passed after the direct IPC and Item keyboard-handler fix.
+  Installer regression covers scoped checkout IPC, installed selection, failure
+  when no shell responds, no stale token write, and unchanged Hyprland files.
+- `python3 tests/live/launcher-invocation.py --live`: three open/close cycles on
+  each output passed, with the actual input focused and correct focused monitor.
+  The test restored monitor focus and closed only SwiftShell's launcher.
+- `scripts/test-launcher-native.sh` executed on both HDMI-A-1 and DP-1: a real
+  native LauncherWindow accepted typing and Escape dismissed it. QtTest sends
+  keyboard events to the real native input; this is not a physical global-chord
+  test. Temporary XDG settings isolated the audit from user preferences.
+- Only SwiftShell instance qe1ejptnt was stopped; updated instance 6f8i1qtnt
+  launched successfully. The previous non-Item Keys warning is gone. The legacy
+  missing launcher.request warning remains because older token callers remain
+  supported. Qt Wayland text-input warnings remain under investigation.
+
+C0's physical Super+Space handoff and reboot persistence acceptance are pending
+approval. This increment does not claim that changing the request command alone
+changes the existing compositor binding. Full Spotlight redesign belongs to C1.

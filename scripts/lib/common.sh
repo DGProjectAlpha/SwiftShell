@@ -68,14 +68,13 @@ swiftshell_state_dir() {
 }
 
 swiftshell_request_launcher() {
-    swiftshell_need_home
-    state=$(swiftshell_state_dir)
-    mkdir -p "$state"
-    token=$(date +%s).$$
-    tmp=$(mktemp "$state/launcher.request.XXXXXX")
-    printf '{\n  "text": "%s"\n}\n' "$token" >"$tmp"
-    mv "$tmp" "$state/launcher.request"
-    swiftshell_say "launcher requested."
+    launcher_config=${1:-"$(swiftshell_app_dir)"}
+    if ! command -v qs >/dev/null 2>&1; then
+        swiftshell_die "Quickshell is unavailable; start SwiftShell before requesting its launcher."
+    fi
+    if ! qs ipc -p "$launcher_config" call swiftshell launcher toggle >/dev/null 2>&1; then
+        swiftshell_die "The selected SwiftShell instance is not running or lacks launcher IPC. Start or update SwiftShell first."
+    fi
 }
 
 swiftshell_bin_path() {

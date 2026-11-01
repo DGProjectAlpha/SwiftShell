@@ -54,6 +54,7 @@ write_stubs() {
 #!/bin/sh
 printf '%s\n' "$*" >>"${SWIFTSHELL_QS_LOG:-/dev/null}"
 case ${1:-} in
+    ipc) exit "${SWIFTSHELL_TEST_IPC_RESULT:-0}" ;;
     -V|--version)
         printf '%s\n' "quickshell 0.3.2"
         exit 0
@@ -530,8 +531,14 @@ test_request_launcher() {
     new_home
     binds_sum=$(checksum "$HOME/.config/hypr/config/binds.lua")
     "$ROOT/scripts/swiftshell" request-launcher >/dev/null
-    [ -s "$XDG_STATE_HOME/swiftshell/launcher.request" ] || fail "launcher request was not written"
-    grep -q '"text"' "$XDG_STATE_HOME/swiftshell/launcher.request" || fail "launcher request is not json"
+    grep -q 'call swiftshell launcher toggle' "$SWIFTSHELL_QS_LOG" || fail "launcher request did not use scoped IPC"
+    [ ! -e "$XDG_STATE_HOME/swiftshell/launcher.request" ] || fail "IPC request wrote a stale file token"
+    if SWIFTSHELL_TEST_IPC_RESULT=1 "$ROOT/scripts/swiftshell" request-launcher >"$HOME/request.out" 2>"$HOME/request.err"; then
+        fail "missing shell reported a successful invocation"
+    fi
+    grep -q 'not running' "$HOME/request.err" || fail "missing shell lacks actionable feedback"
+    "$ROOT/scripts/request-launcher.sh"
+    grep -q "ipc -p $ROOT/shell call swiftshell launcher toggle" "$SWIFTSHELL_QS_LOG" || fail "checkout request targeted a different config"
     [ "$(checksum "$HOME/.config/hypr/config/binds.lua")" = "$binds_sum" ] || fail "launcher request edited hypr binds"
     [ ! -e "$HOME/.config/hypr/hyprland.conf" ] || fail "launcher request wrote a hyprland config"
     ok "launcher request does not touch Hyprland"
