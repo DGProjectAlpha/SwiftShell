@@ -57,7 +57,7 @@ swiftshell_doctor() {
     swiftshell_report_dependencies || true
     swiftshell_say "QtQuick.Dialogs: $(swiftshell_qml_module_status QtQuick.Dialogs)"
     swiftshell_say "Qt.labs.folderlistmodel: $(swiftshell_qml_module_status Qt.labs.folderlistmodel)"
-    swiftshell_say "blur: unavailable. Quickshell 0.2 has no BackgroundEffect. Surfaces use a translucent scrim."
+    swiftshell_say "blur: check Settings > Appearance for live compositor support. This command does not change blur settings."
     swiftshell_say "outputs: not measured. This command does not read a layout."
     data=$(swiftshell_data_dir)
     if swiftshell_is_our_install "$data" && [ -f "$(swiftshell_app_dir)/shell.qml" ]; then

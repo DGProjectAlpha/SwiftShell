@@ -83,33 +83,33 @@ Item {
     Column {
         id: column
         width: page.width
-        spacing: Theme.panelSpacing
+        spacing: Theme.settingsSpacing
 
         Text {
             width: parent.width
             text: "Top bar"
-            color: Theme.panelText
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.fontSize + 4
+            color: Theme.settingsText
+            font.family: Theme.settingsFontFamily
+            font.pixelSize: Theme.settingsFontSize + 4
             font.weight: Font.Medium
         }
 
         Text {
             width: parent.width
             wrapMode: Text.WordWrap
-            text: "Height changes the bar text, icons, hit area, and reserved strip together. The default height is 28."
-            color: Theme.panelMuted
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.fontSizeSmall
+            text: "Choose the screens, size and content of your top bar."
+            color: Theme.settingsMuted
+            font.family: Theme.settingsFontFamily
+            font.pixelSize: Theme.settingsFontSizeSmall
         }
 
         Text {
             width: parent.width
             visible: page.query.trim() !== "" && !page.shows("barHeight") && !page.shows("reserveSpace") && !page.shows("targetMonitor") && !page.shows("showTitle") && !page.shows("clock24") && !page.shows("moduleOrder")
             text: "No matching settings"
-            color: Theme.panelText
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.fontSize
+            color: Theme.settingsText
+            font.family: Theme.settingsFontFamily
+            font.pixelSize: Theme.settingsFontSize
         }
 
         SettingsRow {
@@ -120,14 +120,14 @@ Item {
             label: "Bar height"
 
             Row {
-                spacing: Theme.panelSpacing
+                spacing: Theme.settingsSpacing
 
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     text: SettingsStore.barHeight + " px"
-                    color: Theme.panelMuted
-                    font.family: Theme.fontFamily
-                    font.pixelSize: Theme.fontSizeSmall
+                    color: Theme.settingsMuted
+                    font.family: Theme.settingsFontFamily
+                    font.pixelSize: Theme.settingsFontSizeSmall
                 }
 
                 CompactSlider {
@@ -155,7 +155,7 @@ Item {
             label: "Screens"
 
             Row {
-                spacing: Theme.panelSpacing
+                spacing: Theme.settingsSpacing
 
                 FlatButton {
                     label: "Focused"
@@ -181,11 +181,11 @@ Item {
             property string controlId: "targetMonitor"
             visible: page.shows("targetMonitor")
             width: parent.width
-            spacing: Theme.panelSpacing
+            spacing: Theme.settingsSpacing
             Text {
                 text: "Use one monitor"
-                color: Theme.panelMuted
-                font.pixelSize: Theme.fontSizeSmall
+                color: Theme.settingsMuted
+                font.pixelSize: Theme.settingsFontSizeSmall
             }
             Repeater {
                 model: HyprlandModel.monitorChoices
@@ -202,8 +202,8 @@ Item {
                 width: parent.width
                 wrapMode: Text.WordWrap
                 text: "Selected: " + SettingsStore.targetMonitor + ". Disconnected outputs fall back to the focused screen. Focused, Primary, or All clears this selection."
-                color: Theme.panelMuted
-                font.pixelSize: Theme.fontSizeSmall
+                color: Theme.settingsMuted
+                font.pixelSize: Theme.settingsFontSizeSmall
             }
         }
 
@@ -230,14 +230,14 @@ Item {
             property string controlId: "moduleOrder"
             visible: page.shows("moduleOrder")
             width: parent.width
-            spacing: Theme.panelSpacing
+            spacing: Theme.settingsSpacing
 
             Text {
                 width: parent.width
                 text: page.marked("moduleOrder") ? "Module order" : "Module order"
-                color: Theme.panelText
-                font.family: Theme.fontFamily
-                font.pixelSize: Theme.fontSize
+                color: Theme.settingsText
+                font.family: Theme.settingsFontFamily
+                font.pixelSize: Theme.settingsFontSize
                 font.weight: page.marked("moduleOrder") ? Font.Medium : Font.Normal
             }
 
@@ -248,15 +248,15 @@ Item {
                     required property int index
                     required property string modelData
                     width: modules.width
-                    spacing: Theme.panelSpacing
+                    spacing: Theme.settingsSpacing
 
                     Text {
                         width: 120
                         anchors.verticalCenter: parent.verticalCenter
                         text: page.moduleName(modelData)
-                        color: Theme.panelText
-                        font.family: Theme.fontFamily
-                        font.pixelSize: Theme.fontSize
+                        color: Theme.settingsText
+                        font.family: Theme.settingsFontFamily
+                        font.pixelSize: Theme.settingsFontSize
                         elide: Text.ElideRight
                     }
 

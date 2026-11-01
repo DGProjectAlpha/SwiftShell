@@ -70,8 +70,8 @@ Column {
         visible: root.overflow > 0
         width: parent.width
         text: "+" + root.overflow + " more"
-        color: Theme.panelMuted
-        font.family: Theme.fontFamily
-        font.pixelSize: Theme.fontSizeSmall
+        color: Theme.settingsMuted
+        font.family: Theme.settingsFontFamily
+        font.pixelSize: Theme.settingsFontSizeSmall
     }
 }

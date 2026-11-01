@@ -44,9 +44,9 @@ Column {
             Text {
                 width: parent.width - (root.controls.art !== "" ? Theme.barIcon + Theme.panelSpacing : 0)
                 text: Media.mediaLine(root.player)
-                color: Theme.panelText
-                font.family: Theme.fontFamily
-                font.pixelSize: Theme.fontSize
+                color: Theme.settingsText
+                font.family: Theme.settingsFontFamily
+                font.pixelSize: Theme.settingsFontSize
                 elide: Text.ElideRight
                 wrapMode: Text.NoWrap
             }

@@ -1,6 +1,2 @@
 import QtQuick
-
-QtObject {
-    property int intersection: 0
-    property Item item: null
-}
+QtObject { property int intersection: 0; property Item item: null; property int radius: 0 }

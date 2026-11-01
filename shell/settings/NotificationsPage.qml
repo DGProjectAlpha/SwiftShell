@@ -9,6 +9,7 @@ Item {
     id: page
 
     property string query: ""
+    property string policyApplication: ""
     property string highlightId: ""
     property string arm: ""
     property bool previewOpen: false
@@ -41,24 +42,24 @@ Item {
     Column {
         id: column
         width: page.width
-        spacing: Theme.panelSpacing
+        spacing: Theme.settingsSpacing
 
         Text {
             width: parent.width
             text: "Notifications"
-            color: Theme.panelText
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.fontSize + 4
+            color: Theme.settingsText
+            font.family: Theme.settingsFontFamily
+            font.pixelSize: Theme.settingsFontSize + 4
             font.weight: Font.Medium
         }
 
         Text {
             width: parent.width
             wrapMode: Text.WordWrap
-            text: "SwiftShell does not own notifications unless you confirm a request. The default is off, so another program keeps the bus. Quickshell 0.2 does not expose the D-Bus name result: SwiftShell reports ownership as observed only after notification traffic arrives. A current owner is not stopped or replaced."
-            color: Theme.panelMuted
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.fontSizeSmall
+            text: "Notification handling is off by default. Enable it only after switching from your current notification app."
+            color: Theme.settingsMuted
+            font.family: Theme.settingsFontFamily
+            font.pixelSize: Theme.settingsFontSizeSmall
         }
 
         ServiceStatus {
@@ -68,7 +69,7 @@ Item {
 
         FlatButton {
             visible: page.shows("notificationOwner")
-            label: SettingsStore.notificationOwnership === "on" ? "Release notifications" : (page.arm === "own" ? "Confirm ownership" : "Own notifications")
+            label: SettingsStore.notificationOwnership === "on" ? "Disable notifications" : (page.arm === "own" ? "Confirm switch" : "Enable notifications")
             emphasized: page.arm === "own"
             onActivated: {
                 if (SettingsStore.notificationOwnership === "on") {
@@ -101,9 +102,9 @@ Item {
             width: parent.width
             wrapMode: Text.WordWrap
             text: SettingsStore.notificationDnd ? "Critical banners still show. Other banners wait in history." : "Banners follow the notifications this shell has accepted."
-            color: Theme.panelMuted
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.fontSizeSmall
+            color: Theme.settingsMuted
+            font.family: Theme.settingsFontFamily
+            font.pixelSize: Theme.settingsFontSizeSmall
         }
 
         FlatButton {
@@ -129,18 +130,18 @@ Item {
                 Text {
                     width: parent.width
                     text: "Preview"
-                    color: Theme.panelMuted
-                    font.family: Theme.fontFamily
-                    font.pixelSize: Theme.fontSizeSmall
+                    color: Theme.settingsMuted
+                    font.family: Theme.settingsFontFamily
+                    font.pixelSize: Theme.settingsFontSizeSmall
                 }
 
                 Text {
                     width: parent.width
                     wrapMode: Text.WordWrap
-                    text: "This is a preview. It was not sent by another application, and showing it does not take the bus."
-                    color: Theme.panelText
-                    font.family: Theme.fontFamily
-                    font.pixelSize: Theme.fontSize
+                    text: "This is a preview of a SwiftShell notification."
+                    color: Theme.settingsText
+                    font.family: Theme.settingsFontFamily
+                    font.pixelSize: Theme.settingsFontSize
                     textFormat: Text.PlainText
                 }
 
@@ -154,62 +155,65 @@ Item {
         Text {
             width: parent.width
             wrapMode: Text.WordWrap
-            text: "The preview card is labeled Preview. It is not a notification from another application, and showing it does not take the bus."
-            color: Theme.panelMuted
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.fontSizeSmall
+            text: "Preview does not change your notification settings."
+            color: Theme.settingsMuted
+            font.family: Theme.settingsFontFamily
+            font.pixelSize: Theme.settingsFontSizeSmall
         }
 
         Text {
             width: parent.width
             wrapMode: Text.WordWrap
-            text: "Notification sounds are not played. This shell has no sound trigger for them."
-            color: Theme.panelMuted
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.fontSizeSmall
+            text: "Notification sounds are unavailable."
+            color: Theme.settingsMuted
+            font.family: Theme.settingsFontFamily
+            font.pixelSize: Theme.settingsFontSizeSmall
         }
 
         Text {
             width: parent.width
             text: "Per application"
-            color: Theme.panelText
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.fontSize
+            color: Theme.settingsText
+            font.family: Theme.settingsFontFamily
+            font.pixelSize: Theme.settingsFontSize
         }
 
-        TextInput {
-            id: policyId
-            width: parent.width
-            height: Theme.controlHeight
-            color: Theme.panelText
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.fontSize
-            selectByMouse: true
-            clip: true
-            Accessible.name: "Desktop id"
+        ChoiceBox {
+            width:Math.min(360,parent.width)
+            choices:[{label:"Choose an application",value:""}].concat(LauncherModel.applications.map(function(app){return {label:app.name,value:app.id}}))
+            selectedValue:page.policyApplication
+            onChosen:function(value){page.policyApplication=value}
+            Accessible.name:"Notification application"
         }
 
         Row {
-            spacing: Theme.panelSpacing
+            spacing: Theme.settingsSpacing
 
             FlatButton {
                 label: "Show"
-                onActivated: SettingsStore.setNotificationPolicy(policyId.text, "show")
+                emphasized:page.policyApplication !== "" && Notifications.policyFor(Notifications.parsePolicies(SettingsStore.notificationPoliciesJson),page.policyApplication) === "show"
+                enabled:page.policyApplication !== ""
+                onActivated: SettingsStore.setNotificationPolicy(page.policyApplication, "show")
             }
 
             FlatButton {
                 label: "Quiet"
-                onActivated: SettingsStore.setNotificationPolicy(policyId.text, "quiet")
+                emphasized:page.policyApplication !== "" && Notifications.policyFor(Notifications.parsePolicies(SettingsStore.notificationPoliciesJson),page.policyApplication) === "quiet"
+                enabled:page.policyApplication !== ""
+                onActivated: SettingsStore.setNotificationPolicy(page.policyApplication, "quiet")
             }
 
             FlatButton {
                 label: "Hide"
-                onActivated: SettingsStore.setNotificationPolicy(policyId.text, "hide")
+                emphasized:page.policyApplication !== "" && Notifications.policyFor(Notifications.parsePolicies(SettingsStore.notificationPoliciesJson),page.policyApplication) === "hide"
+                enabled:page.policyApplication !== ""
+                onActivated: SettingsStore.setNotificationPolicy(page.policyApplication, "hide")
             }
 
             FlatButton {
                 label: "Clear rule"
-                onActivated: SettingsStore.setNotificationPolicy(policyId.text, "")
+                enabled:page.policyApplication !== ""
+                onActivated: SettingsStore.setNotificationPolicy(page.policyApplication, "")
             }
         }
 
@@ -220,9 +224,9 @@ Item {
                 required property var modelData
                 width: column.width
                 text: modelData.id + " " + modelData.value
-                color: Theme.panelText
-                font.family: Theme.fontFamily
-                font.pixelSize: Theme.fontSizeSmall
+                color: Theme.settingsText
+                font.family: Theme.settingsFontFamily
+                font.pixelSize: Theme.settingsFontSizeSmall
                 elide: Text.ElideRight
             }
         }
@@ -238,9 +242,9 @@ Item {
                 Text {
                     width: parent.width
                     text: modelData.app
-                    color: Theme.panelText
-                    font.family: Theme.fontFamily
-                    font.pixelSize: Theme.fontSize
+                    color: Theme.settingsText
+                    font.family: Theme.settingsFontFamily
+                    font.pixelSize: Theme.settingsFontSize
                     elide: Text.ElideRight
                 }
 
@@ -251,9 +255,9 @@ Item {
                         required property var modelData
                         width: column.width
                         text: modelData.summary
-                        color: Theme.panelMuted
-                        font.family: Theme.fontFamily
-                        font.pixelSize: Theme.fontSizeSmall
+                        color: Theme.settingsMuted
+                        font.family: Theme.settingsFontFamily
+                        font.pixelSize: Theme.settingsFontSizeSmall
                         elide: Text.ElideRight
                     }
                 }

@@ -55,7 +55,7 @@ write_stubs() {
 printf '%s\n' "$*" >>"${SWIFTSHELL_QS_LOG:-/dev/null}"
 case ${1:-} in
     -V|--version)
-        printf '%s\n' "quickshell 0.3.0"
+        printf '%s\n' "quickshell 0.3.2"
         exit 0
         ;;
     kill)
@@ -71,7 +71,7 @@ EOF
     cat >"$dir/Hyprland" <<'EOF'
 #!/bin/sh
 if [ "${1:-}" = "--version" ]; then
-    printf '%s\n' "Hyprland 0.45.2 built from branch test"
+    printf '%s\n' "Hyprland 0.57.0 built from branch test"
     exit 0
 fi
 exit 0
@@ -190,9 +190,9 @@ test_versions() {
     if swiftshell_version_ge 0.1.9 0.2.0; then
         fail "0.1.9 should be below 0.2.0"
     fi
-    [ "$(swiftshell_extract_version "quickshell 0.3.0")" = "0.3.0" ] || fail "parse quickshell"
+    [ "$(swiftshell_extract_version "quickshell 0.3.2")" = "0.3.2" ] || fail "parse quickshell"
     [ "$(swiftshell_extract_version "Tag: v0.41.2")" = "0.41.2" ] || fail "parse tag"
-    [ "$(swiftshell_extract_version "Hyprland 0.45.2 built from branch test")" = "0.45.2" ] || fail "parse hyprland"
+    [ "$(swiftshell_extract_version "Hyprland 0.57.0 built from branch test")" = "0.57.0" ] || fail "parse hyprland"
     ok "version parsing"
 }
 
@@ -472,7 +472,7 @@ test_doctor_and_rollback() {
     decoy=$(mktemp -d)
     write_decoy_commands "$decoy"
     PATH="$STUBS:$decoy:$BASE_PATH" "$HOME/.local/bin/swiftshell" doctor >"$HOME/doctor.out" 2>"$HOME/doctor.err"
-    grep -q 'blur: unavailable' "$HOME/doctor.out" || fail "doctor did not report blur"
+    grep -q 'blur: check Settings' "$HOME/doctor.out" || fail "doctor did not report blur"
     grep -q 'notification ownership: on' "$HOME/doctor.out" || fail "doctor did not report ownership"
     grep -q 'settings backup: present' "$HOME/doctor.out" || fail "doctor missed the backup"
     grep -q 'were not read or written' "$HOME/doctor.out" || fail "doctor did not state the file boundary"

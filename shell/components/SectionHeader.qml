@@ -2,9 +2,9 @@ import QtQuick
 import "../themes"
 
 Text {
-    font.family: Theme.fontFamily
-    font.pixelSize: Theme.fontSizeSmall
+    font.family: Theme.settingsFontFamily
+    font.pixelSize: Theme.settingsFontSizeSmall
     font.weight: Font.Medium
-    color: Theme.panelMuted
+    color: Theme.settingsMuted
     elide: Text.ElideRight
 }

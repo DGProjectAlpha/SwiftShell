@@ -22,10 +22,23 @@ ShellRoot {
 
     IpcHandler {
         target: "swiftshell"
+        function diagnostics(): string {
+            const w=SettingsModel.nativeWindow
+            return JSON.stringify({settingsOpen:SettingsModel.open,category:SettingsStore.settingsWindowCategory,blurAvailable:WindowService.blurAvailable,blurRegionApplied:WindowService.blurRegionApplied,blurReason:WindowService.blurReason,windowError:WindowService.error,
+                panelBlur:SettingsStore.panelBlur,shadowOpacity:SettingsStore.shadowOpacity,shadowSoftness:SettingsStore.shadowSoftness,window:w ? {width:w.width,height:w.height,pageStatus:w.pageStatus,searchHasFocus:w.searchHasFocus,maximized:WindowService.maximized,qtMaximized:w.maximized,shadowInset:w.shadowInset,resizeRequests:w.resizeRequests,lastResizeAccepted:w.lastResizeAccepted} : null})
+        }
+        function appearance(key: string, value: real): void {
+            if (["panelBlur","panelOpacity","radius","shadowOpacity","shadowSoftness"].indexOf(key)>=0)
+                SettingsModel.appearanceEditRequested(key,value)
+        }
+        function window(action: string): void {
+            SettingsModel.windowActionRequested(action)
+        }
         function settings(category: string): void {
             const allowed = ["appearance","bar","wallpaper","displays","workspaces","shortcuts","audio","network","bluetooth","power","notifications"]
             if (allowed.indexOf(category) >= 0) SettingsStore.setSettingsCategory(category)
             SettingsModel.show()
+            SettingsModel.windowActionRequested("clear-search")
         }
     }
 

@@ -6,7 +6,6 @@ FocusScope {
 
     property real value: 0
     property string valueName: "Volume"
-    property bool enabled: true
     property bool adjusting: false
     signal moved(real next)
 
@@ -56,25 +55,28 @@ FocusScope {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.verticalCenter: parent.verticalCenter
-        height: 1
-        color: Theme.panelMuted
+        height: 3
+        radius: 1.5
+        color: Theme.settingsMuted
     }
 
     Rectangle {
         anchors.verticalCenter: parent.verticalCenter
         width: Math.max(0, control.value * parent.width)
-        height: 1
-        color: control.enabled ? Theme.panelText : Theme.panelMuted
+        height: 3
+        radius: 1.5
+        color: control.enabled ? Theme.settingsText : Theme.settingsMuted
     }
 
     Rectangle {
         anchors.verticalCenter: parent.verticalCenter
-        width: Math.max(4, 6 * Theme.iconScale)
-        height: Math.max(4, 6 * Theme.iconScale)
+        width: Math.max(10, 10 * Theme.iconScale)
+        height: Math.max(10, 10 * Theme.iconScale)
+        radius: width/2
         x: Math.max(0, control.value * (parent.width - width))
-        color: control.enabled ? Theme.panelText : Theme.panelMuted
+        color: control.enabled ? Theme.settingsText : Theme.settingsMuted
         border.width: control.activeFocus ? 1 : 0
-        border.color: Theme.panelText
+        border.color: Theme.settingsText
     }
 
     MouseArea {

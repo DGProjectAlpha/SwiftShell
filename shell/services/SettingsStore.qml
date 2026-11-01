@@ -689,7 +689,7 @@ Singleton {
                 property bool reducedMotion: false
                 property int panelPadding: 12
                 property int panelSpacing: 8
-                property int fontSize: 12
+                property int fontSize: 13
                 property string fontWeight: "regular"
                 property real iconScale: 1
                 property bool topGradient: false
@@ -722,8 +722,8 @@ Singleton {
 
             property JsonObject settingsWindow: JsonObject {
                 id: windowSettings
-                property int width: 900
-                property int height: 620
+                property int width: 1000
+                property int height: 700
                 property string category: "appearance"
             }
 

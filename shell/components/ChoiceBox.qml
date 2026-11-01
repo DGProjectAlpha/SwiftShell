@@ -1,31 +1,39 @@
 import QtQuick
 import QtQuick.Controls.Basic as Controls
 import "../themes"
+import "../services"
 
 Controls.ComboBox {
     id: control
     property var choices: []
     property var selectedValue: null
+    property string customLabel: ""
+    readonly property var resolvedChoices: {
+        if (selectedValue === null || selectedValue === undefined || choices.some(function(c){return c.value===selectedValue})) return choices
+        return choices.concat([{label:customLabel || String(selectedValue),value:selectedValue}])
+    }
     signal chosen(var value)
-    model: choices
+    model: resolvedChoices
     textRole: "label"
     valueRole: "value"
     currentIndex: {
-        for (let i = 0; i < choices.length; i++) {
-            if (choices[i].value === selectedValue) return i
+        for (let i = 0; i < resolvedChoices.length; i++) {
+            if (resolvedChoices[i].value === selectedValue) return i
         }
         return -1
     }
+    opacity: enabled ? 1 : .45
     width: 240
     height: Theme.controlHeight + 6
-    font.family: Theme.fontFamily
-    font.pixelSize: Theme.fontSize
+    font.family: Theme.settingsFontFamily
+    font.pixelSize: Theme.settingsFontSize
+    font.weight: Theme.fontWeight
     onActivated: chosen(currentValue)
     background: Rectangle {
         radius: Theme.controlRadius
         color: control.down ? Qt.rgba(.5,.5,.5,.18) : Qt.rgba(.5,.5,.5,control.hovered ? .12 : .07)
         border.width: control.activeFocus ? 1 : 0
-        border.color: Theme.panelMuted
+        border.color: Theme.settingsMuted
     }
     contentItem: Text {
         leftPadding: 10
@@ -33,22 +41,23 @@ Controls.ComboBox {
         text: control.displayText
         verticalAlignment: Text.AlignVCenter
         font: control.font
-        color: control.enabled ? Theme.panelText : Theme.panelMuted
+        color: control.enabled ? Theme.settingsText : Theme.settingsMuted
         elide: Text.ElideRight
     }
     indicator: Text {
         x: control.width - 22
         y: (control.height-height)/2
         text: "⌄"
-        color: Theme.panelMuted
+        color: Theme.settingsMuted
     }
     delegate: Controls.ItemDelegate {
+        id:delegateControl
         width: control.width
         text: modelData.label
         font: control.font
         highlighted: control.highlightedIndex === index
-        contentItem: Text { text: modelData.label; color: Theme.panelText; font: control.font; elide: Text.ElideRight; verticalAlignment: Text.AlignVCenter }
-        background: Rectangle { radius: Theme.controlRadius; color: highlighted ? Qt.rgba(.5,.5,.5,.2) : "transparent" }
+        contentItem: Text { text: modelData.label; color: Theme.settingsText; font: control.font; elide: Text.ElideRight; verticalAlignment: Text.AlignVCenter }
+        background: Rectangle { radius: Theme.controlRadius; color: delegateControl.highlighted ? Qt.rgba(.5,.5,.5,.2) : "transparent" }
     }
     popup: Controls.Popup {
         y: control.height + 4
@@ -63,6 +72,6 @@ Controls.ComboBox {
             currentIndex: control.highlightedIndex
             boundsBehavior: Flickable.StopAtBounds
         }
-        background: Rectangle { radius: Theme.controlRadius + 2; color: Theme.panelColor }
+        background: Rectangle { radius: Theme.controlRadius + 2; color: SettingsStore.appearanceMode === "light" ? "#f1f1f1" : "#292929" }
     }
 }

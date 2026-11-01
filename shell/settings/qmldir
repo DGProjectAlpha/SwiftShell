@@ -9,3 +9,5 @@ BluetoothPage 1.0 BluetoothPage.qml
 PowerPage 1.0 PowerPage.qml
 NotificationsPage 1.0 NotificationsPage.qml
 WorkspacesPage 1.0 WorkspacesPage.qml
+BlurAdapter 1.0 BlurAdapter.qml
+SettingsShadow 1.0 SettingsShadow.qml

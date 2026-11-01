@@ -1,5 +1,6 @@
 import QtQuick
 import "../themes"
+import "../services"
 
 MouseArea {
     id: control
@@ -11,9 +12,10 @@ MouseArea {
     signal toggled(bool next)
 
     implicitWidth: Math.max(labelText.implicitWidth + 40, Theme.controlHeight)
-    implicitHeight: Theme.controlHeight
-    width: implicitWidth
+    implicitHeight: Math.max(38, Theme.controlHeight)
+    width: parent ? parent.width : implicitWidth
     height: implicitHeight
+    opacity: enabled ? 1 : .45
     hoverEnabled: true
     activeFocusOnTab: true
     cursorShape: Qt.PointingHandCursor
@@ -36,27 +38,34 @@ MouseArea {
     }
 
     Rectangle {
-        width: 28
-        height: 14
-        radius: 7
+        id: track
+        width: 32
+        height: 18
+        radius: 9
+        anchors.right: parent.right
         anchors.verticalCenter: parent.verticalCenter
-        color: control.checked ? Theme.panelText : Theme.panelHover
+        color: control.checked ? Theme.settingsText : Theme.settingsSelected
         border.width: control.activeFocus ? 1 : 0
-        border.color: Theme.panelText
+        border.color: Theme.settingsText
+        Rectangle {
+            width:12; height:12; radius:6
+            x:control.checked ? 17 : 3; y:3
+            color: control.checked ? (SettingsStore.appearanceMode === "light" ? "white" : "#222222") : Theme.settingsMuted
+        }
     }
 
     Text {
         id: labelText
         anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.leftMargin: 36
-        anchors.rightMargin: 4
+        anchors.right: track.left
+        anchors.leftMargin: 0
+        anchors.rightMargin: 16
         anchors.verticalCenter: parent.verticalCenter
         elide: Text.ElideRight
         text: control.label
-        color: Theme.panelText
-        font.family: Theme.fontFamily
-        font.pixelSize: Theme.fontSize
-        font.weight: control.marked ? Font.Medium : Font.Normal
+        color: Theme.settingsText
+        font.family: Theme.settingsFontFamily
+        font.pixelSize: Theme.settingsFontSize
+        font.weight: control.marked ? Font.Medium : Theme.fontWeight
     }
 }

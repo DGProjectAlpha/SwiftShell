@@ -15,6 +15,7 @@ fi
 "$NODE" "$ROOT/tests/workspaces.test.js"
 "$NODE" "$ROOT/tests/displays.test.js"
 python3 "$ROOT/tests/test_displays.py"
+python3 "$ROOT/tests/test_windowctl.py"
 "$NODE" "$ROOT/tests/settings_files.test.js"
 sh "$ROOT/tests/install_flow.sh"
 

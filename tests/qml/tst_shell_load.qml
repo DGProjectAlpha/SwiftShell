@@ -1,5 +1,6 @@
 import QtQuick
 import QtTest
+import "../../shell/logic/settingsNav.js" as Navigation
 import "../../shell/services" as Services
 import Quickshell.Services.Mpris
 import Quickshell.Services.SystemTray
@@ -44,6 +45,7 @@ TestCase {
         "shell/services/SettingsStore.qml",
         "shell/services/HyprlandModel.qml",
         "shell/services/DisplayService.qml",
+        "shell/services/WindowService.qml",
         "shell/services/LauncherModel.qml",
         "shell/services/SettingsModel.qml",
         "shell/services/ColorAnalysis.qml",
@@ -60,11 +62,14 @@ TestCase {
         "shell/settings/BarPage.qml",
         "shell/settings/WorkspacesPage.qml",
         "shell/settings/ImageDialog.qml",
+        "shell/settings/ColorPicker.qml",
         "shell/settings/FolderPicker.qml",
         "shell/settings/FolderScanner.qml",
         "shell/settings/DisplaysPage.qml",
         "shell/settings/ShortcutsPage.qml",
         "shell/settings/SettingsWindow.qml",
+        "shell/settings/BlurAdapter.qml",
+        "shell/settings/SettingsShadow.qml",
         "shell/settings/WallpaperPage.qml",
         "shell/wallpaper/SlideshowClock.qml",
         "shell/wallpaper/WallpaperHost.qml",
@@ -124,7 +129,10 @@ TestCase {
     }
 
     function expectedUnavailable(path, message) {
-        if (path === "shell/settings/ImageDialog.qml"
+        if (path === "shell/settings/SettingsShadow.qml")
+            return message.indexOf('module "QtQuick.Effects" is not installed') !== -1
+                || message.indexOf('RectangularShadow is not a type') !== -1
+        if (path === "shell/settings/ColorPicker.qml" || path === "shell/settings/ImageDialog.qml"
                 || path === "shell/settings/FolderPicker.qml")
             return message.indexOf('module "QtQuick.Dialogs" is not installed') !== -1
         if (path === "shell/settings/FolderScanner.qml")
@@ -323,19 +331,50 @@ TestCase {
         return false
     }
 
+    function test_every_sidebar_category_routes_and_search_stays_available() {
+        var settings=componentFor("shell/settings/SettingsWindow.qml").createObject(this)
+        var search=findChild(settings,"settingsSearch")
+        verify(search !== null)
+        var categories=Navigation.categories()
+        for(var i=0;i<categories.length;i++) {
+            var button=findChild(settings,categories[i].id+"Navigation")
+            verify(button !== null,categories[i].label)
+            button.activated()
+            compare(Services.SettingsStore.settingsWindowCategory,categories[i].id)
+            verify(settings.activePage() !== null)
+        }
+        search.text="workspaces"
+        compare(Services.SettingsStore.settingsWindowCategory,"workspaces")
+        findChild(settings,"displaysNavigation").activated()
+        compare(search.text,"")
+        compare(Services.SettingsStore.settingsWindowCategory,"displays")
+        settings.destroy()
+    }
+
+    function test_hyprland_forced_qt_maximized_flag_does_not_hide_shadow() {
+        Services.WindowService.maximized=false
+        var settings=componentFor("shell/settings/SettingsWindow.qml").createObject(this,{maximized:true})
+        verify(settings.shadowInset>0)
+        Services.WindowService.maximized=true
+        compare(settings.shadowInset,0)
+        Services.WindowService.maximized=false
+        settings.destroy()
+    }
+
     function test_workspaces_sidebar_button_opens_page() {
         var settings = componentFor("shell/settings/SettingsWindow.qml").createObject(this, {visible:true})
         verify(settings !== null)
         var button = findChild(settings, "workspacesNavigation")
         verify(button !== null, "Workspaces must be accessible from the sidebar")
+        verify(button.width >= 130, "Sidebar entries must fill the navigation column")
         var siblings = button.parent.children
         var position = -1
         for (var i = 0; i < siblings.length; i++) {
             if (siblings[i] === button) position = i
         }
         verify(position > 0 && position < siblings.length - 1)
-        compare(siblings[position - 1].label, "Displays")
-        compare(siblings[position + 1].label, "Shortcuts")
+        compare(siblings[position - 1].Accessible.name, "Displays")
+        compare(siblings[position + 1].Accessible.name, "Shortcuts")
         Services.SettingsStore.setSettingsCategory("bar")
         button.activated()
         compare(Services.SettingsStore.settingsWindowCategory, "workspaces")
@@ -378,8 +417,8 @@ TestCase {
     function test_settings_page_names_the_blur_limit() {
         var page = componentFor("shell/settings/AppearancePage.qml").createObject(this)
         verify(page !== null)
-        verify(findText(page, "translucent scrim", 0))
-        verify(findText(page, "not a rounded blur mask", 0))
+        verify(findText(page, "Backdrop blur", 0))
+        verify(findText(page, "unavailable", 0))
         verify(findText(page, "High contrast", 0))
         verify(page.shows("textContrast"))
         verify(!findText(page, "Gaussian", 0))
@@ -407,7 +446,7 @@ TestCase {
 
         var wallpaper = componentFor("shell/settings/WallpaperPage.qml").createObject(this)
         verify(wallpaper !== null)
-        verify(findText(wallpaper, "does not stop that program", 0))
+        verify(findText(wallpaper, "Choose a shared background", 0))
         verify(findText(wallpaper, "No outputs are connected", 0))
         verify(wallpaper.shows("wallpaperPath"))
         var displays = componentFor("shell/settings/DisplaysPage.qml").createObject(this)
@@ -416,29 +455,29 @@ TestCase {
         verify(findText(displays, "No outputs are connected", 0))
         var shortcuts = componentFor("shell/settings/ShortcutsPage.qml").createObject(this)
         verify(shortcuts !== null)
-        verify(findText(shortcuts, "does not install", 0))
+        verify(findText(shortcuts, "not installed automatically", 0))
         var audioPage = componentFor("shell/settings/AudioPage.qml").createObject(this)
         verify(audioPage !== null)
-        verify(findText(audioPage, "follow PipeWire", 0))
+        verify(findText(audioPage, "Adjust speakers", 0))
         verify(audioPage.shows("mediaPlayer"))
         audioPage.query = "microphone"
         verify(audioPage.shows("audioInput"))
         verify(!audioPage.shows("mediaPlayer"))
         var network = componentFor("shell/settings/NetworkPage.qml").createObject(this)
         verify(network !== null)
-        verify(findText(network, "does not store", 0))
-        verify(findText(network, "hardware brightness", 0))
+        verify(findText(network, "Network controls are not available", 0))
+        verify(findText(network, "Brightness control is not available", 0))
         var bluetoothPage = componentFor("shell/settings/BluetoothPage.qml").createObject(this)
         verify(bluetoothPage !== null)
-        verify(findText(bluetoothPage, "does not start a scan", 0))
+        verify(findText(bluetoothPage, "Known devices", 0))
         var powerPage = componentFor("shell/settings/PowerPage.qml").createObject(this)
         verify(powerPage !== null)
-        verify(findText(powerPage, "ask once more", 0))
+        verify(findText(powerPage, "then confirm", 0))
         var notes = componentFor("shell/settings/NotificationsPage.qml").createObject(this)
         verify(notes !== null)
-        verify(findText(notes, "does not own notifications", 0))
+        verify(findText(notes, "Notification handling is off", 0))
         verify(findText(notes, "Not SwiftShell", 0))
-        verify(findText(notes, "sounds are not played", 0))
+        verify(findText(notes, "sounds are unavailable", 0))
         UPower.displayDevice.ready = false
         var emptyBattery = componentFor("shell/bar/BatteryModule.qml").createObject(this)
         verify(emptyBattery !== null)

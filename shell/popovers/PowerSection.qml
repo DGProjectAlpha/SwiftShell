@@ -20,10 +20,10 @@ Column {
     Text {
         width: parent.width
         wrapMode: Text.WordWrap
-        text: "Lock, suspend, restart, and shut down ask once more before loginctl runs. The search field is not part of that command."
-        color: Theme.panelMuted
-        font.family: Theme.fontFamily
-        font.pixelSize: Theme.fontSizeSmall
+        text: "Choose an action, then confirm."
+        color: Theme.settingsMuted
+        font.family: Theme.settingsFontFamily
+        font.pixelSize: Theme.settingsFontSizeSmall
     }
 
     Repeater {
@@ -59,8 +59,8 @@ Column {
         width: parent.width
         wrapMode: Text.WordWrap
         text: root.notice
-        color: Theme.panelText
-        font.family: Theme.fontFamily
-        font.pixelSize: Theme.fontSizeSmall
+        color: Theme.settingsText
+        font.family: Theme.settingsFontFamily
+        font.pixelSize: Theme.settingsFontSizeSmall
     }
 }

@@ -306,11 +306,11 @@ test("version 1 settings migrate and unknown keys stay in the extension bag", fu
     assert.equal(brokenBag.settings.extensionsJson, "{}");
 });
 
-test("settings window stays one instance and blur is not available", function () {
+test("settings window lifecycle and unprobed blur capabilities remain honest", function () {
     const report = capabilities.capabilityReport();
     assert.equal(report.settingsToplevel.available, true);
     assert.equal(report.settingsToplevel.hardwareVerified, false);
-    assert.equal(report.settingsToplevel.clientMove, false);
+    assert.equal(report.settingsToplevel.clientMove, true);
     assert.equal(report.backdropBlur.available, false);
     assert.equal(report.backdropBlur.hardwareVerified, false);
     const surface = material.materialReport().backdropBlur;
@@ -377,7 +377,7 @@ test("settings search, density, and undo stay on real appearance fields", functi
     assert.equal(history.past[0].mode, "dark");
     history = settings.reduceAppearanceHistory(history, { type: "undo" });
     assert.equal(history.present.mode, "dark");
-    assert.equal(history.present.fontSize, 12);
+    assert.equal(history.present.fontSize, settings.DEFAULTS.appearance.fontSize);
     assert.equal(history.past.length, 0);
     history = settings.reduceAppearanceHistory(history, { type: "undo" });
     assert.equal(history.present.mode, "dark");

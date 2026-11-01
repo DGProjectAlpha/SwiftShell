@@ -38,7 +38,7 @@
     "reducedMotion": false,
     "panelPadding": 12,
     "panelSpacing": 8,
-    "fontSize": 12,
+    "fontSize": 13,
     "fontWeight": "regular",
     "iconScale": 1,
     "topGradient": false,
@@ -65,8 +65,8 @@
     "slidesJson": "[]"
   },
   "settingsWindow": {
-    "width": 900,
-    "height": 620,
+    "width": 1000,
+    "height": 700,
     "category": "appearance"
   },
   "shortcutsJson": "{}",

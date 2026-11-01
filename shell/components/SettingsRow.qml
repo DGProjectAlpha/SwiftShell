@@ -9,28 +9,32 @@ Item {
     property bool marked: false
     default property alias extra: slot.data
 
+    readonly property bool stacked: slot.childrenRect.width > width * .75
+
     implicitWidth: 480
-    implicitHeight: Math.max(Theme.controlHeight, labelText.implicitHeight, slot.implicitHeight)
+    implicitHeight: stacked ? labelText.implicitHeight + slot.height + 12 : Math.max(34, labelText.implicitHeight + 8, slot.height + 4)
     height: implicitHeight
 
     Text {
         id: labelText
         anchors.left: parent.left
-        anchors.right: slot.left
+        anchors.right: row.stacked ? parent.right : slot.left
         anchors.rightMargin: Theme.panelSpacing
-        anchors.verticalCenter: parent.verticalCenter
+        anchors.verticalCenter: row.stacked ? undefined : parent.verticalCenter
+        y: row.stacked ? 0 : (row.height-height)/2
         text: row.label
-        color: Theme.panelText
-        font.family: Theme.fontFamily
-        font.pixelSize: Theme.fontSize
-        font.weight: row.marked ? Font.Medium : Font.Normal
+        color: Theme.settingsText
+        font.family: Theme.settingsFontFamily
+        font.pixelSize: Theme.settingsFontSize
+        font.weight: row.marked ? Font.Medium : Theme.fontWeight
         elide: Text.ElideRight
     }
 
     Item {
         id: slot
         anchors.right: parent.right
-        anchors.verticalCenter: parent.verticalCenter
+        anchors.verticalCenter: row.stacked ? undefined : parent.verticalCenter
+        y: row.stacked ? labelText.implicitHeight + 6 : (row.height-height)/2
         width: childrenRect.width
         height: Math.max(Theme.controlHeight, childrenRect.height)
     }

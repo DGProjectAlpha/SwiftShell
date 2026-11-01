@@ -7,9 +7,14 @@ import "../logic/capabilities.js" as Capabilities
 Singleton {
     id: root
 
+    property bool shadowAvailable: false
     property bool open: false
+    property var nativeWindow: null
     property int focusTicket: 0
     property string reason: ""
+
+    signal windowActionRequested(string action)
+    signal appearanceEditRequested(string key, real value)
 
     function show() {
         const step = Capabilities.reduceSettingsWindow(
@@ -18,10 +23,18 @@ Singleton {
         )
         root.reason = step.reason
         if (root.open) {
+            WindowService.request("activate")
             root.focusTicket += 1
             return
         }
-        root.open = true
+        WindowService.request("prepare")
+    }
+
+    Connections {
+        target: WindowService
+        function onCompleted(action, success) {
+            if (action === "prepare") root.open = true
+        }
     }
 
     function hide() {

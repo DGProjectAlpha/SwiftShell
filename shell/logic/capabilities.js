@@ -3,15 +3,15 @@ function capabilityReport() {
         settingsToplevel: {
             available: true,
             mechanism: "Quickshell.FloatingWindow",
-            documentedIn: "0.2.0",
-            clientMove: false,
+            documentedIn: "0.3.2",
+            clientMove: true,
             hardwareVerified: false,
-            reason: "Quickshell 0.2 documents FloatingWindow as a standard toplevel with a title and a minimum size. Client-started move and resize are not on that page. The compositor can still move the window. This report is not a hardware pass.",
+            reason: "Quickshell 0.3.2 exposes native move and resize requests. WindowService reports live compositor integration separately.",
         },
         backdropBlur: {
             available: false,
             hardwareVerified: false,
-            reason: "Quickshell 0.2 has no BackgroundEffect. This shell does not change Hyprland blur rules. Surfaces use a translucent scrim.",
+            reason: "Backdrop blur is unavailable until the active surface backend confirms support. Surfaces use a translucent scrim.",
         },
     };
 }

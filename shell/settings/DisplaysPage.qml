@@ -50,6 +50,12 @@ Item {
         return (item.modes || []).filter(function (m) { return m.width === item.width && m.height === item.height })
             .map(function (m) { return {label:m.refresh.toFixed(2) + " Hz", value:m.refresh} })
     }
+    function scaleChoices() {
+        const item=selected()
+        return [.5,.75,1,1.25,1.5,1.6,1.75,2,2.5,3].filter(function(value) {
+            return !item || (Math.abs(item.width/value-Math.round(item.width/value))<.02 && Math.abs(item.height/value-Math.round(item.height/value))<.02)
+        }).map(function(value){return {label:Math.round(value*100)+"%",value:value}})
+    }
     function selectMode(value) {
         const parts = value.split("x")
         const w = Number(parts[0]), h = Number(parts[1])
@@ -77,20 +83,20 @@ Item {
     Column {
         id: column
         width: page.width
-        spacing: Theme.panelSpacing + 4
-        Text { text:"Displays"; color:Theme.panelText; font.pixelSize:Theme.fontSize+6; font.weight:Font.Medium }
+        spacing: Theme.settingsSpacing + 4
+        Text { text:"Displays"; color:Theme.settingsText; font.pixelSize:Theme.settingsFontSize+6; font.weight:Font.Medium }
         Text {
             width: parent.width
             wrapMode: Text.WordWrap
             text: "Arrange your screens, then apply. Changes revert automatically unless you keep them."
-            color: Theme.panelMuted
-            font.pixelSize: Theme.fontSizeSmall
+            color: Theme.settingsMuted
+            font.pixelSize: Theme.settingsFontSizeSmall
         }
         Text {
             visible: page.staged.length === 0
             text: "No outputs are connected."
-            color: Theme.panelMuted
-            font.pixelSize: Theme.fontSize
+            color: Theme.settingsMuted
+            font.pixelSize: Theme.settingsFontSize
         }
         Item {
             id: canvas
@@ -110,13 +116,13 @@ Item {
                     radius: 5
                     color: page.selectedId === modelData.id ? Qt.rgba(.6,.6,.6,.2) : Qt.rgba(.5,.5,.5,.07)
                     border.width: 1
-                    border.color: page.selectedId === modelData.id ? Theme.panelText : Theme.panelMuted
+                    border.color: page.selectedId === modelData.id ? Theme.settingsText : Theme.settingsMuted
                     Column {
                         anchors.centerIn: parent
                         width: parent.width-8
                         spacing: 4
-                        Text { width:parent.width; horizontalAlignment:Text.AlignHCenter; text:modelData.label; color:Theme.panelText; font.pixelSize:Theme.fontSize; elide:Text.ElideRight }
-                        Text { width:parent.width; horizontalAlignment:Text.AlignHCenter; text:page.staged.find(function(m) { return m.id===modelData.id }).friendly || modelData.label; color:Theme.panelMuted; font.pixelSize:Theme.fontSizeSmall; elide:Text.ElideRight }
+                        Text { width:parent.width; horizontalAlignment:Text.AlignHCenter; text:modelData.label; color:Theme.settingsText; font.pixelSize:Theme.settingsFontSize; elide:Text.ElideRight }
+                        Text { width:parent.width; horizontalAlignment:Text.AlignHCenter; text:page.staged.find(function(m) { return m.id===modelData.id }).friendly || modelData.label; color:Theme.settingsMuted; font.pixelSize:Theme.settingsFontSizeSmall; elide:Text.ElideRight }
                     }
                 }
             }
@@ -169,7 +175,7 @@ Item {
         }
         Column {
             width: parent.width
-            spacing: Theme.panelSpacing
+            spacing: Theme.settingsSpacing
             enabled: !!page.selected() && !DisplayService.pending && !DisplayService.busy
             SettingsToggle {
                 label: "Enable display"
@@ -206,7 +212,7 @@ Item {
             SettingsRow {
                 width:parent.width; label:"Scale"
                 ChoiceBox {
-                    choices: [.5,.75,1,1.25,1.5,1.6,1.75,2,2.5,3].map(function(value) { return {label:Math.round(value*100)+"%",value:value} })
+                    choices: page.scaleChoices()
                     selectedValue: page.selected() ? page.selected().scale : 1
                     onChosen: function(value) { page.update({scale:value}) }
                     Accessible.name: "Display scale"
@@ -221,6 +227,18 @@ Item {
                     Accessible.name: "Display orientation"
                 }
             }
+            SettingsToggle {
+                label:"Adaptive sync"
+                checked:page.selected() ? page.selected().vrr : false
+                enabled:!!page.selected() && !!page.selected().hardware && page.selected().vrrSupported === true
+                onToggled:function(value) { page.update({vrr:value}) }
+            }
+            Text {
+                width:parent.width;wrapMode:Text.WordWrap
+                visible:!!page.selected() && !!page.selected().vrrReason
+                text:page.selected() ? page.selected().vrrReason || "" : ""
+                color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall
+            }
             SettingsRow {
                 width:parent.width; label:"Position"
                 Row {
@@ -230,7 +248,7 @@ Item {
                         delegate: TextInput {
                             required property string modelData
                             width:90; height:Theme.controlHeight
-                            color:Theme.panelText; font.pixelSize:Theme.fontSize
+                            color:Theme.settingsText; font.pixelSize:Theme.settingsFontSize
                             text:page.selected() ? page.selected()[modelData] : "0"
                             validator: IntValidator { bottom:-32768; top:32768 }
                             selectByMouse:true; activeFocusOnTab:true
@@ -251,18 +269,18 @@ Item {
             width:parent.width
             wrapMode:Text.WordWrap
             text: page.selected() ? "Color format: " + page.selected().format + " · " + (page.selected().vrr ? "Adaptive sync on" : "Adaptive sync off") + ". Existing color and HDR settings are preserved." : ""
-            color:Theme.panelMuted; font.pixelSize:Theme.fontSizeSmall
+            color:Theme.settingsMuted; font.pixelSize:Theme.settingsFontSizeSmall
         }
         Text {
             width:parent.width; wrapMode:Text.WordWrap
             visible:text !== ""
             text:DisplayService.error || page.enableError || Displays.warnings(page.staged).join(" ") || DisplayService.message
-            color:Theme.panelText; font.pixelSize:Theme.fontSizeSmall
+            color:Theme.settingsText; font.pixelSize:Theme.settingsFontSizeSmall
         }
         Column {
             width:parent.width; spacing:8
             visible:DisplayService.pending
-            Text { text:"Keep these display settings? " + DisplayService.remaining + " seconds"; color:Theme.panelText; font.pixelSize:Theme.fontSize }
+            Text { text:"Keep these display settings? " + DisplayService.remaining + " seconds"; color:Theme.settingsText; font.pixelSize:Theme.settingsFontSize }
             Row {
                 spacing:8
                 FlatButton { label:"Keep"; emphasized:true; enabled:!DisplayService.busy && DisplayService.state === "pending"; onActivated:DisplayService.keep() }
@@ -279,7 +297,7 @@ Item {
         Text {
             width:parent.width; wrapMode:Text.WordWrap
             text:"Your original display configuration stays intact. Reloading it restores its layout; Restore saved layout brings back your last kept choice."
-            color:Theme.panelMuted; font.pixelSize:Theme.fontSizeSmall
+            color:Theme.settingsMuted; font.pixelSize:Theme.settingsFontSizeSmall
         }
     }
 }

@@ -51,6 +51,17 @@ Singleton {
     }
     readonly property var motion: ThemeLogic.motionDurations(SettingsStore.reducedMotion, SettingsStore.motionScale)
 
+    readonly property string settingsFontFamily: "Noto Sans"
+    readonly property int settingsFontSize: SettingsStore.fontSize
+    readonly property int settingsFontSizeSmall: Math.max(11, settingsFontSize - 1)
+    readonly property color settingsText: SettingsStore.manualText !== "" ? SettingsStore.manualText : Qt.rgba(palette.text.r/255,palette.text.g/255,palette.text.b/255,1)
+    readonly property color settingsMuted: SettingsStore.manualMuted !== "" ? SettingsStore.manualMuted : Qt.rgba(palette.muted.r/255,palette.muted.g/255,palette.muted.b/255,1)
+    readonly property color settingsHover: SettingsStore.appearanceMode === "light" ? Qt.rgba(0,0,0,.05) : Qt.rgba(1,1,1,.07)
+    readonly property color settingsSelected: SettingsStore.appearanceMode === "light" ? Qt.rgba(0,0,0,.09) : Qt.rgba(1,1,1,.11)
+    readonly property int settingsSpacing: Math.max(6, Math.round(SettingsStore.panelSpacing * .75))
+    readonly property color settingsSurface: Qt.rgba(surface.panel.r/255,surface.panel.g/255,surface.panel.b/255,
+        WindowService.blurAvailable && SettingsStore.textContrast !== "high" ? SettingsStore.panelOpacity * .8 : .98)
+
     readonly property int fontSize: SettingsStore.fontSize
     readonly property int fontSizeSmall: Math.max(11, fontSize - 1)
     readonly property int fontWeight: SettingsStore.fontWeight === "medium" ? Font.Medium : Font.Normal
@@ -71,7 +82,7 @@ Singleton {
     readonly property color gradientTop: Qt.rgba(gradientUnits.r, gradientUnits.g, gradientUnits.b, gradientUnits.a)
 
     readonly property real panelOpacity: SettingsStore.panelOpacity
-    // Stored only. Quickshell 0.2 has no BackgroundEffect, so this does not blur the panel.
+    // Settings uses native backdrop blur through WindowService; other surfaces retain their existing treatment.
     readonly property real panelBlur: SettingsStore.panelBlur
     readonly property int radius: SettingsStore.radius
     readonly property real shadowOpacity: SettingsStore.shadowOpacity

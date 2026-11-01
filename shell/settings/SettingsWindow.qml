@@ -9,11 +9,17 @@ import "../themes"
 
 FloatingWindow {
     id: window
-
     title: "SwiftShell Settings"
     visible: SettingsModel.open
-    minimumSize: Qt.size(640, 440)
-
+    color: "transparent"
+    minimumSize: Qt.size(640,440)
+    implicitWidth: WindowService.geometry.width || 1000
+    implicitHeight: WindowService.geometry.height || 700
+    property bool closing: false
+    property int mapAttempts: 0
+    property int resizeRequests: 0
+    property bool lastResizeAccepted: false
+    readonly property int shadowInset: WindowService.maximized ? 0 : 32
     property var history: Settings.initialHistory(window.currentAppearance())
     readonly property bool canUndo: history && history.past && history.past.length > 0
 
@@ -65,458 +71,271 @@ FloatingWindow {
         window.applyHistory(Settings.reduceAppearanceHistory(history, { type: "reset" }))
     }
 
-    function activePage() {
-        if (SettingsStore.settingsWindowCategory === "workspaces") return workspacesPage
-        if (SettingsStore.settingsWindowCategory === "bar")
-            return barPage
-        if (SettingsStore.settingsWindowCategory === "wallpaper")
-            return wallpaperPage
-        if (SettingsStore.settingsWindowCategory === "displays")
-            return displaysPage
-        if (SettingsStore.settingsWindowCategory === "shortcuts")
-            return shortcutsPage
-        if (SettingsStore.settingsWindowCategory === "audio")
-            return audioPage
-        if (SettingsStore.settingsWindowCategory === "network")
-            return networkPage
-        if (SettingsStore.settingsWindowCategory === "bluetooth")
-            return bluetoothPage
-        if (SettingsStore.settingsWindowCategory === "power")
-            return powerPage
-        if (SettingsStore.settingsWindowCategory === "notifications")
-            return notificationsPage
-        return page
-    }
-
-    Component.onCompleted: {
-        history = Settings.initialHistory(window.currentAppearance())
-        window.width = SettingsStore.settingsWindowWidth
-        window.height = SettingsStore.settingsWindowHeight
-        search.forceActiveFocus()
-    }
-
+    readonly property bool searchHasFocus: search.activeFocus
+    readonly property int pageStatus: pageLoader.status
+    function activePage() { return pageLoader.item }
     function rememberSize() {
-        SettingsStore.setSettingsWindowSize(Math.round(window.width), Math.round(window.height))
+        if (!WindowService.maximized) SettingsStore.setSettingsWindowSize(Math.round(width),Math.round(height))
     }
-
-    function raiseWindow() {
-        try {
-            if (typeof window.requestActivate === "function")
-                window.requestActivate()
-        } catch (error) {
-            // Quickshell 0.2 does not document a raise method. The compositor still owns stacking.
+    function requestClose() {
+        rememberSize()
+        closing=true
+        WindowService.request("remember")
+    }
+    function beginResize(edges) {
+        resizeRequests++
+        // Hyprland forces the Qt maximized flag even for normal floating windows.
+        // Clear only the client hint before requesting the native Wayland gesture.
+        if (window.maximized) window.maximized=false
+        lastResizeAccepted=window.startSystemResize(edges)
+    }
+    function performAction(action) {
+        if (action === "clear-search") search.text=""
+        else if (action === "close") requestClose()
+        else if (action === "minimize") WindowService.request("minimize")
+        else if (action === "maximize") {
+            rememberSize()
+            WindowService.request("maximize")
+        } else if (action === "restore") WindowService.request("activate")
+    }
+    function componentForCategory() {
+        const pages={appearance:appearanceComponent,bar:barComponent,wallpaper:wallpaperComponent,
+            displays:displaysComponent,workspaces:workspacesComponent,shortcuts:shortcutsComponent,
+            audio:audioComponent,network:networkComponent,bluetooth:bluetoothComponent,
+            power:powerComponent,notifications:notificationsComponent}
+        return pages[SettingsStore.settingsWindowCategory] || appearanceComponent
+    }
+    function iconFor(id) {
+        return ({appearance:"◐",bar:"≡",wallpaper:"▧",displays:"▣",workspaces:"▦",shortcuts:"⌘",
+            audio:"♫",network:"⌁",bluetooth:"ᛒ",power:"⏻",notifications:"□"})[id] || "·"
+    }
+    Component.onCompleted: {
+        WindowService.active=visible
+        SettingsModel.nativeWindow=window
+        history=Settings.initialHistory(window.currentAppearance())
+        if (visible) { search.forceActiveFocus();mapTimer.start() }
+    }
+    onClosed: requestClose()
+    onWidthChanged: sizeTimer.restart()
+    onHeightChanged: sizeTimer.restart()
+    Component.onDestruction: { WindowService.active=false;SettingsModel.nativeWindow=null;WindowService.request("cleanup") }
+    Timer { id:mapTimer; interval:150; repeat:false; onTriggered:{ window.mapAttempts++;WindowService.request("mapped") } }
+    Timer { id:sizeTimer; interval:350; repeat:false; onTriggered:if(window.visible && !WindowService.maximized) { window.rememberSize();WindowService.request("remember") } }
+    Connections {
+        target: WindowService
+        function onCompleted(action,success) {
+            if (action === "remember" && window.closing) SettingsModel.hide()
+            if (action === "mapped" && success) search.forceActiveFocus()
+            if (action === "mapped" && !success && window.mapAttempts < 4) mapTimer.restart()
         }
     }
-
-    onClosed: {
-        window.rememberSize()
-        SettingsModel.hide()
-    }
-
     Connections {
         target: SettingsModel
-        function onFocusTicketChanged() {
-            if (!SettingsModel.open)
-                return
-            window.raiseWindow()
-            search.forceActiveFocus()
+        function onAppearanceEditRequested(key,value) { const patch={};patch[key]=value;window.commit(patch) }
+        function onWindowActionRequested(action) { window.performAction(action) }
+        function onFocusTicketChanged() { WindowService.request("activate");search.forceActiveFocus() }
+    }
+    Loader {
+        anchors.fill: content
+        source: "SettingsShadow.qml"
+        active: !WindowService.maximized
+        visible: Theme.shadowOpacity > 0
+        onStatusChanged: {
+            if(status === Loader.Ready) SettingsModel.shadowAvailable=true
+            else if(status === Loader.Error) SettingsModel.shadowAvailable=false
         }
     }
-
+    Loader {
+        active: WindowService.blurAvailable && SettingsStore.panelBlur > 0
+        sourceComponent: Component { BlurAdapter { targetWindow:window;surface:content } }
+    }
     Rectangle {
         id: content
         anchors.fill: parent
-        color: Theme.panelColor
+        anchors.margins: window.shadowInset
+        radius: WindowService.maximized ? 0 : Theme.radius
+        color: Theme.settingsSurface
         focus: true
-
-        Keys.onEscapePressed: function (event) {
-            window.rememberSize()
-            SettingsModel.hide()
-            event.accepted = true
+        Keys.onEscapePressed: function(event) {
+            if (search.text !== "") search.text=""
+            else window.requestClose()
+            event.accepted=true
         }
-
-        Keys.onPressed: function (event) {
-            var alt = (event.modifiers & Qt.AltModifier) !== 0
-            if (!alt)
-                return
-            if (event.key === Qt.Key_U)
-                window.undo()
-            else if (event.key === Qt.Key_R)
-                window.resetAppearance()
-            else
-                return
-            event.accepted = true
+        Keys.onPressed: function(event) {
+            if (!(event.modifiers & Qt.AltModifier)) return
+            if (event.key === Qt.Key_U) window.undo()
+            else if (event.key === Qt.Key_R) window.resetAppearance()
+            else return
+            event.accepted=true
         }
-
         Item {
-            id: frame
-            anchors.fill: parent
-            anchors.margins: Theme.panelPadding
-            readonly property bool stacked: Nav.navigationLayout(width) === "stacked"
-
+            id: titlebar
+            anchors.top:parent.top
+            width:parent.width
+            height:52
+            MouseArea {
+                anchors.left:parent.left;anchors.right:windowControls.left
+                height:parent.height
+                onPressed:window.startSystemMove()
+                onDoubleClicked:window.performAction("maximize")
+            }
             Text {
-                anchors.left: search.left
-                anchors.right: search.right
-                anchors.verticalCenter: search.verticalCenter
-                visible: search.text === ""
-                text: "Search settings"
-                color: Theme.panelMuted
-                font.family: Theme.fontFamily
-                font.pixelSize: Theme.fontSize
-                elide: Text.ElideRight
+                anchors.left:parent.left;anchors.leftMargin:22
+                anchors.verticalCenter:parent.verticalCenter
+                text:"Settings";color:Theme.settingsText
+                font.family:Theme.settingsFontFamily;font.pixelSize:14;font.weight:Font.DemiBold
             }
-
-            TextInput {
-                id: search
-                width: parent.width
-                height: Theme.controlHeight
-                color: Theme.panelText
-                font.family: Theme.fontFamily
-                font.pixelSize: Theme.fontSize
-                selectByMouse: true
-                activeFocusOnTab: true
-                clip: true
-                Accessible.name: "Search settings"
-                onTextChanged: {
-                    if (text.trim() === "")
-                        return
-                    var category = Nav.categoryFor(Nav.firstControlId(text))
-                    if (category !== "" && category !== SettingsStore.settingsWindowCategory)
-                        SettingsStore.setSettingsCategory(category)
-                }
-
-                Keys.onEscapePressed: function (event) {
-                    if (text !== "") {
-                        text = ""
-                        event.accepted = true
-                        return
-                    }
-                    window.rememberSize()
-                    SettingsModel.hide()
-                    event.accepted = true
-                }
-
-                Keys.onPressed: function (event) {
-                    var alt = (event.modifiers & Qt.AltModifier) !== 0
-                    if (alt && event.key === Qt.Key_J) {
-                        window.activePage().moveHighlight(1)
-                        event.accepted = true
-                        return
-                    }
-                    if (alt && event.key === Qt.Key_K) {
-                        window.activePage().moveHighlight(-1)
-                        event.accepted = true
-                        return
-                    }
-                    if (alt && event.key === Qt.Key_U) {
-                        window.undo()
-                        event.accepted = true
-                        return
-                    }
-                    if (alt && event.key === Qt.Key_R) {
-                        window.resetAppearance()
-                        event.accepted = true
-                        return
-                    }
-                    if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                        window.activePage().focusHighlight()
-                        event.accepted = true
-                    }
-                }
+            Row {
+                id:windowControls
+                anchors.right:parent.right;anchors.rightMargin:12;anchors.verticalCenter:parent.verticalCenter
+                spacing:4
+                FlatButton { width:32;label:"−";objectName:"minimizeButton";enabled:WindowService.available;Accessible.name:"Minimize Settings";onActivated:window.performAction("minimize") }
+                FlatButton { width:32;label:WindowService.maximized ? "❐" : "□";objectName:"maximizeButton";enabled:WindowService.available;Accessible.name:WindowService.maximized ? "Restore Settings" : "Maximize Settings";onActivated:window.performAction("maximize") }
+                FlatButton { width:32;label:"×";objectName:"closeButton";Accessible.name:"Close Settings";onActivated:window.performAction("close") }
             }
-
+        }
+        Item {
+            id:side
+            anchors.top:titlebar.bottom;anchors.left:parent.left;anchors.bottom:parent.bottom
+            width:content.width<770 ? 64 : 184
             Rectangle {
-                id: searchLine
-                anchors.top: search.bottom
-                width: parent.width
-                height: 1
-                color: Theme.panelMuted
+                anchors.fill:parent;anchors.margins:10
+                radius:Math.min(Theme.radius,10)
+                color:Qt.rgba(.5,.5,.5,.035)
             }
-
-            Item {
-                id: side
-                anchors.top: searchLine.bottom
-                anchors.left: parent.left
-                anchors.topMargin: Theme.panelSpacing
-                width: frame.stacked ? parent.width : 148
-                height: frame.stacked ? sideColumn.implicitHeight : parent.height - searchLine.y - searchLine.height - Theme.panelSpacing
-
-                Column {
-                    id: sideColumn
-                    width: parent.width
-                    spacing: Theme.panelSpacing
-
-                    Text {
-                        visible: SettingsStore.persistenceState === "error" || SettingsStore.persistenceState === "protected"
-                        width: parent.width
-                        wrapMode: Text.WordWrap
-                        text: SettingsStore.persistenceMessage
-                        color: Theme.panelText
-                        font.family: Theme.fontFamily
-                        font.pixelSize: Theme.fontSizeSmall
-                    }
-
-                    FlatButton {
-                        width: parent.width
-                        label: "Undo"
-                        enabled: window.canUndo
-                        onActivated: window.undo()
-                    }
-
-                    FlatButton {
-                        width: parent.width
-                        label: "Reset"
-                        onActivated: window.resetAppearance()
-                    }
-
-                    FlatButton {
-                        width: parent.width
-                        label: "Appearance"
-                        emphasized: SettingsStore.settingsWindowCategory === "appearance"
-                        onActivated: {
-                            SettingsStore.setSettingsCategory("appearance")
-                            search.text = ""
-                        }
-                    }
-
-                    FlatButton {
-                        width: parent.width
-                        label: "Top bar"
-                        emphasized: SettingsStore.settingsWindowCategory === "bar"
-                        onActivated: {
-                            SettingsStore.setSettingsCategory("bar")
-                            search.text = ""
-                        }
-                    }
-
-                    FlatButton {
-                        width: parent.width
-                        label: "Wallpaper"
-                        emphasized: SettingsStore.settingsWindowCategory === "wallpaper"
-                        onActivated: {
-                            SettingsStore.setSettingsCategory("wallpaper")
-                            search.text = ""
-                        }
-                    }
-
-                    FlatButton {
-                        width: parent.width
-                        label: "Displays"
-                        emphasized: SettingsStore.settingsWindowCategory === "displays"
-                        onActivated: {
-                            SettingsStore.setSettingsCategory("displays")
-                            search.text = ""
-                        }
-                    }
-
-                    FlatButton {
-                        objectName: "workspacesNavigation"
-                        width: parent.width
-                        label: "Workspaces"
-                        emphasized: SettingsStore.settingsWindowCategory === "workspaces"
-                        onActivated: {
-                            SettingsStore.setSettingsCategory("workspaces")
-                            search.text = ""
-                        }
-                    }
-
-                    FlatButton {
-                        width: parent.width
-                        label: "Shortcuts"
-                        emphasized: SettingsStore.settingsWindowCategory === "shortcuts"
-                        onActivated: {
-                            SettingsStore.setSettingsCategory("shortcuts")
-                            search.text = ""
-                        }
-                    }
-
-                    FlatButton {
-                        width: parent.width
-                        label: "Audio"
-                        emphasized: SettingsStore.settingsWindowCategory === "audio"
-                        onActivated: {
-                            SettingsStore.setSettingsCategory("audio")
-                            search.text = ""
-                        }
-                    }
-
-                    FlatButton {
-                        width: parent.width
-                        label: "Network"
-                        emphasized: SettingsStore.settingsWindowCategory === "network"
-                        onActivated: {
-                            SettingsStore.setSettingsCategory("network")
-                            search.text = ""
-                        }
-                    }
-
-                    FlatButton {
-                        width: parent.width
-                        label: "Bluetooth"
-                        emphasized: SettingsStore.settingsWindowCategory === "bluetooth"
-                        onActivated: {
-                            SettingsStore.setSettingsCategory("bluetooth")
-                            search.text = ""
-                        }
-                    }
-
-                    FlatButton {
-                        width: parent.width
-                        label: "Power"
-                        emphasized: SettingsStore.settingsWindowCategory === "power"
-                        onActivated: {
-                            SettingsStore.setSettingsCategory("power")
-                            search.text = ""
-                        }
-                    }
-
-                    FlatButton {
-                        width: parent.width
-                        label: "Notifications"
-                        emphasized: SettingsStore.settingsWindowCategory === "notifications"
-                        onActivated: {
-                            SettingsStore.setSettingsCategory("notifications")
-                            search.text = ""
-                        }
-                    }
-                }
-            }
-
             Flickable {
-                id: scroller
-                clip: true
-                boundsBehavior: Flickable.StopAtBounds
-                anchors.left: frame.stacked ? parent.left : side.right
-                anchors.leftMargin: frame.stacked ? 0 : Theme.panelSpacing
-                anchors.right: parent.right
-                anchors.top: frame.stacked ? side.bottom : searchLine.bottom
-                anchors.topMargin: Theme.panelSpacing
-                anchors.bottom: parent.bottom
-                contentWidth: width
-                contentHeight: window.activePage().implicitHeight
-
-                AppearancePage {
-                    id: page
-                    y: 0
-                    width: scroller.width
-                    visible: SettingsStore.settingsWindowCategory === "appearance"
-                    height: visible ? implicitHeight : 0
-                    query: search.text
-                    onEdited: function (patch) { window.commit(patch) }
-                    onRevealRequested: function (y, itemHeight) {
-                        scroller.contentY = Nav.scrollTarget(scroller.contentY, scroller.height, y, itemHeight)
+                anchors.fill:parent;anchors.margins:14
+                contentHeight:navigationColumn.implicitHeight
+                clip:true;boundsBehavior:Flickable.StopAtBounds
+                Column {
+                    id:navigationColumn
+                    width:parent.width
+                    spacing:4
+                    Repeater {
+                        model:Nav.categories()
+                        delegate:FlatButton {
+                            required property var modelData
+                            objectName:modelData.id+"Navigation"
+                            navigation:true
+                            width:navigationColumn.width;height:38
+                            label:side.width<100 ? window.iconFor(modelData.id) : window.iconFor(modelData.id)+"   "+modelData.label
+                            Accessible.name:modelData.label
+                            emphasized:SettingsStore.settingsWindowCategory===modelData.id
+                            onActivated:{search.text="";SettingsStore.setSettingsCategory(modelData.id);scroller.contentY=0}
+                        }
                     }
                 }
-
-                BarPage {
-                    id: barPage
-                    y: 0
-                    width: scroller.width
-                    visible: SettingsStore.settingsWindowCategory === "bar"
-                    height: visible ? implicitHeight : 0
-                    query: search.text
-                    onRevealRequested: function (y, itemHeight) {
-                        scroller.contentY = Nav.scrollTarget(scroller.contentY, scroller.height, y, itemHeight)
+            }
+        }
+        Item {
+            id:body
+            anchors.left:side.right;anchors.right:parent.right
+            anchors.top:titlebar.bottom;anchors.bottom:parent.bottom
+            anchors.rightMargin:14
+            Rectangle {
+                id:searchFrame
+                x:20;y:4;width:Math.min(parent.width-40,440);height:34
+                radius:6;color:Theme.settingsHover
+                Text {
+                    anchors.left:parent.left;anchors.leftMargin:12;anchors.verticalCenter:parent.verticalCenter
+                    visible:search.text==="";text:"Search settings";color:Theme.settingsMuted
+                    font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSize
+                }
+                TextInput {
+                    id:search
+                    objectName:"settingsSearch"
+                    anchors.fill:parent;anchors.leftMargin:12;anchors.rightMargin:12
+                    verticalAlignment:TextInput.AlignVCenter
+                    color:Theme.settingsText;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSize
+                    selectByMouse:true;activeFocusOnTab:true;clip:true
+                    Accessible.name:"Search settings"
+                    onTextChanged: {
+                        const category=Nav.categoryFor(Nav.firstControlId(text))
+                        if (text.trim()!=="" && category!=="") SettingsStore.setSettingsCategory(category)
+                        scroller.contentY=0
+                    }
+                    Keys.onPressed:function(event) {
+                        if (!window.activePage()) return
+                        const alt=(event.modifiers & Qt.AltModifier)!==0
+                        if (alt && (event.key===Qt.Key_J || event.key===Qt.Key_K)) {window.activePage().moveHighlight(event.key===Qt.Key_J ? 1 : -1);event.accepted=true}
+                        if (event.key===Qt.Key_Return || event.key===Qt.Key_Enter) {window.activePage().focusHighlight();event.accepted=true}
                     }
                 }
-
-                WorkspacesPage {
-                    id: workspacesPage
-                    objectName: "workspacesPage"
-                    width: scroller.width
-                    visible: SettingsStore.settingsWindowCategory === "workspaces"
-                    height: visible ? implicitHeight : 0
-                    query: search.text
-                    onRevealRequested: function (y, itemHeight) {
-                        scroller.contentY = Nav.scrollTarget(scroller.contentY, scroller.height, y, itemHeight)
-                    }
+            }
+            Row {
+                anchors.right:parent.right;anchors.top:parent.top
+                visible:SettingsStore.settingsWindowCategory==="appearance" && body.width>600
+                spacing:4
+                FlatButton { label:"Undo";enabled:window.canUndo;onActivated:window.undo() }
+                FlatButton { label:"Reset";onActivated:window.resetAppearance() }
+            }
+            Flickable {
+                id:scroller
+                anchors.left:parent.left;anchors.right:parent.right;anchors.top:searchFrame.bottom;anchors.topMargin:22
+                anchors.bottom:transaction.visible ? transaction.top : (windowNotice.visible ? windowNotice.top : parent.bottom);anchors.bottomMargin:16
+                clip:true;boundsBehavior:Flickable.StopAtBounds
+                contentWidth:width
+                contentHeight:pageLoader.height+16
+                Loader {
+                    id:pageLoader
+                    x:20
+                    width:Math.min(760,scroller.width-40)
+                    height:item ? item.implicitHeight : 0
+                    sourceComponent:window.componentForCategory()
                 }
-
-                WallpaperPage {
-                    id: wallpaperPage
-                    y: 0
-                    width: scroller.width
-                    visible: SettingsStore.settingsWindowCategory === "wallpaper"
-                    height: visible ? implicitHeight : 0
-                    query: search.text
-                    onRevealRequested: function (y, itemHeight) {
-                        scroller.contentY = Nav.scrollTarget(scroller.contentY, scroller.height, y, itemHeight)
-                    }
-                    onEdited: function (patch) { window.commit(patch) }
-                }
-
-                DisplaysPage {
-                    id: displaysPage
-                    y: 0
-                    width: scroller.width
-                    visible: SettingsStore.settingsWindowCategory === "displays"
-                    height: visible ? implicitHeight : 0
-                    query: search.text
-                    onRevealRequested: function (y, itemHeight) {
-                        scroller.contentY = Nav.scrollTarget(scroller.contentY, scroller.height, y, itemHeight)
-                    }
-                }
-
-                ShortcutsPage {
-                    id: shortcutsPage
-                    y: 0
-                    width: scroller.width
-                    visible: SettingsStore.settingsWindowCategory === "shortcuts"
-                    height: visible ? implicitHeight : 0
-                    query: search.text
-                    onRevealRequested: function (y, itemHeight) {
-                        scroller.contentY = Nav.scrollTarget(scroller.contentY, scroller.height, y, itemHeight)
-                    }
-                }
-
-                AudioPage {
-                    id: audioPage
-                    y: 0
-                    width: scroller.width
-                    visible: SettingsStore.settingsWindowCategory === "audio"
-                    height: visible ? implicitHeight : 0
-                    query: search.text
-                    onRevealRequested: function (y, itemHeight) {
-                        scroller.contentY = Nav.scrollTarget(scroller.contentY, scroller.height, y, itemHeight)
-                    }
-                }
-
-                NetworkPage {
-                    id: networkPage
-                    y: 0
-                    width: scroller.width
-                    visible: SettingsStore.settingsWindowCategory === "network"
-                    height: visible ? implicitHeight : 0
-                    query: search.text
-                }
-
-                BluetoothPage {
-                    id: bluetoothPage
-                    y: 0
-                    width: scroller.width
-                    visible: SettingsStore.settingsWindowCategory === "bluetooth"
-                    height: visible ? implicitHeight : 0
-                    query: search.text
-                }
-
-                PowerPage {
-                    id: powerPage
-                    y: 0
-                    width: scroller.width
-                    visible: SettingsStore.settingsWindowCategory === "power"
-                    height: visible ? implicitHeight : 0
-                    query: search.text
-                }
-
-                NotificationsPage {
-                    id: notificationsPage
-                    y: 0
-                    width: scroller.width
-                    visible: SettingsStore.settingsWindowCategory === "notifications"
-                    height: visible ? implicitHeight : 0
-                    query: search.text
+            }
+            Connections {
+                target:pageLoader.item
+                ignoreUnknownSignals:true
+                function onRevealRequested(y,itemHeight) {scroller.contentY=Nav.scrollTarget(scroller.contentY,scroller.height,y,itemHeight)}
+            }
+            Text {
+                id:windowNotice
+                anchors.left:parent.left;anchors.right:parent.right;anchors.bottom:parent.bottom
+                anchors.margins:12
+                text:WindowService.error || WindowService.reasonUnavailable
+                visible:text !== ""
+                color:Theme.settingsMuted;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall
+                wrapMode:Text.WordWrap
+            }
+            Rectangle {
+                id:transaction
+                anchors.left:parent.left;anchors.right:parent.right;anchors.bottom:parent.bottom
+                height:86;radius:8;color:Theme.settingsSelected
+                visible:DisplayService.pending
+                Text { x:14;y:10;text:"Keep display changes? " + DisplayService.remaining + " seconds";color:Theme.settingsText;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSize }
+                Row {
+                    x:12;y:42;spacing:8
+                    FlatButton {label:"Keep";emphasized:true;enabled:!DisplayService.busy;onActivated:DisplayService.keep()}
+                    FlatButton {label:"Revert";enabled:!DisplayService.busy;onActivated:DisplayService.revert()}
                 }
             }
         }
     }
+    // Native Wayland resize gestures, including all four corners.
+    Repeater {
+        model:[Qt.LeftEdge,Qt.RightEdge,Qt.TopEdge,Qt.BottomEdge,Qt.LeftEdge|Qt.TopEdge,Qt.RightEdge|Qt.TopEdge,Qt.LeftEdge|Qt.BottomEdge,Qt.RightEdge|Qt.BottomEdge]
+        delegate:MouseArea {
+            required property int modelData
+            readonly property bool corner:(modelData&(Qt.LeftEdge|Qt.RightEdge)) && (modelData&(Qt.TopEdge|Qt.BottomEdge))
+            width:corner ? 18 : ((modelData&(Qt.LeftEdge|Qt.RightEdge)) ? 8 : window.width-36)
+            height:corner ? 18 : ((modelData&(Qt.TopEdge|Qt.BottomEdge)) ? 8 : window.height-36)
+            x:(modelData&Qt.RightEdge) ? window.width-width : ((modelData&Qt.LeftEdge) ? 0 : 18)
+            y:(modelData&Qt.BottomEdge) ? window.height-height : ((modelData&Qt.TopEdge) ? 0 : 18)
+            enabled:!WindowService.maximized
+            cursorShape:corner ? (((modelData&Qt.LeftEdge)&&(modelData&Qt.TopEdge)) || ((modelData&Qt.RightEdge)&&(modelData&Qt.BottomEdge)) ? Qt.SizeFDiagCursor : Qt.SizeBDiagCursor) : ((modelData&(Qt.LeftEdge|Qt.RightEdge)) ? Qt.SizeHorCursor : Qt.SizeVerCursor)
+            onPressed:window.beginResize(modelData)
+        }
+    }
+    Component { id:appearanceComponent;AppearancePage {query:search.text;onEdited:function(patch){window.commit(patch)}} }
+    Component { id:barComponent;BarPage {query:search.text} }
+    Component { id:wallpaperComponent;WallpaperPage {query:search.text;onEdited:function(patch){window.commit(patch)}} }
+    Component { id:displaysComponent;DisplaysPage {query:search.text} }
+    Component { id:workspacesComponent;WorkspacesPage {objectName:"workspacesPage";query:search.text} }
+    Component { id:shortcutsComponent;ShortcutsPage {query:search.text} }
+    Component { id:audioComponent;AudioPage {query:search.text} }
+    Component { id:networkComponent;NetworkPage {query:search.text} }
+    Component { id:bluetoothComponent;BluetoothPage {query:search.text} }
+    Component { id:powerComponent;PowerPage {query:search.text} }
+    Component { id:notificationsComponent;NotificationsPage {query:search.text} }
 }

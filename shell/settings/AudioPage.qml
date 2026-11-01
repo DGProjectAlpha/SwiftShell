@@ -29,25 +29,25 @@ Item {
     Column {
         id: column
         width: page.width
-        spacing: Theme.panelSpacing
+        spacing: Theme.settingsSpacing
         activeFocusOnTab: true
 
         Text {
             width: parent.width
             text: "Audio"
-            color: Theme.panelText
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.fontSize + 4
+            color: Theme.settingsText
+            font.family: Theme.settingsFontFamily
+            font.pixelSize: Theme.settingsFontSize + 4
             font.weight: Font.Medium
         }
 
         Text {
             width: parent.width
             wrapMode: Text.WordWrap
-            text: "Output, input, and application streams follow PipeWire. Playback follows a connected player. Tray icons use the status notifier items this session already exposes. A missing module stays unavailable."
-            color: Theme.panelMuted
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.fontSizeSmall
+            text: "Adjust speakers, microphone and application volume. Control playback from connected players."
+            color: Theme.settingsMuted
+            font.family: Theme.settingsFontFamily
+            font.pixelSize: Theme.settingsFontSizeSmall
         }
 
         Loader {
