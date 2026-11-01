@@ -59,6 +59,8 @@ export QML_IMPORT_PATH="$IMPORTS"
 QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_implicit_size.qml" -platform offscreen
 QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_shell_load.qml" -platform offscreen
 QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_displays.qml" -platform offscreen
+QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_keyed_models.qml" -platform offscreen
+QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_color_picker.qml" -platform offscreen
 
 DIALOGS_AVAILABLE=0
 FOLDER_MODEL_AVAILABLE=0

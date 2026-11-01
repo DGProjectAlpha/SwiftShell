@@ -84,3 +84,10 @@ Apply to All screens changes the shared background. To customize one output,
 choose its monitor name and turn off Use all-screen background. Turn that switch
 back on to inherit again. Reset background restores the shared transparent style;
 individual overrides remain until you return those monitors to inheritance.
+
+## Choosing colors
+
+Color selection stays inside Settings and follows its theme. Drag the color
+square and hue strip, select a neutral swatch, or enter a six-digit hex color.
+Use color applies your choice; Cancel, Escape or clicking outside discards it.
+Draft changes do not affect your bar or wallpaper. Opacity is controlled separately.

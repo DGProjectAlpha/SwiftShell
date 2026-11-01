@@ -121,11 +121,14 @@ PanelWindow {
         anchors.rightMargin: Theme.marginH
         spacing: Theme.moduleSpacing
 
+        KeyedModel { id: stableItems; entries: SettingsStore.visibleModules }
+
         Repeater {
-            model: SettingsStore.visibleModules
+            model: stableItems
 
             delegate: Loader {
-                required property var modelData
+                required property var entry
+                readonly property var modelData: entry
                 Layout.alignment: Qt.AlignVCenter
                 Layout.fillWidth: modelData === "title"
                 Layout.fillHeight: modelData === "title"

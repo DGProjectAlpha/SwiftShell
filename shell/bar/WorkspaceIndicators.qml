@@ -13,13 +13,17 @@ Row {
     property color textHover: Theme.textHover
     spacing: Theme.workspaceGap
 
+    KeyedModel { id: stableItems; entries: root.workspaces }
+
     Repeater {
-        model: root.workspaces
+        objectName: "workspaceRepeater"
+        model: stableItems
 
         delegate: MouseArea {
             id: button
 
-            required property var modelData
+            required property var entry
+            readonly property var modelData: entry
             width: Math.min(160, Math.max(label.implicitWidth + 8, Theme.barHeight))
             height: Theme.barHeight
             hoverEnabled: true

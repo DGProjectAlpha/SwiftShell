@@ -8,6 +8,15 @@ import "../themes"
 Item {
     id: page
 
+    readonly property bool colorPickerOpen: colorPicker.item ? colorPicker.item.opened : false
+    function colorPickerGeometry() { return colorPickerOpen ? colorPicker.item.geometry() : null }
+    property string pickingOutput: ""
+    function openSurfaceColorPicker() {
+        if(colorPicker.status !== Loader.Ready) return
+        pickingOutput=surfaceOutput
+        colorPicker.item.selectedColor=selectedSurface.color
+        colorPicker.item.open()
+    }
     property string surfaceOutput: ""
     readonly property var surfaceOverrides: JSON.parse(SettingsStore.barSurfaceOutputsJson)
     readonly property bool hasSurfaceOverride: Object.prototype.hasOwnProperty.call(surfaceOverrides,surfaceOutput)
@@ -90,7 +99,10 @@ Item {
         source: "ColorPicker.qml"
         Connections {
             target: colorPicker.item
-            function onColorChosen(field,value) { page.editSurface(page.selectedSurface.mode,value,page.selectedSurface.opacity) }
+            function onColorChosen(field,value) {
+                const selected=page.pickingOutput && page.surfaceOverrides[page.pickingOutput] ? page.surfaceOverrides[page.pickingOutput] : ({mode:SettingsStore.barSurfaceMode,opacity:SettingsStore.barSurfaceOpacity})
+                SettingsStore.setBarSurface(page.pickingOutput,selected.mode,value,selected.opacity)
+            }
         }
     }
     Column {
@@ -168,7 +180,7 @@ Item {
                     FlatButton {
                         enabled:(page.surfaceOutput === "" || page.hasSurfaceOverride) && page.selectedSurface.mode !== "transparent" && colorPicker.status === Loader.Ready
                         label:"Choose color…"
-                        onActivated:{colorPicker.item.selectedColor=page.selectedSurface.color;colorPicker.item.open()}
+                        onActivated:page.openSurfaceColorPicker()
                     }
                 }
             }

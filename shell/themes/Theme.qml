@@ -24,7 +24,7 @@ Singleton {
     readonly property int weekNumberWidth: 22
     readonly property int controlWidth: 248
 
-    readonly property var palette: Palette.resolvePalette(SettingsStore.appearanceMode, SettingsStore.appearanceTint, SettingsStore.textContrast)
+    readonly property var themePalette: Palette.resolvePalette(SettingsStore.appearanceMode, SettingsStore.appearanceTint, SettingsStore.textContrast)
     readonly property var surface: Contrast.surfaceColors({
         mode: SettingsStore.appearanceMode,
         contrast: SettingsStore.textContrast,
@@ -54,8 +54,9 @@ Singleton {
     readonly property string settingsFontFamily: "Noto Sans"
     readonly property int settingsFontSize: SettingsStore.fontSize
     readonly property int settingsFontSizeSmall: Math.max(11, settingsFontSize - 1)
-    readonly property color settingsText: SettingsStore.manualText !== "" ? SettingsStore.manualText : Qt.rgba(palette.text.r/255,palette.text.g/255,palette.text.b/255,1)
-    readonly property color settingsMuted: SettingsStore.manualMuted !== "" ? SettingsStore.manualMuted : Qt.rgba(palette.muted.r/255,palette.muted.g/255,palette.muted.b/255,1)
+    readonly property color settingsText: SettingsStore.manualText !== "" ? SettingsStore.manualText : Qt.rgba(themePalette.text.r/255,themePalette.text.g/255,themePalette.text.b/255,1)
+    readonly property color settingsMuted: SettingsStore.manualMuted !== "" ? SettingsStore.manualMuted : Qt.rgba(themePalette.muted.r/255,themePalette.muted.g/255,themePalette.muted.b/255,1)
+    readonly property color settingsPopupSurface: Qt.rgba(surface.panel.r/255,surface.panel.g/255,surface.panel.b/255,.98)
     readonly property color settingsHover: SettingsStore.appearanceMode === "light" ? Qt.rgba(0,0,0,.05) : Qt.rgba(1,1,1,.07)
     readonly property color settingsSelected: SettingsStore.appearanceMode === "light" ? Qt.rgba(0,0,0,.09) : Qt.rgba(1,1,1,.11)
     readonly property int settingsSpacing: Math.max(6, Math.round(SettingsStore.panelSpacing * .75))
@@ -69,7 +70,7 @@ Singleton {
     readonly property color textPrimary: Qt.rgba(surface.text.r / 255, surface.text.g / 255, surface.text.b / 255, 1)
     readonly property color textMuted: Qt.rgba(surface.muted.r / 255, surface.muted.g / 255, surface.muted.b / 255, 1)
     readonly property color transparent: Qt.rgba(0, 0, 0, 0)
-    readonly property var panelHoverUnits: Palette.colorUnits(palette.hover, 1)
+    readonly property var panelHoverUnits: Palette.colorUnits(themePalette.hover, 1)
     readonly property var panelUnits: Palette.colorUnits(surface.panel, SettingsStore.panelOpacity)
     readonly property var gradientUnits: Palette.colorUnits(surface.gradient, surface.gradientAlpha)
     // Foreground follows the surface, so a manual hex and automatic png text reach the bar and the panels.
@@ -95,7 +96,7 @@ Singleton {
     readonly property string contrastReason: surface.reason
     readonly property string contrastWarning: surface.warning
     readonly property bool reducedMotion: SettingsStore.reducedMotion
-    readonly property string adaptiveReason: palette.adaptiveReason
+    readonly property string adaptiveReason: themePalette.adaptiveReason
     readonly property int motionOpen: motion.open
     readonly property int motionClose: motion.close
     readonly property int motionHover: motion.hover

@@ -26,6 +26,7 @@ TestCase {
         "shell/components/BarLabel.qml",
         "shell/components/FlatButton.qml",
         "shell/components/ChoiceBox.qml",
+        "shell/components/KeyedModel.qml",
         "shell/components/BackdropEffect.qml",
         "shell/components/CompactSlider.qml",
         "shell/components/SectionHeader.qml",
@@ -134,7 +135,7 @@ TestCase {
         if (path === "shell/settings/SettingsShadow.qml")
             return message.indexOf('module "QtQuick.Effects" is not installed') !== -1
                 || message.indexOf('RectangularShadow is not a type') !== -1
-        if (path === "shell/settings/ColorPicker.qml" || path === "shell/settings/ImageDialog.qml"
+        if (path === "shell/settings/ImageDialog.qml"
                 || path === "shell/settings/FolderPicker.qml")
             return message.indexOf('module "QtQuick.Dialogs" is not installed') !== -1
         if (path === "shell/settings/FolderScanner.qml")

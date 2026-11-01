@@ -711,3 +711,27 @@ bars, heights, workspace lists, modules and per-output monitor choices intact.
 Normal capability checks never capture desktop pixels. Missing-tool fallback is
 unit-tested, rather than uninstalling user software or disabling global blur.
 Physical hotplug and full wallpaper/opacity accessibility review remain NOT RUN.
+
+## Bar flicker and themed color picker (2026-11-01)
+
+Native before/after hidden-bar lifecycle audit: old 23 module / 68 workspace
+creations; new 9 / 4 under 15 preference/urgency updates and module hide/show.
+`python3 tests/live/bar-stability.py --live` retains this regression in temporary
+XDG directories. Role updates and reorder preserve existing workspace controls;
+QML tests verify object identity and active/urgent values, not just item counts.
+
+`python3 tests/live/color-picker.py --live` and `--output HDMI-A-1` passed real
+pointer hue/saturation/value editing, two cancels and one commit, no preference
+writes while drafting, no extra native client and no Settings geometry movement.
+The original global bar color/mode/opacity and prior Settings open/category state
+were restored. A separate bounded capture over the owned checkerboard fixture
+was visually inspected at `/tmp/swiftshell-themed-color-picker.png`.
+
+New always-run QML suites: keyed models 4 passed, color picker 8 passed. The latter
+covers cancel, invalid hex, one accepted value, Escape, keyboard edits, dark/light
+shared theme and pointer dragging. Color selection no longer depends on
+QtQuick.Dialogs; native image/folder selection remains separately gated.
+Existing native bar mode/blur, hidden atomic save/restart and actual global
+Super+Space regressions passed on both monitors. Startup geometry readiness is
+included in diagnostics to avoid sending test clicks during native restore.
+No claim is made about high-GPU-load driver behavior or every physical hotplug case.

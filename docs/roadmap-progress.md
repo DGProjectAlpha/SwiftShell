@@ -17,5 +17,8 @@ and evidence without modifying that external document.
   frosted, color/opacity, per-output inheritance and real layer blur without
   compositor rules. Existing transparent defaults preserved. Shared floater
   treatment and B2 context menus/ergonomics remain separate increments.
+- Maintenance: bar updates retain module/workspace controls; the color picker
+  is a themed in-window draft/commit popup. Native pointer tests passed on both
+  scales, and the delegate-lifetime regression quantifies the removed churn.
 - Next: B2 in small independent slices. C1/C2,
   D and later milestones remain separate work, not hidden inside this increment.

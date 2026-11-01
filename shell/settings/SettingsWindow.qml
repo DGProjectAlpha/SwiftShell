@@ -17,6 +17,7 @@ FloatingWindow {
     implicitHeight: WindowService.geometry.height || 700
     property bool closing: false
     property int mapAttempts: 0
+    property bool placementReady: false
     property int resizeRequests: 0
     property bool lastResizeAccepted: false
     readonly property int shadowInset: WindowService.maximized ? 0 : 32
@@ -90,7 +91,8 @@ FloatingWindow {
         lastResizeAccepted=window.startSystemResize(edges)
     }
     function performAction(action) {
-        if (action === "clear-search") search.text=""
+        if (action === "color-picker" && window.activePage() && window.activePage().openSurfaceColorPicker) window.activePage().openSurfaceColorPicker()
+        else if (action === "clear-search") search.text=""
         else if (action === "close") requestClose()
         else if (action === "minimize") WindowService.request("minimize")
         else if (action === "maximize") {
@@ -125,7 +127,7 @@ FloatingWindow {
         target: WindowService
         function onCompleted(action,success) {
             if (action === "remember" && window.closing) SettingsModel.hide()
-            if (action === "mapped" && success) search.forceActiveFocus()
+            if (action === "mapped" && success) { window.placementReady=true;search.forceActiveFocus() }
             if (action === "mapped" && !success && window.mapAttempts < 4) mapTimer.restart()
         }
     }

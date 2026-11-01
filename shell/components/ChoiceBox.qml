@@ -72,6 +72,6 @@ Controls.ComboBox {
             currentIndex: control.highlightedIndex
             boundsBehavior: Flickable.StopAtBounds
         }
-        background: Rectangle { radius: Theme.controlRadius + 2; color: SettingsStore.appearanceMode === "light" ? "#f1f1f1" : "#292929" }
+        background: Rectangle { radius: Theme.controlRadius + 2; color: Theme.settingsPopupSurface }
     }
 }
