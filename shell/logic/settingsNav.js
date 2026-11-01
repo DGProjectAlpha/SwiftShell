@@ -116,9 +116,9 @@ function categories() {
     return [
         { id: "appearance", label: "Appearance" },
         { id: "bar", label: "Top bar" },
-        { id: "workspaces", label: "Workspaces" },
         { id: "wallpaper", label: "Wallpaper" },
         { id: "displays", label: "Displays" },
+        { id: "workspaces", label: "Workspaces" },
         { id: "shortcuts", label: "Shortcuts" },
         { id: "audio", label: "Audio" },
         { id: "network", label: "Network" },

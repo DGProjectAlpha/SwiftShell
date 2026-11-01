@@ -310,6 +310,17 @@ FloatingWindow {
                     }
 
                     FlatButton {
+                        objectName: "workspacesNavigation"
+                        width: parent.width
+                        label: "Workspaces"
+                        emphasized: SettingsStore.settingsWindowCategory === "workspaces"
+                        onActivated: {
+                            SettingsStore.setSettingsCategory("workspaces")
+                            search.text = ""
+                        }
+                    }
+
+                    FlatButton {
                         width: parent.width
                         label: "Shortcuts"
                         emphasized: SettingsStore.settingsWindowCategory === "shortcuts"
@@ -411,6 +422,7 @@ FloatingWindow {
 
                 WorkspacesPage {
                     id: workspacesPage
+                    objectName: "workspacesPage"
                     width: scroller.width
                     visible: SettingsStore.settingsWindowCategory === "workspaces"
                     height: visible ? implicitHeight : 0

@@ -345,7 +345,7 @@ test("settings search, density, and undo stay on real appearance fields", functi
     assert.equal(settingsNav.categories().length, 11);
     assert.equal(settingsNav.categories()[0].id, "appearance");
     assert.equal(settingsNav.categories()[1].id, "bar");
-    assert.deepEqual(settingsNav.categories().slice(2).map(c => c.id), ["workspaces", "wallpaper", "displays", "shortcuts", "audio", "network", "bluetooth", "power", "notifications"]);
+    assert.deepEqual(settingsNav.categories().slice(2).map(c => c.id), ["wallpaper", "displays", "workspaces", "shortcuts", "audio", "network", "bluetooth", "power", "notifications"]);
     assert.equal(settingsNav.categoryFor(settingsNav.firstControlId("cover")), "wallpaper");
     assert.equal(settingsNav.filterControls("").length, settingsNav.CONTROLS.length);
     assert.equal(settingsNav.filterControls("not-a-setting").length, 0);

@@ -321,6 +321,27 @@ TestCase {
         return false
     }
 
+    function test_workspaces_sidebar_button_opens_page() {
+        var settings = componentFor("shell/settings/SettingsWindow.qml").createObject(this, {visible:true})
+        verify(settings !== null)
+        var button = findChild(settings, "workspacesNavigation")
+        verify(button !== null, "Workspaces must be accessible from the sidebar")
+        var siblings = button.parent.children
+        var position = -1
+        for (var i = 0; i < siblings.length; i++) {
+            if (siblings[i] === button) position = i
+        }
+        verify(position > 0 && position < siblings.length - 1)
+        compare(siblings[position - 1].label, "Displays")
+        compare(siblings[position + 1].label, "Shortcuts")
+        Services.SettingsStore.setSettingsCategory("bar")
+        button.activated()
+        compare(Services.SettingsStore.settingsWindowCategory, "workspaces")
+        compare(settings.activePage(), findChild(settings, "workspacesPage"))
+        verify(button.emphasized)
+        settings.destroy()
+    }
+
     function test_workspaces_page_uses_live_monitors_and_persists_overrides() {
         Services.HyprlandModel.monitorChoices = [
             {name: "DP-1", label: "HP X32 · DP-1", scale: 1},
