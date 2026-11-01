@@ -31,6 +31,10 @@ original=window();assert original['floating']
 if args.output:
     monitor=next(m for m in snapshot() if m['name']==args.output and m['enabled'])
     selector=json.dumps('address:'+original['address'])
+    logical_width,logical_height=logical_size(monitor)
+    width=min(original['size'][0],int(logical_width)-200,1200)
+    height=min(original['size'][1],int(logical_height)-200,700)
+    ipc(f'eval hl.dispatch(hl.dsp.window.resize({{window={selector},x={width},y={height}}}))')
     x,y=monitor['x']+100,monitor['y']+60
     ipc(f'eval hl.dispatch(hl.dsp.window.move({{window={selector},x={x},y={y}}}))')
     time.sleep(.4)

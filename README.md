@@ -579,3 +579,10 @@ scale, orientation, enable/disable, and Apply/Keep/Revert on verified Hyprland
 0.57 Lua sessions. An independent watchdog restores unconfirmed changes even if
 SwiftShell exits. Kept layouts can be restored explicitly; your Hyprland Lua
 files remain unchanged. See the live transaction evidence in `docs/testing.md`.
+
+Settings now uses a compact monochrome floating window with native drag/resize,
+minimize, maximize/restore and saved geometry. All eleven pages share consistent
+controls and navigation. Rounded compositor backdrop blur and adjustable soft
+shadows are verified on the local mixed-scale monitors; unsupported effects have
+explicit fallbacks. Reopen Settings to restore its minimized window. See
+[the native integration decision](docs/decisions/0032-native-settings-glass.md).

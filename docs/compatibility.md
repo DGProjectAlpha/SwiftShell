@@ -1,15 +1,19 @@
 # Compatibility
 
-Versions below are the APIs this prototype was written against. They were taken from the Quickshell documentation and source for the 0.2 and 0.3 lines. They were not executed on the target CachyOS machine. Run `qs -V` locally and treat a mismatch as a load failure to fix, not as a working bar.
+Current native target, verified locally on 2026-11-01: Quickshell 0.3.2,
+Qt 6.12.0 and Hyprland 0.57.0 (Lua), NVIDIA RTX 4070. The supported version floors
+are Quickshell 0.3.2, Hyprland 0.57 and Qt 6.9 for Settings shadows. Python 3 and
+wayland-info support the scoped native helpers and protocol detection. Older
+API notes below are historical context, not current support promises.
 
-## Expected stack
+Settings has a real floating window and native move/resize, maximize/restore,
+minimize/reactivation and saved geometry. Native compositor backdrop blur is
+verified on DP-1 (scale 1) and HDMI-A-1 (scale 1.25). Missing blur support uses a
+readable fallback. Displays performs real staged Apply/Keep/Revert with independent
+rollback; it does not edit user-authored Lua. See decisions 0031 and 0032 and the
+dated local evidence in docs/testing.md.
 
-| Piece | Expectation |
-|---|---|
-| Session | Hyprland on Wayland. The Lua configuration is left unchanged. |
-| Quickshell | `qs` or `quickshell` on `PATH`, built with `Quickshell.Hyprland` and `Quickshell.Wayland` layer shell. |
-| Qt | Qt 6. QML modules: `QtQuick`, `QtQuick.Layouts`, `QtCore`. |
-| Settings path | `StandardPaths.GenericConfigLocation`, then `/swiftshell/settings.json`. |
+## Historical API notes
 
 ## Quickshell types used
 
@@ -31,7 +35,9 @@ Versions below are the APIs this prototype was written against. They were taken 
 
 `HyprlandFocusGrab` is the 0.2 click-outside path. It needs `hyprland-focus-grab-v1`. The shell sets `active` and does not set `PopupWindow.grabFocus`. That property is absent from the 0.2.0 page and present on the 0.3.1 page. `setActive(false)` releases the grab without emitting `cleared`.
 
-`BackgroundEffect` and `ext-background-effect-v1` appear in the 0.3 docs, not in 0.2.0. The attached object has to be declared in QML. A JavaScript lookup does not construct it. Naming the type in a file that 0.2.0 parses makes that file fail to load, and this tree does not assume the later version-gated preprocessor. Blur is unsupported. The scrim is the panel surface. Hyprland blur rules are left unchanged.
+`BackgroundEffect` is used through a dynamically loaded adapter on the current
+0.3.2 target. The attached blur Region and exact-client `no_blur` override are
+verified natively. Earlier 0.2 builds are outside the current supported floor.
 
 PipeWire volume uses `Pipewire.defaultAudioSink`, `PwObjectTracker.objects`, and `PwNodeAudio.volume` / `muted`. Those properties are documented as invalid until the node is bound. The audio file is loaded with a `Loader`, so a build without the PipeWire module does not take the bar down.
 
@@ -59,7 +65,7 @@ Quickshell 0.2.0 accepts `--path` and `--no-duplicate` on the main command, and 
 
 ## Installation
 
-`./install.sh` and `swiftshell` are the distributable entry points. They copy files into XDG data, config, and state directories and can run `qs -V` and `Hyprland --version` as read-only probes. Optional package installation is `pacman` on Arch-based systems and only runs with `--install-deps`. The version floors in `scripts/lib/deps.sh` are documented assumptions, not measurements from the target machine. See `docs/install.md`.
+`./install.sh` and `swiftshell` are the distributable entry points. They copy files into XDG data, config, and state directories and can run `qs -V` and `Hyprland --version` as read-only probes. Optional package installation is `pacman` on Arch-based systems and only runs with `--install-deps`. The current version floors reflect the locally verified Settings and Lua display APIs. See `docs/install.md`.
 
 ## Behavior that depends on the local compositor
 
@@ -82,7 +88,7 @@ Quickshell 0.2.0 accepts `--path` and `--no-duplicate` on the main command, and 
 | `QsWindow.itemRect` | Documented as a 0×0 map | Same documented equivalent | Not used |
 | `HyprlandFocusGrab` | Documented. Needs `hyprland-focus-grab-v1` | Documented | Implemented, not runtime-tested. Missing protocol logs a warning and does not grab |
 | `PopupWindow.grabFocus` | Absent | Present in 0.3.1 | Not used |
-| `BackgroundEffect` | Absent | 0.3+ attached property. Needs `ext-background-effect-v1` | Unsupported. Scrim fallback is what renders |
+| `BackgroundEffect` | Absent | 0.3+ attached property. Needs `ext-background-effect-v1` | Native Settings blur verified on the current 0.3.2 target |
 | PipeWire default sink and source | `Pipewire.defaultAudioSink`, `defaultAudioSource`, `nodes`, `preferredDefaultAudioSink`, `PwObjectTracker`, `PwNodeAudio.volume` / `muted` | Same family | Implemented, not runtime-tested. A missing module stays inside the audio `Loader` |
 | MPRIS | `Mpris.players`, `togglePlaying`, `next`, `previous`, and the `can*` flags | Same family | Buttons stay disabled when the player refuses the action. Not runtime-tested |
 | StatusNotifier tray | `SystemTray.items`, `activate`, `display` | Same family | Items that cannot be activated and have no menu are omitted. Not runtime-tested |
@@ -91,8 +97,8 @@ Quickshell 0.2.0 accepts `--path` and `--no-duplicate` on the main command, and 
 | Launcher window | `DesktopEntries`, `applicationsChanged`, `Quickshell.iconPath(icon, true)`, and `Hyprland.focusedMonitor` are on the 0.2 pages | The scan result is queued before `applicationsChanged`. `focusedMonitor` may be null | Implemented. The CachyOS session opened an earlier launcher and did not find Dolphin or Helium. The centered card and focused-monitor placement have not been launched with `qs` here |
 | Wallpaper surface | `PanelWindow`, `WlrLayer.Background`, `WlrLayershell.namespace` | Same family | One layer per `Quickshell.screens` entry, in source. Not shown on a session. Sampling the picture for tint is still not implemented |
 | Wallpaper sampling | PNG bytes are inflated and unfiltered in `shell/logic/png.js` | No `Canvas` and no image-pixel API in this Qt Quick build | PNG top edge only. Jpeg and webp display and are reported as not sampled. Not shown on a session |
-| `FloatingWindow` settings toplevel | Documented in 0.2.0 with `title`, `minimumSize`, and `maximumSize` only. `closed` is on `QsWindow`. Client move and resize methods are later | `startSystemMove` and `startSystemResize` appear after 0.2 | Loaded through a `Loader`. Size is assigned once. Not shown on a Wayland session in this run |
+| `FloatingWindow` settings toplevel | Documented in 0.2.0 with `title`, `minimumSize`, and `maximumSize` only. `closed` is on `QsWindow`. Client move and resize methods are later | `startSystemMove` and `startSystemResize` appear after 0.2 | Native drag/resize/buttons and geometry persistence verified on both monitor scales |
 
 ## Explicitly out of scope
 
-Network management, Bluetooth, and Hyprland decoration changes are later milestones. Media and tray controls use the Quickshell 0.2 services and stay inside loaders. PNG top-edge sampling is in the wallpaper page. Jpeg and webp are not sampled. The settings window is a `FloatingWindow` with Appearance, Top bar, Wallpaper, Displays, and Shortcuts pages. The shortcut page stores preferred chords and does not read or write compositor binds. It does not edit Hyprland. The wallpaper layer is a background `PanelWindow` and does not stop another wallpaper program. The launcher's power rows call `loginctl` only after a second confirmation. Panel blur is unsupported on the current compatibility floor rather than deferred behind a fake effect. The display page is a preview and does not send a layout.
+Network management, Bluetooth, and Hyprland decoration changes are later milestones. Media and tray controls use the Quickshell 0.2 services and stay inside loaders. PNG top-edge sampling is in the wallpaper page. Jpeg and webp are not sampled. The settings window is a `FloatingWindow` with Appearance, Top bar, Wallpaper, Displays, and Shortcuts pages. The shortcut page stores preferred chords and does not read or write compositor binds. It does not edit Hyprland. The wallpaper layer is a background `PanelWindow` and does not stop another wallpaper program. The launcher's power rows call `loginctl` only after a second confirmation. Native Settings blur and transactional display editing are implemented on the current target; the historical table above retains earlier milestone context.

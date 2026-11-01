@@ -58,3 +58,17 @@ Ownership stays off until Settings asks a second time. The preview card is label
 `swiftshell rollback-settings` restores `settings.json` from `settings.json.bak-swiftshell` only. Copy the settings file aside before the first launch of a new version if it contains keys the settings window does not know.
 
 `swiftshell uninstall` removes the installed copy and keeps settings. `--purge-settings` removes `~/.config/swiftshell` and nothing else under `~/.config`.
+
+## Native Settings window
+
+Drag the title bar to move Settings and its edges or corners to resize it.
+Double-click the title bar or use □ to maximize/restore. − minimizes Settings;
+open Settings again to bring it back. × closes it. Normal size and position are
+remembered. The sidebar contains every page, including Workspaces between
+Displays and Shortcuts. Search also opens matching pages.
+
+Appearance controls surface transparency, compositor blur, corner radius and
+soft shadows. Unavailable effects are disabled. Displays edits are staged until
+Apply; use Keep before the countdown expires, or Revert. An independent watchdog
+restores an unconfirmed layout even if Settings or SwiftShell exits. Kept layouts
+can be restored explicitly without changing your Hyprland Lua files.

@@ -593,3 +593,44 @@ Kept layouts are in SwiftShell's own state directory and restored explicitly
 with **Restore saved layout**. They are not automatically applied at login or
 written into Hyprland configuration. HDR/color/ICC/reservations stay under the
 existing compositor configuration; mirrored displays cannot be edited here.
+
+## Native Settings redesign completion (2026-11-01)
+
+Target: CachyOS, RTX 4070, Quickshell 0.3.2, Qt 6.12.0, Hyprland
+0.57.0 Lua. DP-1 scale 1 and HDMI-A-1 scale 1.25. This is local desktop
+execution, not a mocked compositor pass.
+
+- `scripts/check.sh`: passed; 62 QML files checked, JavaScript suites, display
+  and scoped-window Python tests, 17 installer checks, QML suites 6/13/5/4/4
+  passed with zero failures or skips. Output `/tmp/swiftshell-final-check.log`.
+- `python3 tests/live/settings-pages.py --live`: all eleven actual Settings
+  categories reached Loader.Ready, with no native integration errors.
+- `python3 tests/live/settings-window.py --live --output HDMI-A-1`: native title
+  drag preserved size; all four edges and four corners resized; real maximize
+  and restore, minimize and reactivation, close/reopen and saved geometry passed.
+  DP-1 passed the same native gestures during the preceding implementation run.
+  Tests restore the window's original geometry and fit the test window to the
+  smaller logical display before exercising outward resize gestures.
+- `python3 tests/live/settings-blur.py --live`: controlled checkerboard fixture
+  fully covered each bounded capture. Actual blur on/off mean horizontal edge
+  contrast: HDMI-A-1 0.016/2.142; DP-1 0.052/2.015. Radius 6/12, shadow opacity
+  0/0.4 and softness 4/24 each produced measured pixel changes on both outputs.
+  Private desktop pixels were not captured. Original appearance preferences and
+  window position were restored. Captures are ephemeral `/tmp` artifacts.
+- `scripts/test-workspaces-native.sh`: hidden real SettingsWindow loaded; atomic
+  per-output workspace save and independent-process restart readback passed in
+  temporary XDG directories. No user settings were replaced.
+- `qs log -i qe1ejptnt --tail 100 --no-color`: no Settings TypeError,
+  ReferenceError or failed component loads. Existing launcher non-Item Keys,
+  missing launcher request file and Qt Wayland text-input warnings remain; this
+  milestone does not claim they are repaired.
+
+User visual acceptance: open every sidebar page, check readability over your
+wallpaper, resize between compact and full navigation, use keyboard Tab and
+search, and compare Appearance blur/radius/shadow extremes. In Displays, drag a
+monitor and confirm it moves without distortion; Apply a desired supported layout,
+then test Revert or leave the countdown unconfirmed before using Keep. Reopen
+Settings after − to restore it. Hotplug, HDR/ICC editing, mirroring, full keyboard
+accessibility audit, other drivers/compositors and notification ownership takeover
+were not validated by this Settings milestone. User-authored Lua, Noctalia,
+autostart and system services were left unchanged.
