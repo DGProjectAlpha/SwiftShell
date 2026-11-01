@@ -18,7 +18,10 @@ ShellRoot {
             if (Services.SettingsStore.persistenceState !== "ready") return;
             if (Quickshell.env("SWIFTSHELL_AUDIT_READBACK") === "1") {
                 if (Services.SettingsStore.workspaceOutputsJson === audit.expected
-                    && Services.SettingsStore.settingsWindowCategory === "workspaces")
+                    && Services.SettingsStore.settingsWindowCategory === "workspaces"
+                    && Services.SettingsStore.barSurfaceMode === "solid"
+                    && Services.SettingsStore.barSurfaceColor === "#dedede"
+                    && JSON.parse(Services.SettingsStore.barSurfaceOutputsJson)["DP-1"].mode === "frosted")
                     console.info("Workspace settings audit: restart readback passed");
                 else console.warn("Workspace settings audit: restart readback FAILED");
                 Qt.quit();
@@ -26,6 +29,8 @@ ShellRoot {
                 audit.written = true;
                 // Multiple synchronous edits reproduced a stale JsonAdapter cache write.
                 Services.SettingsStore.setSettingsCategory("workspaces");
+                Services.SettingsStore.setBarSurface("", "solid", "#dedede", .8);
+                Services.SettingsStore.setBarSurface("DP-1", "frosted", "#222222", .4);
                 Services.SettingsStore.setWorkspaceOutput("DP-1", ["1", "2", "3", "gaming"]);
                 Services.SettingsStore.setWorkspaceOutput("HDMI-A-1", null);
             } else {

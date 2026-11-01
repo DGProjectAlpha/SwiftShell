@@ -684,3 +684,30 @@ system service, package installation or administrator privileges were needed.
 The command is persisted in the approved user file and survives configuration
 reload. Reboot and a human physical-keypress were not performed. No Noctalia
 process/configuration, other shortcut, autostart, service or core OS file changed.
+
+## Bar surface modes (2026-11-01, roadmap B1)
+
+`scripts/check.sh` passed: 64 QML files; all JavaScript suites, 8 display and 7
+window-helper Python cases, 17 installer checks, QML totals 6/13/6/4/4, zero
+failures/skips. `scripts/test-workspaces-native.sh` now also verifies global and
+per-output bar appearance across an actual independent-process restart in temporary
+XDG directories. This caught and regresses the JsonAdapter serialization timing
+issue when several surface/workspace settings change synchronously.
+
+`python3 tests/live/bar-surfaces.py --live` passed all three actual modes on both
+outputs, asserted other bars stayed unchanged, and restored original overrides.
+A raised controlled checkerboard fully shielded the bounded capture behind the
+real production bar. Mean horizontal edge contrast, transparent/solid/frosted:
+HDMI-A-1 19.786/13.386/3.341; DP-1 29.880/19.941/6.009. The real layer blur is
+observable while foreground remains sharp. No layer rule or global compositor
+blur setting was required. Crops are `/tmp/swiftshell-bar-<output>-<mode>.png`.
+Native Settings category loading and actual Super+Space/repeat/Escape passed
+again on both outputs. Settings activation requests were allowed to drain before
+changing test monitor focus; otherwise an earlier asynchronous show request can
+legitimately reactivate its own output during the chord test.
+
+Native mode/blur tests use temporary overrides and leave the user's transparent
+bars, heights, workspace lists, modules and per-output monitor choices intact.
+Normal capability checks never capture desktop pixels. Missing-tool fallback is
+unit-tested, rather than uninstalling user software or disabling global blur.
+Physical hotplug and full wallpaper/opacity accessibility review remain NOT RUN.

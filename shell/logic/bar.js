@@ -143,7 +143,20 @@ function layerForBar() {
     return "top";
 }
 
+function surfaceForOutput(mode, color, opacity, outputsJson, output, blurAvailable) {
+    let selected = {mode:mode,color:color,opacity:opacity};
+    try {
+        const outputs=JSON.parse(outputsJson);
+        if (outputs && Object.prototype.hasOwnProperty.call(outputs,output)) selected=outputs[output];
+    } catch (error) {}
+    const visible=selected.mode !== "transparent";
+    const blur=selected.mode === "frosted" && blurAvailable === true;
+    return {mode:selected.mode,color:selected.color,opacity:selected.opacity,visible:visible,blur:blur,
+        alpha:!visible ? 0 : (selected.mode === "frosted" && !blur ? Math.max(.95,selected.opacity) : selected.opacity)};
+}
+
 var swiftshellBar = {
+    surfaceForOutput: surfaceForOutput,
     BAR_MODULES: BAR_MODULES,
     barMetrics: barMetrics,
     heightFromUnit: heightFromUnit,

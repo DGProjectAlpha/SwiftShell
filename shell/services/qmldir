@@ -7,3 +7,4 @@ singleton WallpaperModel 1.0 WallpaperModel.qml
 singleton NotificationsModel 1.0 NotificationsModel.qml
 singleton DisplayService 1.0 DisplayService.qml
 singleton WindowService 1.0 WindowService.qml
+singleton SurfaceService 1.0 SurfaceService.qml

@@ -17,6 +17,9 @@ with open(sys.argv[1]) as stream:
     settings = json.load(stream)
 assert json.loads(settings['bar']['workspaceOutputsJson']) == {'DP-1':['1','2','3','gaming'],'HDMI-A-1':None}
 assert settings['settingsWindow']['category'] == 'workspaces'
+assert settings['bar']['surfaceMode'] == 'solid'
+assert settings['bar']['surfaceColor'] == '#dedede'
+assert json.loads(settings['bar']['surfaceOutputsJson']) == {'DP-1':{'mode':'frosted','color':'#222222','opacity':0.4}}
 PY
 SWIFTSHELL_AUDIT_READBACK=1 qs -p "$AUDIT_TMP/shell/SettingsAudit.qml" >"$AUDIT_TMP/read.log" 2>&1
 rg -q 'Workspace settings audit: restart readback passed' "$AUDIT_TMP/read.log" || { cat "$AUDIT_TMP/read.log"; exit 1; }

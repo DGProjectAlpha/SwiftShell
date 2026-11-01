@@ -102,6 +102,25 @@ function hiddenModulesValid(hidden) {
     return normalizeHiddenModules(source).length === source.length;
 }
 
+function barSurfaceOutputsValue(value, errors) {
+    if (value === undefined) return "{}";
+    try {
+        if (typeof value !== "string" || value.length > 16384) throw new Error();
+        const outputs = JSON.parse(value);
+        if (!isPlainObject(outputs) || Object.keys(outputs).length > 32) throw new Error();
+        const clean = {};
+        for (const key of Object.keys(outputs)) {
+            const item = outputs[key];
+            if (!key.trim() || key.length > 256 || ["__proto__","constructor","prototype"].indexOf(key)>=0 || /[\x00-\x1f]/.test(key) || !isPlainObject(item)) throw new Error();
+            if (["transparent", "solid", "frosted"].indexOf(item.mode) < 0
+                || typeof item.color !== "string" || !/^#[0-9a-fA-F]{6}$/.test(item.color)
+                || typeof item.opacity !== "number" || !Number.isFinite(item.opacity) || item.opacity < 0 || item.opacity > 1) throw new Error();
+            clean[key] = {mode:item.mode,color:item.color.toLowerCase(),opacity:item.opacity};
+        }
+        return JSON.stringify(clean);
+    } catch (error) { errors.push("bar.surfaceOutputsJson"); return "{}"; }
+}
+
 var DEFAULTS = {
     version: 3,
     clock: {
@@ -120,6 +139,10 @@ var DEFAULTS = {
         height: 28,
         moduleOrder: ["workspaces", "title", "search", "clock", "control", "media", "tray", "battery"],
         hiddenModules: [],
+        surfaceMode: "transparent",
+        surfaceColor: "#161616",
+        surfaceOpacity: 0.75,
+        surfaceOutputsJson: "{}",
     },
     appearance: {
         mode: "dark",
@@ -336,6 +359,14 @@ function validateSettings(input) {
     );
     const barPlacement = pickEnum(bar, "placement", ["focused", "primary", "all"], DEFAULTS.bar.placement, errors, "bar.placement");
     const barHeight = pickInt(bar, "height", 22, 52, DEFAULTS.bar.height, errors, "bar.height");
+    const surfaceMode = pickEnum(bar, "surfaceMode", ["transparent","solid","frosted"], DEFAULTS.bar.surfaceMode, errors, "bar.surfaceMode");
+    let surfaceColor = DEFAULTS.bar.surfaceColor;
+    if (bar.surfaceColor !== undefined) {
+        if (typeof bar.surfaceColor === "string" && /^#[0-9a-fA-F]{6}$/.test(bar.surfaceColor)) surfaceColor=bar.surfaceColor.toLowerCase();
+        else errors.push("bar.surfaceColor");
+    }
+    const surfaceOpacity = pickNumber(bar,"surfaceOpacity",0,1,DEFAULTS.bar.surfaceOpacity,errors,"bar.surfaceOpacity");
+    const surfaceOutputsJson = barSurfaceOutputsValue(bar.surfaceOutputsJson,errors);
     let moduleOrder = DEFAULTS.bar.moduleOrder.slice();
     if (bar.moduleOrder === undefined) {
         moduleOrder = DEFAULTS.bar.moduleOrder.slice();
@@ -446,6 +477,10 @@ function validateSettings(input) {
                 height: barHeight,
                 moduleOrder: moduleOrder,
                 hiddenModules: hiddenModules,
+                surfaceMode: surfaceMode,
+                surfaceColor: surfaceColor,
+                surfaceOpacity: surfaceOpacity,
+                surfaceOutputsJson: surfaceOutputsJson,
             },
             appearance: {
                 mode: appearanceMode,
@@ -749,7 +784,7 @@ function extensionsText(source, errors) {
 
     const domainKeys = {
         clock: { use24Hour: true, showWeekNumbers: true, weekStart: true },
-        bar: { targetMonitor: true, reserveSpace: true, showFocusedTitle: true, workspaceIds: true, workspaceOutputsJson: true, workspaceDispatch: true, placement: true, height: true, moduleOrder: true, hiddenModules: true },
+        bar: { targetMonitor: true, reserveSpace: true, showFocusedTitle: true, workspaceIds: true, workspaceOutputsJson: true, workspaceDispatch: true, placement: true, height: true, moduleOrder: true, hiddenModules: true, surfaceMode:true, surfaceColor:true, surfaceOpacity:true, surfaceOutputsJson:true },
         appearance: { mode: true, tint: true, panelOpacity: true, panelBlur: true, radius: true, shadowOpacity: true, shadowSoftness: true, motionScale: true, reducedMotion: true, panelPadding: true, panelSpacing: true, fontSize: true, fontWeight: true, iconScale: true, topGradient: true, contrast: true, automaticText: true, automaticGradient: true, manualText: true, manualMuted: true, manualPanel: true, manualGradient: true },
         launcher: { pinnedIds: true },
         wallpaper: { enabled: true, fit: true, path: true, outputsJson: true, slideshow: true, intervalMinutes: true, order: true, transitionMs: true, slidesJson: true },

@@ -24,7 +24,11 @@
       "tray",
       "battery"
     ],
-    "hiddenModules": []
+    "hiddenModules": [],
+    "surfaceMode": "transparent",
+    "surfaceColor": "#161616",
+    "surfaceOpacity": 0.75,
+    "surfaceOutputsJson": "{}"
   },
   "appearance": {
     "mode": "dark",

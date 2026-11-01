@@ -1,6 +1,6 @@
 # SwiftShell
 
-> **Status:** M2 and the M3 launcher are in `shell/`. On the CachyOS Hyprland session, with Noctalia stopped, SwiftShell has loaded and the bar has rendered. Workspace switching works after the Lua dispatch fix. The launcher has opened and did not find Dolphin or Helium; that discovery path is changed and has not been relaunched. Cloud checks do not show pixels and do not launch applications. Noctalia is its own `noctalia` executable, not a `qs` process.
+> **Status:** Local CachyOS development has verified per-monitor numeric/named workspaces, transactional Displays, native floating Settings and real compositor blur on mixed-scale monitors. The approved Super+Space handoff invokes SwiftShell, with repeat-toggle and Escape tested on both outputs. Opt-in bar backgrounds now support transparent, solid and native frost per monitor. This remains an alpha; see dated evidence and unperformed checks in `docs/testing.md`.
 >
 > **Purpose:** A clean, understated, keyboard-first, fully integrated desktop shell built with **Quickshell + Qt 6/QML** for **Hyprland on Arch-based systems**. The reference workstation is CachyOS; the installer is not limited to that one machine.
 >
@@ -586,3 +586,9 @@ controls and navigation. Rounded compositor backdrop blur and adjustable soft
 shadows are verified on the local mixed-scale monitors; unsupported effects have
 explicit fallbacks. Reopen Settings to restore its minimized window. See
 [the native integration decision](docs/decisions/0032-native-settings-glass.md).
+
+Top bar → Background now offers Transparent, Solid and Frosted surfaces with
+color/opacity and optional per-monitor overrides. Transparent stays the default.
+Native layer blur is verified on both connected outputs without compositor rules;
+unsupported systems use a readable fallback. Scope and recovery are documented in
+[decision 0033](docs/decisions/0033-bar-surface-modes.md).

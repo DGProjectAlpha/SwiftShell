@@ -922,7 +922,10 @@ def main():
             ]
             if process_commands != expected_commands or text.count("Process {") != 1 or "function onRawEvent" not in text:
                 errors.append("Hyprland snapshot must use only fixed event-triggered read-only queries")
-        if "Process {" in text and path.name not in ("HyprlandModel.qml", "DisplayService.qml", "WindowService.qml"):
+        if path.name == "SurfaceService.qml":
+            if text.count("Process {") != 1 or '"/helpers/windowctl.py","capabilities"' not in text or 'event.name === "configreloaded"' not in text:
+                errors.append("Surface capability probe must be a fixed read-only query on startup/config reload")
+        if "Process {" in text and path.name not in ("HyprlandModel.qml", "DisplayService.qml", "WindowService.qml", "SurfaceService.qml"):
             errors.append(str(path.relative_to(ROOT)) + " polls or spawns a process")
         if "Timer {" in text:
             slideshow = path.name == "SlideshowClock.qml" and "Math.max(60000" in text

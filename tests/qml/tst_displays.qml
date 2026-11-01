@@ -8,6 +8,26 @@ TestCase {
     width: 800
     height: 600
     visible: true
+    function test_bar_surface_controls_preserve_per_output_inheritance() {
+        const component=Qt.createComponent("../../shell/settings/BarPage.qml")
+        compare(component.status,Component.Ready,component.errorString())
+        const page=component.createObject(this,{width:600})
+        const saved=Services.SettingsStore.snapshot().bar
+        verify(Services.SettingsStore.setBarSurface("DP-1","frosted","#222222",.4))
+        page.surfaceOutput="DP-1"
+        compare(page.selectedSurface.mode,"frosted")
+        compare(page.hasSurfaceOverride,true)
+        page.surfaceOutput="HDMI-A-1"
+        compare(page.hasSurfaceOverride,false)
+        compare(page.selectedSurface.mode,Services.SettingsStore.barSurfaceMode)
+        Services.SettingsStore.clearBarSurface("DP-1")
+        page.surfaceOutput="DP-1"
+        compare(page.hasSurfaceOverride,false)
+        verify(!Services.SettingsStore.setBarSurface("DP-1","unknown","#222222",.4))
+        compare(Services.SettingsStore.barHeight,saved.height)
+        compare(Services.SettingsStore.workspaceOutputsJson,saved.workspaceOutputsJson)
+        page.destroy()
+    }
     function test_compact_wallpaper_controls_wrap() {
         const component=Qt.createComponent("../../shell/settings/WallpaperPage.qml")
         compare(component.status,Component.Ready,component.errorString())

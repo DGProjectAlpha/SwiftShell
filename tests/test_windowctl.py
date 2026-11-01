@@ -17,6 +17,17 @@ class WindowIntegration(unittest.TestCase):
         self.folder=tempfile.TemporaryDirectory()
         self.env=patch.dict(os.environ,{'XDG_STATE_HOME':self.folder.name});self.env.start()
     def tearDown(self):self.env.stop();self.folder.cleanup()
+    def test_layer_capability_probe_never_mutates_compositor(self):
+        with patch.object(w.subprocess,'run') as command,patch.object(w,'ipc',return_value='{"bool":true}') as ipc:
+            command.return_value.stdout='interface: ext_background_effect_manager_v1'
+            result=w.run('capabilities',11)
+            self.assertTrue(result['blurAvailable'])
+            self.assertEqual(ipc.call_args_list[0].args,('j/getoption decoration:blur:enabled',))
+            self.assertEqual(ipc.call_count,1)
+    def test_missing_protocol_tool_has_an_honest_unavailable_result(self):
+        with patch.object(w.subprocess,'run',side_effect=FileNotFoundError),patch.object(w,'ipc') as ipc:
+            self.assertFalse(w.run('capabilities',11)['blurAvailable'])
+            ipc.assert_not_called()
     def test_never_selects_another_pid_or_application(self):
         with patch.object(w,'ipc',return_value=json.dumps([OTHER,dict(OWN,**{'class':'other.app'}),OWN])):
             self.assertEqual(w.own_window(11)['address'],'0x1234')

@@ -26,6 +26,7 @@ TestCase {
         "shell/components/BarLabel.qml",
         "shell/components/FlatButton.qml",
         "shell/components/ChoiceBox.qml",
+        "shell/components/BackdropEffect.qml",
         "shell/components/CompactSlider.qml",
         "shell/components/SectionHeader.qml",
         "shell/components/ServiceStatus.qml",
@@ -46,6 +47,7 @@ TestCase {
         "shell/services/HyprlandModel.qml",
         "shell/services/DisplayService.qml",
         "shell/services/WindowService.qml",
+        "shell/services/SurfaceService.qml",
         "shell/services/LauncherModel.qml",
         "shell/services/SettingsModel.qml",
         "shell/services/ColorAnalysis.qml",
@@ -141,6 +143,7 @@ TestCase {
             return message.indexOf('module "Quickshell.Services.Notifications" is not installed') !== -1
                 || message.indexOf('module "Quickshell.Services.Notifications" plugin "quickshell-service-notificationsplugin" not found') !== -1
                 || expectedWlrFailure(message)
+        if (path === "shell/components/BackdropEffect.qml") return expectedWlrFailure(message)
         if (path === "shell/shell.qml"
                 || path === "shell/bar/BarHost.qml"
                 || path === "shell/bar/BarWindow.qml"
@@ -156,7 +159,7 @@ TestCase {
             return true
         if (message.indexOf("Non-existent attached object") === -1)
             return false
-        return message.indexOf("BarWindow.qml:32") !== -1
+        return message.indexOf("BarWindow.qml:") !== -1
             || message.indexOf("LauncherWindow.qml:19") !== -1
             || message.indexOf("NotificationHost.qml:24") !== -1
             || message.indexOf("WallpaperSurface.qml:25") !== -1

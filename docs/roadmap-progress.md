@@ -13,5 +13,9 @@ and evidence without modifying that external document.
   Wayland chord tests passed open/repeat/Escape on both mixed-scale monitors.
   The persistent Lua command is in place; an actual reboot and physical human
   keypress remain unperformed. See docs/launcher-shortcut.md and docs/testing.md.
-- Next: B in small independent slices. C1/C2,
+- B1: bar surface modes implemented and natively verified: transparent/solid/
+  frosted, color/opacity, per-output inheritance and real layer blur without
+  compositor rules. Existing transparent defaults preserved. Shared floater
+  treatment and B2 context menus/ergonomics remain separate increments.
+- Next: B2 in small independent slices. C1/C2,
   D and later milestones remain separate work, not hidden inside this increment.

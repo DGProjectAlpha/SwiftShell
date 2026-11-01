@@ -72,3 +72,15 @@ soft shadows. Unavailable effects are disabled. Displays edits are staged until
 Apply; use Keep before the countdown expires, or Revert. An independent watchdog
 restores an unconfirmed layout even if Settings or SwiftShell exits. Kept layouts
 can be restored explicitly without changing your Hyprland Lua files.
+
+## Bar background
+
+In Top bar → Background, choose Transparent, Solid or Frosted. Color and opacity
+change the painted surface. Frosted uses actual compositor blur when available;
+otherwise SwiftShell shows a readable solid fallback. The optional readability
+gradient remains independent in Appearance. Corner radius follows Appearance.
+
+Apply to All screens changes the shared background. To customize one output,
+choose its monitor name and turn off Use all-screen background. Turn that switch
+back on to inherit again. Reset background restores the shared transparent style;
+individual overrides remain until you return those monitors to inheritance.

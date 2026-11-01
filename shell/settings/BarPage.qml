@@ -8,6 +8,11 @@ import "../themes"
 Item {
     id: page
 
+    property string surfaceOutput: ""
+    readonly property var surfaceOverrides: JSON.parse(SettingsStore.barSurfaceOutputsJson)
+    readonly property bool hasSurfaceOverride: Object.prototype.hasOwnProperty.call(surfaceOverrides,surfaceOutput)
+    readonly property var selectedSurface: hasSurfaceOverride ? surfaceOverrides[surfaceOutput] : ({mode:SettingsStore.barSurfaceMode,color:SettingsStore.barSurfaceColor,opacity:SettingsStore.barSurfaceOpacity})
+    function editSurface(mode,color,opacity) { SettingsStore.setBarSurface(surfaceOutput,mode,color,opacity) }
     property string query: ""
     property string highlightId: ""
     signal revealRequested(real y, real itemHeight)
@@ -80,6 +85,14 @@ Item {
             revealRequested(item.y, item.height)
     }
 
+    Loader {
+        id: colorPicker
+        source: "ColorPicker.qml"
+        Connections {
+            target: colorPicker.item
+            function onColorChosen(field,value) { page.editSurface(page.selectedSurface.mode,value,page.selectedSurface.opacity) }
+        }
+    }
     Column {
         id: column
         width: page.width
@@ -105,11 +118,94 @@ Item {
 
         Text {
             width: parent.width
-            visible: page.query.trim() !== "" && !page.shows("barHeight") && !page.shows("reserveSpace") && !page.shows("targetMonitor") && !page.shows("showTitle") && !page.shows("clock24") && !page.shows("moduleOrder")
+            visible: page.query.trim() !== "" && !page.shows("barSurface") && !page.shows("barHeight") && !page.shows("reserveSpace") && !page.shows("targetMonitor") && !page.shows("showTitle") && !page.shows("clock24") && !page.shows("moduleOrder")
             text: "No matching settings"
             color: Theme.settingsText
             font.family: Theme.settingsFontFamily
             font.pixelSize: Theme.settingsFontSize
+        }
+
+        Column {
+            property string controlId: "barSurface"
+            visible: page.shows("barSurface")
+            width: parent.width
+            spacing: Theme.settingsSpacing
+            SectionHeader { text: "Background" }
+            SettingsRow {
+                width:parent.width
+                label:"Apply to"
+                ChoiceBox {
+                    choices:[{label:"All screens",value:""}].concat(HyprlandModel.monitorChoices.map(function(m){return {label:m.label,value:m.name}}))
+                    selectedValue:page.surfaceOutput
+                    onChosen:function(value){page.surfaceOutput=value}
+                }
+            }
+            SettingsToggle {
+                visible:page.surfaceOutput !== ""
+                label:"Use all-screen background"
+                checked:!page.hasSurfaceOverride
+                onToggled:function(next) {
+                    if(next) SettingsStore.clearBarSurface(page.surfaceOutput)
+                    else page.editSurface(SettingsStore.barSurfaceMode,SettingsStore.barSurfaceColor,SettingsStore.barSurfaceOpacity)
+                }
+            }
+            SettingsRow {
+                width:parent.width
+                label:"Style"
+                ChoiceBox {
+                    enabled:page.surfaceOutput === "" || page.hasSurfaceOverride
+                    choices:[{label:"Transparent",value:"transparent"},{label:"Solid",value:"solid"},{label:"Frosted",value:"frosted"}]
+                    selectedValue:page.selectedSurface.mode
+                    onChosen:function(value){page.editSurface(value,page.selectedSurface.color,page.selectedSurface.opacity)}
+                }
+            }
+            SettingsRow {
+                width:parent.width
+                label:"Surface color"
+                Row {
+                    spacing:Theme.settingsSpacing
+                    Rectangle { width:24;height:24;radius:4;color:page.selectedSurface.color;anchors.verticalCenter:parent.verticalCenter }
+                    FlatButton {
+                        enabled:(page.surfaceOutput === "" || page.hasSurfaceOverride) && page.selectedSurface.mode !== "transparent" && colorPicker.status === Loader.Ready
+                        label:"Choose color…"
+                        onActivated:{colorPicker.item.selectedColor=page.selectedSurface.color;colorPicker.item.open()}
+                    }
+                }
+            }
+            SettingsRow {
+                width:parent.width
+                label:"Surface opacity"
+                Row {
+                    spacing:Theme.settingsSpacing
+                    Text { anchors.verticalCenter:parent.verticalCenter;text:Math.round(page.selectedSurface.opacity*100)+"%";color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall }
+                    CompactSlider {
+                        enabled:(page.surfaceOutput === "" || page.hasSurfaceOverride) && page.selectedSurface.mode !== "transparent"
+                        valueName:"Bar surface opacity"
+                        value:page.selectedSurface.opacity
+                        onMoved:function(value){page.editSurface(page.selectedSurface.mode,page.selectedSurface.color,value)}
+                    }
+                }
+            }
+            Text {
+                width:parent.width
+                wrapMode:Text.WordWrap
+                text:page.selectedSurface.mode === "frosted" ? (SurfaceService.blurAvailable ? "Frosted uses your desktop’s backdrop blur. Opacity changes the surface tint." : SurfaceService.reason+" A solid, readable background is used instead.") : "Transparent keeps the bar clear. The optional readability gradient is set in Appearance."
+                color:Theme.settingsMuted
+                font.pixelSize:Theme.settingsFontSizeSmall
+            }
+            Text {
+                visible:colorPicker.status === Loader.Error
+                width:parent.width
+                wrapMode:Text.WordWrap
+                text:"Color selection is unavailable on this system."
+                color:Theme.settingsMuted
+                font.pixelSize:Theme.settingsFontSizeSmall
+            }
+            FlatButton {
+                visible:page.surfaceOutput === ""
+                label:"Reset background"
+                onActivated:page.editSurface("transparent","#161616",.75)
+            }
         }
 
         SettingsRow {

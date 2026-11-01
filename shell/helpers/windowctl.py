@@ -21,21 +21,29 @@ def dispatch(expression):
         raise ValueError('The window action was not accepted.')
 
 
+def blur_capability():
+    """Read-only capability probe shared by toplevel and layer surfaces."""
+    result={'blurAvailable':False,'blurReason':'Backdrop blur is unavailable.'}
+    # Protocol detection only; no global compositor setting is changed.
+    try:
+        protocol=subprocess.run(['wayland-info'],capture_output=True,text=True,timeout=3,check=True).stdout
+        option=json.loads(ipc('j/getoption decoration:blur:enabled'))
+        enabled=option.get('int',option.get('bool',False))
+        result['blurAvailable']='ext_background_effect_manager_v1' in protocol and bool(enabled)
+        result['blurReason']='Compositor backdrop blur' if result['blurAvailable'] else 'Backdrop blur is disabled in your desktop settings.'
+    except (OSError,subprocess.SubprocessError,ValueError):pass
+    return result
+
+
 def run(action,owner):
+    if action=='capabilities':return dict(ok=True,**blur_capability())
     folder=Path(os.environ.get('XDG_STATE_HOME',str(Path.home()/'.local/state')))/'swiftshell'
     geometry=folder/'settings-window.json'
     minimized=folder/f'settings-minimized-{owner}.json'
     saved=read(geometry,{})
     result={'ok':True,'geometry':saved,'blurAvailable':False,'blurReason':'Backdrop blur is unavailable.'}
     if action=='prepare':
-        # Protocol detection only; no global compositor setting is changed.
-        try:
-            protocol=subprocess.run(['wayland-info'],capture_output=True,text=True,timeout=3,check=True).stdout
-            option=json.loads(ipc('j/getoption decoration:blur:enabled'))
-            enabled=option.get('int',option.get('bool',False))
-            result['blurAvailable']='ext_background_effect_manager_v1' in protocol and bool(enabled)
-            result['blurReason']='Compositor backdrop blur' if result['blurAvailable'] else 'Backdrop blur is disabled in your desktop settings.'
-        except (OSError,subprocess.SubprocessError,ValueError):pass
+        result.update(blur_capability())
         # Temporary rule scoped to this exact application/title. No config file writes.
         code='if _G.__swiftshell_settings_rule then _G.__swiftshell_settings_rule:set_enabled(false) end; '
         code+=f'_G.__swiftshell_settings_owner={owner}; '
@@ -105,7 +113,7 @@ def run(action,owner):
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser()
-    parser.add_argument('action',choices=['prepare','mapped','remember','minimize','maximize','blur-on','blur-off','activate','status','cleanup'])
+    parser.add_argument('action',choices=['capabilities','prepare','mapped','remember','minimize','maximize','blur-on','blur-off','activate','status','cleanup'])
     parser.add_argument('--owner-pid',type=int,default=os.getppid())
     args=parser.parse_args()
     try:result=run(args.action,args.owner_pid)

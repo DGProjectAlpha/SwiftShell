@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Wayland
 import "../logic/bar.js" as Bar
+import "../logic/contrast.js" as Contrast
 import "../logic/windows.js" as Windows
 import "../logic/workspaces.js" as Workspaces
 import "../components"
@@ -39,14 +40,19 @@ PanelWindow {
     readonly property string analysisKey: modelData && modelData.name ? modelData.name : monitorKey
     readonly property var outputAnalysis: ColorAnalysis.sampleForOutput(analysisKey)
     readonly property var outputSurface: Theme.surfaceForAnalysis(outputAnalysis)
-    readonly property color outputTextPrimary: Qt.rgba(outputSurface.text.r / 255, outputSurface.text.g / 255,
+    readonly property bool useSurfaceForeground: barSurface.visible && barSurface.alpha >= .5
+    readonly property bool darkSurfaceForeground: useSurfaceForeground && Contrast.chooseForeground(Contrast.parseHex(barSurface.color), "").foreground === "dark"
+    readonly property color outputTextPrimary: useSurfaceForeground && SettingsStore.manualText === "" ? (darkSurfaceForeground ? "#1a1a1a" : "#f2f2f2") : Qt.rgba(outputSurface.text.r / 255, outputSurface.text.g / 255,
                                                        outputSurface.text.b / 255, 1)
-    readonly property color outputTextMuted: Qt.rgba(outputSurface.muted.r / 255, outputSurface.muted.g / 255,
+    readonly property color outputTextMuted: useSurfaceForeground && SettingsStore.manualMuted === "" ? (darkSurfaceForeground ? "#525252" : "#c4c4c4") : Qt.rgba(outputSurface.muted.r / 255, outputSurface.muted.g / 255,
                                                      outputSurface.muted.b / 255, 1)
     readonly property color outputGradientTop: Qt.rgba(outputSurface.gradient.r / 255,
                                                        outputSurface.gradient.g / 255,
                                                        outputSurface.gradient.b / 255,
                                                        outputSurface.gradientAlpha)
+    readonly property var barSurface: Bar.surfaceForOutput(SettingsStore.barSurfaceMode, SettingsStore.barSurfaceColor,
+        SettingsStore.barSurfaceOpacity, SettingsStore.barSurfaceOutputsJson, monitorKey, SurfaceService.blurAvailable)
+    readonly property bool surfaceBlurApplied: backdrop.applied
     readonly property var workspaceItems: Workspaces.perMonitorItems(SettingsStore.workspaceOutputsJson, SettingsStore.workspaceIds, SettingsStore.targetMonitor, HyprlandModel.liveWorkspaces, monitorKey)
     readonly property int activeWorkspaceId: {
         for (let i = 0; i < workspaceItems.length; i++) {
@@ -80,6 +86,23 @@ PanelWindow {
     Component.onCompleted: syncExclusion()
     onReserveSpaceChanged: syncExclusion()
     onImplicitHeightChanged: syncExclusion()
+
+    Rectangle {
+        id: background
+        z: -2
+        anchors.fill: parent
+        visible: window.barSurface.visible
+        color: window.barSurface.color
+        opacity: window.barSurface.alpha
+        radius: Math.min(Theme.radius,height/2)
+    }
+    BackdropEffect {
+        id: backdrop
+        targetWindow: window
+        surface: background
+        cornerRadius: background.radius
+        enabled: window.barSurface.blur
+    }
 
     Rectangle {
         z: -1

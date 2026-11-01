@@ -27,6 +27,10 @@ Singleton {
     readonly property var moduleOrder: Bar.normalizeModuleOrder(barSettings.moduleOrder)
     readonly property var hiddenModules: barSettings.hiddenModules
     readonly property var visibleModules: Bar.visibleModules(barSettings.moduleOrder, barSettings.hiddenModules)
+    readonly property string barSurfaceMode: barSettings.surfaceMode
+    readonly property string barSurfaceColor: barSettings.surfaceColor
+    readonly property real barSurfaceOpacity: barSettings.surfaceOpacity
+    readonly property string barSurfaceOutputsJson: barSettings.surfaceOutputsJson
     readonly property string appearanceMode: appearanceSettings.mode
     readonly property string appearanceTint: appearanceSettings.tint
     readonly property real panelOpacity: appearanceSettings.panelOpacity
@@ -115,6 +119,10 @@ Singleton {
         barSettings.height = bar.height
         barSettings.moduleOrder = bar.moduleOrder || []
         barSettings.hiddenModules = bar.hiddenModules || []
+        barSettings.surfaceMode = bar.surfaceMode || "transparent"
+        barSettings.surfaceColor = bar.surfaceColor || "#161616"
+        barSettings.surfaceOpacity = bar.surfaceOpacity === undefined ? .75 : bar.surfaceOpacity
+        barSettings.surfaceOutputsJson = bar.surfaceOutputsJson || "{}"
         appearanceSettings.mode = appearance.mode || "dark"
         appearanceSettings.tint = appearance.tint || "neutral"
         appearanceSettings.panelOpacity = appearance.panelOpacity
@@ -202,6 +210,10 @@ Singleton {
                 placement: barSettings.placement,
                 height: barSettings.height,
                 moduleOrder: barSettings.moduleOrder,
+                surfaceMode: barSettings.surfaceMode,
+                surfaceColor: barSettings.surfaceColor,
+                surfaceOpacity: barSettings.surfaceOpacity,
+                surfaceOutputsJson: barSettings.surfaceOutputsJson,
                 hiddenModules: barSettings.hiddenModules
             },
             appearance: {
@@ -348,10 +360,14 @@ Singleton {
             reserveSpace: barSettings.reserveSpace,
             showFocusedTitle: barSettings.showFocusedTitle,
             workspaceIds: barSettings.workspaceIds,
-                workspaceOutputsJson: barSettings.workspaceOutputsJson,
+            workspaceOutputsJson: barSettings.workspaceOutputsJson,
             workspaceDispatch: barSettings.workspaceDispatch,
             height: barSettings.height,
             moduleOrder: barSettings.moduleOrder,
+            surfaceMode: barSettings.surfaceMode,
+            surfaceColor: barSettings.surfaceColor,
+            surfaceOpacity: barSettings.surfaceOpacity,
+            surfaceOutputsJson: barSettings.surfaceOutputsJson,
             hiddenModules: barSettings.hiddenModules
         }
     }
@@ -385,6 +401,34 @@ Singleton {
 
     function setShowFocusedTitle(value) {
         barSettings.showFocusedTitle = value === true
+    }
+
+    function setBarSurface(output, mode, color, opacity) {
+        if (typeof output !== "string" || output.length>256 || /[\x00-\x1f]/.test(output) || ["__proto__","prototype","constructor"].indexOf(output)>=0) return false
+        var next = currentBar()
+        if (output === "") {
+            next.surfaceMode=mode;next.surfaceColor=color;next.surfaceOpacity=opacity
+        } else {
+            var overrides = JSON.parse(root.barSurfaceOutputsJson)
+            overrides[output]={mode:mode,color:color,opacity:opacity}
+            next.surfaceOutputsJson=JSON.stringify(overrides)
+        }
+        var result=Settings.validateSettings({bar:next})
+        if (!result.ok) return false
+        root.suppressAdapterWrite=true
+        barSettings.surfaceMode=result.settings.bar.surfaceMode
+        barSettings.surfaceColor=result.settings.bar.surfaceColor
+        barSettings.surfaceOpacity=result.settings.bar.surfaceOpacity
+        barSettings.surfaceOutputsJson=result.settings.bar.surfaceOutputsJson
+        root.suppressAdapterWrite=false
+        Qt.callLater(root.writeLatest)
+        return true
+    }
+
+    function clearBarSurface(output) {
+        var overrides=JSON.parse(root.barSurfaceOutputsJson)
+        delete overrides[output]
+        barSettings.surfaceOutputsJson=JSON.stringify(overrides)
     }
 
     function setBarHeight(value) {
@@ -674,6 +718,10 @@ Singleton {
                 property int height: 28
                 property list<string> moduleOrder: ["workspaces", "title", "search", "clock", "control", "media", "tray", "battery"]
                 property list<string> hiddenModules: []
+                property string surfaceMode: "transparent"
+                property string surfaceColor: "#161616"
+                property real surfaceOpacity: .75
+                property string surfaceOutputsJson: "{}"
             }
 
             property JsonObject appearance: JsonObject {

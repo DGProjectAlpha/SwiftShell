@@ -24,9 +24,13 @@ ShellRoot {
         target: "swiftshell"
         function diagnostics(): string {
             const w=SettingsModel.nativeWindow
-            return JSON.stringify({launcherOpen:LauncherModel.open,launcherOutput:LauncherModel.screen ? LauncherModel.screen.name : "",launcherHasFocus:launcherWindow.searchHasFocus,settingsOpen:SettingsModel.open,category:SettingsStore.settingsWindowCategory,blurAvailable:WindowService.blurAvailable,blurRegionApplied:WindowService.blurRegionApplied,blurReason:WindowService.blurReason,windowError:WindowService.error,
+            return JSON.stringify({barSurfaces:barHost.surfaceDiagnostics(),layerBlurAvailable:SurfaceService.blurAvailable,launcherOpen:LauncherModel.open,launcherOutput:LauncherModel.screen ? LauncherModel.screen.name : "",launcherHasFocus:launcherWindow.searchHasFocus,windowBusy:WindowService.busy || WindowService.queue.length>0,settingsOpen:SettingsModel.open,category:SettingsStore.settingsWindowCategory,blurAvailable:WindowService.blurAvailable,blurRegionApplied:WindowService.blurRegionApplied,blurReason:WindowService.blurReason,windowError:WindowService.error,
                 panelBlur:SettingsStore.panelBlur,shadowOpacity:SettingsStore.shadowOpacity,shadowSoftness:SettingsStore.shadowSoftness,window:w ? {width:w.width,height:w.height,pageStatus:w.pageStatus,searchHasFocus:w.searchHasFocus,maximized:WindowService.maximized,qtMaximized:w.maximized,shadowInset:w.shadowInset,resizeRequests:w.resizeRequests,lastResizeAccepted:w.lastResizeAccepted} : null})
         }
+        function barSurface(output: string, mode: string, color: string, opacity: real): void {
+            SettingsStore.setBarSurface(output,mode,color,opacity)
+        }
+        function barInherit(output: string): void { SettingsStore.clearBarSurface(output) }
         function launcher(action: string): void {
             if (action === "open") LauncherModel.openLauncher()
             else if (action === "close") LauncherModel.closeLauncher()
@@ -47,7 +51,7 @@ ShellRoot {
         }
     }
 
-    BarHost {}
+    BarHost { id: barHost }
     LauncherWindow { id: launcherWindow }
 
     Connections {

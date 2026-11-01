@@ -27,6 +27,7 @@ original=next(m['name'] for m in monitors if m['focused'])
 bindings=json.loads(ipc('j/binds'))
 assert len([b for b in bindings if b['modmask']==64 and b.get('key','').lower()=='space' and not b['submap']])==1,'Expected a single approved binding'
 command('launcher','close')
+wait(lambda:not diagnostics().get('windowBusy',False))
 try:
     with tempfile.TemporaryDirectory(prefix='swiftshell-keyboard-test-') as directory:
         directory=Path(directory)
@@ -36,10 +37,12 @@ try:
         subprocess.run(['cc','-Wall','-Wextra','-Werror','-I'+str(directory),str(ROOT/'tests/helpers/launcher-keyboard.c'),str(directory/'keyboard-protocol.c'),'-o',str(directory/'keyboard'),'-lwayland-client','-lxkbcommon'],check=True)
         def key(action):subprocess.run([str(directory/'keyboard'),action],check=True)
         for monitor in monitors:
-            focus(monitor['name']);time.sleep(.2)
+            focus(monitor['name'])
+            wait(lambda:any(m['name']==monitor['name'] and m['focused'] for m in json.loads(ipc('j/monitors'))))
+            time.sleep(.2)
             for _ in range(2):
                 key('toggle');wait(lambda:diagnostics()['launcherOpen'] and diagnostics()['launcherHasFocus'])
-                assert diagnostics()['launcherOutput']==monitor['name']
+                assert diagnostics()['launcherOutput']==monitor['name'], {'expected':monitor['name'],'launcher':diagnostics()['launcherOutput'],'focused':[m['name'] for m in json.loads(ipc('j/monitors')) if m['focused']]}
                 key('toggle');wait(lambda:not diagnostics()['launcherOpen'])
             key('toggle');wait(lambda:diagnostics()['launcherOpen'] and diagnostics()['launcherHasFocus'])
             key('escape');wait(lambda:not diagnostics()['launcherOpen'])

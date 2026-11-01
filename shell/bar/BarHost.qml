@@ -6,6 +6,9 @@ import "../services"
 Scope {
     id: root
 
+    function surfaceDiagnostics() {
+        return bars.instances.map(function(w){return {output:w.monitorKey,mode:w.barSurface.mode,color:w.barSurface.color,alpha:w.barSurface.alpha,blurApplied:w.surfaceBlurApplied,height:w.height}})
+    }
     property bool refreshingScreens: false
     property var targetScreens: []
     property string announcedPlacement: ""
@@ -94,6 +97,7 @@ Scope {
     }
 
     Variants {
+        id: bars
         model: root.targetScreens
         BarWindow {}
     }
