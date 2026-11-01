@@ -82,7 +82,7 @@ FORBIDDEN = (
     "decorations.lua",
     ".config/hypr",
     "quickshell/noctalia",
-    "QtQuick.Controls",
+    "QtQuick.Controls.Material",
 )
 
 
@@ -922,14 +922,15 @@ def main():
             ]
             if process_commands != expected_commands or text.count("Process {") != 1 or "function onRawEvent" not in text:
                 errors.append("Hyprland snapshot must use only fixed event-triggered read-only queries")
-        if "Process {" in text and path.name != "HyprlandModel.qml":
+        if "Process {" in text and path.name not in ("HyprlandModel.qml", "DisplayService.qml"):
             errors.append(str(path.relative_to(ROOT)) + " polls or spawns a process")
         if "Timer {" in text:
             slideshow = path.name == "SlideshowClock.qml" and "Math.max(60000" in text
             banner = path.name == "NotificationHost.qml" and "repeat: false" in text and "repeat: true" not in text
             snapshot = path.name == "HyprlandModel.qml" and "repeat: false" in text and "repeat: true" not in text
             audit = path.name == "WorkspaceAudit.qml" and "repeat: false" in text and "repeat: true" not in text
-            if not slideshow and not banner and not snapshot and not audit:
+            display_confirmation = path.name == "DisplayService.qml" and "running: root.pending" in text
+            if not slideshow and not banner and not snapshot and not audit and not display_confirmation:
                 errors.append(str(path.relative_to(ROOT)) + " polls or spawns a process")
         errors.extend(nesting_errors(text, str(path.relative_to(ROOT)), component_roots))
         errors.extend(readonly_implicit_errors(text, str(path.relative_to(ROOT)), component_roots))

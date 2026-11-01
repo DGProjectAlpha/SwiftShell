@@ -733,7 +733,7 @@ test("display preview math keeps aspect and refuses the last output", function (
     assert.equal(displays.needsRow(dual), false);
     const box = displays.bounds(dual);
     assert.equal(box.x, 0);
-    assert.equal(box.width, 2560 + 1920);
+    assert.equal(box.width, 2560 + 1920 / 1.5);
     const fitted = displays.project(dual, 480, 270, 12);
     assert.equal(fitted.length, 2);
     assert.ok(fitted[0].width > 8 && fitted[1].width > 8);
@@ -766,7 +766,7 @@ test("display preview math keeps aspect and refuses the last output", function (
         displays.fromScreen({ name: "DP-1", width: 2560, height: 1440 }, null),
     ]);
     assert.equal(row[1].x, 1920);
-    assert.ok(displays.APPLY_REASON.indexOf("not sent") !== -1);
+
 });
 
 test("blank monitor text means automatic placement", function () {

@@ -1,5 +1,3 @@
-var APPLY_REASON = "Display changes are not sent. This shell has no verified layout call on this floor, so the diagram is a preview.";
-
 function finite(value, fallback) {
     return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
@@ -12,7 +10,7 @@ function outputFrom(raw) {
     var name = source.name == null ? "" : String(source.name);
     var description = source.description == null ? "" : String(source.description);
     var id = source.id == null || source.id === "" ? (description || name || "output") : String(source.id);
-    return {
+    return Object.assign({}, source, {
         id: id,
         name: name,
         description: description,
@@ -21,9 +19,10 @@ function outputFrom(raw) {
         width: width,
         height: height,
         scale: scale > 0 ? scale : 1,
-        refresh: Math.max(0, Math.round(finite(source.refresh, 0))),
+        refresh: Math.max(0, finite(source.refresh, 0)),
         enabled: source.enabled !== false,
-    };
+        transform: source.transform || 0,
+    });
 }
 
 function clone(outputs) {
@@ -85,20 +84,23 @@ function liveOf(outputs) {
     return out;
 }
 
+function logicalWidth(item) { return (item.transform % 2 ? item.height : item.width) / item.scale; }
+function logicalHeight(item) { return (item.transform % 2 ? item.width : item.height) / item.scale; }
+
 function bounds(outputs) {
     var live = liveOf(outputs);
     if (live.length === 0)
         return { x: 0, y: 0, width: 1, height: 1 };
     var minX = live[0].x;
     var minY = live[0].y;
-    var maxX = live[0].x + live[0].width;
-    var maxY = live[0].y + live[0].height;
+    var maxX = live[0].x + logicalWidth(live[0]);
+    var maxY = live[0].y + logicalHeight(live[0]);
     for (var index = 1; index < live.length; index++) {
         var item = live[index];
         minX = Math.min(minX, item.x);
         minY = Math.min(minY, item.y);
-        maxX = Math.max(maxX, item.x + item.width);
-        maxY = Math.max(maxY, item.y + item.height);
+        maxX = Math.max(maxX, item.x + logicalWidth(item));
+        maxY = Math.max(maxY, item.y + logicalHeight(item));
     }
     return { x: minX, y: minY, width: Math.max(1, maxX - minX), height: Math.max(1, maxY - minY) };
 }
@@ -111,11 +113,11 @@ function canvasScale(outputs, canvasWidth, canvasHeight, margin) {
     return Math.min(innerW / box.width, innerH / box.height);
 }
 
-function project(outputs, canvasWidth, canvasHeight, margin) {
+function project(outputs, canvasWidth, canvasHeight, margin, fixed) {
     var list = outputs || [];
-    var box = bounds(list);
+    var box = fixed ? fixed.bounds : bounds(list);
     var pad = finite(margin, 0);
-    var scale = canvasScale(list, canvasWidth, canvasHeight, pad);
+    var scale = fixed ? fixed.scale : canvasScale(list, canvasWidth, canvasHeight, pad);
     var out = [];
     for (var index = 0; index < list.length; index++) {
         var item = list[index];
@@ -126,8 +128,8 @@ function project(outputs, canvasWidth, canvasHeight, margin) {
             label: item.name || item.id,
             x: Math.round(pad + (item.x - box.x) * scale),
             y: Math.round(pad + (item.y - box.y) * scale),
-            width: Math.max(8, Math.round(item.width * scale)),
-            height: Math.max(8, Math.round(item.height * scale)),
+            width: Math.max(8, Math.round(logicalWidth(item) * scale)),
+            height: Math.max(8, Math.round(logicalHeight(item) * scale)),
         });
     }
     return out;
@@ -159,33 +161,33 @@ function snapEdges(outputs, id, threshold) {
     var limit = finite(threshold, 0);
     var x = current.x;
     var y = current.y;
-    var right = current.x + current.width;
-    var bottom = current.y + current.height;
+    var right = current.x + logicalWidth(current);
+    var bottom = current.y + logicalHeight(current);
     for (index = 0; index < list.length; index++) {
         var other = list[index];
         if (other.id === id || other.enabled === false)
             continue;
-        var edgesX = [other.x, other.x + other.width];
-        var edgesY = [other.y, other.y + other.height];
+        var edgesX = [other.x, other.x + logicalWidth(other)];
+        var edgesY = [other.y, other.y + logicalHeight(other)];
         var edge;
         for (edge = 0; edge < edgesX.length; edge++) {
             if (Math.abs(current.x - edgesX[edge]) <= limit)
                 x = edgesX[edge];
             if (Math.abs(right - edgesX[edge]) <= limit)
-                x = edgesX[edge] - current.width;
+                x = edgesX[edge] - logicalWidth(current);
         }
         for (edge = 0; edge < edgesY.length; edge++) {
             if (Math.abs(current.y - edgesY[edge]) <= limit)
                 y = edgesY[edge];
             if (Math.abs(bottom - edgesY[edge]) <= limit)
-                y = edgesY[edge] - current.height;
+                y = edgesY[edge] - logicalHeight(current);
         }
     }
     return moveBy(list, id, x - current.x, y - current.y);
 }
 
 function overlaps(left, right) {
-    return left.x < right.x + right.width && left.x + left.width > right.x && left.y < right.y + right.height && left.y + left.height > right.y;
+    return left.x < right.x + logicalWidth(right) && left.x + logicalWidth(left) > right.x && left.y < right.y + logicalHeight(right) && left.y + logicalHeight(left) > right.y;
 }
 
 function warnings(outputs) {
@@ -233,7 +235,7 @@ function nudge(outputs, id, direction, step) {
 }
 
 var swiftshellDisplays = {
-    APPLY_REASON: APPLY_REASON,
+    logicalWidth: logicalWidth, logicalHeight: logicalHeight,
     outputFrom: outputFrom,
     clone: clone,
     fromScreen: fromScreen,

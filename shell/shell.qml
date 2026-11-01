@@ -1,6 +1,7 @@
 //@ pragma ShellId swiftshell
 
 import Quickshell
+import Quickshell.Io
 import QtQuick
 import "bar"
 import "launcher"
@@ -18,6 +19,15 @@ ShellRoot {
     }
 
     Component.onDestruction: console.info("SwiftShell: prototype stopped")
+
+    IpcHandler {
+        target: "swiftshell"
+        function settings(category: string): void {
+            const allowed = ["appearance","bar","wallpaper","displays","workspaces","shortcuts","audio","network","bluetooth","power","notifications"]
+            if (allowed.indexOf(category) >= 0) SettingsStore.setSettingsCategory(category)
+            SettingsModel.show()
+        }
+    }
 
     BarHost {}
     LauncherWindow {}

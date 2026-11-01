@@ -24,6 +24,7 @@ TestCase {
         "shell/bar/BatteryModule.qml",
         "shell/components/BarLabel.qml",
         "shell/components/FlatButton.qml",
+        "shell/components/ChoiceBox.qml",
         "shell/components/CompactSlider.qml",
         "shell/components/SectionHeader.qml",
         "shell/components/ServiceStatus.qml",
@@ -42,6 +43,7 @@ TestCase {
         "shell/themes/Theme.qml",
         "shell/services/SettingsStore.qml",
         "shell/services/HyprlandModel.qml",
+        "shell/services/DisplayService.qml",
         "shell/services/LauncherModel.qml",
         "shell/services/SettingsModel.qml",
         "shell/services/ColorAnalysis.qml",
@@ -410,7 +412,7 @@ TestCase {
         verify(wallpaper.shows("wallpaperPath"))
         var displays = componentFor("shell/settings/DisplaysPage.qml").createObject(this)
         verify(displays !== null)
-        verify(findText(displays, "not sent", 0))
+        verify(findText(displays, "Arrange your screens", 0))
         verify(findText(displays, "No outputs are connected", 0))
         var shortcuts = componentFor("shell/settings/ShortcutsPage.qml").createObject(this)
         verify(shortcuts !== null)

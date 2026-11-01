@@ -13,6 +13,8 @@ fi
 
 "$NODE" "$ROOT/tests/logic.test.js"
 "$NODE" "$ROOT/tests/workspaces.test.js"
+"$NODE" "$ROOT/tests/displays.test.js"
+python3 "$ROOT/tests/test_displays.py"
 "$NODE" "$ROOT/tests/settings_files.test.js"
 sh "$ROOT/tests/install_flow.sh"
 
@@ -54,6 +56,7 @@ export QML_IMPORT_PATH="$IMPORTS"
 
 QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_implicit_size.qml" -platform offscreen
 QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_shell_load.qml" -platform offscreen
+QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_displays.qml" -platform offscreen
 
 DIALOGS_AVAILABLE=0
 FOLDER_MODEL_AVAILABLE=0

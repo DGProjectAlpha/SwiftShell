@@ -9,7 +9,7 @@ pkgdesc='Transparent Quickshell bar for Hyprland'
 arch=('any')
 url='https://github.com/DGProjectAlpha/SwiftShell'
 license=('LicenseRef-None')
-depends=('quickshell' 'hyprland' 'qt6-base' 'qt6-declarative')
+depends=('python' 'quickshell' 'hyprland' 'qt6-base' 'qt6-declarative')
 source=("$pkgname-$pkgver.tar.gz::https://github.com/DGProjectAlpha/SwiftShell/archive/refs/tags/v$pkgver.tar.gz")
 sha256sums=('SKIP')
 

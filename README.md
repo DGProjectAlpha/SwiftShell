@@ -573,3 +573,9 @@ IPC snapshots. Existing global IDs remain preserved and are scoped by ownership.
 The native hidden Settings save/restart regression and live read-only workspace
 audit passed locally; visual switching, focus-follow, mixed-scale layout and
 hotplug still need the checklist in [testing](docs/testing.md#local-per-monitor-workspace-repair-2026-10-31).
+
+Displays now supports staged arrangement, advertised resolutions/refresh rates,
+scale, orientation, enable/disable, and Apply/Keep/Revert on verified Hyprland
+0.57 Lua sessions. An independent watchdog restores unconfirmed changes even if
+SwiftShell exits. Kept layouts can be restored explicitly; your Hyprland Lua
+files remain unchanged. See the live transaction evidence in `docs/testing.md`.

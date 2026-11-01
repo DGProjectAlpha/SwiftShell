@@ -1,0 +1,15 @@
+const assert=require('node:assert/strict');
+const D=require('../shell/logic/displays.js');
+const layout=[D.outputFrom({id:'DP-1',name:'DP-1',width:2560,height:1440,scale:1,x:0,y:0}),D.outputFrom({id:'HDMI-A-1',name:'HDMI-A-1',width:1920,height:1080,scale:1.25,x:2560,y:720})];
+assert.equal(D.bounds(layout).width,4096);
+const frozen={bounds:D.bounds(layout),scale:D.canvasScale(layout,620,230,24)};
+const before=D.project(layout,620,230,24,frozen);
+const after=D.project(D.moveBy(layout,'HDMI-A-1',500,400),620,230,24,frozen);
+assert.equal(before[1].width,after[1].width);
+assert.equal(before[1].height,after[1].height);
+assert.equal(before[0].width,after[0].width);
+assert.ok(after[1].x>before[1].x && after[1].y>before[1].y);
+const portrait=D.outputFrom({...layout[1],transform:1});
+assert.equal(D.logicalWidth(portrait),864);
+assert.equal(D.logicalHeight(portrait),1536);
+console.log('display gesture and logical geometry regressions passed');

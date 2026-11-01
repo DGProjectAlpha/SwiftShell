@@ -562,3 +562,34 @@ repair commit (do not hard reset), then `scripts/launch.sh`. The additive prefer
 can remain: old code preserves unknown keys in its extension bag. No compositor
 configuration needs restoring. A pre-repair source copy was also retained in
 `/tmp/swiftshell-before-workspaces/shell` for this session; it is not a durable backup.
+
+## Live Displays transactions (2026-10-31)
+
+Phase 1 verified with `python3 tests/live/display-transactions.py --live` on both
+connected outputs. Passed Apply/Keep, explicit Revert, advertised 1280×720@60
+mode changes, scale changes, 90-degree rotation, 15-second timeout recovery, and
+recovery after the controlling process exited. Original monitor modes, scales,
+positions, orientation and color formats were checked after every test and
+restored at completion. No user Hyprland Lua file was written.
+
+`scripts/check.sh` passes, including seven Python validation/journal tests,
+logical mixed-scale geometry, and a QML pointer-drag regression that loads the
+actual DisplaysPage and asserts rectangles retain their dimensions during a drag.
+The native page was opened via `qs ipc -p shell call swiftshell settings displays`;
+a window-bounded capture confirmed discovery, friendly names, mode lists and the
+arrangement. This initial window remained tiled; floating behavior belongs to
+Phase 2. Hardware APIs were checked against installed stubs and exact Hyprland
+0.57.0 source (monitor-rule parser preserves unspecified fields on exact rules).
+
+The external Python watchdog owns the confirmation deadline and fsyncs the
+original state before applying. It survives Quickshell exit, watches the owner's
+PID/start time, and reverts on timeout, owner death or failed verification. A
+pending journal is recovered before accepting new work. Revert failures retain
+the snapshot and retry; disconnected outputs cannot be restored until reconnected.
+Do not delete the journal during recovery. `python3 shell/helpers/displayctl.py
+revert` explicitly asks the watchdog to recover a pending transaction.
+
+Kept layouts are in SwiftShell's own state directory and restored explicitly
+with **Restore saved layout**. They are not automatically applied at login or
+written into Hyprland configuration. HDR/color/ICC/reservations stay under the
+existing compositor configuration; mirrored displays cannot be edited here.
