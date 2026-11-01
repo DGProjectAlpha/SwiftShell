@@ -1,5 +1,6 @@
 import QtQuick
 import QtTest
+import "../../shell/services" as Services
 import Quickshell.Services.Mpris
 import Quickshell.Services.SystemTray
 import Quickshell.Services.UPower
@@ -11,6 +12,7 @@ TestCase {
     // Every shell QML document. The static check requires this list to match the tree.
     readonly property var shellFiles: [
         "shell/shell.qml",
+        "shell/WorkspaceAudit.qml",
         "shell/bar/BarHost.qml",
         "shell/bar/BarWindow.qml",
         "shell/bar/WorkspaceIndicators.qml",
@@ -54,6 +56,7 @@ TestCase {
         "shell/notifications/NotificationHost.qml",
         "shell/settings/AppearancePage.qml",
         "shell/settings/BarPage.qml",
+        "shell/settings/WorkspacesPage.qml",
         "shell/settings/ImageDialog.qml",
         "shell/settings/FolderPicker.qml",
         "shell/settings/FolderScanner.qml",
@@ -100,6 +103,7 @@ TestCase {
         "shell/settings/NotificationsPage.qml",
         "shell/settings/AppearancePage.qml",
         "shell/settings/BarPage.qml",
+        "shell/settings/WorkspacesPage.qml",
         "shell/settings/DisplaysPage.qml",
         "shell/settings/ShortcutsPage.qml",
         "shell/settings/SettingsWindow.qml",
@@ -125,6 +129,7 @@ TestCase {
             return message.indexOf('module "Qt.labs.folderlistmodel" is not installed') !== -1
         if (path === "shell/notifications/NotificationHost.qml")
             return message.indexOf('module "Quickshell.Services.Notifications" is not installed') !== -1
+                || message.indexOf('module "Quickshell.Services.Notifications" plugin "quickshell-service-notificationsplugin" not found') !== -1
                 || expectedWlrFailure(message)
         if (path === "shell/shell.qml"
                 || path === "shell/bar/BarHost.qml"
@@ -314,6 +319,37 @@ TestCase {
         if (node.item)
             return findText(node.item, needle, depth + 1)
         return false
+    }
+
+    function test_workspaces_page_uses_live_monitors_and_persists_overrides() {
+        Services.HyprlandModel.monitorChoices = [
+            {name: "DP-1", label: "HP X32 · DP-1", scale: 1},
+            {name: "HDMI-A-1", label: "PM161Q C · HDMI-A-1", scale: 1.25}
+        ]
+        Services.HyprlandModel.liveWorkspaces = [
+            {key:"gaming", id:-1, name:"gaming", monitorName:"DP-1", active:true, focused:true, windows:2},
+            {key:"4", id:4, name:"4", monitorName:"HDMI-A-1", active:true, focused:false, windows:0}
+        ]
+        var page = componentFor("shell/settings/WorkspacesPage.qml").createObject(this, {width:560})
+        verify(page !== null)
+        verify(findText(page, "HP X32", 0))
+        verify(findText(page, "PM161Q C", 0))
+        verify(findText(page, "gaming · active", 0))
+        verify(findText(page, "4 · active · empty", 0))
+        verify(Services.SettingsStore.setWorkspaceOutput("DP-1", ["2", "gaming"]))
+        compare(JSON.parse(Services.SettingsStore.workspaceOutputsJson)["DP-1"].join(","), "2,gaming")
+        verify(!Services.SettingsStore.setWorkspaceOutput("DP-1", ["2", "2"]))
+        verify(Services.SettingsStore.setWorkspaceOutput("DP-1", ["name:gaming", " 2 "]))
+        compare(JSON.parse(Services.SettingsStore.workspaceOutputsJson)["DP-1"].join(","), "gaming,2")
+        verify(Services.SettingsStore.setWorkspaceOutput("DP-1", null))
+        compare(JSON.parse(Services.SettingsStore.workspaceOutputsJson)["DP-1"], null)
+        Services.SettingsStore.setTargetMonitor("DP-1")
+        Services.SettingsStore.setBarPlacement("all")
+        compare(Services.SettingsStore.targetMonitor, "")
+        compare(Services.SettingsStore.barPlacement, "all")
+        page.destroy()
+        Services.HyprlandModel.monitorChoices = []
+        Services.HyprlandModel.liveWorkspaces = []
     }
 
     function test_settings_page_names_the_blur_limit() {

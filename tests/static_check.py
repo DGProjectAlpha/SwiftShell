@@ -884,7 +884,7 @@ def main():
     for path in qml_files:
         text = path.read_text(encoding="utf-8")
         for token in FORBIDDEN:
-            if token in text:
+            if token in text and not (token == "hyprctl" and path.name == "HyprlandModel.qml"):
                 errors.append(str(path.relative_to(ROOT)) + " contains " + token)
         for token in (
             "Easing.OutBounce",
@@ -913,12 +913,23 @@ def main():
                 + str(paren)
                 + ")"
             )
-        if "Process {" in text:
+        if path.name == "HyprlandModel.qml":
+            # Narrow exception: one event-triggered process with fixed read-only argv.
+            process_commands = re.findall(r'snapshotProcess.command = ([^;]+);', text)
+            expected_commands = [
+                '["hyprctl", "-j", "monitors"]',
+                '["hyprctl", "-j", root.snapshotStage === 1 ? "workspaces" : "workspacerules"]',
+            ]
+            if process_commands != expected_commands or text.count("Process {") != 1 or "function onRawEvent" not in text:
+                errors.append("Hyprland snapshot must use only fixed event-triggered read-only queries")
+        if "Process {" in text and path.name != "HyprlandModel.qml":
             errors.append(str(path.relative_to(ROOT)) + " polls or spawns a process")
         if "Timer {" in text:
             slideshow = path.name == "SlideshowClock.qml" and "Math.max(60000" in text
             banner = path.name == "NotificationHost.qml" and "repeat: false" in text and "repeat: true" not in text
-            if not slideshow and not banner:
+            snapshot = path.name == "HyprlandModel.qml" and "repeat: false" in text and "repeat: true" not in text
+            audit = path.name == "WorkspaceAudit.qml" and "repeat: false" in text and "repeat: true" not in text
+            if not slideshow and not banner and not snapshot and not audit:
                 errors.append(str(path.relative_to(ROOT)) + " polls or spawns a process")
         errors.extend(nesting_errors(text, str(path.relative_to(ROOT)), component_roots))
         errors.extend(readonly_implicit_errors(text, str(path.relative_to(ROOT)), component_roots))
@@ -988,7 +999,7 @@ def main():
         "focused launcher screen": "resolveLauncherScreen" in (SHELL / "services" / "LauncherModel.qml").read_text(encoding="utf-8"),
         "bar follows placement helper": "selectBarPlacement" in (SHELL / "bar" / "BarHost.qml").read_text(encoding="utf-8"),
         "launcher is not pinned to the bar": "LauncherModel.screen = window.screen" not in bar,
-        "workspace indicators can follow live ids": "indicatorItems" in bar,
+        "workspace indicators can follow live ids": "perMonitorItems" in bar,
         "socket dispatch": "Hyprland.dispatch" in (SHELL / "services" / "HyprlandModel.qml").read_text(encoding="utf-8"),
         "lua workspace expression": "hl.dsp.focus({ workspace = " in (SHELL / "logic" / "workspaces.js").read_text(encoding="utf-8"),
         "existing workspaces do not use activate()": ".activate()" not in (SHELL / "services" / "HyprlandModel.qml").read_text(encoding="utf-8"),

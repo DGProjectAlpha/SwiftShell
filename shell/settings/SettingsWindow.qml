@@ -66,6 +66,7 @@ FloatingWindow {
     }
 
     function activePage() {
+        if (SettingsStore.settingsWindowCategory === "workspaces") return workspacesPage
         if (SettingsStore.settingsWindowCategory === "bar")
             return barPage
         if (SettingsStore.settingsWindowCategory === "wallpaper")
@@ -401,6 +402,17 @@ FloatingWindow {
                     y: 0
                     width: scroller.width
                     visible: SettingsStore.settingsWindowCategory === "bar"
+                    height: visible ? implicitHeight : 0
+                    query: search.text
+                    onRevealRequested: function (y, itemHeight) {
+                        scroller.contentY = Nav.scrollTarget(scroller.contentY, scroller.height, y, itemHeight)
+                    }
+                }
+
+                WorkspacesPage {
+                    id: workspacesPage
+                    width: scroller.width
+                    visible: SettingsStore.settingsWindowCategory === "workspaces"
                     height: visible ? implicitHeight : 0
                     query: search.text
                     onRevealRequested: function (y, itemHeight) {

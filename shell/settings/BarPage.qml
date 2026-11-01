@@ -177,26 +177,33 @@ Item {
             }
         }
 
-        SettingsRow {
-            controlId: "targetMonitor"
+        Column {
+            property string controlId: "targetMonitor"
             visible: page.shows("targetMonitor")
-            marked: page.marked("targetMonitor")
             width: parent.width
-            label: "Monitor"
-
-            TextInput {
-                id: monitorField
-                width: 160
-                height: Theme.controlHeight
-                text: SettingsStore.targetMonitor
-                color: Theme.panelText
-                font.family: Theme.fontFamily
-                font.pixelSize: Theme.fontSize
-                selectByMouse: true
-                activeFocusOnTab: true
-                clip: true
-                Accessible.name: "Bar monitor"
-                onEditingFinished: SettingsStore.setTargetMonitor(text)
+            spacing: Theme.panelSpacing
+            Text {
+                text: "Use one monitor"
+                color: Theme.panelMuted
+                font.pixelSize: Theme.fontSizeSmall
+            }
+            Repeater {
+                model: HyprlandModel.monitorChoices
+                delegate: FlatButton {
+                    required property var modelData
+                    width: Math.min(implicitWidth, page.width)
+                    label: modelData.label
+                    emphasized: SettingsStore.targetMonitor === modelData.name
+                    onActivated: SettingsStore.setTargetMonitor(modelData.name)
+                }
+            }
+            Text {
+                visible: SettingsStore.targetMonitor !== ""
+                width: parent.width
+                wrapMode: Text.WordWrap
+                text: "Selected: " + SettingsStore.targetMonitor + ". Disconnected outputs fall back to the focused screen. Focused, Primary, or All clears this selection."
+                color: Theme.panelMuted
+                font.pixelSize: Theme.fontSizeSmall
             }
         }
 

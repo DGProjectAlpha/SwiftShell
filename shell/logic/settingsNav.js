@@ -15,6 +15,7 @@ var CONTROLS = [
     { id: "topGradient", category: "appearance", section: "Surface", label: "Top edge gradient", keywords: ["gradient", "bar", "fade"] },
     { id: "wallpaperTint", category: "appearance", section: "Limits", label: "Wallpaper tint", keywords: ["tint", "wallpaper", "adaptive"] },
     { id: "backdropBlur", category: "appearance", section: "Limits", label: "Backdrop blur", keywords: ["blur", "frost", "material"] },
+    { id: "workspaceOutputs", category: "workspaces", section: "Monitors", label: "Per-monitor workspaces", keywords: ["workspace", "empty", "named", "automatic", "override"] },
     { id: "barHeight", category: "bar", section: "Size", label: "Bar height", keywords: ["height", "scale", "size"] },
     { id: "reserveSpace", category: "bar", section: "Placement", label: "Reserve space", keywords: ["exclusive", "overlay", "zone"] },
     { id: "barPlacement", category: "bar", section: "Placement", label: "Bar screens", keywords: ["monitor", "focus", "all", "primary"] },
@@ -115,6 +116,7 @@ function categories() {
     return [
         { id: "appearance", label: "Appearance" },
         { id: "bar", label: "Top bar" },
+        { id: "workspaces", label: "Workspaces" },
         { id: "wallpaper", label: "Wallpaper" },
         { id: "displays", label: "Displays" },
         { id: "shortcuts", label: "Shortcuts" },

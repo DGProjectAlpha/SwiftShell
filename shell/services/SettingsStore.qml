@@ -5,6 +5,7 @@ import QtCore
 import Quickshell
 import Quickshell.Io
 import "../logic/bar.js" as Bar
+import "../logic/workspaces.js" as Workspaces
 import "../logic/settings.js" as Settings
 
 Singleton {
@@ -18,6 +19,7 @@ Singleton {
     readonly property string targetMonitor: barSettings.targetMonitor
     readonly property bool reserveSpace: barSettings.reserveSpace
     readonly property bool showFocusedTitle: barSettings.showFocusedTitle
+    readonly property string workspaceOutputsJson: barSettings.workspaceOutputsJson
     readonly property var workspaceIds: Settings.normalizeWorkspaceIds(barSettings.workspaceIds)
     readonly property string workspaceDispatch: barSettings.workspaceDispatch === "lua" || barSettings.workspaceDispatch === "legacy" ? barSettings.workspaceDispatch : "auto"
     readonly property string barPlacement: barSettings.placement === "all" || barSettings.placement === "primary" ? barSettings.placement : "focused"
@@ -107,6 +109,7 @@ Singleton {
         barSettings.reserveSpace = bar.reserveSpace !== false
         barSettings.showFocusedTitle = bar.showFocusedTitle !== false
         barSettings.workspaceIds = bar.workspaceIds || []
+        barSettings.workspaceOutputsJson = bar.workspaceOutputsJson || "{}"
         barSettings.workspaceDispatch = bar.workspaceDispatch || "auto"
         barSettings.placement = bar.placement === "all" || bar.placement === "primary" ? bar.placement : "focused"
         barSettings.height = bar.height
@@ -194,6 +197,7 @@ Singleton {
                 reserveSpace: barSettings.reserveSpace,
                 showFocusedTitle: barSettings.showFocusedTitle,
                 workspaceIds: barSettings.workspaceIds,
+                workspaceOutputsJson: barSettings.workspaceOutputsJson,
                 workspaceDispatch: barSettings.workspaceDispatch,
                 placement: barSettings.placement,
                 height: barSettings.height,
@@ -344,6 +348,7 @@ Singleton {
             reserveSpace: barSettings.reserveSpace,
             showFocusedTitle: barSettings.showFocusedTitle,
             workspaceIds: barSettings.workspaceIds,
+                workspaceOutputsJson: barSettings.workspaceOutputsJson,
             workspaceDispatch: barSettings.workspaceDispatch,
             height: barSettings.height,
             moduleOrder: barSettings.moduleOrder,
@@ -355,7 +360,18 @@ Singleton {
         clockSettings.use24Hour = value === true
     }
 
+    function setWorkspaceOutput(monitor, keys) {
+        const outputs = Workspaces.parseOverrides(root.workspaceOutputsJson) || {}
+        outputs[monitor] = keys
+        const next = JSON.stringify(outputs)
+        const normalized = Workspaces.parseOverrides(next)
+        if (normalized === null) return false
+        barSettings.workspaceOutputsJson = JSON.stringify(normalized)
+        return true
+    }
+
     function setBarPlacement(value) {
+        barSettings.targetMonitor = ""
         barSettings.placement = value === "all" || value === "primary" ? value : "focused"
     }
 
@@ -569,7 +585,9 @@ Singleton {
         onAdapterUpdated: {
             if (!root.acceptWrites || root.protectFile || root.pendingPlan || root.suppressAdapterWrite)
                 return;
-            root.writeLatest();
+            // JsonAdapter updates its serialized cache after this signal.
+            // Coalesce edits and write only after those notifications complete.
+            Qt.callLater(root.writeLatest);
         }
         onSaved: {
             root.writing = false;
@@ -650,6 +668,7 @@ Singleton {
                 property bool reserveSpace: true
                 property bool showFocusedTitle: true
                 property list<int> workspaceIds: []
+                property string workspaceOutputsJson: "{}"
                 property string workspaceDispatch: "auto"
                 property string placement: "focused"
                 property int height: 28

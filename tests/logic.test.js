@@ -342,17 +342,10 @@ test("settings window stays one instance and blur is not available", function ()
 test("settings search, density, and undo stay on real appearance fields", function () {
     assert.equal(settingsNav.navigationLayout(719), "stacked");
     assert.equal(settingsNav.navigationLayout(720), "columns");
-    assert.equal(settingsNav.categories().length, 10);
+    assert.equal(settingsNav.categories().length, 11);
     assert.equal(settingsNav.categories()[0].id, "appearance");
     assert.equal(settingsNav.categories()[1].id, "bar");
-    assert.equal(settingsNav.categories()[2].id, "wallpaper");
-    assert.equal(settingsNav.categories()[3].id, "displays");
-    assert.equal(settingsNav.categories()[4].id, "shortcuts");
-    assert.equal(settingsNav.categories()[5].id, "audio");
-    assert.equal(settingsNav.categories()[6].id, "network");
-    assert.equal(settingsNav.categories()[7].id, "bluetooth");
-    assert.equal(settingsNav.categories()[8].id, "power");
-    assert.equal(settingsNav.categories()[9].id, "notifications");
+    assert.deepEqual(settingsNav.categories().slice(2).map(c => c.id), ["workspaces", "wallpaper", "displays", "shortcuts", "audio", "network", "bluetooth", "power", "notifications"]);
     assert.equal(settingsNav.categoryFor(settingsNav.firstControlId("cover")), "wallpaper");
     assert.equal(settingsNav.filterControls("").length, settingsNav.CONTROLS.length);
     assert.equal(settingsNav.filterControls("not-a-setting").length, 0);

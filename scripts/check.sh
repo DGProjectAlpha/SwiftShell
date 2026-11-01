@@ -12,11 +12,13 @@ else
 fi
 
 "$NODE" "$ROOT/tests/logic.test.js"
+"$NODE" "$ROOT/tests/workspaces.test.js"
 "$NODE" "$ROOT/tests/settings_files.test.js"
 sh "$ROOT/tests/install_flow.sh"
 
 QMLTESTRUNNER=""
-for candidate in qmltestrunner qml6testrunner; do
+# Prefer Qt 6 explicitly: /usr/bin/qmltestrunner may belong to Qt 5 on CachyOS.
+for candidate in /usr/lib/qt6/bin/qmltestrunner /usr/lib/qt6/bin/qml6testrunner qml6testrunner qmltestrunner; do
     if command -v "$candidate" >/dev/null 2>&1; then
         QMLTESTRUNNER=$(command -v "$candidate")
         break

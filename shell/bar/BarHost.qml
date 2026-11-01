@@ -50,6 +50,10 @@ Scope {
             console.info("SwiftShell: bar placed on preferred monitor", placement.label);
         else if (placement.mode === "focused")
             console.info("SwiftShell: bar placed on focused monitor", placement.label);
+        else if (placement.mode === "all")
+            console.info("SwiftShell: bars placed on all connected monitors");
+        else if (placement.mode === "primary")
+            console.info("SwiftShell: bar placed on primary screen", placement.label);
         else
             console.info("SwiftShell: bar placed on fallback monitor", placement.label);
     }

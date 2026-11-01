@@ -114,6 +114,7 @@ var DEFAULTS = {
         reserveSpace: true,
         showFocusedTitle: true,
         workspaceIds: [],
+        workspaceOutputsJson: "{}",
         workspaceDispatch: "auto",
         placement: "focused",
         height: 28,
@@ -311,6 +312,20 @@ function validateSettings(input) {
         workspaceIds = normalizeWorkspaceIds(bar.workspaceIds);
     }
 
+    let workspaceOutputsJson = "{}";
+    if (bar.workspaceOutputsJson !== undefined) {
+        try {
+            const outputs = JSON.parse(bar.workspaceOutputsJson);
+            if (!outputs || typeof outputs !== "object" || Array.isArray(outputs)) throw new Error();
+            for (const key of Object.keys(outputs)) {
+                if (!key.trim() || key.length > 256) throw new Error();
+                if (outputs[key] === null) continue;
+                if (!Array.isArray(outputs[key]) || outputs[key].length > 32) throw new Error();
+                if (outputs[key].some(function (v) { return typeof v !== "string" || !v.trim() || v !== v.trim() || v.length > 128 || /[\x00-\x1f,]/.test(v) || v.indexOf("special:") === 0 || v.indexOf("name:") === 0; }) || new Set(outputs[key]).size !== outputs[key].length) throw new Error();
+            }
+            workspaceOutputsJson = JSON.stringify(outputs);
+        } catch (error) { errors.push("bar.workspaceOutputsJson"); }
+    }
     const workspaceDispatch = pickEnum(
         bar,
         "workspaceDispatch",
@@ -376,7 +391,7 @@ function validateSettings(input) {
         errors.push("settingsWindow");
     const settingsWindowWidth = pickInt(windowSource, "width", 640, 1600, DEFAULTS.settingsWindow.width, errors, "settingsWindow.width");
     const settingsWindowHeight = pickInt(windowSource, "height", 440, 1200, DEFAULTS.settingsWindow.height, errors, "settingsWindow.height");
-    const settingsWindowCategory = pickEnum(windowSource, "category", ["appearance", "bar", "wallpaper", "displays", "shortcuts", "audio", "network", "bluetooth", "power", "notifications"], DEFAULTS.settingsWindow.category, errors, "settingsWindow.category");
+    const settingsWindowCategory = pickEnum(windowSource, "category", ["appearance", "bar", "workspaces", "wallpaper", "displays", "shortcuts", "audio", "network", "bluetooth", "power", "notifications"], DEFAULTS.settingsWindow.category, errors, "settingsWindow.category");
     const noteSource = isPlainObject(source.notifications) ? source.notifications : {};
     if (source.notifications !== undefined && !isPlainObject(source.notifications))
         errors.push("notifications");
@@ -425,6 +440,7 @@ function validateSettings(input) {
                 reserveSpace: reserveSpace,
                 showFocusedTitle: showFocusedTitle,
                 workspaceIds: workspaceIds,
+                workspaceOutputsJson: workspaceOutputsJson,
                 workspaceDispatch: workspaceDispatch,
                 placement: barPlacement,
                 height: barHeight,
@@ -733,7 +749,7 @@ function extensionsText(source, errors) {
 
     const domainKeys = {
         clock: { use24Hour: true, showWeekNumbers: true, weekStart: true },
-        bar: { targetMonitor: true, reserveSpace: true, showFocusedTitle: true, workspaceIds: true, workspaceDispatch: true, placement: true, height: true, moduleOrder: true, hiddenModules: true },
+        bar: { targetMonitor: true, reserveSpace: true, showFocusedTitle: true, workspaceIds: true, workspaceOutputsJson: true, workspaceDispatch: true, placement: true, height: true, moduleOrder: true, hiddenModules: true },
         appearance: { mode: true, tint: true, panelOpacity: true, panelBlur: true, radius: true, shadowOpacity: true, shadowSoftness: true, motionScale: true, reducedMotion: true, panelPadding: true, panelSpacing: true, fontSize: true, fontWeight: true, iconScale: true, topGradient: true, contrast: true, automaticText: true, automaticGradient: true, manualText: true, manualMuted: true, manualPanel: true, manualGradient: true },
         launcher: { pinnedIds: true },
         wallpaper: { enabled: true, fit: true, path: true, outputsJson: true, slideshow: true, intervalMinutes: true, order: true, transitionMs: true, slidesJson: true },

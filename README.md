@@ -564,3 +564,12 @@ swiftshell start
 `./install.sh` copies SwiftShell into `$XDG_DATA_HOME/swiftshell` and adds a user launcher. It does not replace another Quickshell config. `swiftshell activate` registers a free config name and a desktop entry. `swiftshell deactivate` reverses that registration. `swiftshell doctor` reports versions, blur, and notification ownership without printing the settings file. `swiftshell rollback-settings` restores only `settings.json.bak-swiftshell`. `swiftshell uninstall` removes the installed files and keeps `~/.config/swiftshell` unless `--purge-settings` is passed.
 
 None of these commands edit Hyprland startup, keyboard shortcuts, or system services. Details, the manual copy steps, and the draft AUR package are in `docs/install.md` and `packaging/README.md`. The first-run guide is `docs/user-guide.md`. The session checklist is `docs/first-run.md`. Recovery is `docs/troubleshooting.md`. The installer has been exercised with stub commands in a temporary home directory. It has not been run on a Hyprland session. This checkout is an alpha, not a stable release.
+
+The local workspace repair adds **Settings → Workspaces**: automatic discovery
+and independently saved numeric/named indicator lists for each connected monitor.
+Top bar output selection uses discovered model/connector controls. Hyprland 0.57
+workspace addresses and per-output active state are read through event-triggered
+IPC snapshots. Existing global IDs remain preserved and are scoped by ownership.
+The native hidden Settings save/restart regression and live read-only workspace
+audit passed locally; visual switching, focus-follow, mixed-scale layout and
+hotplug still need the checklist in [testing](docs/testing.md#local-per-monitor-workspace-repair-2026-10-31).

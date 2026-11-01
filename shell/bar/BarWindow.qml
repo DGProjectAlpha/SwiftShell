@@ -35,7 +35,7 @@ PanelWindow {
 
     readonly property bool reserveSpace: SettingsStore.reserveSpace
     readonly property string hyprlandMonitorName: HyprlandModel.hyprlandNameForScreen(modelData)
-    readonly property string monitorKey: hyprlandMonitorName !== "" ? hyprlandMonitorName : SettingsStore.targetMonitor
+    readonly property string monitorKey: hyprlandMonitorName !== "" ? hyprlandMonitorName : (modelData && modelData.name ? modelData.name : "")
     readonly property string analysisKey: modelData && modelData.name ? modelData.name : monitorKey
     readonly property var outputAnalysis: ColorAnalysis.sampleForOutput(analysisKey)
     readonly property var outputSurface: Theme.surfaceForAnalysis(outputAnalysis)
@@ -47,7 +47,7 @@ PanelWindow {
                                                        outputSurface.gradient.g / 255,
                                                        outputSurface.gradient.b / 255,
                                                        outputSurface.gradientAlpha)
-    readonly property var workspaceItems: Workspaces.indicatorItems(SettingsStore.workspaceIds, HyprlandModel.liveWorkspaces, monitorKey)
+    readonly property var workspaceItems: Workspaces.perMonitorItems(SettingsStore.workspaceOutputsJson, SettingsStore.workspaceIds, SettingsStore.targetMonitor, HyprlandModel.liveWorkspaces, monitorKey)
     readonly property int activeWorkspaceId: {
         for (let i = 0; i < workspaceItems.length; i++) {
             if (workspaceItems[i].active)
@@ -137,6 +137,7 @@ PanelWindow {
 
         WorkspaceIndicators {
             workspaces: window.workspaceItems
+            monitorName: window.monitorKey
             textPrimary: window.outputTextPrimary
             textMuted: window.outputTextMuted
             textHover: window.outputTextPrimary

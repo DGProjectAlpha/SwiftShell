@@ -7,6 +7,7 @@ Row {
     id: root
 
     required property var workspaces
+    property string monitorName: ""
     property color textPrimary: Theme.textPrimary
     property color textMuted: Theme.textMuted
     property color textHover: Theme.textHover
@@ -19,20 +20,22 @@ Row {
             id: button
 
             required property var modelData
-            width: Math.max(label.implicitWidth + 8, Theme.barHeight)
+            width: Math.min(160, Math.max(label.implicitWidth + 8, Theme.barHeight))
             height: Theme.barHeight
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
             Accessible.role: Accessible.Button
-            Accessible.name: "Workspace " + modelData.id
+            Accessible.name: "Workspace " + modelData.name
             Accessible.description: modelData.active ? "Active on this monitor" : "Switch to this workspace"
 
-            onClicked: HyprlandModel.activateWorkspace(modelData.id, SettingsStore.workspaceDispatch)
+            onClicked: HyprlandModel.activateWorkspace(modelData.key || modelData.id, SettingsStore.workspaceDispatch, root.monitorName)
 
             BarLabel {
                 id: label
                 anchors.centerIn: parent
-                text: modelData.id
+                width: parent.width - 8
+                horizontalAlignment: Text.AlignHCenter
+                text: modelData.name
                 font.weight: modelData.active ? Font.Medium : Font.Normal
                 color: {
                     if (modelData.active || modelData.urgent)
@@ -48,7 +51,7 @@ Row {
                 anchors.bottom: parent.bottom
                 anchors.bottomMargin: 4
                 anchors.horizontalCenter: parent.horizontalCenter
-                width: label.implicitWidth
+                width: Math.min(label.width, label.implicitWidth)
                 height: 1
                 color: root.textPrimary
             }

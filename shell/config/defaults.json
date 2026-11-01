@@ -10,6 +10,7 @@
     "reserveSpace": true,
     "showFocusedTitle": true,
     "workspaceIds": [],
+    "workspaceOutputsJson": "{}",
     "workspaceDispatch": "auto",
     "placement": "focused",
     "height": 28,

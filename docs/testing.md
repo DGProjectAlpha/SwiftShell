@@ -509,3 +509,56 @@ Clock format is `clock.use24Hour` in the same file. `true` prints `09:04`. `fals
 ## Recovery
 
 Stopping SwiftShell releases its layer surface. These milestones do not write Hyprland or another shell's files, so there is no compositor config to roll back. If a bar remains after stop, run `qs list --all` and kill only the instance whose config path is this checkout's `shell/shell.qml` or the installed `swiftshell/app` directory.
+
+## Local per-monitor workspace repair (2026-10-31)
+
+Verified on CachyOS: Quickshell 0.3.2, Qt 6.12.0, Hyprland 0.57.0.
+DP-1: HP X32, scale 1; HDMI-A-1: PM161Q C, scale 1.25.
+
+- `scripts/check.sh`: static checks, logic and observed-workspace regressions,
+  settings file tests, 17 install tests, and Qt 6 QML suites pass. The checker
+  now prefers the explicit Qt 6 runner over `/usr/bin/qmltestrunner` (Qt 5 here).
+  Native notification plugin absence in qmltestrunner remains an explicitly
+  recognized unavailable dependency; that component is not thereby runtime-tested.
+- `qs -p shell/WorkspaceAudit.qml`: a windowless read-only audit reports
+  DP-1 `1,2,3,gaming`, active `gaming`; HDMI-A-1 `4,5,6`, active `4`;
+  focused DP-1. The probe exits itself and never dispatches a workspace action.
+- `scripts/test-workspaces-native.sh`: hidden native SettingsWindow instantiates;
+  real atomic save and subsequent process restart/readback pass using temporary
+  XDG settings. This caught and regresses a synchronous JsonAdapter stale write.
+- With owner approval only SwiftShell was restarted. Its actual root loaded,
+  both output bars were instantiated, and diagnostics showed no new workspace
+  snapshot failures or QML load failures. Existing launcher Keys/non-Item,
+  missing launcher-request file, and deprecated Settings sizing warnings are
+  separate known diagnostics, not suppressed or repaired here.
+
+Visual checks still required on the running desktop:
+
+1. Open Settings → Top bar → All. Open Workspaces and choose Automatic for
+   each output, especially if an old global ID selection exists. DP-1 should
+   show 1, 2, 3, gaming; HDMI-A-1 should show 4, 5, 6. Confirm readable labels
+   and sensible spacing at scales 1 and 1.25.
+2. Click numeric, named and empty workspaces on both bars. Each monitor should
+   keep its own active mark even when focus is on the other monitor. Existing
+   assignments must stay on their original outputs. Use Tab/Enter through the
+   Settings controls; the transparent bars deliberately do not grab keyboard focus.
+3. On DP-1 choose Override, save `1, 3, gaming`, and verify only its row changes.
+   Save an empty list to hide that row, then Automatic to restore discovery.
+   Duplicate entries should produce an error. Editing while focus/workspace
+   events occur must not discard the draft or steal editor focus.
+4. Top bar → Focused should follow the monitor receiving focus. Select an actual
+   named monitor, then All; the old explicit selection must no longer override
+   All. Primary means the first Qt screen, not an invented compositor primary.
+5. After an owner-controlled restart, confirm the override and placement remain.
+   Automatic follows actual ownership when a workspace moves externally. If
+   convenient and safe, unplug/reconnect an output and verify its preference is
+   retained and the remaining output's row remains correct.
+
+These click, rendering, focus-follow and hotplug checks have **not** been automated
+or claimed as visual passes. The native hidden-window test does not prove them.
+
+Recovery: stop only this checkout with `scripts/stop.sh`. Revert the workspace
+repair commit (do not hard reset), then `scripts/launch.sh`. The additive preference
+can remain: old code preserves unknown keys in its extension bag. No compositor
+configuration needs restoring. A pre-repair source copy was also retained in
+`/tmp/swiftshell-before-workspaces/shell` for this session; it is not a durable backup.

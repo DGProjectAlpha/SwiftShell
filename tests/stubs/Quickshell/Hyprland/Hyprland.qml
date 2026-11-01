@@ -9,6 +9,8 @@ QtObject {
     property QtObject monitors: QtObject { property var values: [] }
     property QtObject toplevels: QtObject { property var values: [] }
 
+    signal rawEvent(var event)
+
     function monitorFor(screen) { return null }
     function dispatch(command) {}
     function refreshMonitors() {}
