@@ -10,9 +10,9 @@ spec.loader.exec_module(d)
 
 # Sanitized real 0.57 monitor data from this workstation.
 BASE = [dict(name='DP-1',width=2560,height=1440,refresh=164.834,scale=1,transform=0,x=0,y=0,enabled=True,
-             modes=[dict(width=2560,height=1440,refresh=164.83),dict(width=1920,height=1080,refresh=60)],mirror='none'),
+             vrr=False,hardware={'vrrCapable':True},modes=[dict(width=2560,height=1440,refresh=164.83),dict(width=1920,height=1080,refresh=60)],mirror='none'),
         dict(name='HDMI-A-1',width=1920,height=1080,refresh=60,scale=1.25,transform=0,x=2560,y=720,enabled=True,
-             modes=[dict(width=1920,height=1080,refresh=60),dict(width=1280,height=720,refresh=60)],mirror='none')]
+             vrr=False,hardware={'vrrCapable':False},modes=[dict(width=1920,height=1080,refresh=60),dict(width=1280,height=720,refresh=60)],mirror='none')]
 
 
 class DisplayValidation(unittest.TestCase):
@@ -44,6 +44,13 @@ class DisplayValidation(unittest.TestCase):
     def test_monitor_name_quoted_not_executed(self):
         changed=copy.deepcopy(BASE[0]);changed['name']='DP-1"}; error("bad") --';changed['scale']=1.25
         self.assertIn('DP-1\\"',d.lua_spec(changed,BASE[0]))
+    def test_adaptive_sync_is_capability_gated_and_reversible(self):
+        changed=copy.deepcopy(BASE);changed[0]['vrr']=True
+        self.assertTrue(d.validate(changed,BASE)[0]['vrr'])
+        self.assertIn('vrr=1',d.lua_spec(changed[0],BASE[0]))
+        self.assertIn('vrr=0',d.lua_spec(BASE[0],changed[0]))
+        changed[1]['vrr']=True
+        with self.assertRaises(ValueError):d.validate(changed,BASE)
     def test_atomic_recovery_snapshot_and_matching(self):
         with tempfile.TemporaryDirectory() as folder:
             journal=Path(folder)/'transaction.json'

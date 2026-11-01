@@ -26,3 +26,12 @@ A custom-styled Qt Quick Basic ComboBox supplies usable dropdown behavior withou
 Material styling. An explicit Settings IPC action also enables native inspection.
 
 Live two-monitor tests and limitations are recorded in `docs/testing.md`.
+
+A follow-up native test found that DP-1 advertises adaptive-sync capability but
+the current output backend rejects enabling it. The watchdog verified the failed
+readback and restored the original state. The helper now records this observation
+per compositor session and publishes `vrrSupported: false` with an explanation.
+It does not equate EDID capability with a successful operation, change GPU/driver
+settings, or offer an enabled toggle after rejection. Adaptive-sync requests are
+validated and included in recovery snapshots; older saved layouts inherit the
+current value. The full native suite passed with this rejection/recovery case.

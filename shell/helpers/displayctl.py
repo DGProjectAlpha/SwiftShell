@@ -22,7 +22,7 @@ import sys
 import time
 
 TIMEOUT = 15
-FIELDS = ('width', 'height', 'refresh', 'scale', 'transform', 'x', 'y', 'enabled')
+FIELDS = ('width', 'height', 'refresh', 'scale', 'transform', 'x', 'y', 'enabled', 'vrr')
 MODE = re.compile(r'^(\d+)x(\d+)@([\d.]+)Hz$')
 
 
@@ -61,6 +61,8 @@ def ipc(request):
 
 def snapshot():
     raw = json.loads(ipc('j/monitors all'))
+    journal=paths()[1]
+    capabilities=read(journal.with_name(journal.name.replace('transaction-','capabilities-')),{})
     outputs = []
     for m in raw:
         modes = []
@@ -75,6 +77,8 @@ def snapshot():
                             transform=m.get('transform', 0), x=m.get('x', 0), y=m.get('y', 0),
                             enabled=not m.get('disabled', False), modes=modes,
                             format=m.get('currentFormat', ''), vrr=m.get('vrr', False),
+                            vrrSupported=bool(m.get('hardwareDetails',{}).get('vrrCapable')) and capabilities.get(m['name'],{}).get('adaptiveSync') is not False,
+                            vrrReason=capabilities.get(m['name'],{}).get('reason',''),
                             mirror=m.get('mirrorOf', 'none'), hardware=m.get('hardwareDetails', {})))
     return outputs
 
@@ -94,8 +98,8 @@ def validate(proposed, current):
         live = available[item['name']]
         values = {'name': item['name']}
         for field in FIELDS:
-            value = item.get(field)
-            if field == 'enabled':
+            value = item.get(field, live.get('vrr', False) if field=='vrr' else None)
+            if field in ('enabled','vrr'):
                 if type(value) is not bool:
                     raise ValueError('Invalid display state.')
             elif type(value) not in (int, float) or not math.isfinite(value):
@@ -114,6 +118,8 @@ def validate(proposed, current):
                 raise ValueError('That display mode is not advertised by the monitor.')
             if live.get('mirror', 'none') != 'none':
                 raise ValueError('Mirrored outputs are managed by your existing configuration.')
+        if values['vrr'] and not live.get('vrr') and not live.get('vrrSupported',live.get('hardware',{}).get('vrrCapable',False)):
+            raise ValueError('Adaptive sync is not supported by this display.')
         clean.append(values)
     if not any(m['enabled'] for m in clean):
         raise ValueError('At least one display must stay enabled.')
@@ -154,6 +160,8 @@ def lua_spec(item, baseline):
     for name in ('scale', 'transform'):
         if item[name] != baseline[name]:
             fields[name] = item[name]
+    if item.get('vrr',False) != baseline.get('vrr',False):
+        fields['vrr'] = 1 if item.get('vrr') else 0
     if item['enabled'] != baseline['enabled']:
         fields['disabled'] = not item['enabled']
     def literal(value):
@@ -181,7 +189,7 @@ def matches(target, observed):
         n = live.get(m['name'])
         if n is None or m['enabled'] != n['enabled']:
             return False
-        if m['enabled'] and any(abs(m[k]-n[k]) > (.12 if k=='refresh' else .02) for k in FIELDS if k!='enabled'):
+        if m['enabled'] and any(abs(m.get(k,False)-n.get(k,False)) > (.12 if k=='refresh' else .02) for k in FIELDS if k!='enabled'):
             return False
     return True
 
@@ -287,6 +295,15 @@ def serve():
                             else: raise ValueError('The monitor did not accept those settings.')
                             state['state']='pending'; atomic(journal,state)
                         except Exception:
+                            # EDID capability alone is insufficient: a driver can reject VRR.
+                            observed={m['name']:m for m in snapshot()}
+                            capability_file=journal.with_name(journal.name.replace('transaction-','capabilities-'))
+                            capabilities=read(capability_file,{})
+                            for item in target:
+                                actual=observed.get(item['name'])
+                                if item.get('vrr') and actual and not actual.get('vrr') and matches([dict(item,vrr=False)],[actual]):
+                                    capabilities[item['name']]={'adaptiveSync':False,'reason':'Adaptive sync was not accepted by this display connection.'}
+                            atomic(capability_file,capabilities)
                             rollback('The display change failed; previous settings were restored.')
                     elif action=='keep':
                         if not active or state.get('state')!='pending' or time.monotonic()>=expires:

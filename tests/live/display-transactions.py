@@ -55,13 +55,27 @@ try:
             selected=next(m for m in trial if m['name']==output['name'])
             selected.update(patch)
             result=call('apply',trial)
-            assert result['state']=='pending',(output['name'],label,result)
+            assert result['state']=='pending',(output['name'],label,result.get('message'))
             assert d.matches(trial,d.snapshot())
             assert call('revert')['state']=='reverted'
             verify_restored()
             # Confirm that 10-bit/color settings were not reset by geometry changes.
             assert [m['format'] for m in d.snapshot()]==[m['format'] for m in original]
             print('PASS live',output['name'],label,'and recovery',flush=True)
+    for output in original:
+        if output.get('vrrSupported',False):
+            trial=copy.deepcopy(original)
+            next(m for m in trial if m['name']==output['name'])['vrr']=not output['vrr']
+            result=call('apply',trial)
+            if result['state']=='pending':
+                assert d.matches(trial,d.snapshot())
+                assert call('revert')['state']=='reverted'
+                print('PASS live',output['name'],'adaptive sync and recovery',flush=True)
+            else:
+                assert result['state']=='reverted'
+                assert not next(m for m in d.snapshot() if m['name']==output['name'])['vrrSupported']
+                print('PASS live',output['name'],'unsupported adaptive sync rejected and rolled back',flush=True)
+            verify_restored()
     assert call('apply',changed)['state']=='pending'
     time.sleep(d.TIMEOUT+1)
     verify_restored()
