@@ -56,7 +56,7 @@ function workspaceIdsValid(ids) {
     return true;
 }
 
-var BAR_MODULES = ["workspaces", "title", "search", "clock", "control", "media", "tray", "battery"];
+var BAR_MODULES = ["workspaces", "title", "search", "clock", "control", "media", "tray", "battery", "network", "power"];
 
 function normalizeModuleOrder(order) {
     const source = asList(order);
@@ -165,7 +165,7 @@ var DEFAULTS = {
         workspaceDispatch: "auto",
         placement: "focused",
         height: 28,
-        moduleOrder: ["workspaces", "title", "search", "clock", "control", "media", "tray", "battery"],
+        moduleOrder: ["workspaces", "title", "search", "clock", "control", "media", "tray", "battery", "network", "power"],
         hiddenModules: [],
         searchLabel: false,
         moduleSidesJson: "{}",

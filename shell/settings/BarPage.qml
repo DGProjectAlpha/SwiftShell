@@ -131,7 +131,7 @@ Item {
                 width:parent.width
                 label:"Apply to"
                 ChoiceBox {
-                    choices:[{label:"All screens",value:""}].concat(HyprlandModel.monitorChoices.map(function(m){return {label:m.label,value:m.name}}))
+                    choices:[{label:"Default appearance",value:""}].concat(HyprlandModel.monitorChoices.map(function(m){return {label:m.label,value:m.name}}))
                     selectedValue:page.surfaceOutput
                     onChosen:function(value){page.surfaceOutput=value}
                 }
@@ -367,7 +367,7 @@ Item {
             SettingsRow {
                 width:parent.width;label:"Visibility on"
                 ChoiceBox {
-                    choices:[{label:"All screens",value:""}].concat(HyprlandModel.monitorChoices.map(function(m){return {label:m.label,value:m.name}}))
+                    choices:[{label:"Default visibility",value:""}].concat(HyprlandModel.monitorChoices.map(function(m){return {label:m.label,value:m.name}}))
                     selectedValue:page.modulesOutput
                     onChosen:function(value){page.modulesOutput=value}
                 }
@@ -376,6 +376,12 @@ Item {
                 visible:page.modulesOutput!=="" && page.customVisibility
                 label:"Use all-screen visibility"
                 onActivated:SettingsStore.inheritHidden(page.modulesOutput)
+            }
+            Text {
+                width:parent.width;wrapMode:Text.WordWrap
+                visible:page.modulesOutput==="" && Object.keys(JSON.parse(SettingsStore.hiddenOutputsJson)).length>0
+                text:"Some screens have their own visibility choices. Select a screen above to change its modules."
+                color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall
             }
             FlatButton {visible:SettingsStore.moduleSidesJson!=="{}";label:"Reset positions";onActivated:SettingsStore.resetModuleSides()}
             Text {width:parent.width;wrapMode:Text.WordWrap;text:"Position and order apply to all screens. Visibility can be different on each monitor.";color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall}

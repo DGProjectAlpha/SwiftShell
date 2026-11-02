@@ -21,16 +21,21 @@ PanelWindow {
     focusable: false
     implicitHeight: Theme.barHeight
     property Item controlAnchor: null
+    property Item networkAnchor:null
+    property Item powerAnchor:null
     property Item calendarAnchor: null
     property var clockItem: null
+    property var trayItem:null
     readonly property var outputHidden:SettingsStore.hiddenForOutput(monitorKey)
     function modulesOn(side) { return Bar.modulesForSide(SettingsStore.moduleOrder,outputHidden,SettingsStore.moduleSidesJson,side) }
     function moduleLayout() { return {left:{x:leftModules.x,width:leftModules.width},center:{x:centerModules.x,width:centerModules.width},right:{x:rightModules.x,width:rightModules.width}} }
     function menuDiagnostics() { return {geometry:popovers.geometry(),blurBounds:popovers.blurBounds,id:popovers.popupState.panelId,visible:popovers.visible,blur:popovers.surfaceBlurApplied,width:popovers.implicitWidth,height:popovers.implicitHeight,x:popovers.placement.x,y:popovers.placement.y} }
     function showPanel(id) {
         if(id === "close") {popovers.close();return}
-        if(id === "calendar" && calendarAnchor) popovers.toggle(id,calendarAnchor)
+        if((id === "calendar" || id === "clock" || id === "date") && calendarAnchor) popovers.openClock(id==="date" ? "calendar" : "clock",calendarAnchor)
         else if(id === "control" && controlAnchor) popovers.toggle(id,controlAnchor)
+        else if(id === "network" && networkAnchor)popovers.toggle(id,networkAnchor)
+        else if(id === "power" && powerAnchor)popovers.toggle(id,powerAnchor)
         else if(id === "customize") {contextAnchor.x=width-100;popovers.toggle(id,contextAnchor)}
     }
 
@@ -58,10 +63,25 @@ PanelWindow {
                                                        outputSurface.text.b / 255, 1)
     readonly property color outputTextMuted: useSurfaceForeground && SettingsStore.manualMuted === "" ? (darkSurfaceForeground ? "#525252" : "#c4c4c4") : Qt.rgba(outputSurface.muted.r / 255, outputSurface.muted.g / 255,
                                                      outputSurface.muted.b / 255, 1)
-    readonly property color outputGradientTop: Qt.rgba(outputSurface.gradient.r / 255,
-                                                       outputSurface.gradient.g / 255,
-                                                       outputSurface.gradient.b / 255,
-                                                       outputSurface.gradientAlpha)
+    readonly property bool contrastFade:SettingsStore.automaticText && (!outputAnalysis.available || outputAnalysis.scrim) && (!barSurface.visible || barSurface.alpha<.85)
+    readonly property color outputGradientTop:contrastFade ? Qt.rgba(0,0,0,.68) : Qt.rgba(outputSurface.gradient.r/255,outputSurface.gradient.g/255,outputSurface.gradient.b/255,outputSurface.gradientAlpha)
+    function foregroundFor(id,muted) {
+        const manual=muted ? SettingsStore.manualMuted : SettingsStore.manualText
+        if(manual && !SettingsStore.automaticText) return manual
+        if(!SettingsStore.automaticText) return muted ? outputTextMuted : outputTextPrimary
+        const side=Bar.moduleSide(id,SettingsStore.moduleSidesJson,SettingsStore.moduleOrder)
+        const base=outputAnalysis.backgrounds ? outputAnalysis.backgrounds[side] : null
+        if(barSurface.visible && barSurface.alpha>=.85) {
+            const dark=Contrast.chooseForeground(Contrast.parseHex(barSurface.color),"").foreground==="dark"
+            return dark ? (muted ? "#333333" : "#111111") : (muted ? "#dedede" : "#ffffff")
+        }
+        if(contrastFade || !base)return muted ? "#e1e1e1" : "#ffffff"
+        const color=Contrast.parseHex(barSurface.color) || {r:0,g:0,b:0}
+        const alpha=barSurface.visible ? barSurface.alpha : 0
+        const effective={r:base.r*(1-alpha)+color.r*alpha,g:base.g*(1-alpha)+color.g*alpha,b:base.b*(1-alpha)+color.b*alpha}
+        const dark=Contrast.chooseForeground(effective,"").foreground==="dark"
+        return dark ? (muted ? "#333333" : "#111111") : (muted ? "#dedede" : "#ffffff")
+    }
     readonly property var barSurface: Bar.surfaceForOutput(SettingsStore.barSurfaceMode, SettingsStore.barSurfaceColor,
         SettingsStore.barSurfaceOpacity, SettingsStore.barSurfaceOutputsJson, monitorKey, SurfaceService.blurAvailable)
     readonly property bool surfaceBlurApplied: backdrop.applied
@@ -118,11 +138,12 @@ PanelWindow {
 
     Rectangle {
         z: -1
-        visible: Theme.topGradient || outputSurface.scrim
+        visible: Theme.topGradient || outputSurface.scrim || window.contrastFade
         anchors.fill: parent
         color: Theme.transparent
         gradient: Gradient {
             GradientStop { position: 0.0; color: window.outputGradientTop }
+            GradientStop { position: window.contrastFade ? .72 : 0; color: window.outputGradientTop }
             GradientStop { position: 1.0; color: Theme.transparent }
         }
     }
@@ -150,7 +171,7 @@ PanelWindow {
     }
     Item { id:contextAnchor;y:0;width:1;height:Theme.barHeight }
     MouseArea {
-        z:100
+        z:-.5
         anchors.fill:parent
         acceptedButtons:Qt.RightButton
         onClicked:function(mouse) {
@@ -171,6 +192,8 @@ PanelWindow {
             return clockComponent
         if (id === "control")
             return controlComponent
+        if (id === "network")return networkComponent
+        if (id === "power")return powerComponent
         if (id === "media")
             return mediaComponent
         if (id === "tray")
@@ -186,9 +209,9 @@ PanelWindow {
         WorkspaceIndicators {
             workspaces: window.workspaceItems
             monitorName: window.monitorKey
-            textPrimary: window.outputTextPrimary
-            textMuted: window.outputTextMuted
-            textHover: window.outputTextPrimary
+            textPrimary: window.foregroundFor("workspaces",false)
+            textMuted: window.foregroundFor("workspaces",true)
+            textHover: window.foregroundFor("workspaces",false)
         }
     }
 
@@ -201,7 +224,7 @@ PanelWindow {
             FocusedTitle {
                 anchors.fill: parent
                 title: SettingsStore.showFocusedTitle ? window.windowTitle : ""
-                textMuted: window.outputTextMuted
+                textMuted: window.foregroundFor("title",true)
             }
         }
     }
@@ -240,14 +263,14 @@ PanelWindow {
                 spacing:6
                 Item {
                     width:Theme.barIcon;height:Theme.barIcon
-                    readonly property color ink:searchButton.containsMouse || searchButton.activeFocus ? window.outputTextPrimary : window.outputTextMuted
+                    readonly property color ink:searchButton.containsMouse || searchButton.activeFocus ? window.foregroundFor("search",false) : window.foregroundFor("search",true)
                     Rectangle {width:parent.width*.6;height:width;radius:width/2;anchors.left:parent.left;anchors.top:parent.top;color:"transparent";border.width:1.5;border.color:parent.ink}
                     Rectangle {width:parent.width*.48;height:1.5;rotation:45;x:parent.width*.51;y:parent.height*.73;color:parent.ink}
                 }
                 BarLabel {
                     visible:SettingsStore.searchLabel
                     text:"Search"
-                    color:searchButton.containsMouse || searchButton.activeFocus ? window.outputTextPrimary : window.outputTextMuted
+                    color:searchButton.containsMouse || searchButton.activeFocus ? window.foregroundFor("search",false) : window.foregroundFor("search",true)
                 }
             }
         }
@@ -260,11 +283,15 @@ PanelWindow {
             id: clockModule
             Component.onCompleted:{window.calendarAnchor=clockModule;window.clockItem=clockModule}
             Component.onDestruction:{if(window.calendarAnchor===clockModule)window.calendarAnchor=null;if(window.clockItem===clockModule)window.clockItem=null}
-            textPrimary: window.outputTextPrimary
-            textHover: window.outputTextPrimary
+            textPrimary: window.foregroundFor("clock",false)
+            textHover: window.foregroundFor("clock",false)
             onActivated: {
                 LauncherModel.closeLauncher()
-                popovers.toggle("calendar", clockModule)
+                popovers.openClock("clock", clockModule)
+            }
+            onCalendarActivated: {
+                LauncherModel.closeLauncher()
+                popovers.openClock("calendar",clockModule)
             }
         }
     }
@@ -282,21 +309,21 @@ PanelWindow {
                 active: true
                 onLoaded: {
                     if (item) {
-                        item.textPrimary = window.outputTextPrimary
-                        item.textMuted = window.outputTextMuted
+                        item.textPrimary = window.foregroundFor("media",false)
+                        item.textMuted = window.foregroundFor("media",true)
                     }
                 }
             }
             Binding {
                 target: mediaLoader.item
                 property: "textPrimary"
-                value: window.outputTextPrimary
+                value: window.foregroundFor("media",false)
                 when: mediaLoader.status === Loader.Ready
             }
             Binding {
                 target: mediaLoader.item
                 property: "textMuted"
-                value: window.outputTextMuted
+                value: window.foregroundFor("media",true)
                 when: mediaLoader.status === Loader.Ready
             }
         }
@@ -316,21 +343,22 @@ PanelWindow {
                 onLoaded: {
                     if (item) {
                         item.hostWindow = window
-                        item.textPrimary = window.outputTextPrimary
-                        item.textMuted = window.outputTextMuted
+                        window.trayItem=item
+                        item.textPrimary = window.foregroundFor("tray",false)
+                        item.textMuted = window.foregroundFor("tray",true)
                     }
                 }
             }
             Binding {
                 target: trayLoader.item
                 property: "textPrimary"
-                value: window.outputTextPrimary
+                value: window.foregroundFor("tray",false)
                 when: trayLoader.status === Loader.Ready
             }
             Binding {
                 target: trayLoader.item
                 property: "textMuted"
-                value: window.outputTextMuted
+                value: window.foregroundFor("tray",true)
                 when: trayLoader.status === Loader.Ready
             }
         }
@@ -349,13 +377,13 @@ PanelWindow {
                 active: true
                 onLoaded: {
                     if (item)
-                        item.textPrimary = window.outputTextPrimary
+                        item.textPrimary = window.foregroundFor("battery",false)
                 }
             }
             Binding {
                 target: batteryLoader.item
                 property: "textPrimary"
-                value: window.outputTextPrimary
+                value: window.foregroundFor("battery",false)
                 when: batteryLoader.status === Loader.Ready
             }
         }
@@ -366,9 +394,9 @@ PanelWindow {
 
         ControlIndicator {
             id: controlIndicator
-            textPrimary: window.outputTextPrimary
-            textMuted: window.outputTextMuted
-            textHover: window.outputTextPrimary
+            textPrimary: window.foregroundFor("control",false)
+            textMuted: window.foregroundFor("control",true)
+            textHover: window.foregroundFor("control",false)
             Component.onCompleted: window.controlAnchor = controlIndicator
             Component.onDestruction: {
                 if (window.controlAnchor === controlIndicator)
@@ -381,6 +409,31 @@ PanelWindow {
         }
     }
 
+    Component {
+        id:networkComponent
+        WidgetIndicator {
+            id:networkIndicator
+            kind:"network";label:"Network & Devices"
+            textPrimary:window.foregroundFor("network",false)
+            textHover:window.foregroundFor("network",false)
+            connected:NetworkService.connectivity==="full" || NetworkService.connectivity==="limited"
+            Component.onCompleted:{window.networkAnchor=networkIndicator;NetworkService.startViewing()}
+            Component.onDestruction:{NetworkService.stopViewing();if(window.networkAnchor===networkIndicator)window.networkAnchor=null}
+            onActivated:{LauncherModel.closeLauncher();popovers.toggle("network",networkIndicator)}
+        }
+    }
+    Component {
+        id:powerComponent
+        WidgetIndicator {
+            id:powerIndicator
+            kind:"power";label:"Power"
+            textPrimary:window.foregroundFor("power",false)
+            textHover:window.foregroundFor("power",false)
+            Component.onCompleted:window.powerAnchor=powerIndicator
+            Component.onDestruction:if(window.powerAnchor===powerIndicator)window.powerAnchor=null
+            onActivated:{LauncherModel.closeLauncher();popovers.toggle("power",powerIndicator)}
+        }
+    }
     Component {
         id:contextPanel
         BarContextMenu {
@@ -398,6 +451,7 @@ PanelWindow {
     Connections {
         target: LauncherModel
         function onControlRequested() {
+            if(window.monitorKey!==HyprlandModel.readFocusedOutput())return
             if (window.controlAnchor)
                 popovers.toggle("control", window.controlAnchor)
         }

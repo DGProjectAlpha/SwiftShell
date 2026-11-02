@@ -9,12 +9,13 @@ Column {
 
     spacing: Theme.panelSpacing
     width: parent ? parent.width : Theme.controlWidth
+    property string heading:"Session"
     property string confirmId: ""
     property string notice: ""
 
     SectionHeader {
         width: parent.width
-        text: "Power"
+        text: root.heading
     }
 
     Text {

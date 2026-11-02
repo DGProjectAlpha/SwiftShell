@@ -42,8 +42,7 @@ Item {
         width:body.implicitWidth+Theme.panelPadding*2
         height:viewport.height+Theme.panelPadding*2
         radius:Theme.radius
-        color:Qt.rgba(Theme.surface.panel.r/255,Theme.surface.panel.g/255,Theme.surface.panel.b/255,
-            SurfaceService.blurAvailable && SettingsStore.textContrast!=="high" ? SettingsStore.panelOpacity*.8 : .98)
+        color:Theme.floaterSurface
         MouseArea {anchors.fill:parent;onClicked:function(){}}
         Flickable {
             id:viewport

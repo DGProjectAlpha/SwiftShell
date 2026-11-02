@@ -25,7 +25,9 @@
       "control",
       "media",
       "tray",
-      "battery"
+      "battery",
+      "network",
+      "power"
     ],
     "hiddenModules": [],
     "searchLabel": false,

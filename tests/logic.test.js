@@ -342,10 +342,10 @@ test("settings window lifecycle and unprobed blur capabilities remain honest", f
 test("settings search, density, and undo stay on real appearance fields", function () {
     assert.equal(settingsNav.navigationLayout(719), "stacked");
     assert.equal(settingsNav.navigationLayout(720), "columns");
-    assert.equal(settingsNav.categories().length, 11);
+    assert.equal(settingsNav.categories().length, 12);
     assert.equal(settingsNav.categories()[0].id, "appearance");
     assert.equal(settingsNav.categories()[1].id, "bar");
-    assert.deepEqual(settingsNav.categories().slice(2).map(c => c.id), ["wallpaper", "displays", "workspaces", "shortcuts", "audio", "network", "bluetooth", "power", "notifications"]);
+    assert.deepEqual(settingsNav.categories().slice(2).map(c => c.id), ["spotlight", "wallpaper", "displays", "workspaces", "shortcuts", "defaultApps", "audio", "network", "power", "notifications"]);
     assert.equal(settingsNav.categoryFor(settingsNav.firstControlId("cover")), "wallpaper");
     assert.equal(settingsNav.filterControls("").length, settingsNav.CONTROLS.length);
     assert.equal(settingsNav.filterControls("not-a-setting").length, 0);
@@ -1313,7 +1313,7 @@ test("bar exclusion can turn reservation on again and popup focus clears before 
     assert.equal(bar.barMetrics(80, 1).height, 52);
     assert.equal(bar.heightFromUnit(bar.unitFromHeight(28)), 28);
     assert.equal(bar.exclusionUpdate(true, tall.height, 28).zone, 52);
-    assert.deepEqual(bar.visibleModules(bar.BAR_MODULES, ["clock"]), ["workspaces", "title", "search", "control", "media", "tray", "battery"]);
+    assert.deepEqual(bar.visibleModules(bar.BAR_MODULES, ["clock"]), ["workspaces", "title", "search", "control", "media", "tray", "battery", "network", "power"]);
     const moved = bar.moveModule(bar.BAR_MODULES, "clock", -1);
     assert.equal(moved[2], "clock");
     assert.equal(moved[3], "search");

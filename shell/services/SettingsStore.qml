@@ -842,7 +842,7 @@ Singleton {
             property string workspaceDispatch: "auto"
             property string placement: "focused"
             property int height: 28
-            property list<string> moduleOrder: ["workspaces", "title", "search", "clock", "control", "media", "tray", "battery"]
+            property list<string> moduleOrder: ["workspaces", "title", "search", "clock", "control", "media", "tray", "battery", "network", "power"]
             property list<string> hiddenModules: []
             property bool searchLabel: false
             property string moduleSidesJson: "{}"

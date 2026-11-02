@@ -10,6 +10,9 @@ import "services"
 
 ShellRoot {
     id: root
+    readonly property bool clockToolsReady: ClockService.loaded
+    readonly property bool desktopAppearanceReady: DesktopAppearance.available
+    readonly property bool shortcutsReady: ShortcutsService.available
 
     Component.onCompleted: {
         NotificationsModel.configure(SettingsStore.notificationOwnership, SettingsStore.notificationDnd, SettingsStore.notificationPoliciesJson)
@@ -25,8 +28,8 @@ ShellRoot {
         target: "swiftshell"
         function diagnostics(): string {
             const w=SettingsModel.nativeWindow
-            return JSON.stringify({settingsPersistence:SettingsStore.persistenceState,barSurfaces:barHost.surfaceDiagnostics(),layerBlurAvailable:SurfaceService.blurAvailable,launcherOpen:LauncherModel.open,launcherOutput:LauncherModel.screen ? LauncherModel.screen.name : "",launcherHasFocus:launcherWindow.searchHasFocus,windowBusy:WindowService.busy || WindowService.queue.length>0 || !!(w && !w.placementReady),settingsOpen:SettingsModel.open,category:SettingsStore.settingsWindowCategory,blurAvailable:WindowService.blurAvailable,blurRegionApplied:WindowService.blurRegionApplied,blurReason:WindowService.blurReason,windowError:WindowService.error,
-                panelBlur:SettingsStore.panelBlur,shadowOpacity:SettingsStore.shadowOpacity,shadowSoftness:SettingsStore.shadowSoftness,window:w ? {width:w.width,height:w.height,pageStatus:w.pageStatus,searchHasFocus:w.searchHasFocus,colorPickerOpen:w.activePage() && w.activePage().colorPickerOpen === true,colorPicker:w.activePage() && w.activePage().colorPickerGeometry ? w.activePage().colorPickerGeometry() : null,maximized:WindowService.maximized,qtMaximized:w.maximized,shadowInset:w.shadowInset,resizeRequests:w.resizeRequests,lastResizeAccepted:w.lastResizeAccepted} : null})
+            return JSON.stringify({spotlight:launcherWindow.diagnostics(),settingsReloads:SettingsStore.externalReloads,settingsOwnReloads:SettingsStore.ignoredOwnReloads,desktopAppearance:{available:DesktopAppearance.available,observed:DesktopAppearance.observed,managed:DesktopAppearance.managed,error:DesktopAppearance.error},settingsPersistence:SettingsStore.persistenceState,barSurfaces:barHost.surfaceDiagnostics(),layerBlurAvailable:SurfaceService.blurAvailable,launcherOpen:LauncherModel.open,launcherOutput:LauncherModel.screen ? LauncherModel.screen.name : "",launcherHasFocus:launcherWindow.searchHasFocus,windowBusy:WindowService.busy || WindowService.queue.length>0 || !!(w && !w.placementReady),settingsOpen:SettingsModel.open,category:SettingsStore.settingsWindowCategory,blurAvailable:WindowService.blurAvailable,blurRegionApplied:WindowService.blurRegionApplied,blurReason:WindowService.blurReason,windowError:WindowService.error,
+                panelBlur:SettingsStore.panelBlur,shadowOpacity:SettingsStore.shadowOpacity,shadowSoftness:SettingsStore.shadowSoftness,window:w ? {pageGeometry:w.activePage() && w.activePage().geometry ? w.activePage().geometry() : null,width:w.width,height:w.height,pageStatus:w.pageStatus,searchHasFocus:w.searchHasFocus,colorPickerOpen:w.activePage() && w.activePage().colorPickerOpen === true,colorPicker:w.activePage() && w.activePage().colorPickerGeometry ? w.activePage().colorPickerGeometry() : null,maximized:WindowService.maximized,qtMaximized:w.maximized,shadowInset:w.shadowInset,resizeRequests:w.resizeRequests,lastResizeAccepted:w.lastResizeAccepted} : null})
         }
         function moduleSide(id: string, side: string): void { if(side === "inherit")SettingsStore.inheritModuleSide(id);else SettingsStore.setModuleSide(id,side) }
         function moduleVisibility(output: string, hiddenJson: string): void {
@@ -41,6 +44,22 @@ ShellRoot {
             SettingsStore.setBarSurface(output,mode,color,opacity)
         }
         function barInherit(output: string): void { SettingsStore.clearBarSurface(output) }
+        function clockTool(action: string, value: string): string {
+            if (action === "snapshot") return JSON.stringify(ClockService.state)
+            if (action === "restore") return ClockService.restore(value) ? "ok" : "invalid"
+            return "unsupported"
+        }
+        function developmentWatching(enabled: bool): void { Quickshell.watchFiles=enabled }
+        function automaticContrast(enabled: bool): void { const next=SettingsStore.snapshot().appearance;next.automaticText=enabled;SettingsStore.setAppearance(next) }
+        function desktopAppearance(action: string): void {
+            if(action==="restore")DesktopAppearance.restore()
+            else if(action==="status")DesktopAppearance.request("status",{})
+        }
+        function workspaceOutput(output: string, keysJson: string): string { try { return JSON.stringify({accepted:SettingsStore.setWorkspaceOutput(output,JSON.parse(keysJson))}) } catch(error) { return JSON.stringify({accepted:false,error:String(error)}) } }
+        function launcherPins(idsJson: string): void { try { SettingsStore.setPinnedIds(JSON.parse(idsJson)) } catch(error) {} }
+        function launcherFavorite(id: string): void { LauncherModel.toggleFavorite(id) }
+        function launcherQuery(text: string): void { LauncherModel.setQuery(text) }
+        function launcherMode(mode: string): void { if(["all","favorites","recent"].indexOf(mode)>=0)LauncherModel.gridMode=mode }
         function launcher(action: string): void {
             if (action === "open") LauncherModel.openLauncher()
             else if (action === "close") LauncherModel.closeLauncher()
@@ -59,7 +78,7 @@ ShellRoot {
             SettingsModel.windowActionRequested(action)
         }
         function settings(category: string): void {
-            const allowed = ["appearance","bar","wallpaper","displays","workspaces","shortcuts","audio","network","bluetooth","power","notifications"]
+            const allowed = ["appearance","bar","spotlight","wallpaper","displays","workspaces","shortcuts","defaultApps","audio","network","bluetooth","power","notifications"]
             if (allowed.indexOf(category) >= 0) SettingsStore.setSettingsCategory(category)
             SettingsModel.show()
             SettingsModel.windowActionRequested("clear-search")

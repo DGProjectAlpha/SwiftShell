@@ -1,77 +1,26 @@
 import QtQuick
 import Quickshell.Services.SystemTray
 import "../components"
-import "../logic/tray.js" as Tray
 import "../themes"
 
 Column {
-    id: root
-
-    spacing: Theme.panelSpacing
-    width: parent ? parent.width : Theme.controlWidth
-    property var hostWindow: null
-
-    readonly property var rows: Tray.trayRows(SystemTray.items, 12)
-    readonly property int overflow: Tray.trayOverflow(SystemTray.items, 12)
-
-    function itemAt(id) {
-        var values = []
-        try {
-            values = Tray.objectValues(SystemTray.items)
-        } catch (error) {
-            values = []
-        }
-        for (var index = 0; index < values.length; index++) {
-            if (values[index] && values[index].id === id)
-                return values[index]
-        }
-        return null
-    }
-
-    function invoke(row, local) {
-        var item = itemAt(row.id)
-        if (!item)
-            return
-        try {
-            if (row.action === "menu" && item.hasMenu === true && root.hostWindow) {
-                var menu = Tray.menuPoint(local ? local.x : 0, local ? local.y : 0)
-                item.display(root.hostWindow, menu.x, menu.y)
-            }
-            else if (row.action === "activate" && item.onlyMenu !== true)
-                item.activate()
-        } catch (error) {
-            console.warn("SwiftShell: the tray item was not activated")
-        }
-    }
-
-    SectionHeader {
-        width: parent.width
-        text: "Tray"
-    }
-
-    ServiceStatus {
-        visible: root.rows.length === 0
-        name: "Tray"
-        detail: "No tray icons"
-    }
-
+    id:root
+    property var hostWindow:null
+    property var trayModel:SystemTray.items
+    spacing:Theme.panelSpacing
+    width:parent ? parent.width : Theme.controlWidth
+    SectionHeader {width:parent.width;text:"Tray"}
+    ServiceStatus {visible:items.count===0;name:"Tray";detail:"No tray applications"}
     Repeater {
-        model: root.rows
-
-        delegate: FlatButton {
+        id:items
+        model:root.trayModel
+        delegate:TrayItemControl {
             required property var modelData
-            width: parent.width
-            label: modelData.title
-            onActivated: root.invoke(modelData, mapToItem(root.hostWindow ? root.hostWindow.contentItem : null, width / 2, height))
+            entry:modelData
+            hostWindow:root.hostWindow
+            showLabel:true
+            width:root.width
+            textPrimary:Theme.settingsText
         }
-    }
-
-    Text {
-        visible: root.overflow > 0
-        width: parent.width
-        text: "+" + root.overflow + " more"
-        color: Theme.settingsMuted
-        font.family: Theme.settingsFontFamily
-        font.pixelSize: Theme.settingsFontSizeSmall
     }
 }

@@ -22,6 +22,7 @@ Item {
         anchors.rightMargin: Theme.panelSpacing
         anchors.verticalCenter: row.stacked ? undefined : parent.verticalCenter
         y: row.stacked ? 0 : (row.height-height)/2
+        textFormat:Text.PlainText
         text: row.label
         color: Theme.settingsText
         font.family: Theme.settingsFontFamily

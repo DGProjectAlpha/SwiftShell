@@ -1,90 +1,42 @@
 import QtQuick
 import Quickshell.Services.SystemTray
-import "../logic/tray.js" as Tray
+import "../components"
 import "../themes"
 
 Item {
-    id: root
-
-    property var hostWindow: null
-    property color textPrimary: Theme.textPrimary
-    property color textMuted: Theme.textMuted
-    readonly property var rows: Tray.trayRows(SystemTray.items, 4)
-    readonly property int overflow: Tray.trayOverflow(SystemTray.items, 4)
-
-    implicitWidth: rows.length === 0 ? 0 : row.implicitWidth
-    implicitHeight: Theme.barHeight
-    visible: rows.length > 0
-
-    function itemAt(id) {
-        var values = Tray.objectValues(SystemTray.items)
-        for (var index = 0; index < values.length; index++) {
-            if (values[index] && values[index].id === id)
-                return values[index]
+    id:root
+    property var hostWindow:null
+    property var trayModel:SystemTray.items
+    property color textPrimary:Theme.textPrimary
+    property color textMuted:Theme.textMuted
+    readonly property int itemCount:items.count
+    implicitWidth:items.count ? row.implicitWidth : 0
+    implicitHeight:Theme.barHeight
+    visible:items.count>0
+    function geometry() {
+        const result=[]
+        for(let index=0;index<items.count;index++) {
+            const item=items.itemAt(index),point=item.mapToItem(null,0,0)
+            result.push({index:index,id:item.entry ? item.entry.id : "",hasMenu:item.menuAvailable,menuOpen:item.menuOpen,x:point.x,y:point.y,width:item.width,height:item.height})
         }
-        return null
+        return result
     }
-
-    function invoke(entry, local) {
-        var item = itemAt(entry.id)
-        if (!item)
-            return
-        try {
-            if (entry.action === "menu" && item.hasMenu === true && hostWindow) {
-                var menu = Tray.menuPoint(local ? local.x : 0, local ? local.y : 0)
-                item.display(hostWindow, menu.x, menu.y)
-            }
-            else if (entry.action === "activate" && item.onlyMenu !== true)
-                item.activate()
-        } catch (error) {
-            console.warn("SwiftShell: the tray item was not activated")
-        }
-    }
-
     Row {
-        id: row
-        anchors.verticalCenter: parent.verticalCenter
-        spacing: 4
-
+        id:row
+        anchors.verticalCenter:parent.verticalCenter
+        spacing:4
         Repeater {
-            model: root.rows
-
-            delegate: MouseArea {
+            id:items
+            objectName:"trayItems"
+            // Keep native objects and ObjectModel notifications. Snapshotting
+            // icons/menu readiness would leave stale controls after registration.
+            model:root.trayModel
+            delegate:TrayItemControl {
                 required property var modelData
-                width: Theme.barIcon
-                height: Theme.barHeight
-                hoverEnabled: true
-                Accessible.role: Accessible.Button
-                Accessible.name: modelData.title
-                onClicked: root.invoke(modelData, mapToItem(root.hostWindow ? root.hostWindow.contentItem : null, width / 2, height))
-
-                Image {
-                    anchors.centerIn: parent
-                    visible: modelData.icon !== ""
-                    source: modelData.icon
-                    width: Theme.barIcon
-                    height: Theme.barIcon
-                    fillMode: Image.PreserveAspectFit
-                }
-
-                Text {
-                    anchors.centerIn: parent
-                    visible: modelData.icon === ""
-                    text: modelData.title.length > 0 ? modelData.title.charAt(0) : ""
-                    color: root.textPrimary
-                    font.family: Theme.fontFamily
-                    font.pixelSize: Theme.fontSizeSmall
-                }
+                entry:modelData
+                hostWindow:root.hostWindow
+                textPrimary:root.textPrimary
             }
-        }
-
-        Text {
-            visible: root.overflow > 0
-            anchors.verticalCenter: parent.verticalCenter
-            text: "+" + root.overflow
-            color: root.textMuted
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.fontSizeSmall
         }
     }
 }

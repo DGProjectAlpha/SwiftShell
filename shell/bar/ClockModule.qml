@@ -12,10 +12,15 @@ MouseArea {
     readonly property int updatePrecision:clock.precision
     readonly property string labelText:(SettingsStore.clockDate ? Qt.formatDate(clock.date,Clock.datePattern(SettingsStore.clockDateFormat))+" · " : "")+Clock.formatTime(clock.date,SettingsStore.use24Hour,SettingsStore.clockSeconds)
     signal activated()
+    signal calendarActivated()
+    function clickTargets() {
+        const date=dateHit.mapToItem(null,0,0),time=label.mapToItem(null,0,0)
+        return {date:{x:date.x,y:date.y,width:dateHit.width,height:dateHit.height,visible:dateHit.visible},time:{x:time.x,y:time.y,width:label.width,height:label.height}}
+    }
     property color textPrimary: Theme.textPrimary
     property color textHover: Theme.textHover
 
-    implicitWidth: label.implicitWidth
+    implicitWidth: contents.implicitWidth
     implicitHeight: Theme.barHeight
     width: implicitWidth
     height: implicitHeight
@@ -24,7 +29,7 @@ MouseArea {
     cursorShape: Qt.PointingHandCursor
     Accessible.role: Accessible.Button
     Accessible.name: "Clock " + label.text
-    Accessible.description: "Open the calendar"
+    Accessible.description: "Open Clock, Calendar, Timer and Stopwatch"
 
     Controls.ToolTip.visible:containsMouse
     Controls.ToolTip.text:Qt.formatDate(clock.date,"dddd, d MMMM yyyy")
@@ -43,19 +48,48 @@ MouseArea {
         precision: SettingsStore.clockSeconds ? SystemClock.Seconds : SystemClock.Minutes
     }
 
-    BarLabel {
-        id: label
-        anchors.centerIn: parent
-        text: root.labelText
-        font.family:"Noto Sans Mono"
-        color: root.containsMouse || root.activeFocus ? root.textHover : root.textPrimary
-
-        Behavior on color {
-            enabled: Theme.motionHover > 0
-            ColorAnimation {
-                duration: Theme.motionHover
-                easing.type: Easing.OutCubic
+    Row {
+        id:contents
+        anchors.centerIn:parent
+        MouseArea {
+            id:dateHit
+            objectName:"barDateButton"
+            visible:SettingsStore.clockDate
+            width:visible ? dateLabel.implicitWidth : 0
+            height:Theme.barHeight
+            cursorShape:Qt.PointingHandCursor
+            activeFocusOnTab:true
+            hoverEnabled:true
+            Accessible.role:Accessible.Button
+            Accessible.name:"Calendar " + dateLabel.text
+            onClicked:root.calendarActivated()
+            Keys.onPressed:function(event) {
+                if(event.key===Qt.Key_Return || event.key===Qt.Key_Enter || event.key===Qt.Key_Space) {
+                    root.calendarActivated();event.accepted=true
+                }
             }
+            BarLabel {
+                id:dateLabel
+                anchors.verticalCenter:parent.verticalCenter
+                text:Qt.formatDate(clock.date,Clock.datePattern(SettingsStore.clockDateFormat))
+                font.family:"Noto Sans Mono"
+                color:dateHit.containsMouse || dateHit.activeFocus ? root.textHover : root.textPrimary
+            }
+        }
+        BarLabel {
+            visible:SettingsStore.clockDate
+            text:" · "
+            font.family:"Noto Sans Mono"
+            color:root.textPrimary
+            anchors.verticalCenter:parent.verticalCenter
+        }
+        BarLabel {
+            id:label
+            objectName:"barTimeLabel"
+            text:Clock.formatTime(clock.date,SettingsStore.use24Hour,SettingsStore.clockSeconds)
+            font.family:"Noto Sans Mono"
+            anchors.verticalCenter:parent.verticalCenter
+            color:root.containsMouse || root.activeFocus ? root.textHover : root.textPrimary
         }
     }
 }

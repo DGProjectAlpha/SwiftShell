@@ -63,8 +63,10 @@ Singleton {
     readonly property color settingsHover: lightSurface ? Qt.rgba(0,0,0,.05) : Qt.rgba(1,1,1,.07)
     readonly property color settingsSelected: lightSurface ? Qt.rgba(0,0,0,.09) : Qt.rgba(1,1,1,.11)
     readonly property int settingsSpacing: Math.max(6, Math.round(SettingsStore.panelSpacing * .75))
-    readonly property color settingsSurface: Qt.rgba(surface.panel.r/255,surface.panel.g/255,surface.panel.b/255,
-        WindowService.blurAvailable && SettingsStore.textContrast !== "high" ? SettingsStore.panelOpacity * .8 : .98)
+    readonly property color settingsSurface: floaterSurface
+
+    readonly property color floaterSurface: Qt.rgba(surface.panel.r/255,surface.panel.g/255,surface.panel.b/255,
+        SurfaceService.blurAvailable && SettingsStore.textContrast !== "high" ? SettingsStore.panelOpacity * .8 : .98)
 
     readonly property int fontSize: SettingsStore.fontSize
     readonly property int fontSizeSmall: Math.max(11, fontSize - 1)
@@ -86,7 +88,7 @@ Singleton {
     readonly property color gradientTop: Qt.rgba(gradientUnits.r, gradientUnits.g, gradientUnits.b, gradientUnits.a)
 
     readonly property real panelOpacity: SettingsStore.panelOpacity
-    // Settings uses native backdrop blur through WindowService; other surfaces retain their existing treatment.
+    // Shared native backdrop blur; DesktopAppearance controls compositor strength.
     readonly property real panelBlur: SettingsStore.panelBlur
     readonly property int radius: SettingsStore.radius
     readonly property real shadowOpacity: SettingsStore.shadowOpacity

@@ -22,7 +22,7 @@ PREFIX = 'SwiftShell · '
 MODS = {'shift': 1, 'ctrl': 4, 'alt': 8, 'super': 64}
 ACTIONS = [
     ('spotlight', 'Spotlight', 'SwiftShell'), ('settings', 'Settings', 'SwiftShell'),
-    ('control', 'Control center', 'SwiftShell'), ('terminal', 'Terminal', 'Applications'),
+    ('control', 'Audio panel', 'SwiftShell'), ('terminal', 'Terminal', 'Applications'),
     ('focus-left', 'Focus window left', 'Windows'), ('focus-right', 'Focus window right', 'Windows'),
     ('focus-up', 'Focus window above', 'Windows'), ('focus-down', 'Focus window below', 'Windows'),
     ('move-left', 'Move window left', 'Windows'), ('move-right', 'Move window right', 'Windows'),

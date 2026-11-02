@@ -293,6 +293,11 @@ Singleton {
 
     function moveFavorite(source,target) {
         SettingsStore.setPinnedIds(Launcher.reorderFavorite(SettingsStore.pinnedIds,source,target));
+        if(root.gridMode==="favorites" && root.query.trim()==="") {
+            const visible=Launcher.gridRows(root.applications,"favorites",SettingsStore.pinnedIds,root.recentIds);
+            const index=visible.findIndex(function(row){return row.id===source;});
+            if(index>=0)root.selected=index;
+        }
     }
 
     function toggleFavorite(id) {

@@ -11,3 +11,8 @@ NotificationsPage 1.0 NotificationsPage.qml
 WorkspacesPage 1.0 WorkspacesPage.qml
 BlurAdapter 1.0 BlurAdapter.qml
 SettingsShadow 1.0 SettingsShadow.qml
+
+DefaultAppsPage 1.0 DefaultAppsPage.qml
+WorkspaceOrderList 1.0 WorkspaceOrderList.qml
+
+SpotlightPage 1.0 SpotlightPage.qml
