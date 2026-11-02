@@ -83,6 +83,13 @@ Singleton {
     readonly property int notificationDuration: notificationSettings.bannerDuration
     readonly property int notificationHistoryLimit: notificationSettings.historyLimit
     readonly property string notificationScreenTarget: notificationSettings.screenTarget
+    readonly property bool notificationQuietHoursEnabled:notificationSettings.quietHoursEnabled
+    readonly property int notificationQuietStart:notificationSettings.quietStart
+    readonly property int notificationQuietEnd:notificationSettings.quietEnd
+    readonly property int notificationQuietDays:notificationSettings.quietDays
+    readonly property string notificationPreviewMode:notificationSettings.previewMode
+    readonly property bool notificationSoundEnabled:notificationSettings.soundEnabled
+    readonly property real notificationSoundVolume:notificationSettings.soundVolume
     readonly property real notificationQuietUntil: notificationSettings.quietUntil
 
     property bool writing: false
@@ -202,6 +209,13 @@ Singleton {
         notificationSettings.historyLimit = notes.historyLimit
         notificationSettings.screenTarget = notes.screenTarget
         notificationSettings.quietUntil = notes.quietUntil
+        notificationSettings.quietHoursEnabled = notes.quietHoursEnabled
+        notificationSettings.quietStart = notes.quietStart
+        notificationSettings.quietEnd = notes.quietEnd
+        notificationSettings.quietDays = notes.quietDays
+        notificationSettings.previewMode = notes.previewMode
+        notificationSettings.soundEnabled = notes.soundEnabled
+        notificationSettings.soundVolume = notes.soundVolume
         adapter.extensionsJson = document.extensionsJson || "{}"
     }
 
@@ -319,7 +333,14 @@ Singleton {
                 bannerDuration: notificationSettings.bannerDuration,
                 historyLimit: notificationSettings.historyLimit,
                 screenTarget: notificationSettings.screenTarget,
-                quietUntil: notificationSettings.quietUntil
+                quietUntil: notificationSettings.quietUntil,
+                quietHoursEnabled: notificationSettings.quietHoursEnabled,
+                quietStart: notificationSettings.quietStart,
+                quietEnd: notificationSettings.quietEnd,
+                quietDays: notificationSettings.quietDays,
+                previewMode: notificationSettings.previewMode,
+                soundEnabled: notificationSettings.soundEnabled,
+                soundVolume: notificationSettings.soundVolume
             },
             extensionsJson: adapter.extensionsJson
         };
@@ -721,11 +742,21 @@ Singleton {
     function setNotificationPreferences(values) {
         const current = snapshot().notifications
         Object.keys(values || {}).forEach(function(key) { current[key] = values[key] })
-        const next = Settings.validateSettings({notifications:current}).settings.notifications
+        const result = Settings.validateSettings({notifications:current})
+        if(!result.ok)return false
+        const next=result.settings.notifications
         notificationSettings.bannerDuration = next.bannerDuration
         notificationSettings.historyLimit = next.historyLimit
         notificationSettings.screenTarget = next.screenTarget
         notificationSettings.quietUntil = next.quietUntil
+        notificationSettings.quietHoursEnabled = next.quietHoursEnabled
+        notificationSettings.quietStart = next.quietStart
+        notificationSettings.quietEnd = next.quietEnd
+        notificationSettings.quietDays = next.quietDays
+        notificationSettings.previewMode = next.previewMode
+        notificationSettings.soundEnabled = next.soundEnabled
+        notificationSettings.soundVolume = next.soundVolume
+        return true
     }
 
     function setNotificationPolicy(id, value) {
@@ -969,6 +1000,13 @@ Singleton {
             property int historyLimit: 60
             property string screenTarget: "focused"
             property real quietUntil: 0
+            property bool quietHoursEnabled:false
+            property int quietStart:1320
+            property int quietEnd:420
+            property int quietDays:127
+            property string previewMode:"full"
+            property bool soundEnabled:false
+            property real soundVolume:.25
         }
 
         property string extensionsJson: "{}"

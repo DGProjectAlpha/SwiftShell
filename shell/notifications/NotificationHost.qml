@@ -21,7 +21,23 @@ PanelWindow {
     surfaceFormat.opaque: false
     margins.top: Theme.barHeight + Theme.panelGap
     margins.right: Theme.panelMargin
-    mask: Region { item:viewport; radius:Theme.radius }
+    property int regionRevision:0
+    function cardSurface(index) {
+        regionRevision
+        const item=banners.itemAt(index)
+        return item ? item.material : null
+    }
+    function updateRegions(){regionRevision++;if(cardRegions)cardRegions.changed()}
+    mask:cardRegions
+    // At most four banners: blur/input includes cards, excluding shadows and gaps.
+    Region {
+        id:cardRegions
+        Region {item:host.cardSurface(0);radius:Theme.radius}
+        Region {item:host.cardSurface(1);radius:Theme.radius}
+        Region {item:host.cardSurface(2);radius:Theme.radius}
+        Region {item:host.cardSurface(3);radius:Theme.radius}
+        Region {item:viewport;intersection:Intersection.Intersect}
+    }
 
     anchors {
         top: true
@@ -74,10 +90,15 @@ PanelWindow {
             urgency: String(notification.urgency) === "2"
                 || String(notification.urgency) === "Critical" ? "critical" : "normal",
             desktopEntry: notification.desktopEntry,
+            appIcon:notification.appIcon,
+            image:notification.image,
+            hasInlineReply:notification.hasInlineReply,
+            replyPlaceholder:notification.inlineReplyPlaceholder,
+            suppressSound:notification.lastGeneration || (notification.hints && notification.hints["suppress-sound"] === true),
             actions: actions,
             // Quickshell 0.3.2 exposes the D-Bus millisecond value unchanged.
             // Normalize once into the reducer's seconds contract (native regression).
-            expireTimeout: notification.expireTimeout < 0 ? SettingsStore.notificationDuration : notification.expireTimeout / 1000
+            expireTimeout: notification.expireTimeout < 0 ? -1 : notification.expireTimeout / 1000
         }
     }
 
@@ -95,10 +116,13 @@ PanelWindow {
         if (host.watchedList.indexOf(notification) !== -1)
             return
         host.watchedList = host.watchedList.concat([notification])
-        var refresh = function () { host.refreshNotification(notification) }
+        // C++ property groups must finish before QML can close/evict a replacement.
+        // One stable flush closure per object coalesces its property notifications.
+        var flush=function(){if(host.nativeList.indexOf(notification)!==-1)host.refreshNotification(notification)}
+        var refresh=function(){Qt.callLater(flush)}
         var names = [
             "appNameChanged", "summaryChanged", "bodyChanged", "urgencyChanged",
-            "desktopEntryChanged", "actionsChanged", "expireTimeoutChanged", "appIconChanged", "transientChanged"
+            "desktopEntryChanged", "actionsChanged", "expireTimeoutChanged", "appIconChanged", "imageChanged", "hasInlineReplyChanged", "inlineReplyPlaceholderChanged", "hintsChanged", "transientChanged", "appIconChanged", "transientChanged"
         ]
         for (var index = 0; index < names.length; index++)
             host.connectSignal(notification, names[index], refresh)
@@ -187,19 +211,7 @@ PanelWindow {
             Notifications.nativeClose(current[index], "dismiss")
     }
 
-    function reconfigure() {
-        NotificationsModel.refreshConfiguration()
-        const current=host.nativeList.slice()
-        current.forEach(function(nativeNotification) {
-            const entries=Notifications.allEntries(NotificationsModel.center)
-            const record=entries.find(function(item){return item.id===nativeNotification.id})
-            if(!record) return
-            const policy=Notifications.policyFor(NotificationsModel.center.policies,record.desktopEntry)
-            if(policy==="hide") NotificationsModel.dismiss(record.id)
-            else if(record.urgency!=="critical" && (NotificationsModel.center.dnd || policy==="quiet"))
-                NotificationsModel.hideBanner(record.id)
-        })
-    }
+    function reconfigure() {NotificationsModel.refreshConfiguration()}
 
     function closeNative(id,kind) {
         const nativeNotification=take(id)
@@ -218,11 +230,20 @@ PanelWindow {
             }
         }
     }
+    function sendReply(id,text) {
+        const nativeNotification=nativeList.find(function(item){return item && item.id===id})
+        if(!nativeNotification || !nativeNotification.hasInlineReply)return
+        // Never read from the object after a nonresident reply closes it.
+        const resident=nativeNotification.resident
+        nativeNotification.sendInlineReply(text)
+        if(!resident)NotificationsModel.dismiss(id)
+    }
     Connections {
         target:NotificationsModel
         function onCenterChanged(){Qt.callLater(host.trimNatives)}
         function onCloseRequested(notificationId,kind) {host.closeNative(notificationId,kind)}
         function onActionRequested(notificationId,identifier) {host.invokeAction(notificationId,identifier)}
+        function onReplyRequested(notificationId,text){host.sendReply(notificationId,text)}
         function onClearRequested() {
             const historyIds=NotificationsModel.center.history.map(function(item){return item.id})
             host.nativeList.slice().forEach(function(item){if(historyIds.indexOf(item.id)!==-1) host.closeNative(item.id,"dismiss")})
@@ -253,8 +274,8 @@ PanelWindow {
         bodyHyperlinksSupported: false
         bodyImagesSupported: false
         actionsSupported: true
-        imageSupported: false
-        inlineReplySupported: false
+        imageSupported: true
+        inlineReplySupported: true
         persistenceSupported: true
 
         onNotification: function (notification) {
@@ -262,7 +283,8 @@ PanelWindow {
         }
     }
 
-    BackdropEffect {targetWindow:host;surface:viewport;cornerRadius:Theme.radius;enabled:SettingsStore.panelBlur>0}
+    readonly property bool surfaceBlurApplied:backdrop.applied
+    BackdropEffect {id:backdrop;targetWindow:host;surface:viewport;region:cardRegions;cornerRadius:Theme.radius;enabled:host.visible && SettingsStore.panelBlur>0}
     Flickable {
         id:viewport
         anchors.fill:parent
@@ -270,25 +292,35 @@ PanelWindow {
         contentHeight:column.implicitHeight+Theme.surfaceShadowInset*2
         clip:true
         boundsBehavior:Flickable.StopAtBounds
+        onContentYChanged:host.updateRegions()
         Controls.ScrollBar.vertical:Controls.ScrollBar {policy:Controls.ScrollBar.AsNeeded}
     Column {
         id:column
         x:Theme.surfaceShadowInset;y:Theme.surfaceShadowInset
         width:360
         spacing:Theme.panelSpacing
+        KeyedModel {id:liveBanners;entries:NotificationsModel.center.live}
         Repeater {
-            model:NotificationsModel.center.live
+            id:banners
+            model:liveBanners
+            onItemAdded:host.updateRegions()
+            onItemRemoved:host.updateRegions()
             delegate:Item {
                 id:banner
-                required property var modelData
+                required property var entry
+                readonly property var modelData:entry
+                readonly property alias material:bannerSurface
+                onYChanged:host.updateRegions()
+                onHeightChanged:host.updateRegions()
                 width:column.width;height:card.implicitHeight+Theme.panelPadding*2
                 SurfaceShadow {anchors.fill:parent;visible:Theme.shadowOpacity>0}
-                Rectangle {anchors.fill:parent;radius:Theme.radius;color:Theme.floaterSurface}
+                Rectangle {id:bannerSurface;anchors.fill:parent;radius:Theme.radius;color:Theme.floaterSurface}
                 NotificationCard {
                     id:card
                     x:Theme.panelPadding;y:Theme.panelPadding
                     width:parent.width-Theme.panelPadding*2
                     entry:banner.modelData
+                    banner:true
                 }
                 Timer {
                     interval:Math.max(1,banner.modelData.expireMs-(Date.now()-banner.modelData.receivedAt))

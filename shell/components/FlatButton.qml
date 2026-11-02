@@ -63,6 +63,7 @@ MouseArea {
         horizontalAlignment: control.navigation ? Text.AlignLeft : Text.AlignHCenter
         elide: Text.ElideRight
         text: control.label
+        textFormat:Text.PlainText
         font.family: Theme.settingsFontFamily
         font.pixelSize: Theme.settingsFontSize
         font.weight: control.emphasized ? Font.Medium : Theme.fontWeight

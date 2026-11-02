@@ -118,3 +118,8 @@ Optional desktop tools: `wl-clipboard` enables opt-in clipboard history and imag
 copying; `grim` provides screenshots, and `slurp` provides interactive region
 selection. Missing tools are detected without installing packages or changing
 services. Clipboard history remains disabled until selected in Settings.
+
+
+Optional notification sounds use `qt6-multimedia`. The shell loads without it and
+reports that sound support is unavailable; installing SwiftShell does not install
+or activate this optional integration automatically. Sounds are off by default.

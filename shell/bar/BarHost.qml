@@ -14,6 +14,10 @@ Scope {
         if(selected) selected.showPanel(id)
     }
     function closePanels() {for(const w of bars.instances)w.showPanel("close")}
+    function showNotifications(output) {
+        const selected=bars.instances.find(function(w){return w.monitorKey===output}) || bars.instances[0]
+        if(selected)selected.openNotifications()
+    }
     function showClockTool(output,tab) {
         const selected=bars.instances.find(function(w){return w.monitorKey===output}) || bars.instances[0]
         if(selected)selected.openClockTool(tab)

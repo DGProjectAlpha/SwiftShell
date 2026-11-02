@@ -930,3 +930,66 @@ Final source activation repeated Clock notification actions, both-output actual
 Alt+Tab, desktop Spotlight activation, native tray/date/time/widget input and all
 twelve Settings pages successfully. The running checkout matches the committed
 feature source; normal source-file watching was restored after verification.
+
+
+## Notification preferences and interaction polish — 2026-11-02
+
+`bash scripts/check.sh` passed on Quickshell 0.3.2 / Qt 6.12 / Hyprland 0.57 Lua,
+including 97 QML documents and the expanded notification policy/UI regressions.
+The exact staged tree was also checked before committing. Evidence remains local;
+this is not a claim that CI ran these commits on another Qt version.
+
+- Fixed active DND/app-rule reconfiguration for local Clock entries as well as
+  native notifications. Clock events use the configured duration. Critical default
+  timeouts stay until dismissal, and critical arrivals/wakeups take an ordinary
+  banner slot when the bounded four-banner queue is full.
+- Pure tests cover same-day/overnight weekday boundaries, start-day ownership,
+  all-day schedules, invalid settings, explicit critical timeouts, priority,
+  local-only image URLs and additive v3 defaults. New sound/quiet/privacy settings
+  have a real isolated native atomic save, invalid-value rejection and complete
+  process-restart readback (`notification-preferences.py --live`).
+- `notifications-native.py --live` passed actual protocol receipt/replacement,
+  actions, image-path and image-data, native inline-reply signal, client close,
+  default critical timeout, silent hints, DND/sound suppression, no replacement
+  sound replay, actual one-second snooze wake and pause expiry, plus the bounded
+  70-message burst. All of this used a private D-Bus session, not user messages.
+- `notification-sound.py --live` loaded the generated WAV and observed actual Qt
+  playback start/completion at isolated 2% volume. No system volume changed.
+  This is backend playback evidence, not a claim that a person heard the speakers.
+- `notification-surfaces.py --live` passed actual image rendering, app-only privacy,
+  light/dark themes and native Reply→drawer keyboard typing/Send/Escape on both
+  DP-1 and HDMI-A-1. A second incoming notification did not erase the draft/focus.
+  Full-page QML input tests additionally verify the active reply remains scrolled
+  into view when incoming messages push it down.
+- Banner and grouped drawer delegates are keyed. Property refreshes coalesce until
+  native property batches finish, avoiding closing an object inside its update.
+  Reply fields and drafts survive role changes rather than being recreated.
+- Visual inspection found and fixed blur covering transparent shadow padding.
+  Blur/input now use the union of rounded card regions clipped to the viewport;
+  shadows and gaps remain clear. Owned shadow-band contrast measured 122 on both
+  outputs, and the native test requires >70 to catch the former broad blur.
+  Snooze controls share the action row, group headers align left, timestamps avoid
+  repeated app names, and reply placeholders use a readable theme color.
+
+Owned screenshots were inspected at `/tmp/swiftshell-notification-DP-1-drawer.png`
+and both outputs' `-dark.png`, `-light.png` and `-private.png` variants. The capture
+helper asserts every pixel lies over an opaque owned test background, and uses
+synthetic notification content on a private bus. No unrelated application pixels
+or real notification bodies were captured.
+
+Final activation used only the scoped SwiftShell restart. Actual Clock notification
+snooze/wake/open actions and all twelve Settings pages passed on the running build.
+No loading/type/binding errors were found. Known Qt text-input diagnostics and the
+absent legacy launcher request-file warning remain visible. Preferences and Clock
+state are backed up in own state `backups/20261102T193514Z-notification-polish`;
+source backup is `/tmp/swiftshell-notification-polish-20261102T134843`.
+
+Default sound and scheduled quiet hours remain off; preview mode remains full.
+No network, audio device/default, global volume, monitor mode, Noctalia, user Lua,
+autostart or service configuration was changed. Wi-Fi was audited read-only:
+hardware enabled, radio disabled; Ethernet stayed connected. Real messaging apps
+must advertise inline reply, and their app-specific handling still needs owner
+acceptance. Scheduled quiet hours use local time; no system-time or suspend test
+was performed. History/drafts remain session-only and HTTP image fetching is not
+supported. Revert this commit for source recovery; turn new settings off/reset
+individual fields in Notifications to keep newer unrelated preferences intact.

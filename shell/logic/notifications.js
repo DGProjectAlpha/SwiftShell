@@ -1,6 +1,22 @@
 var HISTORY_CAP = 60;
 var BANNER_CAP = 4;
 
+// Quiet hours use local calendar time. Overnight tails belong to their start day.
+function scheduledQuiet(enabled,start,end,days,now) {
+    if(!enabled || !Number.isInteger(start) || !Number.isInteger(end) || !Number.isInteger(days) || start<0 || start>1439 || end<0 || end>1439 || days<1 || days>127)return false;
+    const date=new Date(now),minute=date.getHours()*60+date.getMinutes(),day=(date.getDay()+6)%7;
+    if(!Number.isFinite(date.getTime()))return false;
+    const selected=function(value){return (days & (1 << value))!==0};
+    if(start===end)return selected(day);
+    if(start<end)return selected(day) && minute>=start && minute<end;
+    return minute>=start ? selected(day) : minute<end && selected((day+6)%7);
+}
+function timeLabel(value) {return String(Math.floor(value/60)).padStart(2,"0")+":"+String(value%60).padStart(2,"0")}
+function safeImageSource(value) {
+    if(typeof value!=="string" || value.length>4096 || /[\x00-\x1f]/.test(value))return "";
+    if(/^image:\/\//.test(value) || /^file:\/\/\//.test(value) || /^\/(?!\/)/.test(value))return value;
+    return "";
+}
 function emptyCenter() {
     return { ownership: "off", dnd: false, policies: {}, historyLimit:HISTORY_CAP, live: [], history: [], sequence: 1,
         lastRoute: { id: -1, disposition: "ignored" } };
@@ -39,7 +55,9 @@ function entryFrom(raw, sequence, now) {
         appName: clip(source.appName, 80) || "Application", summary: clip(source.summary, 160) || "Notification",
         body: clip(source.body, 2000), urgency: source.urgency === "critical" ? "critical" : "normal",
         desktopEntry: clip(source.desktopEntry, 128), actions: actionRecords(source.actions),
-        appIcon: clip(source.appIcon, 256), expireMs: expireMs(source.expireTimeout),
+        appIcon: clip(source.appIcon, 4096),image:safeImageSource(source.image),
+        hasInlineReply:source.hasInlineReply === true,replyPlaceholder:clip(source.replyPlaceholder,100),suppressSound:source.suppressSound === true,
+        expireMs: expireMs(source.urgency==="critical" && (source.expireTimeout===undefined || source.expireTimeout<0) ? 0 : source.expireTimeout),
         preview: source.preview === true, local:source.local === true, transient: source.transient === true,
         nativeAlive: source.nativeAlive !== false, receivedAt: now, unread: true, snoozedUntil: 0
     };
@@ -54,6 +72,14 @@ function without(items, id) { return items.filter(function(item) { return item.i
 function remember(next, item) {
     if (item.preview || item.transient) return;
     next.history = [item].concat(without(next.history,item.id)).slice(0, next.historyLimit);
+}
+function enqueueBanner(next,item) {
+    if(item.urgency==="critical" && next.live.length>=BANNER_CAP) {
+        const ordinary=next.live.findIndex(function(row){return row.urgency!=="critical"});
+        if(ordinary>=0){remember(next,next.live[ordinary]);next.live.splice(ordinary,1)}
+    }
+    if(next.live.length>=BANNER_CAP)return false;
+    next.live.push(item);return true;
 }
 function parsePolicies(text) {
     try {
@@ -107,7 +133,17 @@ function reduceNotifications(state, action) {
         if(Number.isFinite(action.historyLimit)) next.historyLimit=Math.max(20,Math.min(200,Math.round(action.historyLimit)));
         next.history=next.history.slice(0,next.historyLimit);
         if (action.policies !== undefined) next.policies = parsePolicies(action.policies);
-        if (next.ownership !== "on") {next.live.forEach(function(item){remember(next,item);});next.live=[];}
+        if(state && next.ownership===state.ownership && next.dnd===state.dnd && next.historyLimit===state.historyLimit && JSON.stringify(next.policies)===JSON.stringify(state.policies))return state;
+        // Reconfigure every source, including local Clock entries. Never replay history.
+        const keep=[];
+        next.history=next.history.filter(function(item){return placement(next,item)!=="drop"});
+        next.live.forEach(function(item){
+            const route=placement(next,item);
+            if(route==="drop")return;
+            if(next.ownership === "on" && route==="banner")keep.push(item);
+            else remember(next,item);
+        });
+        next.live=keep;
         return next;
     }
     if (type === "clear-history") {next.history=[];return next;}
@@ -117,7 +153,7 @@ function reduceNotifications(state, action) {
     }
     if (type === "remove") {next.live=without(next.live,action.id);next.history=without(next.history,action.id);return next;}
     if (type === "closed") {
-        const closed=function(item){return item.id === action.id ? Object.assign({},item,{nativeAlive:false,actions:[],snoozedUntil:0}) : item;};
+        const closed=function(item){return item.id === action.id ? Object.assign({},item,{nativeAlive:false,actions:[],image:"",hasInlineReply:false,snoozedUntil:0}) : item;};
         next.live.filter(function(item){return item.id===action.id;}).forEach(function(item){remember(next,closed(item));});
         next.live=without(next.live,action.id);next.history=next.history.map(closed);return next;
     }
@@ -127,9 +163,9 @@ function reduceNotifications(state, action) {
         const previous=next.live.concat(next.history).find(function(row){return row.id===item.id;});
         if(previous && previous.snoozedUntil>now) item.snoozedUntil=previous.snoozedUntil;
         next.live=without(next.live,item.id);next.history=without(next.history,item.id);
-        const place=placement(next,item);
-        if(place === "banner" && !item.snoozedUntil && next.live.length < BANNER_CAP) next.live.push(item);
-        else if(place !== "drop") remember(next,item);
+        const place=type === "preview" ? "banner" : placement(next,item);
+        const shown=place==="banner" && !item.snoozedUntil && enqueueBanner(next,item);
+        if(!shown && place!=="drop")remember(next,item);
         next.lastRoute={id:item.id,disposition:place === "drop" ? "drop" : next.live.indexOf(item)!==-1 ? "banner" : "history"};
         return next;
     }
@@ -149,8 +185,7 @@ function reduceNotifications(state, action) {
         due.forEach(function(item){
             const awake=Object.assign({},item,{snoozedUntil:0,unread:true,receivedAt:now});
             next.history=without(next.history,item.id);
-            if(placement(next,awake)==="banner" && next.live.length<BANNER_CAP) next.live.push(awake);
-            else remember(next,awake);
+            if(placement(next,awake)!=="banner" || !enqueueBanner(next,awake))remember(next,awake);
         });return next;
     }
     if(type === "archive") {
@@ -167,7 +202,7 @@ function reduceNotifications(state, action) {
     return next;
 }
 function shouldTrack(state) { return !!(state && state.ownership === "on"); }
-var swiftshellNotifications={HISTORY_CAP:HISTORY_CAP,BANNER_CAP:BANNER_CAP,emptyCenter:emptyCenter,reduceNotifications:reduceNotifications,
+var swiftshellNotifications={scheduledQuiet:scheduledQuiet,timeLabel:timeLabel,safeImageSource:safeImageSource,HISTORY_CAP:HISTORY_CAP,BANNER_CAP:BANNER_CAP,emptyCenter:emptyCenter,reduceNotifications:reduceNotifications,
     shouldTrack:shouldTrack,parsePolicies:parsePolicies,policyFor:policyFor,groupHistory:groupHistory,policyRows:policyRows,
     expireMs:expireMs,nativeClose:nativeClose,actionRecords:actionRecords,allEntries:allEntries};
 if(typeof module!=="undefined" && module && module.exports) module.exports=swiftshellNotifications;

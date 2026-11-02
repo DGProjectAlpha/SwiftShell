@@ -1895,7 +1895,7 @@ test("notifications stay off until ownership is confirmed", function () {
         type: "receive",
         notification: { id: 8, appName: "Chat", summary: "Quiet", body: "hidden", urgency: "normal" },
     });
-    assert.equal(center.live.length, 1);
+    assert.equal(center.live.length, 0); // DND archives already visible ordinary banners too.
     assert.equal(center.history[0].summary, "Quiet");
     assert.deepEqual(center.lastRoute, { id: 8, disposition: "history" });
     center = notifications.reduceNotifications(center, {

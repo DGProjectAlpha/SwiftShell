@@ -112,3 +112,15 @@ retains actions after banners archive. `HyprlandToplevel.wayland` plus
 some clients supply no frame and receive a labeled fallback. The guarded Alt+Tab
 handoff supports only the verified built-in cycle-next binding on the Lua target;
 unknown callbacks are never reconstructed. Settings restore the original chord.
+
+
+M6.2 native checks use the installed `image`, `hasInlineReply`, `hints` and
+`sendInlineReply` APIs, plus composable rounded Regions. References:
+[Notification API](https://quickshell.org/docs/v0.3.2/types/Quickshell.Services.Notifications/Notification/),
+[Region API](https://quickshell.org/docs/v0.3.2/types/Quickshell/Region/),
+[tagged notification implementation](https://raw.githubusercontent.com/quickshell-mirror/quickshell/v0.3.2/src/services/notifications/notification.cpp).
+The tagged implementation batches property changes; QML refreshes defer until the
+batch ends before any policy eviction. Optional sounds use QtMultimedia SoundEffect
+and MediaDevices on the supported Qt floor; missing multimedia support leaves the
+shell functional with an explicit unavailable state. Source-owned image URLs and
+reply capability are cleared when the native notification closes.

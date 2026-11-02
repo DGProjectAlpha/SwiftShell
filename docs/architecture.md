@@ -220,3 +220,30 @@ argv, validate output connectors/region geometry, close shell overlays before
 capture, and pipe PNG directly to wl-copy without writing files. Source disappearance,
 missing tools and cancellation have truthful outcomes. No launcher query becomes
 shell code. Settings links retain a pending control until the native page is mapped.
+
+
+## Notification policy and optional media
+
+The notification reducer reapplies policy to live/local entries during configuration
+changes, without replaying history. Overnight schedule calculation is pure logic;
+the service wakes at local minute boundaries only while scheduled quiet hours are
+enabled. Snoozes and timed pauses use a single next-deadline timer, not a poll.
+
+Native image and inline-reply metadata is copied into bounded records. Images use
+local/native image providers only; plain text is used for labels/actions. The host
+routes replies through `Notification.sendInlineReply` while the source is alive.
+Keyed banner/group/card models preserve input focus and drafts across updates;
+popover scrolling keeps the active field visible when content grows. Default
+critical messages persist and can displace an ordinary visible banner into history.
+
+`NotificationSound.qml` is loaded dynamically when enabled, leaving QtMultimedia
+optional. It uses the bundled generated PCM tone, the default output device and
+its own configured volume. New banners can sound; silent hints, quiet policy,
+replacements and a short cooldown prevent repeated playback. Qt availability and
+actual output readiness are separate observable states. No service takes over or
+changes PipeWire's system volume/device preferences.
+
+Banner blur and input regions combine up to four rounded material rectangles and
+intersect the scroll viewport. Transparent shadow margins and inter-card gaps are
+excluded. Native replacement-property refreshes are deferred/coalesced per object
+before closing or evicting a source, in accordance with its native update lifetime.

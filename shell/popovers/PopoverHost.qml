@@ -77,7 +77,7 @@ PanelWindow {
             popup.reposition()
             readyToShow=true
             focusGrab.active=popup.popupState.grab === true
-            Qt.callLater(function() {if(popup.visible && popup.popupState.interactive)keyScope.forceActiveFocus()})
+            Qt.callLater(function() {if(popup.visible && popup.popupState.interactive){if(popup.popupState.panelId==="notifications" && bodyLoader.item && bodyLoader.item.focusReply && bodyLoader.item.focusReply())return;keyScope.forceActiveFocus()}})
         })
     }
 
@@ -283,7 +283,7 @@ PanelWindow {
         CalendarPanel {}
     }
 
-    Component {id:notificationPanel;NotificationDrawer {onSettingsRequested:{popup.close();SettingsStore.setSettingsCategory("notifications");SettingsModel.show()}}}
+    Component {id:notificationPanel;NotificationDrawer {reading:popup.visible;onSettingsRequested:{popup.close();SettingsStore.setSettingsCategory("notifications");SettingsModel.show()}}}
     Component {id:networkPanel;NetworkPanel {onSettingsRequested:{popup.close();SettingsStore.setSettingsCategory("network");SettingsModel.show()}}}
     Component {id:powerPanel;PowerPanel {onSettingsRequested:{popup.close();SettingsStore.setSettingsCategory("power");SettingsModel.show()}}}
     Component {

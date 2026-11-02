@@ -250,6 +250,13 @@ var DEFAULTS = {
         historyLimit: 60,
         screenTarget: "focused",
         quietUntil: 0,
+        quietHoursEnabled:false,
+        quietStart:1320,
+        quietEnd:420,
+        quietDays:127,
+        previewMode:"full",
+        soundEnabled:false,
+        soundVolume:.25,
     },
     extensionsJson: "{}",
 };
@@ -496,6 +503,13 @@ function validateSettings(input) {
     const notificationPolicies = policiesValue(noteSource.policiesJson, errors);
     const notificationDuration = pickInt(noteSource,"bannerDuration",3,30,DEFAULTS.notifications.bannerDuration,errors,"notifications.bannerDuration");
     const notificationHistoryLimit = pickInt(noteSource,"historyLimit",20,200,DEFAULTS.notifications.historyLimit,errors,"notifications.historyLimit");
+    const notificationQuietHoursEnabled=pickBoolean(noteSource,"quietHoursEnabled",false,errors,"notifications.quietHoursEnabled");
+    const notificationQuietStart=pickInt(noteSource,"quietStart",0,1439,1320,errors,"notifications.quietStart");
+    const notificationQuietEnd=pickInt(noteSource,"quietEnd",0,1439,420,errors,"notifications.quietEnd");
+    const notificationQuietDays=pickInt(noteSource,"quietDays",1,127,127,errors,"notifications.quietDays");
+    const notificationPreviewMode=pickEnum(noteSource,"previewMode",["full","app-only"],"full",errors,"notifications.previewMode");
+    const notificationSoundEnabled=pickBoolean(noteSource,"soundEnabled",false,errors,"notifications.soundEnabled");
+    const notificationSoundVolume=pickNumber(noteSource,"soundVolume",0,1,.25,errors,"notifications.soundVolume");
     const notificationQuietUntil = pickNumber(noteSource,"quietUntil",0,8640000000000000,0,errors,"notifications.quietUntil");
     let notificationScreenTarget = typeof noteSource.screenTarget === "string" && /^[a-zA-Z0-9_.:-]{1,80}$/.test(noteSource.screenTarget) ? noteSource.screenTarget : "focused";
     if(noteSource.screenTarget !== undefined && notificationScreenTarget !== noteSource.screenTarget) errors.push("notifications.screenTarget");
@@ -617,6 +631,8 @@ function validateSettings(input) {
                 historyLimit: notificationHistoryLimit,
                 screenTarget: notificationScreenTarget,
                 quietUntil: notificationQuietUntil,
+                quietHoursEnabled:notificationQuietHoursEnabled,quietStart:notificationQuietStart,quietEnd:notificationQuietEnd,quietDays:notificationQuietDays,
+                previewMode:notificationPreviewMode,soundEnabled:notificationSoundEnabled,soundVolume:notificationSoundVolume,
             },
             extensionsJson: extensionsJson,
         },
@@ -876,7 +892,7 @@ function extensionsText(source, errors) {
         launcher: { pinnedIds: true,defaultMode:true,clipboardHistory:true,searchWindows:true },
         wallpaper: { enabled: true, fit: true, path: true, outputsJson: true, slideshow: true, intervalMinutes: true, order: true, transitionMs: true, slidesJson: true },
         settingsWindow: { width: true, height: true, category: true },
-        notifications: { ownership: true, dnd: true, policiesJson: true, bannerDuration:true,historyLimit:true,screenTarget:true,quietUntil:true },
+        notifications: { ownership: true, dnd: true, policiesJson: true, bannerDuration:true,historyLimit:true,screenTarget:true,quietUntil:true,quietHoursEnabled:true,quietStart:true,quietEnd:true,quietDays:true,previewMode:true,soundEnabled:true,soundVolume:true },
     };
     const nested = {};
     const domains = Object.keys(domainKeys);

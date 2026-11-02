@@ -39,6 +39,7 @@ Controls.ComboBox {
         leftPadding: 10
         rightPadding: 26
         text: control.displayText
+        textFormat:Text.PlainText
         verticalAlignment: Text.AlignVCenter
         font: control.font
         color: control.enabled ? Theme.settingsText : Theme.settingsMuted
@@ -56,7 +57,7 @@ Controls.ComboBox {
         text: modelData.label
         font: control.font
         highlighted: control.highlightedIndex === index
-        contentItem: Text { text: modelData.label; color: Theme.settingsText; font: control.font; elide: Text.ElideRight; verticalAlignment: Text.AlignVCenter }
+        contentItem: Text { textFormat:Text.PlainText; text: modelData.label; color: Theme.settingsText; font: control.font; elide: Text.ElideRight; verticalAlignment: Text.AlignVCenter }
         background: Rectangle { radius: Theme.controlRadius; color: delegateControl.highlighted ? Qt.rgba(.5,.5,.5,.2) : "transparent" }
     }
     popup: Controls.Popup {

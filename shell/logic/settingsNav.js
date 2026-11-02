@@ -1,4 +1,7 @@
 var CONTROLS = [
+    {id:"notificationQuietHours",category:"notifications",section:"Quiet hours",label:"Scheduled quiet hours",keywords:["schedule","overnight","days","week","quiet","sleep"]},
+    {id:"notificationPrivacy",category:"notifications",section:"Privacy",label:"Notification previews",keywords:["privacy","hide","body","preview","messages","content"]},
+    {id:"notificationSound",category:"notifications",section:"Sound",label:"Notification sound",keywords:["sound","volume","audio","silent","mute"]},
     {id:"spotlightProviders",category:"spotlight",section:"Search providers",label:"Clipboard and open windows",keywords:["clipboard","clip","history","windows","privacy","providers"]},
     {id:"spotlightScreenshots",category:"spotlight",section:"Screenshots",label:"Screenshots",keywords:["capture","screenshot","image","region"]},
     {id:"notificationDelivery",category:"notifications",section:"Delivery",label:"Notification delivery",keywords:["duration","retention","history","display","banner","timeout","snooze"]},

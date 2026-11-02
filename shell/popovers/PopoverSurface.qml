@@ -51,6 +51,7 @@ Item {
             width:body.implicitWidth
             height:Math.min(body.implicitHeight,Math.max(1,root.maximumHeight-Theme.panelPadding*2-root.shadowMargin*2))
             contentWidth:body.implicitWidth;contentHeight:body.implicitHeight
+            onContentHeightChanged:Qt.callLater(function(){const window=root.Window.window;if(window && window.activeFocusItem)root.reveal(window.activeFocusItem)})
             clip:true
             boundsBehavior:Flickable.StopAtBounds
             Controls.ScrollBar.vertical:Controls.ScrollBar {

@@ -93,6 +93,7 @@ TestCase {
         "shell/settings/NotificationsPage.qml",
         "shell/notifications/NotificationHost.qml",
         "shell/notifications/NotificationCard.qml",
+        "shell/notifications/NotificationSound.qml",
         "shell/notifications/NotificationDrawer.qml",
         "shell/settings/AppearancePage.qml",
         "shell/settings/BarPage.qml",
@@ -180,6 +181,7 @@ TestCase {
     }
 
     function expectedUnavailable(path, message) {
+        if(path === "shell/notifications/NotificationSound.qml" && message.indexOf("QtMultimedia")>=0 && message.indexOf("not installed")>=0)return true
         if (path === "shell/settings/SettingsShadow.qml" || path === "shell/components/SurfaceShadow.qml")
             return message.indexOf('module "QtQuick.Effects" is not installed') !== -1
                 || message.indexOf('RectangularShadow is not a type') !== -1
@@ -529,7 +531,7 @@ TestCase {
         verify(notes !== null)
         verify(findText(notes, "Choose how notifications appear", 0))
         verify(findText(notes, "Handled outside SwiftShell", 0))
-        verify(findText(notes, "sounds are unavailable", 0))
+        verify(findText(notes, "History and reply drafts stay in memory", 0))
         UPower.displayDevice.ready = false
         var emptyBattery = componentFor("shell/bar/BatteryModule.qml").createObject(this)
         verify(emptyBattery !== null)

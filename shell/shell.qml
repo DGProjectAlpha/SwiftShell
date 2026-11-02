@@ -118,6 +118,7 @@ ShellRoot {
     }
     Connections {
         target:NotificationsModel
+        function onDrawerRequested(){barHost.showNotifications(HyprlandModel.readFocusedOutput())}
         function onLocalActionRequested(kind) {
             const output=HyprlandModel.readFocusedOutput()
             barHost.showClockTool(output,kind)

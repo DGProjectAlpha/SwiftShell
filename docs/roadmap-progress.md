@@ -71,3 +71,18 @@ remained separate work. Subsequent progress is recorded below.
 These changes are separate local commits on codex/live-debug, following the pending
 PR baseline. They are not merged into main and do not claim the remaining roadmap
 or release/GPU/hotplug gates are complete. See the dated native evidence in testing.
+
+
+## M6.2 notification polish (2026-11-02)
+
+Completed a separate notification increment: local-time quiet hours/weekdays,
+app-only banner previews, optional generated sound with own volume, native images
+and inline replies, critical defaults/priority and actual preview banners. Existing
+Clock events now obey the same policy edits and duration. Keyed delegates retain
+reply drafts/focus; scrolling follows incoming content, and rounded blur/input
+excludes shadow margins. Native protocol, persistence/restart, audio and owned
+visual/input tests passed on both display scales. Sound and scheduling remain off
+by default. No real Wi-Fi authentication or Bluetooth pairing was attempted.
+
+Still pending: optional persistent history/privacy design, lock/suspend acceptance,
+physical hotplug/GPU load, richer Clock utilities and later roadmap milestones.

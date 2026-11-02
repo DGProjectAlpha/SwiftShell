@@ -8,14 +8,24 @@ Item {
     id:drawer
     signal settingsRequested()
     property string filter:"all"
+    property bool reading:true
+    onReadingChanged:if(reading)NotificationsModel.markAllRead()
+    function focusReply() {
+        const id=NotificationsModel.replyTarget
+        if(!id)return false
+        filter="all"
+        for(let i=0;i<groups.count;i++){const group=groups.itemAt(i);if(group && group.focusReply(id))return true}
+        return false
+    }
     readonly property var filtered:NotificationsModel.entries.filter(function(item){return drawer.filter==="snoozed" ? item.snoozedUntil>0 : item.snoozedUntil<=0})
     implicitWidth:360
     implicitHeight:column.implicitHeight
     width:implicitWidth;height:implicitHeight
-    Component.onCompleted:NotificationsModel.markAllRead()
+    Component.onCompleted:if(reading)NotificationsModel.markAllRead()
     Connections {
         target:NotificationsModel
-        function onUnreadCountChanged(){if(drawer.visible && NotificationsModel.unreadCount>0) Qt.callLater(function(){if(drawer.visible && NotificationsModel.unreadCount>0) NotificationsModel.markAllRead()})}
+        function onReplyTargetChanged(){if(drawer.reading)Qt.callLater(drawer.focusReply)}
+        function onUnreadCountChanged(){if(drawer.reading && NotificationsModel.unreadCount>0) Qt.callLater(function(){if(drawer.reading && NotificationsModel.unreadCount>0) NotificationsModel.markAllRead()})}
     }
     function diagnostics(){return {count:NotificationsModel.entries.length,unread:NotificationsModel.unreadCount,snoozed:NotificationsModel.snoozedCount,filter:filter}}
     Column {
@@ -64,20 +74,32 @@ Item {
             color:Theme.settingsMuted;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSize
             topPadding:20;bottomPadding:20
         }
+        KeyedModel {id:groupRows;entries:Notifications.groupHistory(drawer.filtered)}
         Repeater {
-            model:Notifications.groupHistory(drawer.filtered)
+            id:groups
+            model:groupRows
             delegate:Column {
                 id:group
-                required property var modelData
+                required property var entry
+                readonly property var modelData:entry
                 property bool collapsed:false
+                function focusReply(id) {
+                    if(!modelData.items.some(function(item){return item.id===id}))return false
+                    collapsed=false
+                    for(let i=0;i<cards.count;i++){const card=cards.itemAt(i);if(card && card.entry.id===id)return card.focusReply()}
+                    Qt.callLater(drawer.focusReply);return true
+                }
                 width:column.width;spacing:Theme.settingsSpacing
                 FlatButton {
+                    navigation:true
                     width:parent.width;label:(group.collapsed ? "▸ " : "▾ ")+group.modelData.app+" · "+group.modelData.items.length
                     onActivated:group.collapsed=!group.collapsed
                 }
+                KeyedModel {id:cardRows;entries:group.collapsed ? [] : group.modelData.items}
                 Repeater {
-                    model:group.collapsed ? [] : group.modelData.items
-                    delegate:NotificationCard {required property var modelData;width:group.width;entry:modelData;compact:true}
+                    id:cards
+                    model:cardRows
+                    delegate:NotificationCard {required property var identity;width:group.width;compact:true;grouped:true}
                 }
             }
         }

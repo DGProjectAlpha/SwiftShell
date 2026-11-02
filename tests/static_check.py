@@ -930,7 +930,7 @@ def main():
         if "Timer {" in text:
             slideshow = path.name == "SlideshowClock.qml" and "Math.max(60000" in text
             banner = path.name == "NotificationHost.qml" and "repeat: false" in text and "repeat: true" not in text
-            notification_deadline = path.name == "NotificationsModel.qml" and "running:root.snoozedCount>0 || SettingsStore.notificationQuietUntil>0" in text and "interval:1000;repeat:true" in text and "Process {" not in text
+            notification_deadline = path.name == "NotificationsModel.qml" and "running:root.nextWake>0" in text and "repeat:false" in text and "root.nextWake-root.wakeNow" in text and "Process {" not in text
             snapshot = path.name == "HyprlandModel.qml" and "repeat: false" in text and "repeat: true" not in text
             audit = path.name == "WorkspaceAudit.qml" and "repeat: false" in text and "repeat: true" not in text
             display_confirmation = path.name == "DisplayService.qml" and "running: root.pending" in text

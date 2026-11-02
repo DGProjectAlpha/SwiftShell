@@ -37,6 +37,9 @@ PanelWindow {
     function modulesOn(side) { return Bar.modulesForSide(outputLayout.order,outputHidden,outputLayout.sides,side) }
     function moduleLayout() { return {left:{x:leftModules.x,width:leftModules.width},center:{x:centerModules.x,width:centerModules.width},right:{x:rightModules.x,width:rightModules.width}} }
     function menuDiagnostics() { return {geometry:popovers.geometry(),blurBounds:popovers.blurBounds,id:popovers.popupState.panelId,visible:popovers.visible,blur:popovers.surfaceBlurApplied,width:popovers.implicitWidth,height:popovers.implicitHeight,x:popovers.placement.x,y:popovers.placement.y} }
+    function openNotifications() {
+        if(!popovers.visible || popovers.popupState.panelId!=="notifications")popovers.toggle("notifications",notificationAnchor || contextAnchor)
+    }
     function openClockTool(tab) {popovers.openClock(tab,calendarAnchor || contextAnchor)}
     function showPanel(id) {
         if(id === "close") {popovers.close();return}

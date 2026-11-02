@@ -164,7 +164,7 @@ Do Not Disturb and Pause stop ordinary banners while keeping history. Critical
 notifications can still interrupt. Settings → Notifications controls the display,
 default duration, history limit and per-app Show/Quiet/Hide rules. History lasts
 for the current shell session; app actions stop being available when the source
-closes its notification. Images, inline reply and sounds are not supported yet.
+closes its notification. Images are shown when provided by the app. Reply-capable notifications offer Reply in the banner, then a focused field in the drawer; Send or Enter delivers it to the source app.
 
 Timer and stopwatch activity appears next to the date/time while running or paused.
 Click it to return to the relevant tool. Timer completion and stopwatch pause use
@@ -204,3 +204,26 @@ Network & Devices now reports operations, recoverable errors and authentication
 retry state. Password entry is masked with an optional Show control. Cancel targets
 only a connection observed activating; a connection that already finished is left
 alone. Bluetooth pairing uses the system's existing PIN/confirmation agent.
+
+
+### Notification quiet hours, privacy and sound
+
+Settings → Notifications now includes a local-time quiet-hours schedule with
+weekday selection. An overnight schedule belongs to its start day: Friday
+22:00–07:00 also covers Saturday morning. Matching start/end times mean all day
+on the selected days. Manual DND and timed pauses work alongside the schedule.
+Turning quiet mode off does not replay old banners. Critical banners can still
+appear, but sounds remain silent while quiet mode is active. A default critical
+notification stays visible until dismissed; an app's explicit timeout is honored.
+
+Choose App name only to hide text, images and reply actions in banners. Open the
+drawer to read and respond. Replies stay in memory, survive incoming updates and
+are never logged or saved. A source that closes its notification can no longer
+receive replies. Notifications with no reply capability show no reply field.
+
+Notification sounds are optional and start off. Enable them, choose a volume and
+use Preview sound to hear the short SwiftShell tone. The volume affects this tone,
+not your system volume. DND, quiet hours, silent hints and rapid replacement updates
+do not cause repeated sounds. Missing multimedia support or an audio output has a
+clear unavailable state. Preview banner shows an actual temporary banner when
+SwiftShell owns notifications, without adding history or sounding an alert.

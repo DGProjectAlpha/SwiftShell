@@ -30,3 +30,48 @@ assert.equal(conf.bannerDuration,10);assert.equal(conf.historyLimit,100);assert.
 const invalid=settings.validateSettings({notifications:{bannerDuration:Infinity,historyLimit:10000,screenTarget:'bad / target',quietUntil:-1}});
 assert.equal(invalid.errors.length,4);
 console.log('Notification lifecycle, snooze, source close, policies, bounded burst and settings regressions passed');
+
+// DND and rule edits affect existing native and local entries, without replay.
+let live=reduce(N.emptyCenter(),{type:'configure',ownership:'on',dnd:false});
+live=reduce(live,{type:'receive',notification:{id:-1,local:true,desktopEntry:'swiftshell.clock',summary:'Clock'}});
+live=reduce(live,{type:'receive',notification:{id:50,desktopEntry:'mail',urgency:'critical'}});
+live=reduce(live,{type:'configure',ownership:'on',dnd:true});
+assert.equal(live.live.length,1);assert.equal(live.live[0].id,50);assert.equal(live.history[0].id,-1);
+live=reduce(live,{type:'configure',ownership:'on',dnd:false});assert.equal(live.live.length,1);
+live=reduce(live,{type:'configure',ownership:'on',dnd:false,policies:{'swiftshell.clock':'hide',mail:'hide'}});
+assert.equal(N.allEntries(live).length,0);
+assert.doesNotThrow(()=>reduce(null,{type:'configure',ownership:'on'}));
+const when=(day,hour,minute=0)=>new Date(2026,10,day,hour,minute).getTime();
+assert.equal(N.scheduledQuiet(true,1320,420,1,when(2,22)),true); // Monday starts
+assert.equal(N.scheduledQuiet(true,1320,420,1,when(3,6,59)),true);
+assert.equal(N.scheduledQuiet(true,1320,420,1,when(3,7)),false);
+assert.equal(N.scheduledQuiet(true,1320,420,1,when(2,6)),false); // Sunday not selected
+assert.equal(N.scheduledQuiet(true,1320,420,31,when(7,6)),true); // Friday tail Saturday
+assert.equal(N.scheduledQuiet(true,1320,420,31,when(7,23)),false);
+assert.equal(N.scheduledQuiet(true,540,1020,1,when(2,12)),true);
+assert.equal(N.scheduledQuiet(true,540,1020,1,when(2,17)),false);
+assert.equal(N.scheduledQuiet(true,0,0,1,when(2,12)),true);
+assert.equal(N.scheduledQuiet(true,0,0,1,when(3,12)),false);
+assert.equal(N.scheduledQuiet(false,0,0,127,when(2,12)),false);
+assert.equal(N.scheduledQuiet(true,-1,0,127,when(2,12)),false);
+assert.equal(N.safeImageSource('https://example.org/private.png'),'');
+assert.equal(N.safeImageSource('//example.org/private.png'),'');
+assert.equal(N.safeImageSource('file:///tmp/owned.png'),'file:///tmp/owned.png');
+assert.equal(N.safeImageSource('image://qsimage/123'),'image://qsimage/123');
+assert.equal(N.safeImageSource('image://qsimage/123\0secret'),'');
+for(const patch of [{quietStart:1440},{quietDays:0},{soundVolume:2},{soundEnabled:'yes'},{previewMode:'unknown'}])assert.equal(settings.validateSettings({notifications:patch}).ok,false);
+const defaults=settings.validateSettings({}).settings.notifications;
+assert.equal(defaults.soundEnabled,false);assert.equal(defaults.quietHoursEnabled,false);assert.equal(defaults.previewMode,'full');
+
+let priority=reduce(N.emptyCenter(),{type:'configure',ownership:'on',dnd:false});
+for(let id=1;id<=4;id++)priority=reduce(priority,{type:'receive',notification:{id,summary:'Ordinary'}});
+priority=reduce(priority,{type:'receive',notification:{id:5,urgency:'critical',summary:'Important'}});
+assert.equal(priority.live.length,4);assert.equal(priority.live[3].id,5);assert.equal(priority.live[3].expireMs,0);
+assert.equal(priority.history.length,1);assert.equal(priority.history[0].nativeAlive,true);
+priority=reduce(priority,{type:'receive',notification:{id:5,urgency:'critical',expireTimeout:1,summary:'Explicit timeout'}});
+assert.equal(priority.live[3].expireMs,1000);
+
+priority=reduce(priority,{type:'snooze',id:5,now:1000,durationMs:1000});
+priority=reduce(priority,{type:'receive',notification:{id:6,summary:'Another ordinary'}});
+priority=reduce(priority,{type:'tick',now:2000});
+assert.equal(priority.live.length,4);assert.equal(priority.live.some(item=>item.id===5),true);
