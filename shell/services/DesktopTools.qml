@@ -7,15 +7,13 @@ Singleton {
     id:root
     property var history:[]
     property bool clipboardAvailable:false
-    property bool screenshotAvailable:false
-    property bool regionAvailable:false
-    property string captureMode:""
-    property string captureOutput:""
+    readonly property bool screenshotAvailable:ScreenshotService.available
+    readonly property bool regionAvailable:ScreenshotService.regionAvailable
     property bool readAgain:false
     property int generation:0
     property int readGeneration:0
     property string message:""
-    readonly property bool busy:capture.running || captureDelay.running
+    readonly property bool busy:ScreenshotService.busy
     signal captureRequested()
     function clearHistory(){history=[]}
     function expireHistory(){const now=Date.now();history=history.filter(function(item){return now-item.time<1200000})}
@@ -34,10 +32,9 @@ Singleton {
         reader.running=true
     }
     function screenshot(mode,output) {
-        if(busy)return false
-        if(mode==="region" ? !regionAvailable : !screenshotAvailable){message="Screenshot tools are unavailable.";return false}
-        captureMode=mode;captureOutput=output;message="";captureRequested();captureDelay.restart();return true
+        return ScreenshotService.capture(mode,output)
     }
+    Connections {target:ScreenshotService;function onCaptureRequested(){root.captureRequested()}}
     Connections {
         target:Quickshell
         function onClipboardTextChanged(){if(SettingsStore.clipboardHistory)readDelay.restart()}
@@ -48,14 +45,13 @@ Singleton {
     }
     // Coalesced clipboard events and one-shot capture preparation; no polling.
     Timer {id:readDelay;interval:40;onTriggered:root.readClipboard()}
-    Timer {id:captureDelay;interval:250;onTriggered:capture.running=true}
     Process {
         id:probe
         command:["python3",Quickshell.shellDir+"/helpers/desktoptools.py","capabilities"]
         running:true
         stdout:StdioCollector {id:capabilities;waitForEnd:true}
         onExited:function(code,status) {
-            try {const data=JSON.parse(capabilities.text);root.clipboardAvailable=data.clipboard===true;root.screenshotAvailable=data.screenshot===true;root.regionAvailable=data.region===true} catch(error) {}
+            try {const data=JSON.parse(capabilities.text);root.clipboardAvailable=data.clipboard===true} catch(error) {}
         }
     }
     Process {
@@ -69,14 +65,6 @@ Singleton {
         }
         onExited:function(code,status) {
             if(root.readAgain){root.readAgain=false;readDelay.restart()}
-        }
-    }
-    Process {
-        id:capture
-        command:["python3",Quickshell.shellDir+"/helpers/desktoptools.py",root.captureMode,root.captureOutput]
-        stdout:StdioCollector {id:captureReply;waitForEnd:true}
-        onExited:function(code,status) {
-            try {const data=JSON.parse(captureReply.text);root.message=data.message || "Screenshot copied to clipboard.";if(!data.cancelled)NotificationsModel.publishLocal("Screenshot",root.message,"")}catch(error){root.message="The screenshot could not be captured."}
         }
     }
 }
