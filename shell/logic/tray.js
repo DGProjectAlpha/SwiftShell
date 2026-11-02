@@ -22,6 +22,14 @@ function menuPoint(x, y) {
     };
 }
 
+function itemTitle(item) {
+    if (item && typeof item.title === "string" && item.title.trim() !== "")
+        return item.title.trim();
+    if (item && typeof item.tooltipTitle === "string" && item.tooltipTitle.trim() !== "")
+        return item.tooltipTitle.trim();
+    return item && typeof item.id === "string" && item.id.trim() !== "" ? item.id.trim() : "Tray application";
+}
+
 function trayAction(item) {
     if (!item)
         return "";
@@ -63,11 +71,12 @@ function trayOverflow(items, limit) {
 
 var swiftshellTray = {
     objectValues: objectValues,
+    itemTitle:itemTitle,
     trayAction: trayAction,
     menuPoint: menuPoint,
     trayRows: trayRows,
     trayOverflow: trayOverflow,
 };
 
-if (typeof module !== "undefined" && module.exports)
+if (typeof module !== "undefined" && module && module.exports)
     module.exports = swiftshellTray;

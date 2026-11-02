@@ -25,12 +25,16 @@
       "control",
       "media",
       "tray",
-      "battery"
+      "battery",
+      "network",
+      "power",
+      "notifications"
     ],
     "hiddenModules": [],
     "searchLabel": false,
     "moduleSidesJson": "{}",
     "hiddenOutputsJson": "{}",
+    "layoutOutputsJson": "{}",
     "surfaceMode": "transparent",
     "surfaceColor": "#161616",
     "surfaceOpacity": 0.75,
@@ -53,7 +57,7 @@
     "iconScale": 1,
     "topGradient": false,
     "contrast": "standard",
-    "automaticText": false,
+    "automaticText": true,
     "automaticGradient": false,
     "manualText": "",
     "manualMuted": "",
@@ -61,6 +65,9 @@
     "manualGradient": ""
   },
   "launcher": {
+    "defaultMode": "all",
+    "clipboardHistory": false,
+    "searchWindows": true,
     "pinnedIds": []
   },
   "wallpaper": {
@@ -83,7 +90,18 @@
   "notifications": {
     "ownership": "off",
     "dnd": false,
-    "policiesJson": "{}"
+    "policiesJson": "{}",
+    "bannerDuration": 6,
+    "historyLimit": 60,
+    "screenTarget": "focused",
+    "quietUntil": 0,
+    "quietHoursEnabled": false,
+    "quietStart": 1320,
+    "quietEnd": 420,
+    "quietDays": 127,
+    "previewMode": "full",
+    "soundEnabled": false,
+    "soundVolume": 0.25
   },
   "extensionsJson": "{}"
 }

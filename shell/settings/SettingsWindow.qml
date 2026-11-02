@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Controls.Basic as Controls
 import Quickshell
 import "."
 import "../components"
@@ -13,8 +14,10 @@ FloatingWindow {
     visible: SettingsModel.open
     color: "transparent"
     minimumSize: Qt.size(640,440)
-    implicitWidth: WindowService.geometry.width || 1000
-    implicitHeight: WindowService.geometry.height || 700
+    property int initialWidth: 1000
+    property int initialHeight: 700
+    implicitWidth: initialWidth
+    implicitHeight: initialHeight
     property bool closing: false
     property int mapAttempts: 0
     property bool placementReady: false
@@ -101,17 +104,19 @@ FloatingWindow {
         } else if (action === "restore") WindowService.request("activate")
     }
     function componentForCategory() {
-        const pages={appearance:appearanceComponent,bar:barComponent,wallpaper:wallpaperComponent,
-            displays:displaysComponent,workspaces:workspacesComponent,shortcuts:shortcutsComponent,
-            audio:audioComponent,network:networkComponent,bluetooth:bluetoothComponent,
+        const pages={appearance:appearanceComponent,bar:barComponent,spotlight:spotlightComponent,wallpaper:wallpaperComponent,
+            displays:displaysComponent,workspaces:workspacesComponent,shortcuts:shortcutsComponent,defaultApps:defaultAppsComponent,
+            audio:audioComponent,network:networkComponent,bluetooth:networkComponent,
             power:powerComponent,notifications:notificationsComponent}
         return pages[SettingsStore.settingsWindowCategory] || appearanceComponent
     }
     function iconFor(id) {
-        return ({appearance:"◐",bar:"≡",wallpaper:"▧",displays:"▣",workspaces:"▦",shortcuts:"⌘",
+        return ({appearance:"◐",bar:"≡",spotlight:"⌕",wallpaper:"▧",displays:"▣",workspaces:"▦",shortcuts:"⌘",defaultApps:"▧",
             audio:"♫",network:"⌁",bluetooth:"ᛒ",power:"⏻",notifications:"□"})[id] || "·"
     }
     Component.onCompleted: {
+        initialWidth=WindowService.geometry.width || 1000
+        initialHeight=WindowService.geometry.height || 700
         WindowService.active=visible
         SettingsModel.nativeWindow=window
         history=Settings.initialHistory(window.currentAppearance())
@@ -120,6 +125,15 @@ FloatingWindow {
     onClosed: requestClose()
     onWidthChanged: sizeTimer.restart()
     onHeightChanged: sizeTimer.restart()
+    function revealPendingControl() {
+        const page=activePage()
+        if(!placementReady || !SettingsModel.pendingControl || !page || pageStatus!==Loader.Ready)return
+        search.text=""
+        page.highlightId=SettingsModel.pendingControl
+        SettingsModel.pendingControl=""
+        if(page.focusHighlight)page.focusHighlight()
+    }
+    onPageStatusChanged:Qt.callLater(revealPendingControl)
     Component.onDestruction: { WindowService.active=false;SettingsModel.nativeWindow=null;WindowService.request("cleanup") }
     Timer { id:mapTimer; interval:150; repeat:false; onTriggered:{ window.mapAttempts++;WindowService.request("mapped") } }
     Timer { id:sizeTimer; interval:350; repeat:false; onTriggered:if(window.visible && !WindowService.maximized) { window.rememberSize();WindowService.request("remember") } }
@@ -127,7 +141,7 @@ FloatingWindow {
         target: WindowService
         function onCompleted(action,success) {
             if (action === "remember" && window.closing) SettingsModel.hide()
-            if (action === "mapped" && success) { window.placementReady=true;search.forceActiveFocus() }
+            if (action === "mapped" && success) { window.placementReady=true;search.forceActiveFocus();Qt.callLater(window.revealPendingControl) }
             if (action === "mapped" && !success && window.mapAttempts < 4) mapTimer.restart()
         }
     }
@@ -135,7 +149,8 @@ FloatingWindow {
         target: SettingsModel
         function onAppearanceEditRequested(key,value) { const patch={};patch[key]=value;window.commit(patch) }
         function onWindowActionRequested(action) { window.performAction(action) }
-        function onFocusTicketChanged() { WindowService.request("activate");search.forceActiveFocus() }
+        function onFocusTicketChanged() { WindowService.request("activate");search.forceActiveFocus();Qt.callLater(window.revealPendingControl) }
+        function onPendingControlChanged(){Qt.callLater(window.revealPendingControl)}
     }
     Loader {
         anchors.fill: content
@@ -236,7 +251,7 @@ FloatingWindow {
             anchors.rightMargin:14
             Rectangle {
                 id:searchFrame
-                x:20;y:4;width:Math.min(parent.width-40,440);height:34
+                x:20;y:4;width:Math.max(120,parent.width-40-(SettingsStore.settingsWindowCategory==="appearance" && body.width>600 ? 150 : 0));height:34
                 radius:6;color:Theme.settingsHover
                 Text {
                     anchors.left:parent.left;anchors.leftMargin:12;anchors.verticalCenter:parent.verticalCenter
@@ -278,10 +293,12 @@ FloatingWindow {
                 clip:true;boundsBehavior:Flickable.StopAtBounds
                 contentWidth:width
                 contentHeight:pageLoader.height+16
+                Controls.ScrollBar.vertical: Controls.ScrollBar { policy:Controls.ScrollBar.AsNeeded }
                 Loader {
                     id:pageLoader
-                    x:20
-                    width:Math.min(760,scroller.width-40)
+                    onLoaded:scroller.contentY=0
+                    x:Math.max(20,(scroller.width-width)/2)
+                    width:Math.min(1240,scroller.width-40)
                     height:item ? item.implicitHeight : 0
                     sourceComponent:window.componentForCategory()
                 }
@@ -330,10 +347,12 @@ FloatingWindow {
         }
     }
     Component { id:appearanceComponent;AppearancePage {query:search.text;onEdited:function(patch){window.commit(patch)}} }
+    Component { id:spotlightComponent;SpotlightPage {query:search.text} }
     Component { id:barComponent;BarPage {query:search.text} }
     Component { id:wallpaperComponent;WallpaperPage {query:search.text;onEdited:function(patch){window.commit(patch)}} }
     Component { id:displaysComponent;DisplaysPage {query:search.text} }
     Component { id:workspacesComponent;WorkspacesPage {objectName:"workspacesPage";query:search.text} }
+    Component { id:defaultAppsComponent;DefaultAppsPage {query:search.text} }
     Component { id:shortcutsComponent;ShortcutsPage {query:search.text} }
     Component { id:audioComponent;AudioPage {query:search.text} }
     Component { id:networkComponent;NetworkPage {query:search.text} }

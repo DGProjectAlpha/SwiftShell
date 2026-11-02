@@ -18,6 +18,7 @@ Singleton {
     readonly property string clockDateFormat: clockSettings.dateFormat
     readonly property bool searchLabel: barSettings.searchLabel
     readonly property string moduleSidesJson: barSettings.moduleSidesJson
+    readonly property string layoutOutputsJson: barSettings.layoutOutputsJson
     readonly property string hiddenOutputsJson: barSettings.hiddenOutputsJson
     readonly property bool use24Hour: clockSettings.use24Hour
     readonly property bool showWeekNumbers: clockSettings.showWeekNumbers
@@ -53,6 +54,9 @@ Singleton {
     readonly property real iconScale: appearanceSettings.iconScale
     readonly property bool topGradient: appearanceSettings.topGradient
     readonly property string textContrast: appearanceSettings.contrast === "high" ? "high" : "standard"
+    readonly property bool clipboardHistory:launcherSettings.clipboardHistory
+    readonly property bool searchWindows:launcherSettings.searchWindows
+    readonly property string launcherDefaultMode: launcherSettings.defaultMode
     readonly property var pinnedIds: Settings.normalizePinnedIds(launcherSettings.pinnedIds)
     readonly property int settingsWindowWidth: windowSettings.width
     readonly property int settingsWindowHeight: windowSettings.height
@@ -76,9 +80,19 @@ Singleton {
     readonly property string notificationOwnership: notificationSettings.ownership === "on" ? "on" : "off"
     readonly property bool notificationDnd: notificationSettings.dnd === true
     readonly property string notificationPoliciesJson: notificationSettings.policiesJson
+    readonly property int notificationDuration: notificationSettings.bannerDuration
+    readonly property int notificationHistoryLimit: notificationSettings.historyLimit
+    readonly property string notificationScreenTarget: notificationSettings.screenTarget
+    readonly property bool notificationQuietHoursEnabled:notificationSettings.quietHoursEnabled
+    readonly property int notificationQuietStart:notificationSettings.quietStart
+    readonly property int notificationQuietEnd:notificationSettings.quietEnd
+    readonly property int notificationQuietDays:notificationSettings.quietDays
+    readonly property string notificationPreviewMode:notificationSettings.previewMode
+    readonly property bool notificationSoundEnabled:notificationSettings.soundEnabled
+    readonly property real notificationSoundVolume:notificationSettings.soundVolume
+    readonly property real notificationQuietUntil: notificationSettings.quietUntil
 
     property bool writing: false
-    property bool suppressReload: false
     property bool acceptWrites: false
     property bool protectFile: false
     property bool writePending: false
@@ -90,6 +104,8 @@ Singleton {
     property var pendingPlan: null
     property string pendingRaw: ""
     property bool backupWriting: false
+    property int externalReloads: 0
+    property int ignoredOwnReloads: 0
 
     function writeLatest() {
         if (!root.acceptWrites || root.protectFile || root.pendingPlan)
@@ -109,9 +125,8 @@ Singleton {
         }
         root.inflightDocument = document
         root.writing = true
-        root.suppressReload = true
         root.persistenceState = "saving"
-        settingsFile.writeAdapter()
+        settingsWriter.running=true
     }
 
     function applyDocument(settings) {
@@ -144,6 +159,7 @@ Singleton {
         barSettings.searchLabel = bar.searchLabel === true
         barSettings.moduleSidesJson = bar.moduleSidesJson || "{}"
         barSettings.hiddenOutputsJson = bar.hiddenOutputsJson || "{}"
+        barSettings.layoutOutputsJson = bar.layoutOutputsJson || "{}"
         barSettings.surfaceColor = bar.surfaceColor || "#161616"
         barSettings.surfaceOpacity = bar.surfaceOpacity === undefined ? .75 : bar.surfaceOpacity
         barSettings.surfaceOutputsJson = bar.surfaceOutputsJson || "{}"
@@ -169,6 +185,9 @@ Singleton {
         appearanceSettings.manualMuted = appearance.manualMuted || ""
         appearanceSettings.manualPanel = appearance.manualPanel || ""
         appearanceSettings.manualGradient = appearance.manualGradient || ""
+        launcherSettings.defaultMode=launcher.defaultMode || "all"
+        launcherSettings.clipboardHistory=launcher.clipboardHistory === true
+        launcherSettings.searchWindows=launcher.searchWindows !== false
         launcherSettings.pinnedIds = launcher.pinnedIds || []
         wallpaperSettings.enabled = wallpaper.enabled !== false
         wallpaperSettings.fit = wallpaper.fit || "cover"
@@ -186,6 +205,17 @@ Singleton {
         notificationSettings.ownership = notes.ownership === "on" ? "on" : "off"
         notificationSettings.dnd = notes.dnd === true
         notificationSettings.policiesJson = notes.policiesJson || "{}"
+        notificationSettings.bannerDuration = notes.bannerDuration
+        notificationSettings.historyLimit = notes.historyLimit
+        notificationSettings.screenTarget = notes.screenTarget
+        notificationSettings.quietUntil = notes.quietUntil
+        notificationSettings.quietHoursEnabled = notes.quietHoursEnabled
+        notificationSettings.quietStart = notes.quietStart
+        notificationSettings.quietEnd = notes.quietEnd
+        notificationSettings.quietDays = notes.quietDays
+        notificationSettings.previewMode = notes.previewMode
+        notificationSettings.soundEnabled = notes.soundEnabled
+        notificationSettings.soundVolume = notes.soundVolume
         adapter.extensionsJson = document.extensionsJson || "{}"
     }
 
@@ -205,7 +235,6 @@ Singleton {
         root.persistedDocument = ""
         root.writePending = false
         root.acceptWrites = true
-        root.suppressReload = true
         root.persistenceMessage = ""
         root.suppressAdapterWrite = true
         root.applyDocument(plan.decision.settings)
@@ -247,6 +276,7 @@ Singleton {
                 searchLabel: barSettings.searchLabel,
                 moduleSidesJson: barSettings.moduleSidesJson,
                 hiddenOutputsJson: barSettings.hiddenOutputsJson,
+                layoutOutputsJson: barSettings.layoutOutputsJson,
                 hiddenModules: barSettings.hiddenModules
             },
             appearance: {
@@ -274,6 +304,9 @@ Singleton {
                 manualGradient: appearanceSettings.manualGradient
             },
             launcher: {
+                defaultMode:launcherSettings.defaultMode,
+                clipboardHistory:launcherSettings.clipboardHistory,
+                searchWindows:launcherSettings.searchWindows,
                 pinnedIds: launcherSettings.pinnedIds
             },
             wallpaper: {
@@ -296,7 +329,18 @@ Singleton {
             notifications: {
                 ownership: notificationSettings.ownership,
                 dnd: notificationSettings.dnd,
-                policiesJson: notificationSettings.policiesJson
+                policiesJson: notificationSettings.policiesJson,
+                bannerDuration: notificationSettings.bannerDuration,
+                historyLimit: notificationSettings.historyLimit,
+                screenTarget: notificationSettings.screenTarget,
+                quietUntil: notificationSettings.quietUntil,
+                quietHoursEnabled: notificationSettings.quietHoursEnabled,
+                quietStart: notificationSettings.quietStart,
+                quietEnd: notificationSettings.quietEnd,
+                quietDays: notificationSettings.quietDays,
+                previewMode: notificationSettings.previewMode,
+                soundEnabled: notificationSettings.soundEnabled,
+                soundVolume: notificationSettings.soundVolume
             },
             extensionsJson: adapter.extensionsJson
         };
@@ -326,6 +370,20 @@ Singleton {
             map = {}
         delete map[id]
         adapter.shortcutsJson = Settings.validateSettings({ shortcutsJson: JSON.stringify(map) }).settings.shortcutsJson
+    }
+
+    function setClipboardHistory(value){launcherSettings.clipboardHistory=value === true}
+    function setSearchWindows(value){launcherSettings.searchWindows=value === true}
+    function setLauncherDefaultMode(value) {
+        if(["all","favorites","recent"].indexOf(value)<0)return false
+        launcherSettings.defaultMode=value
+        return true
+    }
+
+    function setPinnedIds(ids) {
+        if (!Array.isArray(ids)) return false
+        launcherSettings.pinnedIds = Settings.normalizePinnedIds(ids)
+        return true
     }
 
     function setPanelOpacity(value) {
@@ -404,6 +462,7 @@ Singleton {
             searchLabel: barSettings.searchLabel,
             moduleSidesJson: barSettings.moduleSidesJson,
             hiddenOutputsJson: barSettings.hiddenOutputsJson,
+                layoutOutputsJson: barSettings.layoutOutputsJson,
             hiddenModules: barSettings.hiddenModules
         }
     }
@@ -450,6 +509,22 @@ Singleton {
         const outputs=JSON.parse(hiddenOutputsJson)
         delete outputs[output]
         barSettings.hiddenOutputsJson=JSON.stringify(outputs)
+    }
+
+    function layoutForOutput(output) { return Bar.layoutForOutput(layoutOutputsJson,output,moduleOrder,moduleSidesJson) }
+    function setOutputLayout(output, edge, scale, order, sides) {
+        const values=JSON.parse(layoutOutputsJson),next=currentBar()
+        if(["__proto__","constructor","prototype"].indexOf(output)>=0)return false
+        values[output]={edge:edge,scale:scale,order:order,sides:JSON.parse(sides)}
+        next.layoutOutputsJson=JSON.stringify(values)
+        const result=Settings.validateSettings({bar:next})
+        if(!result.ok)return false
+        barSettings.layoutOutputsJson=result.settings.bar.layoutOutputsJson
+        return true
+    }
+    function inheritOutputLayout(output) {
+        const values=JSON.parse(layoutOutputsJson);delete values[output]
+        barSettings.layoutOutputsJson=JSON.stringify(values)
     }
 
     function setUse24Hour(value) {
@@ -664,6 +739,26 @@ Singleton {
         notificationSettings.dnd = value === true
     }
 
+    function setNotificationPreferences(values) {
+        const current = snapshot().notifications
+        Object.keys(values || {}).forEach(function(key) { current[key] = values[key] })
+        const result = Settings.validateSettings({notifications:current})
+        if(!result.ok)return false
+        const next=result.settings.notifications
+        notificationSettings.bannerDuration = next.bannerDuration
+        notificationSettings.historyLimit = next.historyLimit
+        notificationSettings.screenTarget = next.screenTarget
+        notificationSettings.quietUntil = next.quietUntil
+        notificationSettings.quietHoursEnabled = next.quietHoursEnabled
+        notificationSettings.quietStart = next.quietStart
+        notificationSettings.quietEnd = next.quietEnd
+        notificationSettings.quietDays = next.quietDays
+        notificationSettings.previewMode = next.previewMode
+        notificationSettings.soundEnabled = next.soundEnabled
+        notificationSettings.soundVolume = next.soundVolume
+        return true
+    }
+
     function setNotificationPolicy(id, value) {
         var map = {}
         try {
@@ -693,57 +788,46 @@ Singleton {
         windowSettings.category = decision.settings.settingsWindow.category
     }
 
+    // Render live previews immediately; coalesce disk work while dragging controls.
+    Timer { id:saveDelay;interval:120;repeat:false;onTriggered:root.writeLatest() }
+
+    Timer {
+        id:readDelay
+        interval:100;repeat:false
+        onTriggered: {
+            if(root.writing || saveDelay.running) {restart();return}
+            settingsReader.reload()
+        }
+    }
     FileView {
-        id: settingsFile
-        path: root.settingsPath
-        watchChanges: true
-        atomicWrites: true
-        onFileChanged: {
-            if (root.suppressReload) {
-                root.suppressReload = false;
-                return;
-            }
-            if (!root.writing)
-                reload();
-        }
-        onAdapterUpdated: {
-            if (!root.acceptWrites || root.protectFile || root.pendingPlan || root.suppressAdapterWrite)
-                return;
-            // JsonAdapter updates its serialized cache after this signal.
-            // Coalesce edits and write only after those notifications complete.
-            Qt.callLater(root.writeLatest);
-        }
-        onSaved: {
-            root.persistedDocument = root.inflightDocument;
-            root.inflightDocument = "";
-            root.writing = false;
-            root.persistenceState = "ready";
-            root.persistenceMessage = "";
-            if (!root.protectFile) {
-                root.acceptWrites = true;
-                if (root.writePending)
-                    Qt.callLater(root.writeLatest);
-            }
-        }
-        onSaveFailed: function (error) {
-            root.inflightDocument = "";
-            root.writePending = false;
-            root.writing = false;
-            root.persistenceState = "error";
-            root.persistenceMessage = "Settings could not be saved. Your latest changes are still active for this session.";
-            console.warn("SwiftShell: settings were not saved", error);
-        }
+        id:settingsReader
+        path:root.settingsPath
+        preload:true
+        watchChanges:true
+        onFileChanged:readDelay.restart()
         onLoaded: {
+            var raw = "";
+            try { raw = settingsReader.text(); } catch (error) {}
+            // File watchers can emit more than one event for an atomic replace.
+            // Ignore our own canonical document before touching live controls.
+            var loaded = null;
+            try { loaded = JSON.parse(raw); } catch (error) {}
+            if (loaded && root.acceptWrites) {
+                const normalized = Settings.validateSettings(loaded);
+                const document = JSON.stringify(normalized.settings);
+                let previous="",inflight="";
+                try {previous=JSON.stringify(Settings.validateSettings(JSON.parse(root.persistedDocument)).settings);} catch(error) {}
+                try {inflight=JSON.stringify(Settings.validateSettings(JSON.parse(root.inflightDocument)).settings);} catch(error) {}
+                if(normalized.ok && (document===previous || document===inflight)) {
+                    root.ignoredOwnReloads++;
+                    return;
+                }
+            }
+            root.externalReloads++;
             root.acceptWrites = false;
             root.protectFile = false;
             root.persistenceState = "loading";
             root.persistenceMessage = "";
-            var raw = "";
-            try {
-                raw = settingsFile.text();
-            } catch (error) {
-                raw = "";
-            }
             var decision = Settings.migrationFromText(raw);
             if (decision.reason === "malformed") {
                 root.protectFile = true;
@@ -781,104 +865,151 @@ Singleton {
             root.persistenceMessage = "Using built-in defaults. The settings file will be created when a value changes.";
             root.acceptWrites = true;
         }
+    }
 
-        JsonAdapter {
-            id: adapter
-            property int version: 3
-
-            property JsonObject clock: JsonObject {
-                id: clockSettings
-                property bool use24Hour: true
-                property bool showSeconds: false
-                property bool showDate: false
-                property string dateFormat: "short"
-                property bool showWeekNumbers: false
-                property string weekStart: "locale"
+    function preferencesChanged() {
+        if(!acceptWrites || protectFile || pendingPlan || suppressAdapterWrite)return
+        persistenceState="saving";persistenceMessage=""
+        saveDelay.restart()
+    }
+    Process {
+        id:settingsWriter
+        command:["python3",Quickshell.shellDir+"/helpers/settingswrite.py"]
+        stdinEnabled:true
+        onStarted:write(root.inflightDocument+"\n")
+        stdout:StdioCollector {id:writeReply;waitForEnd:true}
+        onExited:function(code,status) {
+            let result={ok:false,message:"Settings could not be saved."}
+            try {result=JSON.parse(writeReply.text)} catch(error) {}
+            root.writing=false
+            if(code!==0 || !result.ok) {
+                root.inflightDocument="";root.writePending=false
+                root.protectFile=result.protected===true
+                root.persistenceState=root.protectFile ? "protected" : "error"
+                root.persistenceMessage=result.message || "Settings could not be saved. Your changes remain active for this session."
+                return
             }
-
-            property JsonObject bar: JsonObject {
-                id: barSettings
-                property string targetMonitor: ""
-                property bool reserveSpace: true
-                property bool showFocusedTitle: true
-                property list<int> workspaceIds: []
-                property string workspaceOutputsJson: "{}"
-                property string workspaceDispatch: "auto"
-                property string placement: "focused"
-                property int height: 28
-                property list<string> moduleOrder: ["workspaces", "title", "search", "clock", "control", "media", "tray", "battery"]
-                property list<string> hiddenModules: []
-                property bool searchLabel: false
-                property string moduleSidesJson: "{}"
-                property string hiddenOutputsJson: "{}"
-                property string surfaceMode: "transparent"
-                property string surfaceColor: "#161616"
-                property real surfaceOpacity: .75
-                property string surfaceOutputsJson: "{}"
-            }
-
-            property JsonObject appearance: JsonObject {
-                id: appearanceSettings
-                property string mode: "dark"
-                property string tint: "neutral"
-                property real panelOpacity: 0.92
-                property real panelBlur: 1
-                property int radius: 10
-                property real shadowOpacity: 0.16
-                property int shadowSoftness: 10
-                property real motionScale: 1
-                property bool reducedMotion: false
-                property int panelPadding: 12
-                property int panelSpacing: 8
-                property int fontSize: 13
-                property string fontWeight: "regular"
-                property real iconScale: 1
-                property bool topGradient: false
-                property string contrast: "standard"
-                property bool automaticText: false
-                property bool automaticGradient: false
-                property string manualText: ""
-                property string manualMuted: ""
-                property string manualPanel: ""
-                property string manualGradient: ""
-            }
-
-            property JsonObject launcher: JsonObject {
-                id: launcherSettings
-                property list<string> pinnedIds: []
-            }
-
-            property JsonObject wallpaper: JsonObject {
-                id: wallpaperSettings
-                property bool enabled: true
-                property string fit: "cover"
-                property string path: ""
-                property string outputsJson: "{}"
-                property bool slideshow: false
-                property int intervalMinutes: 30
-                property string order: "sequential"
-                property int transitionMs: 400
-                property string slidesJson: "[]"
-            }
-
-            property JsonObject settingsWindow: JsonObject {
-                id: windowSettings
-                property int width: 1000
-                property int height: 700
-                property string category: "appearance"
-            }
-
-            property string shortcutsJson: "{}"
-
-            property JsonObject notifications: JsonObject {
-                id: notificationSettings
-                property string ownership: "off"
-                property bool dnd: false
-                property string policiesJson: "{}"
-            }
-
-            property string extensionsJson: "{}"
+            root.persistedDocument=root.inflightDocument;root.inflightDocument=""
+            root.persistenceMessage="";root.acceptWrites=true
+            const dirty=JSON.stringify(root.snapshot())!==root.persistedDocument
+            root.writePending=dirty
+            root.persistenceState=dirty ? "saving" : "ready"
+            if(dirty)saveDelay.restart();else saveDelay.stop()
         }
+    }
+
+    JsonAdapter {
+        id: adapter
+        onAdapterUpdated:root.preferencesChanged()
+        property int version: 3
+
+        property JsonObject clock: JsonObject {
+            id: clockSettings
+            property bool use24Hour: true
+            property bool showSeconds: false
+            property bool showDate: false
+            property string dateFormat: "short"
+            property bool showWeekNumbers: false
+            property string weekStart: "locale"
+        }
+
+        property JsonObject bar: JsonObject {
+            id: barSettings
+            property string targetMonitor: ""
+            property bool reserveSpace: true
+            property bool showFocusedTitle: true
+            property list<int> workspaceIds: []
+            property string workspaceOutputsJson: "{}"
+            property string workspaceDispatch: "auto"
+            property string placement: "focused"
+            property int height: 28
+            property list<string> moduleOrder: ["workspaces", "title", "search", "clock", "control", "media", "tray", "battery", "network", "power", "notifications"]
+            property list<string> hiddenModules: []
+            property bool searchLabel: false
+            property string moduleSidesJson: "{}"
+            property string hiddenOutputsJson: "{}"
+            property string layoutOutputsJson: "{}"
+            property string surfaceMode: "transparent"
+            property string surfaceColor: "#161616"
+            property real surfaceOpacity: .75
+            property string surfaceOutputsJson: "{}"
+        }
+
+        property JsonObject appearance: JsonObject {
+            id: appearanceSettings
+            property string mode: "dark"
+            property string tint: "neutral"
+            property real panelOpacity: 0.92
+            property real panelBlur: 1
+            property int radius: 10
+            property real shadowOpacity: 0.16
+            property int shadowSoftness: 10
+            property real motionScale: 1
+            property bool reducedMotion: false
+            property int panelPadding: 12
+            property int panelSpacing: 8
+            property int fontSize: 13
+            property string fontWeight: "regular"
+            property real iconScale: 1
+            property bool topGradient: false
+            property string contrast: "standard"
+            property bool automaticText: true
+            property bool automaticGradient: false
+            property string manualText: ""
+            property string manualMuted: ""
+            property string manualPanel: ""
+            property string manualGradient: ""
+        }
+
+        property JsonObject launcher: JsonObject {
+            id: launcherSettings
+            property string defaultMode:"all"
+            property bool clipboardHistory:false
+            property bool searchWindows:true
+            property list<string> pinnedIds: []
+        }
+
+        property JsonObject wallpaper: JsonObject {
+            id: wallpaperSettings
+            property bool enabled: true
+            property string fit: "cover"
+            property string path: ""
+            property string outputsJson: "{}"
+            property bool slideshow: false
+            property int intervalMinutes: 30
+            property string order: "sequential"
+            property int transitionMs: 400
+            property string slidesJson: "[]"
+        }
+
+        property JsonObject settingsWindow: JsonObject {
+            id: windowSettings
+            property int width: 1000
+            property int height: 700
+            property string category: "appearance"
+        }
+
+        property string shortcutsJson: "{}"
+
+        property JsonObject notifications: JsonObject {
+            id: notificationSettings
+            property string ownership: "off"
+            property bool dnd: false
+            property string policiesJson: "{}"
+            property int bannerDuration: 6
+            property int historyLimit: 60
+            property string screenTarget: "focused"
+            property real quietUntil: 0
+            property bool quietHoursEnabled:false
+            property int quietStart:1320
+            property int quietEnd:420
+            property int quietDays:127
+            property string previewMode:"full"
+            property bool soundEnabled:false
+            property real soundVolume:.25
+        }
+
+        property string extensionsJson: "{}"
     }
 
     FileView {

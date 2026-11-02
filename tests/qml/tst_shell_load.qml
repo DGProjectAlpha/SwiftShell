@@ -12,6 +12,34 @@ TestCase {
 
     // Every shell QML document. The static check requires this list to match the tree.
     readonly property var shellFiles: [
+        "shell/services/OverviewService.qml",
+        "shell/overview/OverviewPreview.qml",
+        "shell/overview/OverviewWindowTile.qml",
+        "shell/overview/OverviewWorkspace.qml",
+        "shell/overview/OverviewWindow.qml",
+        "shell/components/TrayItemControl.qml",
+        "shell/bar/WidgetIndicator.qml",
+        "shell/popovers/AudioPanel.qml",
+        "shell/popovers/NetworkPanel.qml",
+        "shell/popovers/PowerPanel.qml",
+        "shell/components/PowerProfileOptions.qml",
+        "shell/services/PowerProfiles.qml",
+        "shell/services/NetworkService.qml",
+
+        "shell/settings/SpotlightPage.qml",
+        "shell/popovers/ClockFace.qml",
+        "shell/popovers/ClockCalendar.qml",
+        "shell/popovers/ClockTimer.qml",
+        "shell/popovers/ClockStopwatch.qml",
+        "shell/services/ClockService.qml",
+        "shell/services/DesktopTools.qml",
+        "shell/services/DefaultAppsService.qml",
+        "shell/services/ShortcutsService.qml",
+        "shell/services/DesktopAppearance.qml",
+        "shell/launcher/LauncherCard.qml",
+        "shell/settings/WorkspaceOrderList.qml",
+        "shell/settings/DefaultAppsPage.qml",
+
         "shell/shell.qml",
         "shell/WorkspaceAudit.qml",
         "shell/bar/BarHost.qml",
@@ -64,6 +92,9 @@ TestCase {
         "shell/settings/PowerPage.qml",
         "shell/settings/NotificationsPage.qml",
         "shell/notifications/NotificationHost.qml",
+        "shell/notifications/NotificationCard.qml",
+        "shell/notifications/NotificationSound.qml",
+        "shell/notifications/NotificationDrawer.qml",
         "shell/settings/AppearancePage.qml",
         "shell/settings/BarPage.qml",
         "shell/settings/WorkspacesPage.qml",
@@ -85,6 +116,22 @@ TestCase {
     // These compile with the Qt Quick stubs. shell.qml, BarHost, and BarWindow also
     // reference WlrLayershell, which is a C++ attached property and is not stubbed.
     readonly property var readyFiles: [
+        "shell/components/TrayItemControl.qml",
+        "shell/bar/WidgetIndicator.qml",
+        "shell/popovers/AudioPanel.qml",
+        "shell/popovers/NetworkPanel.qml",
+        "shell/popovers/PowerPanel.qml",
+        "shell/components/PowerProfileOptions.qml",
+
+        "shell/settings/SpotlightPage.qml",
+        "shell/popovers/ClockFace.qml",
+        "shell/popovers/ClockCalendar.qml",
+        "shell/popovers/ClockTimer.qml",
+        "shell/popovers/ClockStopwatch.qml",
+        "shell/launcher/LauncherCard.qml",
+        "shell/settings/WorkspaceOrderList.qml",
+        "shell/settings/DefaultAppsPage.qml",
+
         "shell/bar/WorkspaceIndicators.qml",
         "shell/bar/ClockModule.qml",
         "shell/bar/FocusedTitle.qml",
@@ -134,6 +181,7 @@ TestCase {
     }
 
     function expectedUnavailable(path, message) {
+        if(path === "shell/notifications/NotificationSound.qml" && message.indexOf("QtMultimedia")>=0 && message.indexOf("not installed")>=0)return true
         if (path === "shell/settings/SettingsShadow.qml" || path === "shell/components/SurfaceShadow.qml")
             return message.indexOf('module "QtQuick.Effects" is not installed') !== -1
                 || message.indexOf('RectangularShadow is not a type') !== -1
@@ -151,6 +199,7 @@ TestCase {
                 || path === "shell/bar/BarHost.qml"
                 || path === "shell/bar/BarWindow.qml"
                 || path === "shell/popovers/PopoverHost.qml"
+                || path === "shell/overview/OverviewWindow.qml"
                 || path === "shell/launcher/LauncherWindow.qml"
                 || path === "shell/wallpaper/WallpaperHost.qml"
                 || path === "shell/wallpaper/WallpaperSurface.qml")
@@ -165,6 +214,7 @@ TestCase {
             return false
         return message.indexOf("PopoverHost.qml:") !== -1
             || message.indexOf("BarWindow.qml:") !== -1
+            || message.indexOf("OverviewWindow.qml:17") !== -1
             || message.indexOf("LauncherWindow.qml:19") !== -1
             || message.indexOf("NotificationHost.qml:24") !== -1
             || message.indexOf("WallpaperSurface.qml:25") !== -1
@@ -256,7 +306,12 @@ TestCase {
         compare(calendar.height, calendar.implicitHeight)
         verify(calendar.implicitWidth >= 196)
         verify(calendar.implicitWidth < 400)
-        verify(gridRowCount(calendar.children[0]) >= 5)
+        compare(calendar.activeTab, "clock")
+        calendar.showTab("calendar")
+        var month = findChild(calendar, "clockCalendar")
+        verify(month !== null)
+        verify(month.monthModel.weeks.length >= 4)
+        verify(month.monthModel.weeks.length <= 6)
 
         var controlComponent = componentFor("shell/popovers/ControlCenterPanel.qml")
         var control = controlComponent.createObject(this)
@@ -280,14 +335,15 @@ TestCase {
         var surfaceComponent = componentFor("shell/popovers/PopoverSurface.qml")
         var calendarCard = surfaceComponent.createObject(this)
         var calendarColumn = findChild(calendarCard,"popoverBody")
-        calendarComponent.createObject(calendarColumn)
+        var embeddedCalendar = calendarComponent.createObject(calendarColumn)
+        embeddedCalendar.showTab("calendar")
         tryVerify(function() { return calendarColumn.implicitWidth >= 196 }, 1000)
         var card = calendarCard.children[1]
         // Material padding and a full transparent inset keep the Gaussian shadow unclipped.
         compare(card.width, calendarColumn.implicitWidth + 24)
         compare(calendarCard.implicitWidth, card.width + calendarCard.shadowMargin*2)
         compare(calendarCard.implicitHeight, card.height + calendarCard.shadowMargin*2)
-        verify(calendarCard.implicitHeight > calendar.implicitHeight)
+        tryVerify(function() { return calendarCard.implicitHeight > calendar.implicitHeight }, 1000)
 
         var controlCard = surfaceComponent.createObject(this)
         var controlColumn = findChild(controlCard,"popoverBody")
@@ -391,8 +447,10 @@ TestCase {
         var page = componentFor("shell/settings/WorkspacesPage.qml").createObject(this, {width:560})
         verify(page !== null)
         verify(findText(page, "HP X32", 0))
-        verify(findText(page, "PM161Q C", 0))
         verify(findText(page, "gaming · active", 0))
+        page.selectedOutput="HDMI-A-1"
+        wait(0)
+        verify(findText(page, "PM161Q C", 0))
         verify(findText(page, "4 · active · empty", 0))
         verify(Services.SettingsStore.setWorkspaceOutput("DP-1", ["2", "gaming"]))
         compare(JSON.parse(Services.SettingsStore.workspaceOutputsJson)["DP-1"].join(","), "2,gaming")
@@ -414,7 +472,7 @@ TestCase {
         var page = componentFor("shell/settings/AppearancePage.qml").createObject(this)
         verify(page !== null)
         verify(findText(page, "Backdrop blur", 0))
-        verify(findText(page, "unavailable", 0))
+        verify(findText(page, Services.SurfaceService.reason, 0))
         verify(findText(page, "High contrast", 0))
         verify(page.shows("textContrast"))
         verify(!findText(page, "Gaussian", 0))
@@ -451,7 +509,7 @@ TestCase {
         verify(findText(displays, "No outputs are connected", 0))
         var shortcuts = componentFor("shell/settings/ShortcutsPage.qml").createObject(this)
         verify(shortcuts !== null)
-        verify(findText(shortcuts, "not installed automatically", 0))
+        verify(findText(shortcuts, "Changes apply immediately", 0))
         var audioPage = componentFor("shell/settings/AudioPage.qml").createObject(this)
         verify(audioPage !== null)
         verify(findText(audioPage, "Adjust speakers", 0))
@@ -461,19 +519,19 @@ TestCase {
         verify(!audioPage.shows("mediaPlayer"))
         var network = componentFor("shell/settings/NetworkPage.qml").createObject(this)
         verify(network !== null)
-        verify(findText(network, "Network controls are not available", 0))
-        verify(findText(network, "Brightness control is not available", 0))
+        verify(findText(network, "Network & Devices", 0))
+        verify(findText(network, "Wi-Fi", 0))
         var bluetoothPage = componentFor("shell/settings/BluetoothPage.qml").createObject(this)
         verify(bluetoothPage !== null)
-        verify(findText(bluetoothPage, "Known devices", 0))
+        verify(findText(bluetoothPage, "Bluetooth", 0))
         var powerPage = componentFor("shell/settings/PowerPage.qml").createObject(this)
         verify(powerPage !== null)
-        verify(findText(powerPage, "then confirm", 0))
+        verify(findText(powerPage, "Power", 0))
         var notes = componentFor("shell/settings/NotificationsPage.qml").createObject(this)
         verify(notes !== null)
-        verify(findText(notes, "Notification handling is off", 0))
-        verify(findText(notes, "Not SwiftShell", 0))
-        verify(findText(notes, "sounds are unavailable", 0))
+        verify(findText(notes, "Choose how notifications appear", 0))
+        verify(findText(notes, "Handled outside SwiftShell", 0))
+        verify(findText(notes, "History and reply drafts stay in memory", 0))
         UPower.displayDevice.ready = false
         var emptyBattery = componentFor("shell/bar/BatteryModule.qml").createObject(this)
         verify(emptyBattery !== null)
@@ -501,9 +559,9 @@ TestCase {
         verify(media.line.indexOf("Song") !== -1)
 
         SystemTray.items.values = []
-        var emptyTray = componentFor("shell/bar/TrayModule.qml").createObject(this)
+        var emptyTray = componentFor("shell/bar/TrayModule.qml").createObject(this,{trayModel:SystemTray.items.values})
         verify(emptyTray !== null)
-        verify(emptyTray.implicitWidth === 0)
+        tryCompare(emptyTray,"implicitWidth",0)
         SystemTray.items.values = [{
             id: "net",
             title: "Network",
@@ -511,10 +569,10 @@ TestCase {
             hasMenu: true,
             icon: ""
         }]
-        var tray = componentFor("shell/bar/TrayModule.qml").createObject(this)
+        var tray = componentFor("shell/bar/TrayModule.qml").createObject(this,{trayModel:SystemTray.items.values})
         verify(tray !== null)
         verify(tray.implicitWidth > 0)
-        verify(tray.rows.length === 1)
+        compare(tray.itemCount,1)
 
         emptyBattery.destroy()
         battery.destroy()

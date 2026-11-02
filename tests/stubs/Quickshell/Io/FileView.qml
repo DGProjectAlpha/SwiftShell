@@ -5,6 +5,8 @@ QtObject {
     property string path: ""
     property bool watchChanges: false
     property bool atomicWrites: false
+    property bool preload:false
+    property bool blockAllReads:false
 
     signal fileChanged()
     signal adapterUpdated()

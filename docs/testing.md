@@ -1,6 +1,6 @@
 # Testing
 
-The cloud environment used to add this prototype has no Hyprland session, no monitors, and no Noctalia installation. Checks here cover logic, source structure, and the installer in a temporary home directory. They do not show pixels.
+Automated logic, QML and installer checks are separate from native desktop acceptance. Dated local evidence below records actual Quickshell/Hyprland tests; older cloud-only entries remain historical and do not imply hardware coverage.
 
 ## Commands
 
@@ -775,3 +775,221 @@ explicitly while keeping Basic styling. The pointer regression asserts a real
 window overlay with the expected width. KeyedModel uses explicit dynamic roles
 so older Qt retains object rows without nested-list role type warnings.
 The complete local check suite passed after both corrections.
+
+## Native desktop applications and devices (2026-11-01–02)
+
+The exact staged backend tree and exact staged UI tree independently passed
+`scripts/check.sh`. The final local suite passes 71 Python tests, 16 QML suites,
+the JS regressions, 17 installer cases and static checks for 88 QML documents.
+GitHub's Ubuntu Qt 6.4 runner also passes: timer input waits for rendering after
+layout changes, and the tray script guards a nullable QML context named module.
+The local runtime remains Quickshell 0.3.2 / Qt 6.12 / Hyprland 0.57 on RTX 4070,
+DP-1 scale 1 and HDMI-A-1 scale 1.25. Monitor positions/modes were preserved.
+
+Native evidence:
+
+- `settings-pages.py`: all twelve current sidebar categories loaded on the actual
+  floating window. Bluetooth is included in Network & Devices.
+- `settings-window.py --output DP-1` and `--output HDMI-A-1`: title drag, all four
+  edges/four corners, maximize/restore, minimize/reactivation and saved geometry.
+- `workspace-drag.py`: actual handle movement, named/empty indicators retained,
+  disk readback, unchanged window geometry and scoped preference restoration.
+- `spotlight.py`: actual typed calculation, context/keyboard Favorites, All/Favorites,
+  tile drag ordering, no accidental launch, Settings icon, Escape on both outputs.
+- `launcher-shortcut.py`: actual Super+Space open/repeat toggle/Escape on both.
+- `clock-panel.py`: actual faces, Calendar navigation, timer pause/resume/cancel,
+  stopwatch/laps/reset, rounded blur and Escape on both outputs; exact tool state
+  restored on disk. `clock-tools.py` verifies isolated deadline/restart behavior.
+- `bar-inputs.py`: date→Calendar and time→Clock, direct view switching, dedicated
+  Audio/Network/Power panels, native tray menu open/Escape on both outputs.
+- `bar-persistence.py`: a real visibility checkbox, atomic save, complete scoped
+  SwiftShell restart, per-output readback and restoration of the original override.
+- `settings-external.py`: real external edits, subsequent no-op/actual saves, and
+  malformed/future-file protection without changing live preference values.
+- Native duplicate/rapid save, backed-up v2 migration and expanded workspace/
+  Spotlight opening-mode process-restart readback scripts passed.
+- `tray-native.py`: actual native StatusNotifier ObjectModel order/count, all two
+  currently published items displayed. Seven fixture items test the removed cap.
+  Steam/Discord publish icons; Cachy-Update is installed but not running/publishing.
+- `shortcuts-native.py`: real inhibition captured Super+Space without launching
+  Spotlight; a recorded owned chord was applied/read back/removed. All original
+  94 effective bindings were unchanged.
+- `default-apps.py`: actual xdg-mime selection/readback/backup/Undo in temporary XDG.
+  `network-devices.py`: actual NetworkManager transport/state/view ownership with
+  no connectivity changes. `power-profiles.py`: actual pointer choice, D-Bus
+  readback and exact original Performance mode restoration.
+- `contrast.py`: actual hidden bars and async decoder for JPEG/WebP, displayed crop,
+  opaque material foreground and mixed-band readability. `bar-stability.py`: 11
+  module creations (ten initial plus one deliberate re-add), four retained workspace
+  controls, one settings load through 15 appearance/urgency changes.
+
+Actual compositor runtime readback also passed radius 14, blur size 4/passes 2 and
+border width 0, followed by Restore and exact pre-test option/journal restoration.
+No user Lua, Noctalia, autostart, display modes or unrelated services were changed.
+Backups retained: own state directory backups/20261101T190959Z-native-desktop and
+backups/20261102T111525Z-desktop-activation. Revert the commits for source recovery;
+`python3 shell/helpers/appearancectl.py restore` restores owned desktop options.
+
+Owned checkerboard blur comparisons (on/off edge contrast; smaller means blur):
+HDMI Clock 2.318/4.392, Calendar 3.221/5.274, Audio .868/3.223,
+Power 4.675/6.768, modules 1.369/4.085; DP Clock 2.515/5.414,
+Calendar 3.843/6.662, Audio 1.496/4.409, Power 7.559/9.973,
+modules 2.072/5.397. Full Clock and Calendar/module captures were visually inspected;
+no underlying application pixels were captured. Spotlight was separately inspected
+and measured in decision 0037. Capture files remain under /tmp.
+
+Limits: existing opaque Lua shortcut callbacks are not editable; no calendar app
+is installed; no Wi-Fi connection/disconnection, radio change, Bluetooth pairing,
+real timer notification, shutdown/reboot/suspend/lock or real-player playback was
+performed. Those controls have verified APIs, capability/disabled/error behavior
+and focused tests, but this is not an execution claim. Physical hotplug, sustained
+GPU/gaming load, every wallpaper and comprehensive accessibility remain pending.
+Known Qt Wayland text-input focus warnings remain visible; they were not suppressed.
+
+Final activation at 2026-11-02 12:22 UTC repeated the full scoped-restart visibility
+check, both-output bar/tray inputs, Spotlight keyboard/context/favorite-drag checks
+and all twelve Settings pages against the final source. Adaptive bar text was
+enabled as requested; both outputs reported completed contrast analysis. The
+immediately preceding preferences are retained in own state backup
+`backups/20261102T122221Z-final-contrast`. Final runtime logs had no QML loading
+errors; known Qt text-input and absent legacy request-file warnings remain.
+
+
+## Notifications, overview, per-display bars and desktop tools — 2026-11-02
+
+Target: Quickshell 0.3.2, Qt 6.12.0, Hyprland 0.57 Lua, NVIDIA RTX 4070;
+DP-1 scale 1 and HDMI-A-1 scale 1.25. `scripts/check.sh` passed, including
+96 QML documents, the notification/overview/desktop-tools regressions and all
+existing checks. Each device, notification/overview/bar, and Spotlight commit was
+also checked from its exact staged tree in a temporary checkout. These new commits
+have local evidence; the earlier PR's CI result is not a CI claim for them.
+
+Native checks performed:
+
+- `tests/live/notifications-native.py --live`: private D-Bus session with actual
+  Quickshell server receipt/replacement, client close, native action callback,
+  timeout/history, transient, DND, snooze/wake and 70-notification bounded burst.
+  This caught the installed version's millisecond timeout behavior. Actions remain
+  usable after a banner archives, until the source closes or the user dismisses it.
+- Main session: observed no notification owner, backed up preferences, enabled
+  SwiftShell, verified the resulting bus-owner PID, sent a real `notify-send`,
+  observed receipt and mapped/bounded banner geometry, then dismissed that test ID.
+- `tests/live/clock-notifications.py --live`: actual timer deadline, live bar
+  activity, completion notification, snooze/wake and action opening Timer; actual
+  stopwatch pause notification opening Stopwatch. Original clock tool state restored.
+- `tests/live/overview.py --live`: actual local window preview frames and backdrop
+  blur, workspace counts and keyboard Escape on both outputs; no window pixels
+  were recorded or sent anywhere. Some dormant/minimized clients may supply no
+  frame and receive a labeled fallback card.
+- `tests/live/overview-shortcut.py --live`: actual Alt+Tab activation, repeated chord
+  navigation and Escape on both outputs. The known cycle-next chord was first
+  enabled/restored in a guarded test, leaving unrelated bindings unchanged, then
+  enabled as requested. No Lua files were written.
+- `tests/live/bar-layouts.py --live`: Top/Bottom/Left/Right with .9/1.25 content
+  scales on each monitor, other-output independence and drawer opening; restored
+  original layouts. Reservation updates coalesce so orientation changes do not
+  temporarily reserve an entire screen width.
+- `tests/live/bar-persistence.py --live`: actual checkbox/save/full scoped restart
+  and restoration, including final source activation.
+- `tests/live/spotlight-desktop.py --live`: actual owned native-window activation,
+  precise Settings-control navigation and capability-detected screenshot entries.
+  Existing Spotlight pointer/favorite/context tests and all Settings pages passed.
+- `tests/live/screenshot-tools.py --live`: real `grim` capture strictly inside an
+  opaque owned checkerboard, valid image transport to a private sink. No desktop
+  clipboard change and no unrelated application pixels. Full-display capture and
+  interactive region selection remain user acceptance checks.
+- `tests/live/network-devices.py --live`: actual NetworkManager read-only snapshot,
+  helper transport and view ownership. Python/QML regressions cover authentication
+  validation, retained availability after errors, targeted cancellation and all
+  24 Bluetooth fixture devices instead of the former 16-device truncation.
+- Async wallpaper sampling and bounded PNG fallback now test all four bar edges,
+  including scaled thickness, displayed crop and per-output refresh.
+
+Notification preferences and original activation state are backed up under own
+state `backups/20261102T163711Z-notification-overview`. Source backups include
+`/tmp/swiftshell-notification-bar-20261102T074251` and
+`/tmp/swiftshell-device-workflows-20261102T124420Z`; committed source is the durable
+recovery path. Notifications are now enabled on this session; fresh installs still
+leave ownership off. Alt+Tab's owned recovery journal is mode 600, written before
+mutation; if SwiftShell is absent, its handler falls back to window cycling.
+Restore with `python3 shell/helpers/overviewctl.py restore`, or turn the overview
+shortcut off in Workspaces. Disable SwiftShell notifications in Settings to release
+the bus name; no previous daemon was stopped and none is automatically started.
+
+Limits: notification sounds/images/inline replies and disk-persisted history are
+not provided. Clipboard history defaults off, is bounded to 30 text items/20 minutes
+in memory, excludes advertised sensitive formats and requires explicit `clip`
+searches. Ordinary copied secrets can still enter history if their source supplies
+no privacy hint. Real password-manager behavior, Wi-Fi authentication/connection
+changes, Bluetooth PIN/pairing/cancel side effects, physical monitor hotplug and
+sustained GPU load remain unperformed. Existing system pairing agents are preserved.
+Known Qt Wayland text-input warnings and the absent legacy launcher request file
+remain visible; no claim that every intermittent graphics flicker is eliminated.
+
+Final source activation repeated Clock notification actions, both-output actual
+Alt+Tab, desktop Spotlight activation, native tray/date/time/widget input and all
+twelve Settings pages successfully. The running checkout matches the committed
+feature source; normal source-file watching was restored after verification.
+
+
+## Notification preferences and interaction polish — 2026-11-02
+
+`bash scripts/check.sh` passed on Quickshell 0.3.2 / Qt 6.12 / Hyprland 0.57 Lua,
+including 97 QML documents and the expanded notification policy/UI regressions.
+The exact staged tree was also checked before committing. Evidence remains local;
+this is not a claim that CI ran these commits on another Qt version.
+
+- Fixed active DND/app-rule reconfiguration for local Clock entries as well as
+  native notifications. Clock events use the configured duration. Critical default
+  timeouts stay until dismissal, and critical arrivals/wakeups take an ordinary
+  banner slot when the bounded four-banner queue is full.
+- Pure tests cover same-day/overnight weekday boundaries, start-day ownership,
+  all-day schedules, invalid settings, explicit critical timeouts, priority,
+  local-only image URLs and additive v3 defaults. New sound/quiet/privacy settings
+  have a real isolated native atomic save, invalid-value rejection and complete
+  process-restart readback (`notification-preferences.py --live`).
+- `notifications-native.py --live` passed actual protocol receipt/replacement,
+  actions, image-path and image-data, native inline-reply signal, client close,
+  default critical timeout, silent hints, DND/sound suppression, no replacement
+  sound replay, actual one-second snooze wake and pause expiry, plus the bounded
+  70-message burst. All of this used a private D-Bus session, not user messages.
+- `notification-sound.py --live` loaded the generated WAV and observed actual Qt
+  playback start/completion at isolated 2% volume. No system volume changed.
+  This is backend playback evidence, not a claim that a person heard the speakers.
+- `notification-surfaces.py --live` passed actual image rendering, app-only privacy,
+  light/dark themes and native Reply→drawer keyboard typing/Send/Escape on both
+  DP-1 and HDMI-A-1. A second incoming notification did not erase the draft/focus.
+  Full-page QML input tests additionally verify the active reply remains scrolled
+  into view when incoming messages push it down.
+- Banner and grouped drawer delegates are keyed. Property refreshes coalesce until
+  native property batches finish, avoiding closing an object inside its update.
+  Reply fields and drafts survive role changes rather than being recreated.
+- Visual inspection found and fixed blur covering transparent shadow padding.
+  Blur/input now use the union of rounded card regions clipped to the viewport;
+  shadows and gaps remain clear. Owned shadow-band contrast measured 122 on both
+  outputs, and the native test requires >70 to catch the former broad blur.
+  Snooze controls share the action row, group headers align left, timestamps avoid
+  repeated app names, and reply placeholders use a readable theme color.
+
+Owned screenshots were inspected at `/tmp/swiftshell-notification-DP-1-drawer.png`
+and both outputs' `-dark.png`, `-light.png` and `-private.png` variants. The capture
+helper asserts every pixel lies over an opaque owned test background, and uses
+synthetic notification content on a private bus. No unrelated application pixels
+or real notification bodies were captured.
+
+Final activation used only the scoped SwiftShell restart. Actual Clock notification
+snooze/wake/open actions and all twelve Settings pages passed on the running build.
+No loading/type/binding errors were found. Known Qt text-input diagnostics and the
+absent legacy launcher request-file warning remain visible. Preferences and Clock
+state are backed up in own state `backups/20261102T193514Z-notification-polish`;
+source backup is `/tmp/swiftshell-notification-polish-20261102T134843`.
+
+Default sound and scheduled quiet hours remain off; preview mode remains full.
+No network, audio device/default, global volume, monitor mode, Noctalia, user Lua,
+autostart or service configuration was changed. Wi-Fi was audited read-only:
+hardware enabled, radio disabled; Ethernet stayed connected. Real messaging apps
+must advertise inline reply, and their app-specific handling still needs owner
+acceptance. Scheduled quiet hours use local time; no system-time or suspend test
+was performed. History/drafts remain session-only and HTTP image fetching is not
+supported. Revert this commit for source recovery; turn new settings off/reset
+individual fields in Notifications to keep newer unrelated preferences intact.

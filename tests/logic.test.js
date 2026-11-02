@@ -342,10 +342,10 @@ test("settings window lifecycle and unprobed blur capabilities remain honest", f
 test("settings search, density, and undo stay on real appearance fields", function () {
     assert.equal(settingsNav.navigationLayout(719), "stacked");
     assert.equal(settingsNav.navigationLayout(720), "columns");
-    assert.equal(settingsNav.categories().length, 11);
+    assert.equal(settingsNav.categories().length, 12);
     assert.equal(settingsNav.categories()[0].id, "appearance");
     assert.equal(settingsNav.categories()[1].id, "bar");
-    assert.deepEqual(settingsNav.categories().slice(2).map(c => c.id), ["wallpaper", "displays", "workspaces", "shortcuts", "audio", "network", "bluetooth", "power", "notifications"]);
+    assert.deepEqual(settingsNav.categories().slice(2).map(c => c.id), ["spotlight", "wallpaper", "displays", "workspaces", "shortcuts", "defaultApps", "audio", "network", "power", "notifications"]);
     assert.equal(settingsNav.categoryFor(settingsNav.firstControlId("cover")), "wallpaper");
     assert.equal(settingsNav.filterControls("").length, settingsNav.CONTROLS.length);
     assert.equal(settingsNav.filterControls("not-a-setting").length, 0);
@@ -1313,7 +1313,7 @@ test("bar exclusion can turn reservation on again and popup focus clears before 
     assert.equal(bar.barMetrics(80, 1).height, 52);
     assert.equal(bar.heightFromUnit(bar.unitFromHeight(28)), 28);
     assert.equal(bar.exclusionUpdate(true, tall.height, 28).zone, 52);
-    assert.deepEqual(bar.visibleModules(bar.BAR_MODULES, ["clock"]), ["workspaces", "title", "search", "control", "media", "tray", "battery"]);
+    assert.deepEqual(bar.visibleModules(bar.BAR_MODULES, ["clock"]), ["workspaces", "title", "search", "control", "media", "tray", "battery", "network", "power", "notifications"]);
     const moved = bar.moveModule(bar.BAR_MODULES, "clock", -1);
     assert.equal(moved[2], "clock");
     assert.equal(moved[3], "search");
@@ -1421,7 +1421,7 @@ test("launcher ranking is stable and ignores the query as a command", function (
     assert.equal(armed.argv, null);
     const confirmed = launcher.powerStep("poweroff", "poweroff");
     assert.equal(confirmed.run, true);
-    assert.deepEqual(confirmed.argv, ["loginctl", "poweroff"]);
+    assert.deepEqual(confirmed.argv, ["systemctl", "--no-ask-password", "poweroff"]);
     assert.equal(launcher.powerStep("", "custom").run, false);
     assert.equal(launcher.moveSelection(0, 4, -1), 3);
     assert.equal(launcher.moveSelection(3, 4, 1), 0);
@@ -1430,7 +1430,7 @@ test("launcher ranking is stable and ignores the query as a command", function (
     assert.equal(armedPower.argv, null);
     const confirmedPower = launcher.powerInvocation("reboot", "reboot");
     assert.equal(confirmedPower.run, true);
-    assert.deepEqual(confirmedPower.argv, ["loginctl", "reboot"]);
+    assert.deepEqual(confirmedPower.argv, ["systemctl", "--no-ask-password", "reboot"]);
     assert.equal(JSON.stringify(confirmedPower.argv).indexOf("dolphin"), -1);
     const switchedPower = launcher.powerInvocation("reboot", "poweroff");
     assert.equal(switchedPower.run, false);
@@ -1804,6 +1804,7 @@ test("shortcut recording cancels, conflicts, and does not invent a bind", functi
 });
 
 test("audio devices, players, and tray items stay actionable", function () {
+    assert.doesNotThrow(function(){require("node:vm").runInNewContext(fs.readFileSync(path.join(__dirname,"../shell/logic/tray.js"),"utf8"),{module:null});});
     const nodes = [
         { id: 4, isSink: true, isStream: false, audio: { volume: 0.5, muted: false }, description: "Speakers" },
         { id: 5, isSink: false, isStream: false, audio: { volume: 0.2, muted: false }, description: "Microphone" },
@@ -1894,7 +1895,7 @@ test("notifications stay off until ownership is confirmed", function () {
         type: "receive",
         notification: { id: 8, appName: "Chat", summary: "Quiet", body: "hidden", urgency: "normal" },
     });
-    assert.equal(center.live.length, 1);
+    assert.equal(center.live.length, 0); // DND archives already visible ordinary banners too.
     assert.equal(center.history[0].summary, "Quiet");
     assert.deepEqual(center.lastRoute, { id: 8, disposition: "history" });
     center = notifications.reduceNotifications(center, {
@@ -1952,7 +1953,7 @@ test("notifications stay off until ownership is confirmed", function () {
     assert.equal(burst.live.length, notifications.BANNER_CAP);
     assert.equal(burst.history.length, notifications.HISTORY_CAP);
     assert.ok(burst.live.length <= 4);
-    assert.ok(burst.history.length <= 40);
+    assert.ok(burst.history.length <= notifications.HISTORY_CAP);
     assert.deepEqual(burst.lastRoute, { id: 100, disposition: "history" });
     let replacement = notifications.reduceNotifications(notifications.emptyCenter(), {
         type: "configure",

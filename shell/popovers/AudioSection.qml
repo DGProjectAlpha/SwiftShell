@@ -7,6 +7,7 @@ import "../themes"
 
 Column {
     id: root
+    property string heading:"Audio"
 
     spacing: Theme.panelSpacing
     width: parent ? parent.width : Theme.controlWidth
@@ -143,7 +144,8 @@ Column {
 
     SectionHeader {
         width: parent.width
-        text: "Audio"
+        text: root.heading
+        visible:root.heading!==""
     }
 
     ServiceStatus {

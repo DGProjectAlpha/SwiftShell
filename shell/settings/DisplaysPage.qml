@@ -229,7 +229,7 @@ Item {
             }
             SettingsToggle {
                 label:"Adaptive sync"
-                checked:page.selected() ? page.selected().vrr : false
+                checked:page.selected() ? page.selected().vrr === true : false
                 enabled:!!page.selected() && !!page.selected().hardware && page.selected().vrrSupported === true
                 onToggled:function(value) { page.update({vrr:value}) }
             }

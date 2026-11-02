@@ -1,6 +1,6 @@
 # SwiftShell
 
-> **Status:** Local CachyOS development has verified per-monitor numeric/named workspaces, transactional Displays, native floating Settings and real compositor blur on mixed-scale monitors. The approved Super+Space handoff invokes SwiftShell, with repeat-toggle and Escape tested on both outputs. Opt-in bar backgrounds support transparent, solid and native frost per monitor. Bars now offer per-monitor right-click module menus, left/center/right grouping, optional Search labels and clock date/seconds. Calendar and control panels share the Settings material with native rounded blur. This remains an alpha; see dated evidence and unperformed checks in `docs/testing.md`.
+> **Status:** Local CachyOS validation now covers actionable notifications and a bar drawer with quiet hours, preview privacy, inline replies, images and optional sounds, live workspace previews with a reversible Alt+Tab handoff, independent bar edges/scales/content per display, Clock notifications/activity, native device workflows, and Spotlight window/settings/screenshot tools. Clipboard history is optional and session-only. This remains an alpha; dated evidence and unperformed checks are in `docs/testing.md`.
 >
 > **Purpose:** A clean, understated, keyboard-first, fully integrated desktop shell built with **Quickshell + Qt 6/QML** for **Hyprland on Arch-based systems**. The reference workstation is CachyOS; the installer is not limited to that one machine.
 >

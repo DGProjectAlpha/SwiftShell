@@ -39,7 +39,7 @@ function deviceKey(device, index) {
 function deviceRows(devices) {
     const source = objectValues(devices);
     const out = [];
-    for (let i = 0; i < source.length && out.length < 16; i++) {
+    for (let i = 0; i < source.length; i++) {
         const device = source[i];
         if (!device)
             continue;
@@ -48,6 +48,7 @@ function deviceRows(devices) {
             key: deviceKey(device, i),
             name: name.length > 48 ? name.slice(0, 45) + "..." : name,
             connected: device.connected === true,
+            state: typeof device.state === "number" ? device.state : null,
             paired: device.paired === true || device.bonded === true,
             pairing: device.pairing === true,
             battery: device.batteryAvailable === true && typeof device.battery === "number" && Number.isFinite(device.battery)

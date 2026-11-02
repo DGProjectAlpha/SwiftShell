@@ -97,6 +97,7 @@ function analyzeBands(bands, previous) {
         right: right.foreground,
         accent: desaturate(accentSource),
         confidence: scrim ? "low" : "high",
+        backgrounds: {left:bands.left,center:bands.center,right:bands.right},
     };
 }
 
@@ -147,7 +148,7 @@ function surfaceColors(options) {
         panel: panel,
         gradient: gradient,
         gradientAlpha: gradientAlpha,
-        scrim: input.automaticGradient === true && analysis.scrim === true,
+        scrim: input.automaticText === true && analysis.scrim === true || input.automaticGradient === true && analysis.scrim === true,
         reason: reason,
         warning: warning,
     };

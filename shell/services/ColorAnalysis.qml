@@ -2,6 +2,7 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import "../logic/contrast.js" as Contrast
 import "../logic/inflate.js" as Inflate
 import "../logic/png.js" as Png
@@ -11,6 +12,8 @@ Singleton {
     id: root
 
     property int nextToken: 0
+    property var sampleQueue: []
+    property var activeSample: null
     property var outputs: ({})
     property var samplesByOutput: ({})
     property var sample: ({
@@ -99,19 +102,45 @@ Singleton {
         var choice = Wallpaper.resolveSource(config.path)
         root.nextToken += 1
         var nextOutputs = Object.assign({}, root.outputs)
-        config = Object.assign({}, config, { token: root.nextToken })
+        const layout=SettingsStore.layoutForOutput(name)
+        config = Object.assign({}, config, {token:root.nextToken,edge:layout.edge,barThickness:Math.round((layout.edge === "left" || layout.edge === "right" ? 168 : SettingsStore.barHeight)*layout.scale)})
         nextOutputs[name] = config
         root.outputs = nextOutputs
         if (choice.source !== "file") {
-            root.readUrl(name, config, Qt.resolvedUrl("../assets/wallpapers/swiftshell-default-crimson.png"))
+            root.queueSample(name,config,Quickshell.shellDir+"/assets/wallpapers/swiftshell-default-crimson.png")
             return
         }
-        var lower = choice.path.toLowerCase()
-        if (lower.length < 4 || lower.lastIndexOf(".png") !== lower.length - 4) {
-            root.setSample(name, root.blank("Jpeg and webp are displayed, but only png pixels can be sampled in this build."))
-            return
+        queueSample(name,config,choice.path)
+    }
+
+    function queueSample(name,config,path) {
+        // Coalesce queued changes per output and decode away from the render thread.
+        sampleQueue=sampleQueue.filter(function(job){return job.name!==name}).concat([{name:name,config:config,path:path}])
+        runSample()
+    }
+    function runSample() {
+        if(sampler.running || !sampleQueue.length) return
+        activeSample=sampleQueue[0];sampleQueue=sampleQueue.slice(1)
+        const job=activeSample
+        sampler.command=["python3",Quickshell.shellDir+"/helpers/wallpaper_sample.py",job.path,
+            String(job.config.width),String(job.config.height),String(job.config.barThickness),SettingsStore.wallpaperFit,job.config.edge]
+        sampler.running=true
+    }
+    Process {
+        id:sampler
+        stdout:StdioCollector {id:sampleReply;waitForEnd:true}
+        onExited:function(code,status) {
+            const job=root.activeSample
+            if(job && root.outputs[job.name] && root.outputs[job.name].token===job.config.token) {
+                let bands={ok:false,reason:"Wallpaper analysis is unavailable."}
+                try {bands=JSON.parse(sampleReply.text)}catch(error){}
+                if(code===0 && bands.ok)root.setSample(job.name,Contrast.analyzeBands(bands,root.sampleForOutput(job.name)))
+                else if(job.path.toLowerCase().endsWith(".png"))root.readUrl(job.name,job.config,Wallpaper.fileUrl(job.path))
+                else root.setSample(job.name,root.blank(bands.reason))
+            }
+            root.activeSample=null
+            Qt.callLater(root.runSample)
         }
-        root.readUrl(name, config, Wallpaper.fileUrl(choice.path))
     }
 
     function readUrl(name, config, url) {
@@ -131,8 +160,8 @@ Singleton {
             }
             var decoded = Png.decodePng(request.response)
             var bands = Png.visibleBands(decoded, config.width, config.height,
-                                         SettingsStore.wallpaperFit, SettingsStore.barHeight,
-                                         Wallpaper.cropRect)
+                                         SettingsStore.wallpaperFit, config.barThickness,
+                                         Wallpaper.cropRect,config.edge)
             root.setSample(name, Contrast.analyzeBands(bands, root.sampleForOutput(name)))
         }
         request.send()
@@ -144,5 +173,6 @@ Singleton {
         function onAutomaticGradientChanged() { root.refresh() }
         function onWallpaperFitChanged() { root.refresh() }
         function onBarHeightChanged() { root.refresh() }
+        function onLayoutOutputsJsonChanged(){root.refresh()}
     }
 }

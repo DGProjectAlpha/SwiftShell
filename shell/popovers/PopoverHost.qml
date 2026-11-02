@@ -6,6 +6,7 @@ import "../logic/popover.js" as Popover
 import "../themes"
 import "../components"
 import "../services"
+import "../notifications"
 
 PanelWindow {
     id: popup
@@ -20,13 +21,14 @@ PanelWindow {
     property bool applyingAnchor: false
     property bool readyToShow: false
     property int showTicket: 0
+    property string requestedClockTab:"clock"
 
     visible: popupState.visible && readyToShow
     color: Theme.transparent
     surfaceFormat.opaque: false
     implicitWidth: Math.ceil(keyScope.implicitWidth)
     implicitHeight: Math.ceil(keyScope.implicitHeight)
-    mask: popupState.interactive ? null : passThrough
+    mask: popupState.interactive ? cardInput : passThrough
 
     // Independent layer surfaces support real background effects on Hyprland;
     // each floater owns its rounded blur region, placement, and keyboard focus.
@@ -42,7 +44,7 @@ PanelWindow {
 
     function geometry() {
         return {x:popup.screen ? popup.screen.x+Math.round(popup.placement.x) : 0,y:popup.screen ? popup.screen.y+Math.round(popup.placement.y) : 0,width:popup.width,height:popup.height,
-            items:bodyLoader.item && bodyLoader.item.geometry ? bodyLoader.item.geometry() : []}
+            details:bodyLoader.item && bodyLoader.item.diagnostics ? bodyLoader.item.diagnostics() : null,items:bodyLoader.item && bodyLoader.item.geometry ? bodyLoader.item.geometry() : []}
     }
 
     function motionOptions() {
@@ -75,8 +77,20 @@ PanelWindow {
             popup.reposition()
             readyToShow=true
             focusGrab.active=popup.popupState.grab === true
-            Qt.callLater(function() {if(popup.visible && popup.popupState.interactive)keyScope.forceActiveFocus()})
+            Qt.callLater(function() {if(popup.visible && popup.popupState.interactive){if(popup.popupState.panelId==="notifications" && bodyLoader.item && bodyLoader.item.focusReply && bodyLoader.item.focusReply())return;keyScope.forceActiveFocus()}})
         })
+    }
+
+    function openClock(tab,item) {
+        requestedClockTab=["calendar","timer","stopwatch"].indexOf(tab)>=0 ? tab : "clock"
+        if(popupState.visible && popupState.panelId==="calendar" && bodyLoader.item) {
+            if(bodyLoader.item.activeTab===requestedClockTab) {close();return}
+            bodyLoader.item.showTab(requestedClockTab)
+            anchorItem=item
+            Qt.callLater(function(){panelSurface.prepareLayout();popup.reposition()})
+            return
+        }
+        toggle("calendar",item)
     }
 
     function close() {
@@ -112,7 +126,15 @@ PanelWindow {
                 gap: Theme.panelGap,
                 align: "end",
             })
-            if (placed) popup.placement=Qt.point(placed.x,placed.y)
+            if (placed) {
+                const gap=Theme.panelGap, margin=Theme.panelMargin
+                if(barWindow.edge==="bottom")placed.y=barWindow.screen.height-barWindow.height-popup.implicitHeight-gap
+                if(barWindow.vertical) {
+                    placed.x=barWindow.edge==="left" ? barWindow.width+gap : barWindow.screen.width-barWindow.width-popup.implicitWidth-gap
+                    placed.y=Math.max(margin,Math.min(mapped.y,popup.screen.height-popup.implicitHeight-margin))
+                }
+                popup.placement=Qt.point(Math.max(margin,placed.x),Math.max(margin,placed.y))
+            }
         } finally {
             applyingAnchor = false
         }
@@ -163,6 +185,7 @@ PanelWindow {
         function onOpenChanged() { if(SettingsModel.open) popup.close() }
     }
 
+    Region {id:cardInput;item:panelSurface.blurSurface;radius:Theme.radius}
     Region {
         id: passThrough
         intersection: Intersection.Xor
@@ -171,7 +194,7 @@ PanelWindow {
 
     HyprlandFocusGrab {
         id: focusGrab
-        windows: [popup]
+        windows: [popup,popup.barWindow]
         onCleared: {
             popup.commit(Popover.reducePopup(popup.popupState, { type: "outside" }, popup.motionOptions()))
             Qt.callLater(function () {
@@ -247,9 +270,10 @@ PanelWindow {
             // implicitWidth or implicitHeight here is a startup error.
             Loader {
                 id:bodyLoader
-                sourceComponent: popup.popupState.panelId === "control"
+                onLoaded:if(popup.popupState.panelId==="calendar" && item.showTab)item.showTab(popup.requestedClockTab)
+                sourceComponent: popup.popupState.panelId === "notifications" ? notificationPanel : popup.popupState.panelId === "control"
                     ? controlPanel
-                    : popup.popupState.panelId === "calendar" ? calendarPanel : popup.popupState.panelId === "customize" ? popup.customPanel : null
+                    : popup.popupState.panelId === "network" ? networkPanel : popup.popupState.panelId === "power" ? powerPanel : popup.popupState.panelId === "calendar" ? calendarPanel : popup.popupState.panelId === "customize" ? popup.customPanel : null
             }
         }
     }
@@ -259,8 +283,11 @@ PanelWindow {
         CalendarPanel {}
     }
 
+    Component {id:notificationPanel;NotificationDrawer {reading:popup.visible;onSettingsRequested:{popup.close();SettingsStore.setSettingsCategory("notifications");SettingsModel.show()}}}
+    Component {id:networkPanel;NetworkPanel {onSettingsRequested:{popup.close();SettingsStore.setSettingsCategory("network");SettingsModel.show()}}}
+    Component {id:powerPanel;PowerPanel {onSettingsRequested:{popup.close();SettingsStore.setSettingsCategory("power");SettingsModel.show()}}}
     Component {
         id: controlPanel
-        ControlCenterPanel {onSettingsRequested:{popup.close();SettingsModel.show()}}
+        AudioPanel {onSettingsRequested:{popup.close();SettingsStore.setSettingsCategory("audio");SettingsModel.show()}}
     }
 }

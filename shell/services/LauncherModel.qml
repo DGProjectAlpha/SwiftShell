@@ -7,6 +7,7 @@ import Quickshell.Io
 import Quickshell.Hyprland
 import "../logic/launcher.js" as Launcher
 import "../logic/monitors.js" as Monitors
+import "../logic/desktoptools.js" as DesktopToolsLogic
 
 Singleton {
     id: root
@@ -27,7 +28,19 @@ Singleton {
     property bool indexPending: false
     property int indexedCount: -1
     property string notice: ""
+    property string gridMode: "all"
+    readonly property bool actionBusy: powerProcess.running
 
+    readonly property var windowEntries: {
+        const result=[]
+        for(const top of Hyprland.toplevels.values) {
+            const data=top.lastIpcObject || {}
+            if(data.mapped===false || data.hidden===true)continue
+            result.push({address:top.address,title:top.title || "",appId:top.wayland ? top.wayland.appId : "",handle:top.wayland || null})
+        }
+        return result
+    }
+    function windowResults(query){return SettingsStore.searchWindows ? DesktopToolsLogic.windowResults(windowEntries,query) : []}
     signal controlRequested()
     signal settingsRequested()
     signal inputRequested()
@@ -172,6 +185,8 @@ Singleton {
         root.closeLauncher();
     }
 
+    function resetGridMode() { root.gridMode = SettingsStore.launcherDefaultMode; }
+
     function openLauncher() {
         const resolved = root.placeLauncher();
         if (!resolved.screen || !root.screenIsLive(resolved.screen)) {
@@ -186,6 +201,7 @@ Singleton {
         root.warnedScreen = false;
         root.screen = resolved.screen;
         root.indexApplications();
+        root.resetGridMode();
         root.query = "";
         root.selected = 0;
         root.confirmId = "";
@@ -214,7 +230,8 @@ Singleton {
     function remember(id) {
         root.recentIds = Launcher.pushRecent(root.recentIds, id);
         recentSettings.ids = root.recentIds;
-        recentFile.writeAdapter();
+        // JsonAdapter refreshes its serialized cache after property notification.
+        Qt.callLater(recentFile.writeAdapter);
     }
 
     function lookupEntry(id) {
@@ -270,6 +287,7 @@ Singleton {
     }
 
     function runPower(id) {
+        if (powerProcess.running) return;
         const step = Launcher.powerInvocation(root.confirmId, id);
         root.confirmId = step.confirmId;
         if (!step.run) {
@@ -279,16 +297,27 @@ Singleton {
             }
             return;
         }
-        try {
-            Quickshell.execDetached({ command: step.argv });
-        } catch (error) {
-            root.confirmId = "";
-            root.notice = "Could not run the power action";
-            console.warn("SwiftShell: power action failed", id);
+        powerProcess.command = step.argv;
+        root.notice = "Requesting session action…";
+        powerProcess.running = true;
+    }
+
+    function moveFavorite(source,target) {
+        SettingsStore.setPinnedIds(Launcher.reorderFavorite(SettingsStore.pinnedIds,source,target));
+        if(root.gridMode==="favorites" && root.query.trim()==="") {
+            const visible=Launcher.gridRows(root.applications,"favorites",SettingsStore.pinnedIds,root.recentIds);
+            const index=visible.findIndex(function(row){return row.id===source;});
+            if(index>=0)root.selected=index;
+        }
+    }
+
+    function toggleFavorite(id) {
+        const next = Launcher.toggleFavorite(SettingsStore.pinnedIds,id);
+        if (SettingsStore.pinnedIds.indexOf(id)<0 && next.indexOf(id)<0) {
+            root.notice = "Favorites are full. Remove one before adding another.";
             return;
         }
-        console.info("SwiftShell: power action", id);
-        root.closeLauncher();
+        SettingsStore.setPinnedIds(next);
     }
 
     function activate(row) {
@@ -297,6 +326,39 @@ Singleton {
         if (row.kind === "settings") {
             root.closeLauncher();
             root.settingsRequested();
+            return;
+        }
+        if(row.kind === "window") {
+            root.closeLauncher()
+            if(row.handle)row.handle.activate()
+            else if(!HyprlandModel.activateWindow(row.address))root.notice="That window is no longer available."
+            return
+        }
+        if(row.kind === "clipboard") {
+            Quickshell.clipboardText=row.value
+            root.notice="Copied to clipboard"
+            return
+        }
+        if(row.kind === "screenshot") {
+            root.closeLauncher()
+            DesktopTools.screenshot(row.mode,HyprlandModel.readFocusedOutput())
+            return
+        }
+        if (row.kind === "setting-result") {
+            root.closeLauncher();
+            SettingsModel.requestControl(row.controlId || "",row.category);
+            return;
+        }
+        if (row.kind === "calculation") {
+            try {
+                Quickshell.clipboardText = row.value;
+                root.notice = "Result copied";
+            } catch (error) {root.notice = "Could not copy the result";}
+            return;
+        }
+        if (row.kind === "web") {
+            if (Qt.openUrlExternally(row.url)) root.closeLauncher();
+            else root.notice = "Could not open your default browser";
             return;
         }
         if (row.kind === "power") {
@@ -317,6 +379,15 @@ Singleton {
         } else if (step.action === "close") {
             console.info("SwiftShell: launcher dismissed by request");
             root.closeLauncher();
+        }
+    }
+
+    Process {
+        id: powerProcess
+        onExited: function(exitCode, exitStatus) {
+            root.confirmId = "";
+            if (exitCode === 0) root.closeLauncher();
+            else root.notice = "The session action was refused or is unavailable.";
         }
     }
 

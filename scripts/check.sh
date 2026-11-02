@@ -15,7 +15,22 @@ fi
 "$NODE" "$ROOT/tests/workspaces.test.js"
 "$NODE" "$ROOT/tests/displays.test.js"
 "$NODE" "$ROOT/tests/bar-surfaces.test.js"
+"$NODE" "$ROOT/tests/bar-layouts.test.js"
 "$NODE" "$ROOT/tests/bar-ergonomics.test.js"
+"$NODE" "$ROOT/tests/clock-tools.test.js"
+"$NODE" "$ROOT/tests/notifications.test.js"
+"$NODE" "$ROOT/tests/overview.test.js"
+"$NODE" "$ROOT/tests/spotlight-providers.test.js"
+"$NODE" "$ROOT/tests/desktop-tools.test.js"
+python3 "$ROOT/tests/test_desktoptools.py"
+python3 "$ROOT/tests/test_networkctl.py"
+python3 "$ROOT/tests/test_powerprofiles.py"
+python3 "$ROOT/tests/test_settingswrite.py"
+python3 "$ROOT/tests/test_appearancectl.py"
+python3 "$ROOT/tests/test_wallpaper_sample.py"
+python3 "$ROOT/tests/test_defaultapps.py"
+python3 "$ROOT/tests/test_shortcutsctl.py"
+python3 "$ROOT/tests/test_overviewctl.py"
 python3 "$ROOT/tests/test_displays.py"
 python3 "$ROOT/tests/test_windowctl.py"
 "$NODE" "$ROOT/tests/settings_files.test.js"
@@ -62,6 +77,18 @@ QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/t
 QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_displays.qml" -platform offscreen
 QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_keyed_models.qml" -platform offscreen
 QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_color_picker.qml" -platform offscreen
+QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_clock_tools.qml" -platform offscreen
+QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_clock_context.qml" -platform offscreen
+QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_notifications.qml" -platform offscreen
+QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_overview.qml" -platform offscreen
+QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_spotlight.qml" -platform offscreen
+QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_desktop_tools.qml" -platform offscreen
+QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_workspace_drag.qml" -platform offscreen
+QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_settings_responsive.qml" -platform offscreen
+QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_appearance_queue.qml" -platform offscreen
+QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_network_devices.qml" -platform offscreen
+QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_power_profiles.qml" -platform offscreen
+QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_tray.qml" -platform offscreen
 
 DIALOGS_AVAILABLE=0
 FOLDER_MODEL_AVAILABLE=0

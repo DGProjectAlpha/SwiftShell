@@ -12,6 +12,8 @@ Singleton {
     property var nativeWindow: null
     property int focusTicket: 0
     property string reason: ""
+    property string pendingControl:""
+    function requestControl(id,category) {pendingControl=id;SettingsStore.setSettingsCategory(category);show()}
 
     signal windowActionRequested(string action)
     signal appearanceEditRequested(string key, real value)

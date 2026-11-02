@@ -1,6 +1,6 @@
 # Architecture
 
-SwiftShell's M0/M1 prototype is a Quickshell configuration that draws one transparent bar. It is launched from this repository and does not replace Noctalia or edit the Hyprland configuration.
+SwiftShell is a Quickshell desktop layer with independent per-output bars, native Settings, Spotlight, notifications and workspace overview. Services own system integration; surfaces share theme tokens. Development does not replace Noctalia or rewrite user-authored Hyprland configuration.
 
 ## Boundaries
 
@@ -18,27 +18,33 @@ UI files read service snapshots and theme tokens. They do not call `hyprctl` and
 
 ```text
 shell/shell.qml
-  BarHost
-    one PanelWindow per matching screen
-      WorkspaceIndicators
-      FocusedTitle
-      ClockModule
-      ControlIndicator
-      PopoverHost
-        CalendarPanel
-        ControlCenterPanel
-          AudioSection
-  SettingsStore
-  HyprlandModel
+  BarHost -> per-output BarWindow -> module controls and PopoverHost
+    Clock / Audio / Network / Power / Notifications / module customization
+  LauncherWindow -> app grid and desktop search providers
+  OverviewWindow -> workspace cards -> locally rendered window previews
+  SettingsModel -> native floating SettingsWindow
+  NotificationHost (only when notification ownership is enabled)
+  WallpaperHost and shared service adapters
 ```
 
 ## Theme
 
-`Theme.qml` is a QML singleton. Every bar and panel color, size, and duration comes from it. The bar is 28 logical pixels tall. Logical pixels are Quickshell's coordinate system; the prototype does not multiply sizes by `devicePixelRatio`. Text uses the application font so a missing family does not fail the load. The bar color is fully transparent. `appearance.topGradient` defaults to false. When it is true, a vertical fade is drawn inside that 28px window only. It is not a second surface and it does not extend into the wallpaper below the bar.
+Theme provides shared typography, spacing, rounded surfaces, hover/selection,
+shadows and reduced-motion tokens. Settings, Spotlight and dedicated bar panels
+use the same floater material. Native BackdropEffect regions follow each painted
+card rather than its transparent shadow. SurfaceService probes actual protocol
+and compositor capability; unsupported systems keep a readable fallback.
 
-Panel color, opacity, radius, shadow, type size, icon scale, and motion come from `appearance` in the settings file. `shell/logic/palette.js` resolves `dark` and `light`. `tint: "wallpaper"` stores the request and keeps the neutral palette. The provider returns `adaptive: false` and the sentence "Wallpaper tint is not sampled yet." Nothing in this milestone reads the wallpaper.
+DesktopAppearance owns reversible runtime radius, border width and blur-profile
+preferences. These affect compositor defaults; explicit app rules can override
+them. Font, spacing, tint, opacity and shadow controls style SwiftShell surfaces.
+No user Lua is rewritten. See decision 0039 for journal/recovery details.
 
-Active workspace state is a brighter weight plus a 1px mark. Inactive text is muted. Urgent workspaces use the primary text color and stay monochrome.
+ColorAnalysis asynchronously samples the chosen wallpaper file's displayed crop
+with Qt image decoding (PNG/JPEG/WebP). A bounded PNG fallback works without the
+optional Python Qt decoder. Foregrounds account for per-output bar material and
+regional luminance; a neutral readability fade handles mixed/unknown backgrounds.
+No screen or application pixels are captured for normal contrast decisions.
 
 ## Monitors and scale
 
@@ -60,88 +66,52 @@ If the Hyprland socket is absent, the indicators render inactive and clicks log 
 
 ## Panels
 
-Each bar owns one `PopoverHost`, an independent transparent `PanelWindow` on
-`WlrLayer.Overlay` with namespace `swiftshell-popover`. Calendar, control center
-and module customization replace one another on that monitor. Content is measured
-before mapping; screen-local margins account for the shadow inset and clamp the
-painted card to available space. Tall content scrolls inside a bounded viewport.
+Each bar owns one PopoverHost overlay layer. Date opens Calendar; time opens
+Clock. Clock also provides analogue/digital views, deadline-based countdown and
+stopwatch/laps. ClockService owns atomic tool state and uses the existing desktop
+notification owner for completion, without taking over notification service.
 
-The surface uses the same theme, real `RectangularShadow`, rounded
-`BackdropEffect` and neutral controls as Settings. Each layer owns its background
-effect; no global compositor rule is inserted. Unsupported effects retain readable
-translucent/opaque surfaces. See decisions 0032–0035 for current capability evidence;
-older Quickshell 0.2 fallback notes are historical, not a native blur claim.
+Audio/playback, Network & Devices, Power and module customization are dedicated
+panels. The legacy saved module identifier control now renders the Audio widget.
+New network/power modules participate in the existing visibility/order settings.
+NetworkManager and BlueZ own devices; power-profiles-daemon owns actual modes.
+Missing capabilities have explanatory disabled states.
 
-While visible, the layer requests exclusive keyboard focus. `HyprlandFocusGrab`
-handles outside clicks; Escape releases focus and hides immediately. Opening
-Settings or Spotlight closes bar panels first. Opening motion respects reduced
-motion. Geometry diagnostics use screen origin plus layer margins, not unreliable
-QWindow coordinates; native tests cross-check against Hyprland's observed layers.
-Module and workspace repeaters use keyed models so ordinary role updates retain
-live controls rather than destroying/recreating them.
+Content is measured before mapping and tall content scrolls inside a bounded
+viewport. Rounded input includes only the card, excluding the shadow. The focus
+grab permits the panel and its bar, allowing one-click widget/view switches;
+outside clicks, Escape, Settings and Spotlight release it. Native layer geometry
+is checked against Hyprland observations on both scales. Genuine blur and shared
+RectangularShadow require supported compositor/Qt APIs, not an opaque imitation.
 
-The bar's layer is `WlrLayer.Top` and its keyboard focus is `WlrKeyboardFocus.None`. Qt's Wayland text-input client still enables and disables the text-input protocol when an item gains or loses active focus. The logged line `Trying to disable ... but 0x0 is focused` is that client talking to a null keyboard-focus surface. The layer surface is not the text-input focus, and an outside click drops the grab before Qt runs the disable. The shell does not filter the message. Whether it still appears after this focus order is a hardware check.
-
-Open animation is 180ms and close is 120ms at motion scale 1, with a 4px move and an opacity fade. `appearance.reducedMotion` or a motion scale of 0 skips the fade and sets the finished phase immediately. A close that starts while the surface opacity is still 0 also finishes immediately, so an opening panel cannot remain in `closing` with no animation left to complete. A finish signal is applied only when the phase and the opacity agree, so a stale finish cannot hide a panel that has been reopened. Hover color changes take 80ms unless motion is reduced.
-
-The calendar and control center roots are `Item`s. `Column`, `Row`, `Grid`, `Flow`, `Loader`, and `Text` calculate `implicitWidth` and `implicitHeight`, and assigning either property is a startup error. The item publishes the panel size; the column inside it is given that width and lays out the controls. A `Loader` is left to adopt the loaded item's implicit size. Day cells are text. They do not pretend to select an event. The calendar highlights today with weight and a 1px mark, and moves by month. "Today" returns to the clock's month. Week numbers are ISO weeks and stay hidden until the panel's week-number control turns them on. The first column follows `clock.weekStart`: `locale` uses `Qt.locale().firstDayOfWeek`, and `monday` or `sunday` override it.
-
-The control center's audio section is the default PipeWire sink and, when PipeWire reports one, the default source. `AudioSection.qml` binds those nodes with `PwObjectTracker` and writes `audio.volume` and `audio.muted`. Raising the volume above zero unmutes. Application streams are the audio nodes PipeWire marks as streams, capped at six, and a stream slider writes that node's volume. Choosing another output sets `preferredDefaultAudioSink` only after PipeWire is ready and the node is in the sink list. A missing PipeWire module or sink leaves the row labeled Unavailable. Media uses `Mpris.players`. Play, pause, next, and previous run only when that player says the action is allowed. The tray lists `SystemTray.items` that can be activated or that have a menu. An item that is menu-only and has no menu is not shown. A missing MPRIS or tray module stays inside its loader and is labeled Unavailable. Network and brightness stay labeled unavailable: this Quickshell floor has no NetworkManager type and no backlight call, so there is no scan and no software dimming. Bluetooth lists devices BlueZ already knows and can connect, disconnect, pair, cancel, or forget them. It does not start a scan. Battery reads UPower's display device when that device is ready. Lock, suspend, restart, and shut down use the same confirmed `loginctl` path as Spotlight. Do not disturb is a saved preference. Critical banners still show when SwiftShell owns notifications. It does not own them until Settings asks a second time. The notification server is created only after that confirmation. If creation fails, the current owner is left alone. A preview card on the page is labeled Preview and does not take the bus. Notification bodies are not written to the log. The Settings button opens the settings window. Dark, light, motion, and the top gradient are real preference writes. The bar can show Media and Tray. Both take no width until a player or an actionable tray icon exists.
+TrayModule uses the actual StatusNotifier ObjectModel with native object roles,
+without a fixed item cap. Left/right/middle/wheel and keyboard menus reach the
+application's published functions. The background bar context handler sits below
+module controls. Root UseQApplication enables native QsMenuAnchor menus; a native
+open/Escape audit covers the startup prerequisite.
 
 ## Settings
 
-Preferences live in `$XDG_CONFIG_HOME/swiftshell/settings.json`, which is `~/.config/swiftshell/settings.json` when `XDG_CONFIG_HOME` is unset. That directory is separate from `~/.config/quickshell` and from Noctalia.
+Settings is a real floating toplevel with native move/edge/corner resize,
+maximize/restore, scoped minimize/reactivation, and saved size/position. Wide
+Appearance layouts reflow into two columns; compact layouts stack controls and
+navigation collapses. Geometry initializes once, avoiding live persisted-size
+bindings that can resize a mapped window unexpectedly.
 
-`scripts/launch.sh` creates the directory and copies `shell/config/defaults.json` only when the file is missing. `SettingsStore` is a Quickshell `Singleton` and loads the file with `FileView` and `JsonAdapter`. `atomicWrites` stays enabled. A missing or unreadable file keeps the built-in defaults and does not overwrite an existing file. Unknown JSON keys are not preserved across a later adapter write. The settings schema is the whole file. Missing `appearance` or calendar keys keep the defaults.
+Pages share controls and central service models. Workspaces has friendly monitor
+selection, automatic/custom lists and handle drag ordering with a keyboard
+alternative. Spotlight Search saves All/Favorites/Recent as the opening view.
+Default Applications uses installed desktop entries and XDG associations; terminal
+and unsupported calendar roles are explicitly shell preferences. Network & Devices
+includes Bluetooth; the old bluetooth category remains a compatibility alias.
 
-Schema version 3 is the current file. Versions 1 and 2 migrate. Version 3 is kept. Any other version is an error and the file is left as it is. A readable older file, or a readable file with no version, is backed up to `settings.json.bak-swiftshell` and then saved as version 3. The backup is the original file text, written with `FileView.setText`. It is not passed through `JsonAdapter`. An existing backup that already restores to a settings object is left in place, including an older backup that stored the text under a `document` string. `swiftshell rollback-settings` unwraps that string when it is the whole file. Unknown keys from the original object are kept in `extensionsJson` on the migrated file and remain in the backup bytes. A file that is not JSON is not migrated and is not rewritten. Copy the file aside before the first launch of this version if you need the original key layout as well as the backup. A version 3 file that has no `wallpaper` object keeps the wallpaper defaults the next time a value is written. Missing keys are not a new schema version.
-
-`shell/logic/settings.js` is the validation contract. The settings window is `shell/settings/SettingsWindow.qml`, a Quickshell `FloatingWindow` created by a `Loader` while `SettingsModel.open` is true. It is not a `PanelWindow`. Spotlight's Settings row and the control center's Settings button both call `SettingsModel.show()`. A second request raises the same window. Escape and the compositor close path remember the size and close it. The pages that exist are Appearance, Top bar, Wallpaper, Displays, Shortcuts, and Audio. Search covers the controls on those pages: theme, text size and weight, density, panel opacity, corner radius, shadow opacity and softness, icon scale, motion scale, reduced motion, high contrast, the top gradient, bar height and modules, the wallpaper path, fit, and per-output override, the display preview, and the preferred chords. Wallpaper tint is labeled not sampled. Backdrop blur is labeled unavailable. Undo restores the previous appearance values for this open window. Reset restores the appearance defaults and can itself be undone. Both write the settings file. The shortcut page stores preferred chords and does not install them. The audio page shows the same PipeWire, player, and tray controls as the control center. A window narrower than 720 logical pixels stacks the actions above the page. A running shell still reloads the JSON file because `watchChanges` is on. `bar.workspaceIds` accepts a JSON array or a QML `list<int>`. Both have `length` and indexes. `Array.isArray` is false for the QML list, and that used to warn `bar.workspaceIds` for a valid `[4, 5, 6]`. An empty list is valid and means the live ids described above. A non-empty list is valid only when every entry is an integer id, the length is at most 12, and there are no duplicates. A bad list still reports `bar.workspaceIds` and is not treated as clean. Strings such as `"6"` stay invalid. The repaired copy is the valid ids from that list, or an empty list when none remain. `bar.targetMonitor` accepts any string. Blank text is automatic. A non-string is reported and repaired to automatic.
-
-| Key | Default | Effect |
-|---|---|---|
-| `clock.use24Hour` | `true` | `09:04` or `9:04 AM` |
-| `clock.showWeekNumbers` | `false` | ISO week numbers in the calendar |
-| `clock.weekStart` | `locale` | `locale`, `monday`, or `sunday` |
-| `bar.targetMonitor` | `""` | Empty follows the focused monitor, then the first screen. A connector name or Hyprland description pins the bar |
-| `bar.workspaceIds` | `[]` | Empty follows live ids on the bar's monitor. A non-empty list is the indicator order, maximum 12 ids |
-| `bar.workspaceDispatch` | `auto` | `auto`, `lua`, or `legacy` workspace IPC |
-| `bar.showFocusedTitle` | `true` | Hides the center title when false |
-| `bar.reserveSpace` | `true` | When true, reserves the bar height. `false` is the overlay used beside Noctalia |
-| `appearance.mode` | `dark` | `dark` or `light` text and panel palette |
-| `appearance.tint` | `neutral` | `wallpaper` is stored and not sampled |
-| `appearance.panelOpacity` | `0.92` | Scrim strength, clamped from 0.72 to 0.96 |
-| `appearance.panelBlur` | `1` | Stored only. It does not enable blur on the Quickshell 0.2 floor |
-| `appearance.topGradient` | `false` | Faint fade inside the bar window |
-| `appearance.reducedMotion` | `false` | Removes panel and hover animation |
-| `appearance.motionScale` | `1` | Scales the 180ms / 120ms / 80ms durations, from 0 to 1 |
-| `launcher.pinnedIds` | `[]` | Desktop ids shown first in an empty launcher query. Maximum 12. |
-| `settingsWindow.width` | `900` | Last settings window width, from 640 to 1600 logical px |
-| `settingsWindow.height` | `620` | Last settings window height, from 440 to 1200 logical px |
-| `settingsWindow.category` | `appearance` | `appearance`, `bar`, `wallpaper`, `displays`, `shortcuts`, `audio`, `network`, `bluetooth`, `power`, or `notifications` |
-| `notifications.ownership` | `off` | `on` tries to create a notification server. `off` does not |
-| `notifications.dnd` | `false` | When ownership is on, non-critical banners wait in history |
-| `notifications.policiesJson` | `{}` | Desktop id to `show`, `quiet`, or `hide`. `hide` drops the notification. `quiet` keeps it in history unless it is critical |
-| `wallpaper.enabled` | `true` | Draws one background layer per output. `false` removes those layers and does not stop another wallpaper program |
-| `wallpaper.fit` | `cover` | `cover` crops to fill. `contain` shows the whole picture on black |
-| `wallpaper.path` | `""` | Empty uses the packaged crimson image. A png, jpeg, or webp path is used as written |
-| `wallpaper.outputsJson` | `{}` | JSON object of output name to image path. An empty path removes that output's override |
-| `wallpaper.slideshow` | `false` | When true, and at least one slide path is valid, the background advances through that list |
-| `wallpaper.intervalMinutes` | `30` | Minutes between slides, from 1 to 720. The scheduler waits at least one minute |
-| `wallpaper.order` | `sequential` | `sequential` or `shuffle`. Shuffle does not show the current image again while another remains |
-| `wallpaper.transitionMs` | `400` | Crossfade length, from 0 to 1000. Reduced motion uses 0 |
-| `wallpaper.slidesJson` | `[]` | JSON array of image paths, at most 64 |
-| `appearance.automaticText` | `false` | When true, a png's top edge chooses light or dark text. Jpeg and webp are not sampled |
-| `appearance.automaticGradient` | `false` | When true, a split or low-contrast top edge draws the bar fade |
-| `appearance.contrast` | `standard` | `standard` or `high`. High uses black or white text. A manual hex still wins, and automatic text still follows a png sample |
-| `appearance.manualText` | `""` | `#rrggbb` used when automatic text is off. Empty keeps the theme text |
-| `appearance.manualMuted` | `""` | `#rrggbb` muted text. Empty keeps the theme |
-| `appearance.manualPanel` | `""` | `#rrggbb` panel. Empty keeps the theme |
-| `appearance.manualGradient` | `""` | `#rrggbb` fade color. Empty keeps the theme, or the sampled accent when automatic fade is on |
-| `shortcutsJson` | `{}` | JSON object of `spotlight`, `settings`, and `control` to a chord. Saving it does not install a compositor bind |
-| `extensionsJson` | `{}` | JSON object text for keys the validator does not own, capped at 4096 characters |
-
-`reserveSpace` defaults on for a new settings file. `PanelWindow` would otherwise use `ExclusionMode.Auto` and reserve space on its own. Overlay mode (`false`) assigns only `ExclusionMode.Ignore`. Quickshell's Wayland binding then publishes exclusive zone `-1`, which does not push windows. Reservation assigns the logical bar height and `ExclusionMode.Normal`. Quickshell converts that height to native pixels on commit, including on the 1.5 scale HDMI-A-1 output, so the shell does not multiply by scale itself. Writing `exclusiveZone` to the same number it already holds does not call the setter. After an overlay period the stored height is often unchanged, so the window also assigns `Normal` or the bar would stay an overlay. Tiled and maximized windows should then keep out of that strip. The layer stays `WlrLayer.Top`, which Hyprland draws under true fullscreen, so fullscreen clients still cover the bar. This tree does not change Hyprland's fullscreen rules. The zone is applied when the bar is created, when the height changes, and when the setting changes. An existing settings file that already says `false` is left as an overlay. Use that while Noctalia is also drawing on the output. The reserved strip has not been measured on the session yet.
+Preferences use a raw watched FileView, validation and a JsonAdapter model.
+A fixed stdin-fed Python helper performs private, fsynced atomic writes. Changes
+coalesce and saving remains active until the latest snapshot is on disk. No file
+content reaches live controls before validation. Own watcher events are ignored
+using persisted/in-flight fingerprints. Malformed/future files and invalid
+recovery journals are protected. Existing settings and extension data migrate
+with backups; see decision 0039 and the native external-edit regressions.
 
 ## Notifications
 
@@ -163,25 +133,43 @@ Automatic text and the automatic fade read png samples from the image region act
 
 ## Displays
 
-The Displays page draws one rectangle per connected screen. Dragging, or Alt+H/J/K/L while the diagram is focused, moves that rectangle in the preview. Edges within 40 logical pixels snap. Overlap is named. The last enabled output cannot be turned off in the preview. If every reported position is the origin, the preview lays the outputs in a row and says so. The current width, height, scale, and refresh are shown when the compositor reported them. Another mode, rotation, or HDR switch is not offered. Apply is disabled. The sentence on the page is the reason: this floor has no verified layout call, so nothing is sent. The preview is not written to Hyprland and is not kept as a display configuration.
+Displays stages actual discovered monitor modes, refresh rates, scale,
+orientation, enable state and logical positions. Dragging changes position while
+preserving representation dimensions. Apply starts an independent recovery
+watchdog; Keep commits and Revert/timeout restores. Confirmed owned layouts can
+be restored explicitly. User Hyprland Lua remains untouched. Native transaction
+and crash-recovery evidence is in decision 0031 and testing.md; physical hotplug
+remains a separate hardware checklist item.
 
 ## Shortcuts
 
-The Shortcuts page lists Spotlight, Settings, and the control center. Record listens for one chord. Enter stores it in `shortcutsJson`. Escape cancels. A chord already used by another of those three actions is refused. Clear removes that action's chord. The page says the save does not install the chord, and that compositor binds are not read and are not changed. Super+Space stays on the handoff in `docs/launcher-shortcut.md`. Nothing in this page writes a bind file.
+Shortcuts shows effective Hyprland bindings and a curated managed action
+catalog. Recording uses the supported ShortcutInhibitor and waits for confirmed
+inhibition before accepting a chord. Physical-keycode collisions are checked.
+Managed hl.bind handles can be applied, changed, removed and undone; owned state
+reapplies at startup/config reload. Existing opaque Lua callbacks remain read-only
+because their original actions cannot be safely reconstructed from IPC. No user
+bind file or unrelated handle is changed. Decision 0038 documents the boundary.
 
 ## Launcher
 
-The Search control on the bar closes any open panel and asks `LauncherModel` to open `LauncherWindow`. `scripts/request-launcher.sh` and `swiftshell request-launcher` call the selected shell’s typed IPC launcher toggle. Missing instances return an error. The old watched JSON-token channel remains only for compatibility. Neither command edits Hyprland or starts a second process. Super+Space is documented in `docs/launcher-shortcut.md` and is not changed by this repository.
+Spotlight resolves the focused output at invocation and keeps keyboard focus
+in a large search field. Empty input shows the saved All/Favorites/Recent opening
+view. Installed apps are a scrollable icon grid; favorite context actions and
+drag/keyboard ordering persist desktop IDs, retaining temporarily missing apps.
+A mode switch while open does not overwrite the preferred opening view.
 
-Both paths resolve the screen when the request happens. The match is `Hyprland.focusedMonitor` against the Quickshell screen's name, Hyprland connector name, or Hyprland description. The bar's screen is not the target. If that focused monitor cannot be read, the first connected screen is used. The card stays on the screen chosen at open. A focus change while it remains open does not move it. If that screen leaves `Quickshell.screens`, the launcher closes.
+Local providers rank applications/settings, safely parse calculations and common
+unit conversions, and recognize URLs. A labeled Google fallback opens only on
+activation through the default browser, with no network queries while typing.
+Applications launch through parsed DesktopEntry.execute, never a shell query.
+The Settings/Lock/Suspend/Restart/Shutdown icon strip uses verified fixed commands;
+power actions require confirmation. Dangerous actions were not executed in tests.
 
-`LauncherModel` reads `DesktopEntries.applications.values` at startup, whenever `applicationsChanged` fires, and again when the launcher opens. Current Quickshell posts the scan result to the event loop, so the first read can be empty. That read is not treated as the catalog. A later signal replaces it. The list is kept after the launcher closes so the next open is not forced through an empty copy. Keystrokes search the snapshot. They do not scan desktop files. Results come from `shell/logic/launcher.js`: exact name, prefix, word prefix, substring, then a short fuzzy subsequence. The desktop id is scored under the name, so `dolphin` matches `org.kde.dolphin` and `helium` matches the Helium id. Name matches outrank id, generic name, comment, keywords, and categories. Equal scores sort by name, then id. There is no file, calculation, or settings-search provider.
-
-An empty query shows pinned ids from `launcher.pinnedIds`, then up to eight recent ids, then up to twelve other applications in name order, then Settings and the power rows. The twelve-row grid is not the search set. Recent ids are recorded only after a launch from this launcher. They are desktop ids in the state file, not commands and not window titles. Settings closes the launcher and opens the settings window. Power rows are Lock, Suspend, Restart, and Shut down. The first Enter or click arms confirmation. A different row arms that row instead of running the previous one. The second confirmation runs a fixed `loginctl` argument list. The search text is not one of those arguments. If the call throws, the launcher stays open and shows a short notice.
-
-Launch uses `DesktopEntry.execute()`. That is Quickshell's parsed `command` list plus the entry's working directory. `execString` is not passed to a shell. Quickshell 0.2's `execute()` ignores the terminal flag and field codes; the log says so when a terminal entry is launched. Lookup tries the id and the same id with or without a `.desktop` suffix, because Quickshell's id is the file basename. Icons use `Quickshell.iconPath(name, true)` for theme names and the path itself when it is absolute. The image keeps its aspect ratio. A missing icon or a failed load is a one-letter monogram.
-
-The window is layer `Overlay` only so the search field sits above other windows while it is open. It uses `ExclusionMode.Ignore`, so it does not reserve the screen. The card is centered on the chosen screen in logical pixels. Its width is at most 480 and stays at least 48 logical pixels in from each side. Its height follows the field, status lines, and result rows, and it stops 24 logical pixels short of the screen edges. The search field stays above the result list, so scrolling does not move it. Long lists scroll inside the card. The card fades in over `Theme.motionOpen` unless reduced motion or a motion scale of 0 makes that duration 0. Closing hides the window immediately. Keyboard focus is `Exclusive` while the window is visible and `None` after it closes. Hiding the window clears the field and the focus grab. If the screen is gone while the launcher is open, it closes rather than leaving the grab up. Focus on the text field is requested on the next frame, and once more if that frame did not focus it. Escape on the field or the window, a click on the dim area around the card, and a cleared focus grab all close it. Tab and Shift+Tab move the selection and keep the selected row inside the list. Alt+J and Alt+K do the same. Bare letters stay in the search field. Quickshell 0.2 has no panel blur here, so the card is the theme scrim only.
+The layer owns a rounded backdrop region and shared shadow. Escape, outside
+click, repeated invocation and monitor loss close safely. Actual Super+Space,
+calculator input, favorites/context/drag and Settings handoff have native tests on
+both scales. See decision 0037 for provider and privacy limits.
 
 ## Process identity
 
@@ -198,3 +186,64 @@ Test-only: Node for `tests/logic.test.js`, Python 3 for `tests/static_check.py`,
 ## Decision
 
 The safe preview behavior is recorded in `docs/decisions/0001-m0-m1-boundaries.md`. The install boundaries are recorded in `docs/decisions/0002-install-boundaries.md`. The original panel boundaries are recorded in `docs/decisions/0003-m2-panels.md`. The color, blur, anchor, and popup-phase corrections are recorded in `docs/decisions/0004-m2-stability.md`.
+
+
+## Notification and overview lifecycle
+
+NotificationsModel is a bounded reducer-backed in-memory store. NotificationHost
+owns protocol objects and uses the installed Quickshell millisecond timeout API;
+archiving a banner retains actions, while client close invalidates them. Model
+signals route dismiss/actions to the host; snooze deadlines and persisted pause
+preferences use a timer only while pending. Native/local Clock entries share the
+same drawer. Local action metadata remains bounded alongside history; no content
+is persisted or logged. Banner height is capped to the output with scrolling.
+
+OverviewService reads live Hyprland toplevel geometry and bridges native foreign
+handles to ScreencopyView. Captures exist only on local GPU surfaces while open,
+with a truthful fallback when a frame is unavailable. No screenshot files are used.
+Focus uses the native handle, with validated address dispatch for missing handles.
+The overviewctl adapter replaces only a source-verified built-in Alt+Tab chord,
+records recovery before mutation and falls back to cycling if shell IPC is absent.
+
+Per-output bar layout is additive validated v3 data: edge, extra content scale,
+module order and groups. Visibility remains independently inherited. Logical
+layout scales the complete control surface, vertical rails stack modules and
+popovers open inward from the selected edge. Reservation changes coalesce after
+orientation dimensions settle. Wallpaper analysis samples that output's actual
+edge/thickness, including the bounded PNG fallback.
+
+DesktopTools provides opt-in event-driven clipboard sampling and typed screenshot
+operations. Clipboard text never enters ordinary launcher ranking: only an explicit
+clip prefix searches bounded session memory, and a deadline removes expired items.
+The helper refuses sensitive MIME hints and bounds input. Screenshots invoke fixed
+argv, validate output connectors/region geometry, close shell overlays before
+capture, and pipe PNG directly to wl-copy without writing files. Source disappearance,
+missing tools and cancellation have truthful outcomes. No launcher query becomes
+shell code. Settings links retain a pending control until the native page is mapped.
+
+
+## Notification policy and optional media
+
+The notification reducer reapplies policy to live/local entries during configuration
+changes, without replaying history. Overnight schedule calculation is pure logic;
+the service wakes at local minute boundaries only while scheduled quiet hours are
+enabled. Snoozes and timed pauses use a single next-deadline timer, not a poll.
+
+Native image and inline-reply metadata is copied into bounded records. Images use
+local/native image providers only; plain text is used for labels/actions. The host
+routes replies through `Notification.sendInlineReply` while the source is alive.
+Keyed banner/group/card models preserve input focus and drafts across updates;
+popover scrolling keeps the active field visible when content grows. Default
+critical messages persist and can displace an ordinary visible banner into history.
+
+`NotificationSound.qml` is loaded dynamically when enabled, leaving QtMultimedia
+optional. It uses the bundled generated PCM tone, the default output device and
+its own configured volume. New banners can sound; silent hints, quiet policy,
+replacements and a short cooldown prevent repeated playback. Qt availability and
+actual output readiness are separate observable states. No service takes over or
+changes PipeWire's system volume/device preferences.
+
+Banner blur and input regions combine up to four rounded material rectangles and
+intersect the scroll viewport. Transparent shadow margins and inter-card gaps are
+excluded. Native replacement-property refreshes are deferred/coalesced per object
+before closing or evicting a source, in accordance with its native update lifetime.

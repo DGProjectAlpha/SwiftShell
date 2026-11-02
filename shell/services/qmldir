@@ -8,3 +8,17 @@ singleton NotificationsModel 1.0 NotificationsModel.qml
 singleton DisplayService 1.0 DisplayService.qml
 singleton WindowService 1.0 WindowService.qml
 singleton SurfaceService 1.0 SurfaceService.qml
+
+singleton DesktopAppearance 1.0 DesktopAppearance.qml
+
+singleton ClockService 1.0 ClockService.qml
+singleton DefaultAppsService 1.0 DefaultAppsService.qml
+
+singleton ShortcutsService 1.0 ShortcutsService.qml
+
+singleton NetworkService 1.0 NetworkService.qml
+singleton PowerProfiles 1.0 PowerProfiles.qml
+
+singleton OverviewService 1.0 OverviewService.qml
+
+singleton DesktopTools 1.0 DesktopTools.qml

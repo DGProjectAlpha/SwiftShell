@@ -67,9 +67,10 @@ Item {
             revealRequested(item.y, item.height)
     }
 
-    Column {
+    Flow {
         id: column
         width: page.width
+        readonly property real cellWidth:width>=900 ? (width-Theme.settingsSpacing)/2 : width
         spacing: Theme.settingsSpacing
 
         Text {
@@ -122,13 +123,13 @@ Item {
             }
         }
 
-        SectionHeader { text:"Interface"; visible:page.query === "" }
+        SectionHeader { width:column.width;text:"Interface"; visible:page.query === "" }
 
         SettingsRow {
             controlId: "mode"
             visible: page.shows("mode")
             marked: page.marked("mode")
-            width: parent.width
+            width: column.cellWidth
             label: "Theme"
 
             Row {
@@ -152,7 +153,7 @@ Item {
             controlId: "fontSize"
             visible: page.shows("fontSize")
             marked: page.marked("fontSize")
-            width: parent.width
+            width: column.cellWidth
             label: "Text size"
 
             Row {
@@ -178,7 +179,7 @@ Item {
             controlId: "fontWeight"
             visible: page.shows("fontWeight")
             marked: page.marked("fontWeight")
-            width: parent.width
+            width: column.cellWidth
             label: "Text weight"
 
             Row {
@@ -202,7 +203,7 @@ Item {
             controlId: "density"
             visible: page.shows("density")
             marked: page.marked("density")
-            width: parent.width
+            width: column.cellWidth
             label: "Density"
 
             Row {
@@ -227,13 +228,13 @@ Item {
             }
         }
 
-        SectionHeader { text:"Surfaces"; visible:page.query === "" }
+        SectionHeader { width:column.width;text:"Surfaces"; visible:page.query === "" }
 
         SettingsRow {
             controlId: "panelOpacity"
             visible: page.shows("panelOpacity")
             marked: page.marked("panelOpacity")
-            width: parent.width
+            width: column.cellWidth
             label: "Surface opacity"
 
             CompactSlider {
@@ -247,7 +248,7 @@ Item {
             controlId: "radius"
             visible: page.shows("radius")
             marked: page.marked("radius")
-            width: parent.width
+            width: column.cellWidth
             label: "Corner radius"
 
             CompactSlider {
@@ -262,7 +263,7 @@ Item {
             enabled: SettingsModel.shadowAvailable
             visible: page.shows("shadowOpacity")
             marked: page.marked("shadowOpacity")
-            width: parent.width
+            width: column.cellWidth
             label: "Shadow opacity"
 
             CompactSlider {
@@ -277,7 +278,7 @@ Item {
             enabled: SettingsModel.shadowAvailable
             visible: page.shows("shadowSoftness")
             marked: page.marked("shadowSoftness")
-            width: parent.width
+            width: column.cellWidth
             label: "Shadow softness"
 
             CompactSlider {
@@ -294,13 +295,13 @@ Item {
             color:Theme.settingsMuted;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall
         }
 
-        SectionHeader { text:"Motion & readability"; visible:page.query === "" }
+        SectionHeader { width:column.width;text:"Motion & readability"; visible:page.query === "" }
 
         SettingsRow {
             controlId: "iconScale"
             visible: page.shows("iconScale")
             marked: page.marked("iconScale")
-            width: parent.width
+            width: column.cellWidth
             label: "Icon scale"
 
             CompactSlider {
@@ -314,7 +315,7 @@ Item {
             controlId: "motionScale"
             visible: page.shows("motionScale")
             marked: page.marked("motionScale")
-            width: parent.width
+            width: column.cellWidth
             label: "Animation speed"
 
             Column {
@@ -339,6 +340,7 @@ Item {
         }
 
         SettingsToggle {
+            width:column.cellWidth
             controlId: "textContrast"
             visible: page.shows("textContrast")
             marked: page.marked("textContrast")
@@ -348,6 +350,7 @@ Item {
         }
 
         SettingsToggle {
+            width:column.cellWidth
             controlId: "reducedMotion"
             visible: page.shows("reducedMotion")
             marked: page.marked("reducedMotion")
@@ -357,6 +360,7 @@ Item {
         }
 
         SettingsToggle {
+            width:column.cellWidth
             controlId: "topGradient"
             visible: page.shows("topGradient")
             marked: page.marked("topGradient")
@@ -365,18 +369,78 @@ Item {
             onToggled: function (next) { page.edited({ topGradient: next }) }
         }
 
+        SectionHeader {width:column.width;text:"Application windows";visible:page.shows("windowBorders")}
         SettingsToggle {
+            width:column.cellWidth
+            controlId:"windowBorders"
+            visible:page.shows("windowBorders")
+            label:"Window borders"
+            enabled:DesktopAppearance.available
+            checked:DesktopAppearance.observed.border>0
+            onToggled:function(next){DesktopAppearance.request("apply",{border:next ? DesktopAppearance.lastBorderWidth : 0})}
+        }
+        SettingsRow {
+            width:column.cellWidth
+            visible:page.shows("windowBorders")
+            label:"Border width"
+            ChoiceBox {
+                width:160
+                enabled:DesktopAppearance.available
+                choices:[{label:"None",value:0},{label:"1 pixel",value:1},{label:"2 pixels",value:2},{label:"3 pixels",value:3},{label:"4 pixels",value:4},{label:"6 pixels",value:6},{label:"8 pixels",value:8}]
+                selectedValue:DesktopAppearance.observed.border
+                onChosen:function(value){DesktopAppearance.request("apply",{border:value})}
+            }
+        }
+        Text {
+            width:column.width;wrapMode:Text.WordWrap
+            visible:page.shows("windowBorders")
+            text:"Applies to active and inactive application windows. Individual window rules may override these defaults."
+            color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall
+        }
+        SettingsToggle {
+            width:column.cellWidth
+            controlId:"automaticText"
+            visible:page.shows("automaticText")
+            label:"Adaptive bar contrast"
+            checked:SettingsStore.automaticText
+            onToggled:function(next){page.edited({automaticText:next})}
+        }
+        SettingsToggle {
+            width:column.cellWidth
             controlId: "backdropBlur"
             visible: page.shows("backdropBlur")
             label: "Backdrop blur"
-            enabled: WindowService.blurAvailable
-            checked: WindowService.blurAvailable && SettingsStore.panelBlur > 0
-            onToggled: function(next) { page.edited({panelBlur:next ? 1 : 0}) }
+            enabled: SurfaceService.blurAvailable
+            checked: SurfaceService.blurAvailable && SettingsStore.panelBlur > 0
+            onToggled: function(next) { page.edited({panelBlur:next ? DesktopAppearance.preferredBlur() : 0}) }
+        }
+        SettingsRow {
+            controlId:"blurStrength"
+            width:column.cellWidth
+            label:"Blur strength"
+            visible:page.shows("backdropBlur")
+            enabled:DesktopAppearance.available && SettingsStore.panelBlur>0
+            CompactSlider {
+                valueName:"Desktop blur strength"
+                value:DesktopAppearance.managed.size !== undefined ? SettingsStore.panelBlur : Math.max(0,Math.min(1,((DesktopAppearance.observed.size || 1)-1)/11))
+                onMoved:function(next){page.edited({panelBlur:Math.max(.01,next)})}
+            }
+        }
+        Text {
+            width:parent.width;wrapMode:Text.WordWrap
+            visible:page.shows("backdropBlur")
+            text:DesktopAppearance.error || "Blur strength affects all compositor-blurred surfaces. Your configuration files stay unchanged."
+            color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall
+        }
+        FlatButton {
+            visible:page.shows("backdropBlur") && Object.keys(DesktopAppearance.managed).length>0
+            label:"Restore desktop appearance"
+            onActivated:DesktopAppearance.restore()
         }
         Text {
             width: parent.width
             visible: page.shows("backdropBlur")
-            text: WindowService.blurAvailable ? "Blurs the desktop behind this window." : WindowService.blurReason
+            text: SurfaceService.blurAvailable ? "Shared by Settings, Spotlight and bar panels. Desktop corners also follow your radius." : SurfaceService.reason
             color: Theme.settingsMuted
             wrapMode: Text.WordWrap
             font.family: Theme.settingsFontFamily

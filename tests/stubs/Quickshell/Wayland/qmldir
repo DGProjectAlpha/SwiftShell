@@ -1,2 +1,6 @@
 module Quickshell.Wayland
 WaylandModule 1.0 WaylandModule.qml
+
+ShortcutInhibitor 1.0 ShortcutInhibitor.qml
+
+ScreencopyView 1.0 ScreencopyView.qml

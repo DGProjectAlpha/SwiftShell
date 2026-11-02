@@ -9,13 +9,18 @@ Item {
     id: page
     property string query: ""
     property string highlightId: "workspaceOutputs"
+    property string selectedOutput: ""
+    property var activeOrder: null
+    function geometry() {return {output:currentOutput,rows:activeOrder && activeOrder.visible ? activeOrder.geometry() : []}}
+    readonly property string currentOutput: HyprlandModel.monitorChoices.some(function(m){return m.name===selectedOutput}) ? selectedOutput : (HyprlandModel.monitorChoices.length ? HyprlandModel.monitorChoices[0].name : "")
     signal revealRequested(real y, real itemHeight)
     implicitWidth: 560
     implicitHeight: column.implicitHeight
     height: implicitHeight
 
     function moveHighlight(delta) { highlightId = "workspaceOutputs"; revealRequested(0, height) }
-    function focusHighlight() { refreshButton.forceActiveFocus() }
+    function focusHighlight() {if(highlightId==="workspaceOverview")overviewOpen.forceActiveFocus();else refreshButton.forceActiveFocus()}
+    onHighlightIdChanged:if(highlightId==="workspaceOverview")revealRequested(overviewGroup.y,overviewGroup.height)
     function shows(id) { return Nav.controlVisible(query, id) }
 
     Column {
@@ -37,6 +42,30 @@ Item {
             color: Theme.settingsMuted
             font.family: Theme.settingsFontFamily
             font.pixelSize: Theme.settingsFontSizeSmall
+        }
+        Column {
+            width:parent.width;spacing:Theme.settingsSpacing
+            id:overviewGroup
+            SectionHeader {text:"Overview"}
+            SettingsToggle {
+                label:"Alt + Tab opens workspace overview"
+                checked:OverviewService.shortcutEnabled
+                enabled:OverviewService.shortcutEnabled || OverviewService.shortcutCanEnable
+                onToggled:function(value){if(value)OverviewService.enableShortcut();else OverviewService.restoreShortcut()}
+            }
+            FlatButton {id:overviewOpen;label:"Open overview";onActivated:OverviewService.openOverview()}
+            Text {
+                width:parent.width;wrapMode:Text.WordWrap
+                text:OverviewService.shortcutError || (OverviewService.shortcutEnabled ? "Choose a miniature window or desktop to switch. Turn this off to restore window cycling." : OverviewService.shortcutCanEnable ? "Alt + Tab can open a live view of your workspaces and windows." : "Your existing Alt + Tab shortcut is preserved. Open the overview here instead.")
+                color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall
+            }
+        }
+        ChoiceBox {
+            width:Math.min(parent.width,440)
+            choices:HyprlandModel.monitorChoices.map(function(m){return {value:m.name,label:m.label}})
+            selectedValue:page.currentOutput
+            Accessible.name:"Workspace screen"
+            onChosen:function(value){page.selectedOutput=value}
         }
         FlatButton {
             id: refreshButton
@@ -66,7 +95,7 @@ Item {
             font.pixelSize: Theme.settingsFontSizeSmall
         }
         Repeater {
-            model: page.shows("workspaceOutputs") ? HyprlandModel.monitorChoices : []
+            model: page.shows("workspaceOutputs") ? HyprlandModel.monitorChoices.filter(function(m){return m.name===page.currentOutput}) : []
             delegate: Column {
                 id: output
                 required property var modelData
@@ -85,10 +114,15 @@ Item {
                     if(i<0) keys.push(key);else keys.splice(i,1)
                     saveKeys(keys)
                 }
-                function move(key,delta) {
-                    const keys=currentKeys(),i=keys.indexOf(key),next=i+delta
-                    if(i<0 || next<0 || next>=keys.length) return
+                function moveTo(key,next) {
+                    const keys=currentKeys(),i=keys.indexOf(key)
+                    if(i<0 || next<0 || next>=keys.length || next===i) return
                     keys.splice(i,1);keys.splice(next,0,key);saveKeys(keys)
+                }
+                function addNext() {
+                    const keys=currentKeys();let candidate=1
+                    while(keys.indexOf(String(candidate))>=0) candidate++
+                    saveKeys(keys.concat([String(candidate)]))
                 }
                 function discovered() {
                     return HyprlandModel.liveWorkspaces.filter(function(w){return w.monitorName===modelData.name})
@@ -139,20 +173,25 @@ Item {
                         }
                     }
                 }
-                Column {
-                    width:parent.width;spacing:4;visible:!output.automatic
-                    Repeater {
-                        model:output.items
-                        delegate:Row {
-                            required property var modelData
-                            required property int index
-                            width:parent.width;spacing:6
-                            Text {width:150;height:28;verticalAlignment:Text.AlignVCenter;text:modelData.name;color:Theme.settingsText;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSize;elide:Text.ElideRight}
-                            FlatButton {label:"↑";enabled:index>0;Accessible.name:"Move " + modelData.name + " earlier";onActivated:output.move(modelData.key,-1)}
-                            FlatButton {label:"↓";enabled:index<output.items.length-1;Accessible.name:"Move " + modelData.name + " later";onActivated:output.move(modelData.key,1)}
-                            FlatButton {label:"×";Accessible.name:"Remove " + modelData.name;onActivated:output.toggle(modelData.key)}
-                        }
-                    }
+                Text {
+                    visible:!output.automatic
+                    text:"Drag the handles to arrange indicators. Alt J / K also moves a focused row."
+                    width:parent.width;wrapMode:Text.WordWrap
+                    color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall
+                }
+                WorkspaceOrderList {
+                    id:orderList
+                    Component.onCompleted:page.activeOrder=orderList
+                    Component.onDestruction:if(page.activeOrder===orderList)page.activeOrder=null
+                    width:parent.width;visible:!output.automatic
+                    entries:output.items
+                    onReordered:function(key,destination){output.moveTo(key,destination)}
+                    onRemoved:function(key){output.toggle(key)}
+                }
+                FlatButton {
+                    visible:!output.automatic
+                    label:"Add numbered workspace"
+                    onActivated:output.addNext()
                 }
                 Row {
                     width:parent.width;spacing:8;visible:!output.automatic

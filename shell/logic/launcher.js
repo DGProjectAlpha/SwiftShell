@@ -5,9 +5,9 @@ var RESULT_CAP = 24;
 
 var POWER = [
     { id: "lock", label: "Lock", argv: ["loginctl", "lock-session"] },
-    { id: "suspend", label: "Suspend", argv: ["loginctl", "suspend"] },
-    { id: "reboot", label: "Restart", argv: ["loginctl", "reboot"] },
-    { id: "poweroff", label: "Shut down", argv: ["loginctl", "poweroff"] },
+    { id: "suspend", label: "Suspend", argv: ["systemctl", "--no-ask-password", "suspend"] },
+    { id: "reboot", label: "Restart", argv: ["systemctl", "--no-ask-password", "reboot"] },
+    { id: "poweroff", label: "Shut down", argv: ["systemctl", "--no-ask-password", "poweroff"] },
 ];
 
 function asText(value) {
@@ -558,20 +558,14 @@ function iconSource(icon, lookup) {
     return resolved;
 }
 
-var POWER_VERBS = {
-    "lock-session": true,
-    suspend: true,
-    reboot: true,
-    poweroff: true,
-};
-
 function powerInvocation(confirmId, id) {
     const step = powerStep(confirmId, id);
     if (!step.run)
         return { run: false, confirmId: step.confirmId, argv: null, error: "" };
     const argv = step.argv ? step.argv.slice() : null;
-    const verb = argv && argv.length === 2 ? argv[1] : "";
-    if (!argv || argv[0] !== "loginctl" || POWER_VERBS[verb] !== true)
+    const lock = argv && argv.length === 2 && argv[0] === "loginctl" && argv[1] === "lock-session";
+    const session = argv && argv.length === 3 && argv[0] === "systemctl" && argv[1] === "--no-ask-password" && ["suspend","reboot","poweroff"].indexOf(argv[2]) >= 0;
+    if (!lock && !session)
         return { run: false, confirmId: "", argv: null, error: "Power action is not available" };
     return { run: true, confirmId: "", argv: argv, error: "" };
 }
@@ -654,7 +648,43 @@ function revealOffset(contentY, viewport, rowY, rowHeight) {
     return Math.max(0, top);
 }
 
+// The visual grid is independent of the legacy compact result list cap.
+function gridRows(apps, mode, pinnedIds, recentIds) {
+    const unique = dedupeApplications(apps);
+    if (mode === "favorites" || mode === "recent") {
+        const ids = normalizeIdList(mode === "favorites" ? pinnedIds : recentIds, mode === "favorites" ? MAX_PINS : MAX_RECENT);
+        return ids.map(function(id) { return findById(unique,id); }).filter(Boolean).map(function(app) { return appRow(app,mode === "favorites" ? "Favorite" : "Recent"); });
+    }
+    return unique.slice().sort(byName).map(function(app) { return appRow(app,"Applications"); });
+}
+function toggleFavorite(ids, id) {
+    const current = normalizeIdList(ids,MAX_PINS);
+    if (!desktopIdValid(id)) return current;
+    const index = current.indexOf(id);
+    if (index >= 0) current.splice(index,1);
+    else if (current.length < MAX_PINS) current.push(id);
+    return current;
+}
+function reorderFavorite(ids, source, target) {
+    const ordered=normalizeIdList(ids,MAX_PINS);
+    const from=ordered.indexOf(source),to=ordered.indexOf(target);
+    if(from<0 || to<0 || from===to)return ordered;
+    ordered.splice(from,1);
+    ordered.splice(to,0,source);
+    return ordered;
+}
+function gridFrame(screenWidth,screenHeight) {
+    const width = Math.max(0,Math.min(680,finite(screenWidth)-48));
+    const height = Math.max(0,Math.min(560,finite(screenHeight)-64));
+    return {x:Math.round((finite(screenWidth)-width)/2),y:Math.round((finite(screenHeight)-height)/2),width:width,height:height};
+}
+
 var swiftshellLauncher = {
+    appRow:appRow,
+    gridRows:gridRows,
+    toggleFavorite:toggleFavorite,
+    reorderFavorite:reorderFavorite,
+    gridFrame:gridFrame,
     MAX_PINS: MAX_PINS,
     MAX_RECENT: MAX_RECENT,
     GRID_CAP: GRID_CAP,

@@ -1,7 +1,2 @@
 import QtQuick
-
-QtObject {
-    enum Value {
-        Xor = 1
-    }
-}
+QtObject {enum Value {Combine,Subtract,Intersect,Xor}}
