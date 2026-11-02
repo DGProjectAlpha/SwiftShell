@@ -1015,3 +1015,55 @@ does not restart SwiftShell or modify desktop configuration. Backups of the
 affected files are in `/tmp/swiftshell-ci-repair-backup`; revert the repair
 commit to restore the previous workflow/test. GitHub validation is recorded in
 the repair PR; offscreen CI does not verify compositor behavior.
+
+## Desktop quick tools and terminal applications — 2026-11-02
+
+The complete `scripts/check.sh` passes on local Qt 6.12: static coverage includes
+108 QML documents and all 22 QML suites pass. Added Python tests cover terminal
+argument wrapping, selected-terminal failures, telemetry deltas/missing sensors,
+private screenshot cache/PNG export and clipboard window scoping/geometry. JS
+regressions cover additive per-monitor module migration, stable clipboard IDs and
+acceptance of the two new IDs by the actual popup reducer. The native bar test
+caught that last integration defect, which isolated panel tests did not cover.
+
+Native checks on Quickshell 0.3.2 / Hyprland 0.57 Lua / RTX 4070:
+
+- `tests/live/terminal-launch.py --live`: a real Terminal=true desktop entry
+  reached a terminal PTY with literal spaced/metacharacter arguments. Cachy-Update's
+  installed entry uses Terminal=true and Exec=arch-update; the updater itself was
+  not executed, and no packages or system settings were changed.
+- `performance-native.py --live`: real CPU delta/RAM and NVIDIA usage/VRAM/temps,
+  stable bar label identities and owned panel rendering on both output scales.
+  RAM temperature is not exposed by this workstation and is not fabricated.
+- `clipboard-history.py --live`: synthetic text copy through a private offscreen
+  clipboard; real floating placement/focus/blur attachment/Escape/close on both
+  displays. No desktop clipboard content was read or changed.
+- `screenshot-review.py --live`: grim captured only opaque owned checkerboard
+  pixels, preview rendered, a private clipboard sink decoded the PNG, and the real
+  native Save As dialog's accepted handler exported a valid PNG on both displays.
+  This invokes the dialog handler, not a physical pointer click on its Save button.
+- After scoped activation, `desktop-quick-tools.py --live` passed actual camera,
+  clipboard and performance bar clicks, Escape, pinned clipboard window opening/
+  closing, non-overlapping bar bounds, screenshot search and real telemetry on
+  DP-1 (scale 1) and HDMI-A-1 (scale 1.25). No screenshot capture or clipboard
+  mutation occurred in this production-session test.
+
+Owned screenshots of the screenshot review and performance surfaces were visually
+inspected under `/tmp/swiftshell-screenshot-*-review.png` and
+`/tmp/swiftshell-performance-*.png`. Final logs had no QML loading/type/binding
+errors. Existing Qt Wayland text-input diagnostics and the absent legacy launcher
+request-file warning remain visible. No Noctalia, user-authored Lua, display mode,
+autostart or unrelated service was changed. Source watching was paused during
+development and restored after activation.
+
+Clipboard history stays opt-in, text-only, session-only and bounded to 30 items/
+20 minutes. Keep open persists the floating surface until closed, not the copied
+text across a shell restart. Screenshot review caches the current PNG privately
+in the runtime directory until replaced/discarded or the login session ends.
+Interactive physical slurp selection, real desktop clipboard paste into another
+app, physical Save As selection, sustained gaming load and every third-party
+terminal remain owner acceptance checks. SwiftShell preferences before activation
+are backed up under own state `backups/20261102T234104Z-desktop-tools`; tracked
+source and `/tmp/swiftshell-desktop-tools-backup` preserve the prior implementation.
+Revert these feature commits for source recovery; hiding a new bar widget or
+disabling history does not modify compositor/session configuration.

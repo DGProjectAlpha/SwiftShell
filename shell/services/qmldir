@@ -22,3 +22,9 @@ singleton PowerProfiles 1.0 PowerProfiles.qml
 singleton OverviewService 1.0 OverviewService.qml
 
 singleton DesktopTools 1.0 DesktopTools.qml
+
+singleton SystemPerformance 1.0 SystemPerformance.qml
+
+singleton ClipboardModel 1.0 ClipboardModel.qml
+
+singleton ScreenshotService 1.0 ScreenshotService.qml

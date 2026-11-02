@@ -121,7 +121,7 @@ Item {
         SectionHeader {text:"Screenshots"}
         Text {
             width:parent.width;wrapMode:Text.WordWrap
-            text:DesktopTools.regionAvailable ? "Type ‘screenshot’ in Spotlight to select an area or capture this display. Images are copied to the clipboard; paste them into an app to save or share. Escape cancels an area selection." : "Screenshot tools are not available. Install the optional screenshot integration to enable capture."
+            text:DesktopTools.regionAvailable ? "Type ‘screenshot’ in Spotlight to select an area or capture this display. Review the capture, then copy it or save a PNG. The Screenshot bar widget opens the same tools. Escape cancels an area selection." : "Screenshot tools are not available. Install the optional screenshot integration to enable capture."
             color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall
         }
         Text {visible:DesktopTools.message!=="";width:parent.width;wrapMode:Text.WordWrap;text:DesktopTools.message;color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall}

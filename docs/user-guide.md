@@ -190,15 +190,32 @@ layout option to remove a display override.
 
 Search an open window's title or app name, or type `windows`, then select it to
 focus that window. Settings results open the matching control. Type `screenshot`
-to capture a region or the focused display to the clipboard. Paste the image into
-an app to save/share; Escape cancels region selection.
+to capture an area or the focused display, or click the camera in the bar. Review
+the image, then choose Copy PNG or Save as… for a local PNG file. Area selection
+supports Escape to cancel; optional 3/5-second delays let you prepare the screen.
+Capturing never overwrites the clipboard until you choose Copy PNG.
 
 Clipboard history is off by default. Enable it in Settings → Spotlight Search to
 remember text copied from then on. Type `clip` or `clip some text` to browse/search
 it, then Enter to copy an item. History stays in memory, expires after 20 minutes,
 and keeps at most 30 items. Turning it off or Clear history removes its entries.
+The Clipboard bar widget opens searchable history with copy, individual removal
+and Clear. Keep open gives it an independent movable/resizable floating window;
+closing that window leaves recording unchanged. Window geometry is remembered,
+but clipboard contents are never saved to disk.
 Sensitive-format hints are respected, but text without a hint can include secrets;
 leave history off when that is unsuitable. Open-window search can also be disabled.
+
+The Performance bar widget shows CPU/GPU/memory percentages. Click it for recent
+graphs, CPU/GPU temperatures, RAM usage and graphics memory. Missing sensors show
+Not reported. Sampling is shared across monitors and stops when no bar or panel
+uses it. Screenshot, Clipboard and Performance can each be hidden/reordered per
+display in Settings → Top bar.
+
+Terminal-based apps such as Cachy-Update open in the terminal selected in
+Settings → Default Apps, with an installed supported terminal as fallback when
+none is selected. Unsupported terminal launchers produce an error instead of
+silently running an interactive program without a terminal.
 
 Network & Devices now reports operations, recoverable errors and authentication
 retry state. Password entry is masked with an optional Show control. Cancel targets

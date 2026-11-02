@@ -1313,7 +1313,7 @@ test("bar exclusion can turn reservation on again and popup focus clears before 
     assert.equal(bar.barMetrics(80, 1).height, 52);
     assert.equal(bar.heightFromUnit(bar.unitFromHeight(28)), 28);
     assert.equal(bar.exclusionUpdate(true, tall.height, 28).zone, 52);
-    assert.deepEqual(bar.visibleModules(bar.BAR_MODULES, ["clock"]), ["workspaces", "title", "search", "control", "media", "tray", "battery", "network", "power", "notifications"]);
+    assert.deepEqual(bar.visibleModules(bar.BAR_MODULES, ["clock"]), ["workspaces", "title", "search", "control", "media", "tray", "battery", "network", "power", "notifications", "screenshot", "clipboard", "performance"]);
     const moved = bar.moveModule(bar.BAR_MODULES, "clock", -1);
     assert.equal(moved[2], "clock");
     assert.equal(moved[3], "search");
@@ -2012,6 +2012,19 @@ test("notifications stay off until ownership is confirmed", function () {
     const recorded = notifications.actionRecords([{ text: "Open", identifier: "open" }]);
     assert.equal(recorded[0].text, "Open");
     assert.equal(recorded[0].identifier, "open");
+});
+
+// Every newly exposed bar action must be accepted by the real popup reducer.
+test("desktop quick tool panels open, switch, and release focus", function () {
+    for (const id of ["clipboard", "performance"]) {
+        let state=popover.reducePopup(popover.popupModel(),{type:"toggle",id:id},{instantOpen:true,instantClose:true});
+        assert.equal(state.panelId,id);
+        assert.equal(state.visible,true);
+        assert.equal(state.interactive,true);
+        state=popover.reducePopup(state,{type:"close"},{instantClose:true});
+        assert.equal(state.visible,false);
+        assert.equal(state.grab,false);
+    }
 });
 
 if (failed > 0) {

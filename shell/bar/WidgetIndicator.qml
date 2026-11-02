@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Controls.Basic as Controls
 import "../themes"
 MouseArea {
     id:root
@@ -17,6 +18,9 @@ MouseArea {
     hoverEnabled:true;activeFocusOnTab:true;cursorShape:Qt.PointingHandCursor
     Accessible.role:Accessible.Button
     Accessible.name:label
+    Controls.ToolTip.visible:containsMouse
+    Controls.ToolTip.text:label
+    Controls.ToolTip.delay:600
     onClicked:activated()
     Keys.onPressed:function(event) {
         if(event.key===Qt.Key_Return || event.key===Qt.Key_Enter || event.key===Qt.Key_Space){activated();event.accepted=true}
@@ -37,7 +41,13 @@ MouseArea {
         onPaint: {
             const c=getContext("2d");c.reset();c.scale(width/24,height/24)
             c.strokeStyle=root.foreground;c.lineWidth=1.7;c.lineCap="round";c.lineJoin="round"
-            if(root.kind==="notifications") {
+            if(root.kind==="screenshot") {
+                c.strokeRect(3,6,18,15);c.strokeRect(8,3,8,3)
+                c.beginPath();c.arc(12,13.5,4,0,Math.PI*2);c.stroke()
+            } else if(root.kind==="clipboard") {
+                c.strokeRect(5,5,14,17);c.strokeRect(9,2,6,5)
+                c.beginPath();c.moveTo(9,12);c.lineTo(15,12);c.moveTo(9,16);c.lineTo(15,16);c.stroke()
+            } else if(root.kind==="notifications") {
                 c.beginPath();c.moveTo(5,17);c.lineTo(7,14);c.lineTo(7,9);c.arc(12,9,5,Math.PI,0);c.lineTo(17,14);c.lineTo(19,17);c.closePath();c.stroke()
                 c.beginPath();c.arc(12,19,2,0,Math.PI);c.stroke()
             } else if(root.kind==="power") {

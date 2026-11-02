@@ -1,4 +1,4 @@
-var BAR_MODULES = ["workspaces", "title", "search", "clock", "control", "media", "tray", "battery", "network", "power", "notifications"];
+var BAR_MODULES = ["workspaces", "title", "search", "clock", "control", "media", "tray", "battery", "network", "power", "notifications", "screenshot", "clipboard", "performance"];
 
 function clamp01(unit) {
     if (typeof unit !== "number" || !Number.isFinite(unit))
@@ -172,7 +172,7 @@ function modulesForSide(order,hidden,sidesJson,side) {
     return visibleModules(order,hidden).filter(function(id){return moduleSide(id,sidesJson,order)===side;});
 }
 function moduleName(id) {
-    return ({workspaces:"Workspaces",title:"Focused title",search:"Search",clock:"Clock",control:"Audio",media:"Media",tray:"Tray",battery:"Battery",network:"Network & Devices",power:"Power",notifications:"Notifications"})[id] || id;
+    return ({workspaces:"Workspaces",title:"Focused title",search:"Search",clock:"Clock",control:"Audio",media:"Media",tray:"Tray",battery:"Battery",network:"Network & Devices",power:"Power",notifications:"Notifications",screenshot:"Screenshot",clipboard:"Clipboard",performance:"Performance"})[id] || id;
 }
 
 function layoutForOutput(json, output, order, sides) {

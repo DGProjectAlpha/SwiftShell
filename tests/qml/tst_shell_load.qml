@@ -12,6 +12,18 @@ TestCase {
 
     // Every shell QML document. The static check requires this list to match the tree.
     readonly property var shellFiles: [
+        "shell/bar/PerformanceModule.qml",
+        "shell/components/PerformanceMetric.qml",
+        "shell/popovers/PerformancePanel.qml",
+        "shell/services/SystemPerformance.qml",
+        "shell/services/ClipboardModel.qml",
+        "shell/services/ScreenshotService.qml",
+        "shell/clipboard/ClipboardPanel.qml",
+        "shell/clipboard/ClipboardWindow.qml",
+        "shell/screenshots/ScreenshotPanel.qml",
+        "shell/screenshots/ScreenshotSaveDialog.qml",
+        "shell/screenshots/ScreenshotWindow.qml",
+
         "shell/services/OverviewService.qml",
         "shell/overview/OverviewPreview.qml",
         "shell/overview/OverviewWindowTile.qml",
@@ -116,6 +128,12 @@ TestCase {
     // These compile with the Qt Quick stubs. shell.qml, BarHost, and BarWindow also
     // reference WlrLayershell, which is a C++ attached property and is not stubbed.
     readonly property var readyFiles: [
+        "shell/bar/PerformanceModule.qml",
+        "shell/components/PerformanceMetric.qml",
+        "shell/popovers/PerformancePanel.qml",
+        "shell/clipboard/ClipboardPanel.qml",
+        "shell/clipboard/ClipboardWindow.qml",
+        "shell/screenshots/ScreenshotPanel.qml",
         "shell/components/TrayItemControl.qml",
         "shell/bar/WidgetIndicator.qml",
         "shell/popovers/AudioPanel.qml",
@@ -186,7 +204,8 @@ TestCase {
             return message.indexOf('module "QtQuick.Effects" is not installed') !== -1
                 || message.indexOf('RectangularShadow is not a type') !== -1
         if (path === "shell/settings/ImageDialog.qml"
-                || path === "shell/settings/FolderPicker.qml")
+                || path === "shell/settings/FolderPicker.qml"
+                || path === "shell/screenshots/ScreenshotSaveDialog.qml")
             return message.indexOf('module "QtQuick.Dialogs" is not installed') !== -1
         if (path === "shell/settings/FolderScanner.qml")
             return message.indexOf('module "Qt.labs.folderlistmodel" is not installed') !== -1
@@ -200,6 +219,7 @@ TestCase {
                 || path === "shell/bar/BarWindow.qml"
                 || path === "shell/popovers/PopoverHost.qml"
                 || path === "shell/overview/OverviewWindow.qml"
+                || path === "shell/screenshots/ScreenshotWindow.qml"
                 || path === "shell/launcher/LauncherWindow.qml"
                 || path === "shell/wallpaper/WallpaperHost.qml"
                 || path === "shell/wallpaper/WallpaperSurface.qml")
@@ -215,6 +235,7 @@ TestCase {
         return message.indexOf("PopoverHost.qml:") !== -1
             || message.indexOf("BarWindow.qml:") !== -1
             || message.indexOf("OverviewWindow.qml:17") !== -1
+            || message.indexOf("ScreenshotWindow.qml:18") !== -1
             || message.indexOf("LauncherWindow.qml:19") !== -1
             || message.indexOf("NotificationHost.qml:24") !== -1
             || message.indexOf("WallpaperSurface.qml:25") !== -1

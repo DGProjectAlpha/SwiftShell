@@ -30,6 +30,18 @@ PanelWindow {
     property Item notificationAnchor:null
     property Item networkAnchor:null
     property Item powerAnchor:null
+    property Item performanceAnchor:null
+    property Item clipboardAnchor:null
+    property Item screenshotAnchor:null
+    function quickToolTargets() {
+        const result={}
+        const items={screenshot:screenshotAnchor,clipboard:clipboardAnchor,performance:performanceAnchor}
+        for(const id of Object.keys(items)) {
+            const item=items[id]
+            if(item) {const rect=contentItem.mapFromItem(item,0,0,item.width,item.height);result[id]={x:rect.x,y:rect.y,width:rect.width,height:rect.height}}
+        }
+        return result
+    }
     property Item calendarAnchor: null
     property var clockItem: null
     property var trayItem:null
@@ -48,6 +60,9 @@ PanelWindow {
         else if(id === "network" && networkAnchor)popovers.toggle(id,networkAnchor)
         else if(id === "power" && powerAnchor)popovers.toggle(id,powerAnchor)
         else if(id === "notifications" && notificationAnchor)popovers.toggle(id,notificationAnchor)
+        else if(id === "performance")popovers.toggle(id,performanceAnchor || contextAnchor)
+        else if(id === "clipboard")popovers.toggle(id,clipboardAnchor || contextAnchor)
+        else if(id === "screenshot") {popovers.close();ScreenshotService.show(monitorKey)}
         else if(id === "customize") {contextAnchor.x=width-100;popovers.toggle(id,contextAnchor)}
     }
 
@@ -229,6 +244,9 @@ PanelWindow {
         if (id === "network")return networkComponent
         if (id === "power")return powerComponent
         if (id === "notifications")return notificationComponent
+        if (id === "screenshot")return screenshotComponent
+        if (id === "clipboard")return clipboardComponent
+        if (id === "performance")return performanceComponent
         if (id === "media")
             return mediaComponent
         if (id === "tray")
@@ -490,6 +508,43 @@ PanelWindow {
         BarContextMenu {
             outputName:window.monitorKey
             onCustomizeRequested:{popovers.close();SettingsStore.setSettingsCategory("bar");SettingsModel.show()}
+        }
+    }
+
+    Component {
+        id:screenshotComponent
+        WidgetIndicator {
+            id:screenshotIndicator
+            kind:"screenshot";label:"Screenshot"
+            textPrimary:window.foregroundFor("screenshot",false)
+            textHover:window.foregroundFor("screenshot",false)
+            Component.onCompleted:window.screenshotAnchor=screenshotIndicator
+            Component.onDestruction:if(window.screenshotAnchor===screenshotIndicator)window.screenshotAnchor=null
+            onActivated:{LauncherModel.closeLauncher();popovers.close();ScreenshotService.show(window.monitorKey)}
+        }
+    }
+    Component {
+        id:clipboardComponent
+        WidgetIndicator {
+            id:clipboardIndicator
+            kind:"clipboard";label:"Clipboard history"
+            textPrimary:window.foregroundFor("clipboard",false)
+            textHover:window.foregroundFor("clipboard",false)
+            Component.onCompleted:window.clipboardAnchor=clipboardIndicator
+            Component.onDestruction:if(window.clipboardAnchor===clipboardIndicator)window.clipboardAnchor=null
+            onActivated:{LauncherModel.closeLauncher();popovers.toggle("clipboard",clipboardIndicator)}
+        }
+    }
+    Component {
+        id:performanceComponent
+        PerformanceModule {
+            id:performanceIndicator
+            textPrimary:window.foregroundFor("performance",false)
+            textMuted:window.foregroundFor("performance",true)
+            textHover:window.foregroundFor("performance",false)
+            Component.onCompleted:window.performanceAnchor=performanceIndicator
+            Component.onDestruction:if(window.performanceAnchor===performanceIndicator)window.performanceAnchor=null
+            onActivated:{LauncherModel.closeLauncher();popovers.toggle("performance",performanceIndicator)}
         }
     }
 

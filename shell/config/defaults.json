@@ -28,7 +28,10 @@
       "battery",
       "network",
       "power",
-      "notifications"
+      "notifications",
+      "screenshot",
+      "clipboard",
+      "performance"
     ],
     "hiddenModules": [],
     "searchLabel": false,

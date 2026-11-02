@@ -48,8 +48,8 @@ Rectangle {
             const windows=LauncherModel.windowResults(query)
             for(const row of windows)providers.push(row)
             if(/^(screenshot|capture)(?:\s|$)/i.test(query)) {
-                if(DesktopTools.regionAvailable)providers.unshift({kind:"screenshot",id:"capture-region",name:"Screenshot a region",detail:"Select an area · Copies image to clipboard",mode:"region"})
-                if(DesktopTools.screenshotAvailable)providers.push({kind:"screenshot",id:"capture-output",name:"Screenshot this display",detail:"Copies image to clipboard",mode:"output"})
+                if(DesktopTools.regionAvailable)providers.unshift({kind:"screenshot",id:"capture-region",name:"Screenshot a region",detail:"Select an area · Preview, copy or save PNG",mode:"region"})
+                if(DesktopTools.screenshotAvailable)providers.push({kind:"screenshot",id:"capture-output",name:"Screenshot this display",detail:"Preview, copy or save PNG",mode:"output"})
             }
             const controls=Navigation.filterControls(query);
             const used={};
