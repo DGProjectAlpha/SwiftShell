@@ -1000,7 +1000,9 @@ GitHub runs 41513275241 (PR) and 41513935523 (main) failed in
 `NotificationCenter::test_banner_previews_and_action_labels_are_plain`: Qt 6.4
 exposes `Item.children` as an indexed QML list without JavaScript iteration.
 The test now traverses by index and requires a matching label, preserving the
-plain-text assertion. The earlier Bluetooth Connections signal collision was
+plain-text assertion. The next run (41514946078) passed notifications and exposed
+the same indexed-list limitation in the overview test helper, whose use of
+`children.filter` is now replaced by indexed traversal too. The earlier Bluetooth Connections signal collision was
 already fixed in c3ec14c. The PR runner also spent 6m48s installing dependencies;
 its mirror downloaded 38.3 MB at 98 kB/s and completed successfully. That delay
 was separate from the test failure.
