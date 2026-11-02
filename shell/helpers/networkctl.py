@@ -17,6 +17,13 @@ DEVICE = re.compile(r'^[A-Za-z0-9][A-Za-z0-9_.:-]{0,63}$')
 NETWORK_TYPES = {'ethernet','wifi'}
 
 
+class NetworkError(ValueError):
+    def __init__(self, message, code='operation-failed'):
+        super().__init__(message)
+        self.code = code
+
+
+
 def fields(line):
     """Split nmcli's documented escaped terse output, including colon SSIDs."""
     result, word, escaped = [], [], False
@@ -41,11 +48,16 @@ def nm(args, secret=None, timeout=8):
     try:
         result = subprocess.run(command,input=secret,capture_output=True,text=True,timeout=timeout,env=env)
     except (OSError,subprocess.SubprocessError):
-        raise ValueError('The network service did not respond. Try again.') from None
+        raise NetworkError('The network service did not respond. Try again.', 'timeout') from None
     if result.returncode:
         messages = {3:'The connection attempt timed out.',4:'The connection could not be activated. Check the password and signal, then try again.',
                     5:'The connection could not be disconnected.',8:'NetworkManager is not running.',10:'The selected network is no longer available.'}
-        raise ValueError(messages.get(result.returncode,'NetworkManager could not complete this change. Check your permissions and try again.'))
+        codes = {3:'timeout',4:'activation-failed',5:'disconnect-failed',7:'authentication-required',8:'unavailable',10:'not-found'}
+        if result.returncode==7:
+            message='This connection needs authentication. Try again with its password, or use an existing system authentication prompt.'
+        else:
+            message=messages.get(result.returncode,'NetworkManager could not complete this change. Check your permissions and try again.')
+        raise NetworkError(message,codes.get(result.returncode,'permission-denied'))
     return result.stdout
 
 
@@ -97,6 +109,39 @@ def snapshot():
                 devices=devices,profiles=profiles,networks=networks,wifiHardware=bool(radio and radio[0]=='enabled'),wifiEnabled=len(radio)>1 and radio[1]=='enabled')
 
 
+def active_connections():
+    active=[]
+    for values in rows(['--fields','UUID,STATE,DEVICE','connection','show','--active']):
+        if len(values)==3 and UUID.fullmatch(values[0]) and DEVICE.fullmatch(values[2]):
+            active.append(dict(id=values[0],state=values[1].casefold(),device=values[2]))
+    return active
+
+
+def cancel_connection(payload,current):
+    """Refuse established links; cancel an observed activation for this target."""
+    identifier=payload.get('id','')
+    name=payload.get('device','')
+    if identifier and (not isinstance(identifier,str) or not UUID.fullmatch(identifier) and not MAC.fullmatch(identifier)):
+        raise ValueError('The connection cancellation request is invalid.')
+    if identifier and UUID.fullmatch(identifier):
+        if not any(profile['id']==identifier for profile in current['profiles']):
+            raise ValueError('The selected saved connection is no longer available.')
+        candidates=[row for row in active_connections() if row['id']==identifier]
+    else:
+        if not any(device['id']==name for device in current['devices']):
+            raise ValueError('The selected network device is no longer available.')
+        candidates=[row for row in active_connections() if row['device']==name]
+    candidate=next((row for row in candidates if row['state']=='activating'),None)
+    if candidate is None:
+        # A successful connection can race the Cancel button. Do not turn it off.
+        return dict(current,cancelled=False,message='The connection is no longer waiting to connect. Its current status is shown below.')
+    nm(['--wait','10','connection','down','uuid',candidate['id']],timeout=13)
+    remaining=active_connections()
+    if any(row['id']==candidate['id'] and row['device']==candidate['device'] for row in remaining):
+        raise NetworkError('The cancellation could not be confirmed. Check the connection status and try again.','cancel-unconfirmed')
+    return dict(snapshot(),cancelled=True,message='Connection cancelled.')
+
+
 def request(payload):
     if not isinstance(payload,dict) or set(payload)-{'action','device','id','enabled','secret'}:
         raise ValueError('The network request is invalid.')
@@ -104,6 +149,7 @@ def request(payload):
     current=snapshot()
     if action=='snapshot':return current
     if not current['available']:raise ValueError(current['reason'])
+    if action=='cancel-connect':return cancel_connection(payload,current)
     if action=='wifi-radio':
         if type(payload.get('enabled')) is not bool:raise ValueError('Choose whether Wi-Fi is enabled.')
         nm(['radio','wifi','on' if payload['enabled'] else 'off'])
@@ -142,5 +188,5 @@ if __name__=='__main__':
         if len(raw)>16384:raise ValueError('The network request is too large.')
         result=request(json.loads(raw or '{}'))
     except Exception as error:
-        result=dict(ok=False,message=str(error) if isinstance(error,ValueError) else 'The network service is unavailable.')
+        result=dict(ok=False,code=getattr(error,'code','invalid-request' if isinstance(error,ValueError) else 'unavailable'),message=str(error) if isinstance(error,ValueError) else 'The network service is unavailable.')
     print(json.dumps(result,separators=(',',':')))

@@ -10,6 +10,8 @@ Item {
     property var joining:null
     property var confirmation:null
     property bool showSaved:false
+    property bool showPassword:false
+    property string credentialError:""
     signal revealRequested(real y,real itemHeight)
     implicitWidth:560
     implicitHeight:column.implicitHeight
@@ -18,21 +20,44 @@ Item {
     function focusHighlight() {refreshButton.forceActiveFocus()}
     function moveHighlight(delta) {revealRequested(0,height)}
     function requestDisconnect(device) {confirmation={action:"device-disconnect",device:device.id,label:"Disconnect "+(device.connection || device.id)+"?"}}
+    function cancelDraft() {password.text="";joining=null;showPassword=false;credentialError=""}
     function join(network) {
-        if(network.security) {joining=network;password.text="";Qt.callLater(function(){password.forceActiveFocus()})}
+        if(!network || NetworkService.busy)return false
+        credentialError="";showPassword=false
+        if(network.security) {joining=network;password.text="";Qt.callLater(function(){if(page.joining)password.forceActiveFocus()})}
         else NetworkService.perform("wifi-connect",{device:network.device,id:network.id,secret:""})
+        return true
+    }
+    function validPassword(value) {
+        return typeof value==="string" && !/[\r\n\0]/.test(value) && (value.length>=8 && value.length<=63 || /^[0-9a-fA-F]{64}$/.test(value))
+    }
+    function retryConnection() {
+        const failure=NetworkService.lastFailure
+        if(!failure || NetworkService.busy)return false
+        if(failure.action==="wifi-connect") {
+            const target=NetworkService.networks.find(function(network){return network.id===failure.id && network.device===failure.device})
+            if(!target){NetworkService.refresh();return false}
+            NetworkService.clearError();return join(target)
+        }
+        return NetworkService.perform(failure.action,{device:failure.device,id:failure.id})
     }
     function submitPassword() {
         // Enter can arrive while a background device refresh is in flight.
         // Keep the local draft until the service actually accepts the request.
         if(!joining || NetworkService.busy)return false
+        if(!validPassword(password.text)) {credentialError="Enter an 8–63 character password or a 64-digit hexadecimal key.";return false}
         const values={device:joining.device,id:joining.id,secret:password.text}
         if(!NetworkService.perform("wifi-connect",values))return false
-        password.text="";joining=null
+        cancelDraft()
         return true
     }
     Component.onCompleted:NetworkService.startViewing()
     Component.onDestruction:{password.text="";NetworkService.stopViewing()}
+    Connections {
+        target:NetworkService
+        function onWifiEnabledChanged(){if(!NetworkService.wifiEnabled && page.joining)page.cancelDraft()}
+        function onDevicesChanged(){if(page.joining && !NetworkService.devices.some(function(device){return device.id===page.joining.device && device.available})){page.cancelDraft()}}
+    }
     Column {
         id:column
         width:page.width
@@ -45,6 +70,13 @@ Item {
             Text {anchors.verticalCenter:parent.verticalCenter;text:NetworkService.available ? (NetworkService.connectivity==="full" ? "Internet connected" : "Network connections") : "";color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall}
         }
         Text {width:parent.width;wrapMode:Text.WordWrap;visible:text!=="";text:NetworkService.error || (!NetworkService.available ? NetworkService.reason : "");color:Theme.settingsMuted;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall}
+        Row {
+            width:parent.width;spacing:8
+            visible:NetworkService.progressText!=="" || NetworkService.error!==""
+            Text {width:Math.max(100,parent.width-(cancelOperation.visible ? cancelOperation.width+8 : 0)-(retryOperation.visible ? retryOperation.width+8 : 0));height:Theme.controlHeight;verticalAlignment:Text.AlignVCenter;elide:Text.ElideRight;text:NetworkService.progressText;color:Theme.settingsText;font.pixelSize:Theme.settingsFontSizeSmall}
+            FlatButton {id:cancelOperation;objectName:"networkCancelOperation";visible:NetworkService.canCancel;label:"Cancel connection";onActivated:NetworkService.cancel()}
+            FlatButton {id:retryOperation;objectName:"networkRetryOperation";visible:!NetworkService.busy && ["wifi-connect","device-connect","profile-connect","scan","device-disconnect"].indexOf(NetworkService.lastFailure.action)>=0;label:"Try again";onActivated:page.retryConnection()}
+        }
         Column {
             width:parent.width;spacing:6;visible:page.confirmation!==null
             Text {width:parent.width;wrapMode:Text.WordWrap;text:page.confirmation ? page.confirmation.label : "";textFormat:Text.PlainText;color:Theme.settingsText;font.pixelSize:Theme.settingsFontSize}
@@ -52,7 +84,7 @@ Item {
             Row {
                 spacing:6
                 FlatButton {label:"Cancel";onActivated:page.confirmation=null}
-                FlatButton {label:"Disconnect";enabled:!NetworkService.busy;onActivated:{const request=page.confirmation;page.confirmation=null;NetworkService.perform(request.action,request.action==="wifi-radio" ? {enabled:false} : {device:request.device})}}
+                FlatButton {label:page.confirmation && page.confirmation.action==="wifi-radio" ? "Turn off Wi-Fi" : "Disconnect";enabled:!NetworkService.busy;onActivated:{const request=page.confirmation;page.confirmation=null;NetworkService.perform(request.action,request.action==="wifi-radio" ? {enabled:false} : {device:request.device})}}
             }
         }
         SectionHeader {width:parent.width;text:"Connections"}
@@ -108,12 +140,14 @@ Item {
             Rectangle {
                 width:Math.min(320,parent.width);height:34;radius:6;color:Theme.settingsHover
                 Text {anchors.fill:parent;anchors.leftMargin:10;verticalAlignment:Text.AlignVCenter;visible:!password.text;text:"Wi-Fi password";color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall}
-                TextInput {id:password;objectName:"wifiPassword";anchors.fill:parent;anchors.margins:8;echoMode:TextInput.Password;selectByMouse:true;clip:true;maximumLength:64;color:Theme.settingsText;font.pixelSize:Theme.settingsFontSize;Accessible.name:"Wi-Fi password";onAccepted:page.submitPassword()}
+                TextInput {id:password;objectName:"wifiPassword";anchors.fill:parent;anchors.margins:8;echoMode:page.showPassword ? TextInput.Normal : TextInput.Password;selectByMouse:true;clip:true;maximumLength:64;color:Theme.settingsText;font.pixelSize:Theme.settingsFontSize;Accessible.name:"Wi-Fi password";onAccepted:page.submitPassword()}
             }
+            SettingsToggle {width:Math.min(320,parent.width);label:"Show password";checked:page.showPassword;onToggled:function(next){page.showPassword=next}}
+            Text {width:parent.width;wrapMode:Text.WordWrap;visible:page.credentialError!=="";text:page.credentialError;color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall}
             Row {
                 spacing:6
-                FlatButton {label:"Cancel";onActivated:{password.text="";page.joining=null}}
-                FlatButton {label:"Connect";enabled:!NetworkService.busy && password.text.length>=8;onActivated:page.submitPassword()}
+                FlatButton {label:"Cancel";onActivated:page.cancelDraft()}
+                FlatButton {label:"Connect";enabled:!NetworkService.busy && page.validPassword(password.text);onActivated:page.submitPassword()}
             }
         }
         FlatButton {label:page.showSaved ? "Hide saved connections" : "Saved connections";onActivated:page.showSaved=!page.showSaved}

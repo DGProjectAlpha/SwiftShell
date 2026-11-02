@@ -12,6 +12,10 @@ Column {
     property var discoveryOwner:null
     property var pending:null
     property var forgetting:null
+    property var lastAttempt:null
+    readonly property var pendingDevice:pending ? deviceAt(pending.key) : null
+    readonly property bool canCancel:pending!==null && ["connect","pair"].indexOf(pending.action)>=0 && !pending.cancelRequested
+    readonly property string progressText:pending ? (pending.cancelRequested ? "Cancelling…" : pending.action==="pair" ? "Pairing accessory. Confirm the code or PIN in your system prompt." : pending.action==="connect" ? "Connecting accessory…" : pending.action==="disconnect" ? "Disconnecting accessory…" : pending.action==="forget" ? "Removing the saved pairing…" : "Cancelling pairing…") : ""
     readonly property var adapters:BluetoothLogic.objectValues(Bluetooth.adapters)
     readonly property var adapter:adapters.find(function(item){return (item.dbusPath || item.adapterId)===root.selectedAdapter}) || Bluetooth.defaultAdapter
     readonly property var summary:BluetoothLogic.adapterSummary(adapter)
@@ -32,35 +36,89 @@ Column {
         try {adapter.discovering=true;discoveryOwner=adapter;scanLimit.restart();notice=""}
         catch(error){notice="Nearby devices could not be searched. Check your adapter and try again."}
     }
+    function finishPending(message,failed) {
+        pending=null;actionLimit.stop();notice=message || ""
+        if(!failed)lastAttempt=null
+    }
     function checkPending() {
         if(!pending)return
         const device=deviceAt(pending.key)
-        const complete=pending.action==="forget" ? !device || !device.paired && !device.bonded
-            : device && (pending.action==="connect" ? device.connected : pending.action==="disconnect" ? !device.connected
-                : pending.action==="pair" ? device.paired || device.bonded : !device.pairing)
-        if(complete) {pending=null;actionLimit.stop();notice=""}
+        if(!device) {
+            finishPending(pending.action==="forget" ? "" : "The device is no longer available. Keep it nearby and search again.",pending.action!=="forget")
+            return
+        }
+        const changing=device.pairing===true || device.state===3 || device.state===2
+        if(changing && !pending.seenActivity)pending=Object.assign({},pending,{seenActivity:true})
+        if(pending.cancelRequested) {
+            if(!pending.cancelSent) {
+                if(pending.action==="pair" && device.pairing===true) {
+                    pending=Object.assign({},pending,{cancelSent:true});device.cancelPair()
+                } else if(pending.action==="connect" && device.state===3) {
+                    // BlueZ Disconnect explicitly cancels a pending Connect.
+                    pending=Object.assign({},pending,{cancelSent:true});device.disconnect()
+                } else if(pending.action==="pair" && (device.paired || device.bonded) || pending.action==="connect" && device.connected) {
+                    finishPending("The device finished before cancellation. Its current status is shown below.",false);return
+                }
+            }
+            if(pending && pending.cancelSent && !changing && (pending.action==="pair" ? !device.pairing : !device.connected))finishPending("Request cancelled.",false)
+            return
+        }
+        const complete=pending.action==="forget" ? !device.paired && !device.bonded
+            : pending.action==="connect" ? device.connected : pending.action==="disconnect" ? !device.connected && device.state!==2
+                : pending.action==="pair" ? device.paired || device.bonded : !device.pairing
+        if(complete){finishPending("",false);return}
+        if(pending.seenActivity && !changing) {
+            finishPending(pending.action==="pair" ? "Pairing did not finish. Put the accessory into pairing mode and confirm the system prompt before trying again." : "The device could not connect. Keep it nearby and try again.",true)
+        }
+    }
+    function cancelPending() {
+        if(!canCancel)return false
+        pending=Object.assign({},pending,{cancelRequested:true,cancelSent:false})
+        actionLimit.restart();checkPending();return true
+    }
+    function retryLast() {
+        if(!lastAttempt || busy)return
+        run(lastAttempt.key,lastAttempt.action)
     }
     function run(key,action) {
         if(busy && action!=="cancel")return
         const device=deviceAt(key),command=BluetoothLogic.deviceCommand(device,action)
         if(!command)return
         try {
-            pending={key:key,action:command};notice=""
+            pending={key:key,action:command,seenActivity:device.pairing===true || device.state===3 || device.state===2,cancelRequested:false,cancelSent:false}
+            lastAttempt={key:key,action:action};notice=""
+            // Start the deadline before invoking an API that can change observed
+            // state synchronously; success must be able to stop that deadline.
+            actionLimit.restart()
             if(command==="connect")device.connect()
             else if(command==="disconnect")device.disconnect()
             else if(command==="pair")device.pair()
             else if(command==="forget")device.forget()
             else if(command==="cancel")device.cancelPair()
-            actionLimit.restart();Qt.callLater(checkPending)
-        }catch(error){pending=null;notice="The Bluetooth change could not be started. Try again."}
+            Qt.callLater(checkPending)
+        }catch(error){finishPending("The Bluetooth change could not be started. Try again.",true)}
+    }
+    Connections {
+        target:root.pendingDevice
+        ignoreUnknownSignals:true
+        function onStateChanged(){root.checkPending()}
+        function onConnectedChanged(){root.checkPending()}
+        function onPairingChanged(){root.checkPending()}
+        function onPairedChanged(){root.checkPending()}
+        function onBondedChanged(){root.checkPending()}
+    }
+    Connections {
+        target:root.adapter
+        ignoreUnknownSignals:true
+        function onEnabledChanged(){if(!root.adapter.enabled){root.stopDiscovery();if(root.pending)root.finishPending("Bluetooth was turned off before the request finished.",true)}}
     }
     onRowsChanged:Qt.callLater(checkPending)
-    onAdapterChanged: {stopDiscovery();pending=null;forgetting=null;notice=""}
+    onAdapterChanged: {stopDiscovery();pending=null;actionLimit.stop();lastAttempt=null;forgetting=null;notice=""}
     Component.onDestruction:stopDiscovery()
     Timer {id:scanLimit;interval:30000;onTriggered:root.stopDiscovery()}
     Timer {
         id:actionLimit;interval:20000
-        onTriggered:{root.pending=null;root.notice="The device did not finish connecting or pairing. Keep it nearby and check its pairing mode or system confirmation prompt."}
+        onTriggered:{const cancelling=root.pending && root.pending.cancelRequested;root.finishPending(cancelling ? "Cancellation could not be confirmed. Check the accessory's current status before trying again." : "The device did not finish. Keep it nearby, check pairing mode and respond to any system confirmation prompt.",true)}
     }
     SectionHeader {width:parent.width;text:"Bluetooth"}
     ChoiceBox {
@@ -98,6 +156,11 @@ Column {
         text:"Put your accessory into pairing mode, then choose Find devices."
         color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall
     }
+    Row {
+        width:parent.width;spacing:6;visible:root.busy
+        Text {width:Math.max(100,parent.width-(cancelRequest.visible ? cancelRequest.width+6 : 0));wrapMode:Text.WordWrap;text:root.progressText;color:Theme.settingsText;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall}
+        FlatButton {id:cancelRequest;objectName:"bluetoothCancelRequest";visible:root.canCancel;label:"Cancel";onActivated:root.cancelPending()}
+    }
     Repeater {
         model:root.summary.enabled ? root.rows : []
         delegate:Column {
@@ -106,7 +169,7 @@ Column {
             Row {
                 width:parent.width
                 Text {width:parent.width-110;text:modelData.name;textFormat:Text.PlainText;color:Theme.settingsText;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSize;elide:Text.ElideRight}
-                Text {width:110;horizontalAlignment:Text.AlignRight;text:modelData.connected ? "Connected"+(modelData.battery===null ? "" : " · "+modelData.battery+"%") : modelData.pairing ? "Pairing…" : modelData.paired ? "Paired" : "Available";color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall}
+                Text {width:110;horizontalAlignment:Text.AlignRight;text:modelData.connected ? "Connected"+(modelData.battery===null ? "" : " · "+modelData.battery+"%") : modelData.pairing ? "Pairing…" : modelData.state===3 ? "Connecting…" : modelData.state===2 ? "Disconnecting…" : modelData.paired ? "Paired" : "Available";color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall}
             }
             Flow {
                 width:parent.width;spacing:4
@@ -128,5 +191,6 @@ Column {
         }
     }
     Text {visible:root.notice!=="";width:parent.width;wrapMode:Text.WordWrap;text:root.notice;color:Theme.settingsMuted;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall}
-    Text {width:parent.width;wrapMode:Text.WordWrap;visible:root.summary.enabled;text:"Accessories that require a PIN use your system's pairing confirmation prompt.";color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall}
+    FlatButton {visible:root.notice!=="" && root.lastAttempt!==null && !root.busy;label:"Try again";enabled:root.lastAttempt!==null && BluetoothLogic.deviceCommand(root.deviceAt(root.lastAttempt.key),root.lastAttempt.action)!=="";onActivated:root.retryLast()}
+    Text {width:parent.width;wrapMode:Text.WordWrap;visible:root.summary.enabled;text:"Confirm pairing codes and PINs in your system's Bluetooth prompt. If no prompt appears, check that a system pairing agent is available.";color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall}
 }

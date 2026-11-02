@@ -68,4 +68,39 @@ class NetworkTests(unittest.TestCase):
     def test_invalid_top_level_requests_are_rejected(self):
         for data in [[],dict(action='snapshot',extra='ignored')]:
             with self.assertRaises(ValueError):n.request(data)
+    def test_cancel_only_deactivates_an_observed_activating_connection(self):
+        identifier=BASE['profiles'][0]['id']
+        active=dict(id=identifier,device='wlan0',state='activating')
+        with patch.object(n,'snapshot',return_value=BASE),patch.object(n,'active_connections',side_effect=[[active],[]]),patch.object(n,'nm') as nm:
+            result=n.request(dict(action='cancel-connect',device='wlan0',id=AP['id']))
+            self.assertTrue(result['cancelled'])
+            self.assertEqual(nm.call_args.args[0],['--wait','10','connection','down','uuid',identifier])
+    def test_cancel_refuses_to_disconnect_an_already_working_connection(self):
+        active=dict(id=BASE['profiles'][0]['id'],device='wlan0',state='activated')
+        with patch.object(n,'snapshot',return_value=BASE),patch.object(n,'active_connections',return_value=[active]),patch.object(n,'nm') as nm:
+            result=n.request(dict(action='cancel-connect',device='wlan0',id=AP['id']))
+            self.assertFalse(result['cancelled']);nm.assert_not_called()
+    def test_cancel_profile_is_scoped_to_its_uuid(self):
+        identifier=BASE['profiles'][0]['id']
+        other=dict(id='00000000-0000-0000-0000-000000000002',device='wlan0',state='activating')
+        with patch.object(n,'snapshot',return_value=BASE),patch.object(n,'active_connections',return_value=[other]),patch.object(n,'nm') as nm:
+            self.assertFalse(n.request(dict(action='cancel-connect',id=identifier))['cancelled'])
+            nm.assert_not_called()
+    def test_cancellation_readback_must_confirm_the_activation_ended(self):
+        active=dict(id=BASE['profiles'][0]['id'],device='wlan0',state='activating')
+        with patch.object(n,'snapshot',return_value=BASE),patch.object(n,'active_connections',return_value=[active]),patch.object(n,'nm'):
+            with self.assertRaisesRegex(n.NetworkError,'could not be confirmed'):
+                n.request(dict(action='cancel-connect',device='wlan0'))
+    def test_cancel_rejects_unknown_targets_without_mutation(self):
+        with patch.object(n,'snapshot',return_value=BASE),patch.object(n,'active_connections') as active,patch.object(n,'nm') as nm:
+            for payload in [dict(action='cancel-connect',device='missing'),dict(action='cancel-connect',id='bad;command',device='wlan0'),dict(action='cancel-connect',id='00000000-0000-0000-0000-000000000002')]:
+                with self.assertRaises(ValueError):n.request(payload)
+            active.assert_not_called();nm.assert_not_called()
+    def test_authentication_error_is_typed_but_never_echoes_private_diagnostics(self):
+        failed=subprocess.CompletedProcess([],7,'PRIVATE SSID PASSWORD','PRIVATE AUTH MESSAGE')
+        with patch.object(n.subprocess,'run',return_value=failed):
+            with self.assertRaises(n.NetworkError) as error:n.nm(['connection','up'])
+            self.assertEqual(error.exception.code,'authentication-required')
+            self.assertNotIn('PRIVATE',str(error.exception))
+
 if __name__=='__main__':unittest.main()
