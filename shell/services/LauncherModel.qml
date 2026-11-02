@@ -29,7 +29,9 @@ Singleton {
     property int indexedCount: -1
     property string notice: ""
     property string gridMode: "all"
-    readonly property bool actionBusy: powerProcess.running
+    readonly property bool actionBusy: powerProcess.running || terminalLaunch.running
+    property var terminalPayload:({})
+    property string terminalLaunchId:""
 
     readonly property var windowEntries: {
         const result=[]
@@ -255,6 +257,7 @@ Singleton {
     }
 
     function launchApplication(id, label) {
+        if(terminalLaunch.running)return
         const entry = root.lookupEntry(id);
         const shown = typeof label === "string" && label !== "" ? label : "the application";
         if (!entry) {
@@ -274,8 +277,14 @@ Singleton {
             return;
         }
         try {
-            if (entry.runInTerminal === true)
-                console.info("SwiftShell: Quickshell 0.2 execute ignores the terminal flag for", id);
+            if (entry.runInTerminal === true) {
+                const argv=[]
+                for(let i=0;i<entry.command.length;i++)argv.push(entry.command[i])
+                terminalPayload={command:argv,workingDirectory:entry.workingDirectory || ""}
+                terminalLaunchId=id
+                terminalLaunch.running=true
+                return
+            }
             entry.execute();
         } catch (error) {
             root.notice = "Could not launch " + shown;
@@ -284,6 +293,23 @@ Singleton {
         }
         root.remember(id);
         root.closeLauncher();
+    }
+
+    Process {
+        id:terminalLaunch
+        command:["python3",Quickshell.shellDir+"/helpers/terminallaunch.py"]
+        stdinEnabled:true
+        onStarted: {write(JSON.stringify(root.terminalPayload)+"\n");root.terminalPayload={}}
+        stdout:StdioCollector {id:terminalReply;waitForEnd:true}
+        onExited:function(code,status) {
+            let result={}
+            try {result=JSON.parse(terminalReply.text)}catch(error){}
+            if(code===0 && result.ok===true) {
+                root.remember(root.terminalLaunchId)
+                root.closeLauncher()
+            } else root.notice=result.message || "The terminal could not be started."
+            root.terminalLaunchId=""
+        }
     }
 
     function runPower(id) {
