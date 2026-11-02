@@ -20,6 +20,7 @@ assert settings['settingsWindow']['category'] == 'workspaces'
 assert settings['clock']['showSeconds'] and settings['clock']['showDate']
 assert settings['clock']['dateFormat'] == 'iso' and not settings['clock']['use24Hour']
 assert settings['bar']['searchLabel']
+assert settings['launcher']['defaultMode'] == 'favorites'
 assert json.loads(settings['bar']['moduleSidesJson']) == {'clock':'center'}
 assert json.loads(settings['bar']['hiddenOutputsJson']) == {'DP-1':['tray']}
 assert settings['bar']['surfaceMode'] == 'solid'

@@ -53,7 +53,7 @@
     "iconScale": 1,
     "topGradient": false,
     "contrast": "standard",
-    "automaticText": false,
+    "automaticText": true,
     "automaticGradient": false,
     "manualText": "",
     "manualMuted": "",
@@ -61,6 +61,7 @@
     "manualGradient": ""
   },
   "launcher": {
+    "defaultMode": "all",
     "pinnedIds": []
   },
   "wallpaper": {

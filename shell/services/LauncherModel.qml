@@ -27,6 +27,8 @@ Singleton {
     property bool indexPending: false
     property int indexedCount: -1
     property string notice: ""
+    property string gridMode: "all"
+    readonly property bool actionBusy: powerProcess.running
 
     signal controlRequested()
     signal settingsRequested()
@@ -172,6 +174,8 @@ Singleton {
         root.closeLauncher();
     }
 
+    function resetGridMode() { root.gridMode = SettingsStore.launcherDefaultMode; }
+
     function openLauncher() {
         const resolved = root.placeLauncher();
         if (!resolved.screen || !root.screenIsLive(resolved.screen)) {
@@ -186,6 +190,7 @@ Singleton {
         root.warnedScreen = false;
         root.screen = resolved.screen;
         root.indexApplications();
+        root.resetGridMode();
         root.query = "";
         root.selected = 0;
         root.confirmId = "";
@@ -214,7 +219,8 @@ Singleton {
     function remember(id) {
         root.recentIds = Launcher.pushRecent(root.recentIds, id);
         recentSettings.ids = root.recentIds;
-        recentFile.writeAdapter();
+        // JsonAdapter refreshes its serialized cache after property notification.
+        Qt.callLater(recentFile.writeAdapter);
     }
 
     function lookupEntry(id) {
@@ -270,6 +276,7 @@ Singleton {
     }
 
     function runPower(id) {
+        if (powerProcess.running) return;
         const step = Launcher.powerInvocation(root.confirmId, id);
         root.confirmId = step.confirmId;
         if (!step.run) {
@@ -279,16 +286,22 @@ Singleton {
             }
             return;
         }
-        try {
-            Quickshell.execDetached({ command: step.argv });
-        } catch (error) {
-            root.confirmId = "";
-            root.notice = "Could not run the power action";
-            console.warn("SwiftShell: power action failed", id);
+        powerProcess.command = step.argv;
+        root.notice = "Requesting session action…";
+        powerProcess.running = true;
+    }
+
+    function moveFavorite(source,target) {
+        SettingsStore.setPinnedIds(Launcher.reorderFavorite(SettingsStore.pinnedIds,source,target));
+    }
+
+    function toggleFavorite(id) {
+        const next = Launcher.toggleFavorite(SettingsStore.pinnedIds,id);
+        if (SettingsStore.pinnedIds.indexOf(id)<0 && next.indexOf(id)<0) {
+            root.notice = "Favorites are full. Remove one before adding another.";
             return;
         }
-        console.info("SwiftShell: power action", id);
-        root.closeLauncher();
+        SettingsStore.setPinnedIds(next);
     }
 
     function activate(row) {
@@ -297,6 +310,24 @@ Singleton {
         if (row.kind === "settings") {
             root.closeLauncher();
             root.settingsRequested();
+            return;
+        }
+        if (row.kind === "setting-result") {
+            SettingsStore.setSettingsCategory(row.category);
+            root.closeLauncher();
+            root.settingsRequested();
+            return;
+        }
+        if (row.kind === "calculation") {
+            try {
+                Quickshell.clipboardText = row.value;
+                root.notice = "Result copied";
+            } catch (error) {root.notice = "Could not copy the result";}
+            return;
+        }
+        if (row.kind === "web") {
+            if (Qt.openUrlExternally(row.url)) root.closeLauncher();
+            else root.notice = "Could not open your default browser";
             return;
         }
         if (row.kind === "power") {
@@ -317,6 +348,15 @@ Singleton {
         } else if (step.action === "close") {
             console.info("SwiftShell: launcher dismissed by request");
             root.closeLauncher();
+        }
+    }
+
+    Process {
+        id: powerProcess
+        onExited: function(exitCode, exitStatus) {
+            root.confirmId = "";
+            if (exitCode === 0) root.closeLauncher();
+            else root.notice = "The session action was refused or is unavailable.";
         }
     }
 

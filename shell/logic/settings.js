@@ -192,7 +192,7 @@ var DEFAULTS = {
         iconScale: 1,
         topGradient: false,
         contrast: "standard",
-        automaticText: false,
+        automaticText: true,
         automaticGradient: false,
         manualText: "",
         manualMuted: "",
@@ -200,6 +200,7 @@ var DEFAULTS = {
         manualGradient: "",
     },
     launcher: {
+        defaultMode: "all",
         pinnedIds: [],
     },
     wallpaper: {
@@ -459,7 +460,7 @@ function validateSettings(input) {
         errors.push("settingsWindow");
     const settingsWindowWidth = pickInt(windowSource, "width", 640, 1600, DEFAULTS.settingsWindow.width, errors, "settingsWindow.width");
     const settingsWindowHeight = pickInt(windowSource, "height", 440, 1200, DEFAULTS.settingsWindow.height, errors, "settingsWindow.height");
-    const settingsWindowCategory = pickEnum(windowSource, "category", ["appearance", "bar", "workspaces", "wallpaper", "displays", "shortcuts", "audio", "network", "bluetooth", "power", "notifications"], DEFAULTS.settingsWindow.category, errors, "settingsWindow.category");
+    const settingsWindowCategory = pickEnum(windowSource, "category", ["appearance", "bar", "spotlight", "workspaces", "wallpaper", "displays", "shortcuts", "defaultApps", "audio", "network", "bluetooth", "power", "notifications"], DEFAULTS.settingsWindow.category, errors, "settingsWindow.category");
     const noteSource = isPlainObject(source.notifications) ? source.notifications : {};
     if (source.notifications !== undefined && !isPlainObject(source.notifications))
         errors.push("notifications");
@@ -468,6 +469,7 @@ function validateSettings(input) {
     const notificationPolicies = policiesValue(noteSource.policiesJson, errors);
     const shortcutsJson = shortcutsValue(source.shortcutsJson, errors);
 
+    const launcherDefaultMode=pickEnum(launcher,"defaultMode",["all","favorites","recent"],DEFAULTS.launcher.defaultMode,errors,"launcher.defaultMode");
     let pinnedIds = DEFAULTS.launcher.pinnedIds.slice();
     if (!isPlainObject(source.launcher) || launcher.pinnedIds === undefined) {
         pinnedIds = DEFAULTS.launcher.pinnedIds.slice();
@@ -550,6 +552,7 @@ function validateSettings(input) {
                 manualGradient: manualGradient,
             },
             launcher: {
+                defaultMode: launcherDefaultMode,
                 pinnedIds: pinnedIds,
             },
             wallpaper: {
@@ -829,7 +832,7 @@ function extensionsText(source, errors) {
         clock: { use24Hour: true, showSeconds:true, showDate:true, dateFormat:true, showWeekNumbers: true, weekStart: true },
         bar: { targetMonitor: true, reserveSpace: true, showFocusedTitle: true, workspaceIds: true, workspaceOutputsJson: true, workspaceDispatch: true, placement: true, height: true, moduleOrder: true, hiddenModules: true, searchLabel:true, moduleSidesJson:true, hiddenOutputsJson:true, surfaceMode:true, surfaceColor:true, surfaceOpacity:true, surfaceOutputsJson:true },
         appearance: { mode: true, tint: true, panelOpacity: true, panelBlur: true, radius: true, shadowOpacity: true, shadowSoftness: true, motionScale: true, reducedMotion: true, panelPadding: true, panelSpacing: true, fontSize: true, fontWeight: true, iconScale: true, topGradient: true, contrast: true, automaticText: true, automaticGradient: true, manualText: true, manualMuted: true, manualPanel: true, manualGradient: true },
-        launcher: { pinnedIds: true },
+        launcher: { pinnedIds: true,defaultMode:true },
         wallpaper: { enabled: true, fit: true, path: true, outputsJson: true, slideshow: true, intervalMinutes: true, order: true, transitionMs: true, slidesJson: true },
         settingsWindow: { width: true, height: true, category: true },
         notifications: { ownership: true, dnd: true, policiesJson: true },

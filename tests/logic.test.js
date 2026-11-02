@@ -1421,7 +1421,7 @@ test("launcher ranking is stable and ignores the query as a command", function (
     assert.equal(armed.argv, null);
     const confirmed = launcher.powerStep("poweroff", "poweroff");
     assert.equal(confirmed.run, true);
-    assert.deepEqual(confirmed.argv, ["loginctl", "poweroff"]);
+    assert.deepEqual(confirmed.argv, ["systemctl", "--no-ask-password", "poweroff"]);
     assert.equal(launcher.powerStep("", "custom").run, false);
     assert.equal(launcher.moveSelection(0, 4, -1), 3);
     assert.equal(launcher.moveSelection(3, 4, 1), 0);
@@ -1430,7 +1430,7 @@ test("launcher ranking is stable and ignores the query as a command", function (
     assert.equal(armedPower.argv, null);
     const confirmedPower = launcher.powerInvocation("reboot", "reboot");
     assert.equal(confirmedPower.run, true);
-    assert.deepEqual(confirmedPower.argv, ["loginctl", "reboot"]);
+    assert.deepEqual(confirmedPower.argv, ["systemctl", "--no-ask-password", "reboot"]);
     assert.equal(JSON.stringify(confirmedPower.argv).indexOf("dolphin"), -1);
     const switchedPower = launcher.powerInvocation("reboot", "poweroff");
     assert.equal(switchedPower.run, false);

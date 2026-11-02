@@ -172,7 +172,7 @@ function modulesForSide(order,hidden,sidesJson,side) {
     return visibleModules(order,hidden).filter(function(id){return moduleSide(id,sidesJson,order)===side;});
 }
 function moduleName(id) {
-    return ({workspaces:"Workspaces",title:"Focused title",search:"Search",clock:"Clock",control:"Control center",media:"Media",tray:"Tray",battery:"Battery"})[id] || id;
+    return ({workspaces:"Workspaces",title:"Focused title",search:"Search",clock:"Clock",control:"Audio",media:"Media",tray:"Tray",battery:"Battery",network:"Network & Devices",power:"Power"})[id] || id;
 }
 
 var swiftshellBar = {

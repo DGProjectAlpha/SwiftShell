@@ -23,6 +23,7 @@ ShellRoot {
                     && Services.SettingsStore.barSurfaceColor === "#dedede"
                     && Services.SettingsStore.clockSeconds && Services.SettingsStore.clockDate
                     && Services.SettingsStore.clockDateFormat === "iso" && !Services.SettingsStore.use24Hour
+                    && Services.SettingsStore.launcherDefaultMode === "favorites"
                     && Services.SettingsStore.searchLabel
                     && JSON.parse(Services.SettingsStore.moduleSidesJson).clock === "center"
                     && JSON.parse(Services.SettingsStore.hiddenOutputsJson)["DP-1"][0] === "tray"
@@ -37,6 +38,7 @@ ShellRoot {
                 Services.SettingsStore.setClockOptions(true,true,"iso");
                 Services.SettingsStore.setUse24Hour(false);
                 Services.SettingsStore.setSearchLabel(true);
+                Services.SettingsStore.setLauncherDefaultMode("favorites");
                 Services.SettingsStore.setModuleSide("clock","center");
                 Services.SettingsStore.setHiddenForOutput("DP-1",["tray"]);
                 Services.SettingsStore.setBarSurface("", "solid", "#dedede", .8);

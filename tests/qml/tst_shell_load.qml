@@ -12,6 +12,13 @@ TestCase {
 
     // Every shell QML document. The static check requires this list to match the tree.
     readonly property var shellFiles: [
+        "shell/services/ClockService.qml",
+        "shell/services/DefaultAppsService.qml",
+        "shell/services/DesktopAppearance.qml",
+        "shell/services/ShortcutsService.qml",
+        "shell/services/NetworkService.qml",
+        "shell/services/PowerProfiles.qml",
+
         "shell/shell.qml",
         "shell/WorkspaceAudit.qml",
         "shell/bar/BarHost.qml",

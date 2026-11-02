@@ -1,3 +1,4 @@
+//@ pragma UseQApplication
 //@ pragma ShellId swiftshell
 
 import Quickshell
