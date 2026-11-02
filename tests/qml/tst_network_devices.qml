@@ -174,6 +174,17 @@ TestCase {
         compare(section.notice,"Request cancelled.")
         destroyBluetoothFixture(fixture)
     }
+    function test_bluetooth_power_off_stops_discovery_and_pending_request() {
+        const fixture=bluetoothFixture(1),section=fixture.section,device=fixture.devices[0]
+        section.scan();verify(fixture.adapter.discovering)
+        section.run(device.dbusPath,"pair");verify(section.busy)
+        fixture.adapter.enabled=false
+        compare(section.adapterPowered,false)
+        compare(fixture.adapter.discovering,false)
+        compare(section.busy,false)
+        verify(section.notice.indexOf("turned off")>=0)
+        destroyBluetoothFixture(fixture)
+    }
     function test_bluetooth_discovery_is_owned_and_stops_on_close() {
         const adapter=Qt.createQmlObject('import QtQuick;QtObject {property string name:"Test adapter";property string adapterId:"test";property string dbusPath:"/owned/test";property bool enabled:true;property bool discovering:false;property QtObject devices:QtObject{property var values:[]}}',test)
         Bluetooth.defaultAdapter=adapter;Bluetooth.adapters.values=[adapter]

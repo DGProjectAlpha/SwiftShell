@@ -18,6 +18,7 @@ Column {
     readonly property string progressText:pending ? (pending.cancelRequested ? "Cancelling…" : pending.action==="pair" ? "Pairing accessory. Confirm the code or PIN in your system prompt." : pending.action==="connect" ? "Connecting accessory…" : pending.action==="disconnect" ? "Disconnecting accessory…" : pending.action==="forget" ? "Removing the saved pairing…" : "Cancelling pairing…") : ""
     readonly property var adapters:BluetoothLogic.objectValues(Bluetooth.adapters)
     readonly property var adapter:adapters.find(function(item){return (item.dbusPath || item.adapterId)===root.selectedAdapter}) || Bluetooth.defaultAdapter
+    readonly property bool adapterPowered:!!adapter && adapter.enabled===true
     readonly property var summary:BluetoothLogic.adapterSummary(adapter)
     readonly property var deviceModel:adapter && adapter.devices ? adapter.devices : Bluetooth.devices
     readonly property var rows:BluetoothLogic.deviceRows(deviceModel).sort(function(a,b){return Number(b.connected)-Number(a.connected) || Number(b.paired)-Number(a.paired) || a.name.localeCompare(b.name)})
@@ -107,10 +108,8 @@ Column {
         function onPairedChanged(){root.checkPending()}
         function onBondedChanged(){root.checkPending()}
     }
-    Connections {
-        target:root.adapter
-        ignoreUnknownSignals:true
-        function onEnabledChanged(){if(!root.adapter.enabled){root.stopDiscovery();if(root.pending)root.finishPending("Bluetooth was turned off before the request finished.",true)}}
+    onAdapterPoweredChanged: {
+        if(!adapterPowered){root.stopDiscovery();if(root.pending)root.finishPending("Bluetooth was turned off before the request finished.",true)}
     }
     onRowsChanged:Qt.callLater(checkPending)
     onAdapterChanged: {stopDiscovery();pending=null;actionLimit.stop();lastAttempt=null;forgetting=null;notice=""}
