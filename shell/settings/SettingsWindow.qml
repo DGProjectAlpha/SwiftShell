@@ -125,6 +125,15 @@ FloatingWindow {
     onClosed: requestClose()
     onWidthChanged: sizeTimer.restart()
     onHeightChanged: sizeTimer.restart()
+    function revealPendingControl() {
+        const page=activePage()
+        if(!placementReady || !SettingsModel.pendingControl || !page || pageStatus!==Loader.Ready)return
+        search.text=""
+        page.highlightId=SettingsModel.pendingControl
+        SettingsModel.pendingControl=""
+        if(page.focusHighlight)page.focusHighlight()
+    }
+    onPageStatusChanged:Qt.callLater(revealPendingControl)
     Component.onDestruction: { WindowService.active=false;SettingsModel.nativeWindow=null;WindowService.request("cleanup") }
     Timer { id:mapTimer; interval:150; repeat:false; onTriggered:{ window.mapAttempts++;WindowService.request("mapped") } }
     Timer { id:sizeTimer; interval:350; repeat:false; onTriggered:if(window.visible && !WindowService.maximized) { window.rememberSize();WindowService.request("remember") } }
@@ -132,7 +141,7 @@ FloatingWindow {
         target: WindowService
         function onCompleted(action,success) {
             if (action === "remember" && window.closing) SettingsModel.hide()
-            if (action === "mapped" && success) { window.placementReady=true;search.forceActiveFocus() }
+            if (action === "mapped" && success) { window.placementReady=true;search.forceActiveFocus();Qt.callLater(window.revealPendingControl) }
             if (action === "mapped" && !success && window.mapAttempts < 4) mapTimer.restart()
         }
     }
@@ -140,7 +149,8 @@ FloatingWindow {
         target: SettingsModel
         function onAppearanceEditRequested(key,value) { const patch={};patch[key]=value;window.commit(patch) }
         function onWindowActionRequested(action) { window.performAction(action) }
-        function onFocusTicketChanged() { WindowService.request("activate");search.forceActiveFocus() }
+        function onFocusTicketChanged() { WindowService.request("activate");search.forceActiveFocus();Qt.callLater(window.revealPendingControl) }
+        function onPendingControlChanged(){Qt.callLater(window.revealPendingControl)}
     }
     Loader {
         anchors.fill: content

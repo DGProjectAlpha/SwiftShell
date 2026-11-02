@@ -21,3 +21,4 @@ singleton PowerProfiles 1.0 PowerProfiles.qml
 
 singleton OverviewService 1.0 OverviewService.qml
 
+singleton DesktopTools 1.0 DesktopTools.qml

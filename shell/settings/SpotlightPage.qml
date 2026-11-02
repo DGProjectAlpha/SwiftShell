@@ -15,9 +15,9 @@ Item {
 
     function shows(id) { return Nav.controlVisible(query,id); }
     function moveHighlight(delta) { highlightId=Nav.moveSelection(query,highlightId,delta); }
-    function focusHighlight() { if(shows("spotlightDefaultMode"))startMode.forceActiveFocus(); }
+    function focusHighlight() { if(highlightId==="spotlightProviders")providerToggle.forceActiveFocus();else if(shows("spotlightDefaultMode"))startMode.forceActiveFocus(); }
     onQueryChanged: highlightId=Nav.firstControlId(query)
-    onHighlightIdChanged: if(highlightId==="spotlightDefaultMode")revealRequested(startRow.y,startRow.height)
+    onHighlightIdChanged: {if(highlightId==="spotlightDefaultMode")revealRequested(startRow.y,startRow.height);else if(highlightId==="spotlightProviders")revealRequested(providersGroup.y,providersGroup.height);else if(highlightId==="spotlightScreenshots")revealRequested(screenshotGroup.y,screenshotGroup.height)}
 
     Column {
         id: column
@@ -88,11 +88,43 @@ Item {
         }
         Text {
             width:parent.width
-            visible:!page.shows("spotlightDefaultMode")
+            visible:!page.shows("spotlightDefaultMode") && !page.shows("spotlightProviders") && !page.shows("spotlightScreenshots")
             text:"No matching settings"
             color:Theme.settingsMuted
             font.family:Theme.settingsFontFamily
             font.pixelSize:Theme.settingsFontSize
+        }
+        Column {
+            id:providersGroup
+            width:parent.width;spacing:Theme.settingsSpacing;visible:page.shows("spotlightProviders")
+        SectionHeader {text:"Search providers"}
+        SettingsToggle {
+            id:providerToggle
+            label:"Find open windows";checked:SettingsStore.searchWindows
+            onToggled:function(value){SettingsStore.setSearchWindows(value)}
+        }
+        SettingsToggle {
+            label:"Clipboard history";checked:SettingsStore.clipboardHistory
+            enabled:DesktopTools.clipboardAvailable
+            onToggled:function(value){SettingsStore.setClipboardHistory(value)}
+        }
+        Text {
+            width:parent.width;wrapMode:Text.WordWrap
+            text:"When enabled, type ‘clip’ to search text you copy from now on. Keeps up to 30 items for 20 minutes in this session; nothing is saved to disk. Password-manager privacy hints are respected, but other sensitive text may still be copied. Turn it off to clear history."
+            color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall
+        }
+        FlatButton {label:"Clear clipboard history";enabled:DesktopTools.history.length>0;onActivated:DesktopTools.clearHistory()}
+        }
+        Column {
+            id:screenshotGroup
+            width:parent.width;spacing:Theme.settingsSpacing;visible:page.shows("spotlightScreenshots")
+        SectionHeader {text:"Screenshots"}
+        Text {
+            width:parent.width;wrapMode:Text.WordWrap
+            text:DesktopTools.regionAvailable ? "Type ‘screenshot’ in Spotlight to select an area or capture this display. Images are copied to the clipboard; paste them into an app to save or share. Escape cancels an area selection." : "Screenshot tools are not available. Install the optional screenshot integration to enable capture."
+            color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall
+        }
+        Text {visible:DesktopTools.message!=="";width:parent.width;wrapMode:Text.WordWrap;text:DesktopTools.message;color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall}
         }
     }
 }

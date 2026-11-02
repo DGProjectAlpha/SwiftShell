@@ -4,6 +4,7 @@ import QtQuick
 
 QtObject {
     property var screens: []
+    property string clipboardText:""
 
     function execDetached(options) {
     }

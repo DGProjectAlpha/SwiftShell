@@ -11,6 +11,7 @@ import "services"
 
 ShellRoot {
     id: root
+    readonly property bool desktopToolsReady:DesktopTools.clipboardAvailable
     readonly property bool clockToolsReady: ClockService.loaded
     readonly property bool desktopAppearanceReady: DesktopAppearance.available
     readonly property bool shortcutsReady: ShortcutsService.available
@@ -107,6 +108,7 @@ ShellRoot {
         }
     }
 
+    Connections {target:DesktopTools;function onCaptureRequested(){LauncherModel.closeLauncher();OverviewService.closeOverview();barHost.closePanels()}}
     BarHost { id: barHost }
     LauncherWindow { id: launcherWindow }
     OverviewWindow {id:overviewWindow}

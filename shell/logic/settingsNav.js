@@ -1,4 +1,6 @@
 var CONTROLS = [
+    {id:"spotlightProviders",category:"spotlight",section:"Search providers",label:"Clipboard and open windows",keywords:["clipboard","clip","history","windows","privacy","providers"]},
+    {id:"spotlightScreenshots",category:"spotlight",section:"Screenshots",label:"Screenshots",keywords:["capture","screenshot","image","region"]},
     {id:"notificationDelivery",category:"notifications",section:"Delivery",label:"Notification delivery",keywords:["duration","retention","history","display","banner","timeout","snooze"]},
     {id:"barEdgeScale",category:"bar",section:"Position & scale",label:"Bar edge and scale",keywords:["left","right","top","bottom","display","monitor","scale","position"]},
     {id:"workspaceOverview",category:"workspaces",section:"Overview",label:"Workspace overview",keywords:["alt tab","windows","miniatures","overview"]},

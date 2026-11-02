@@ -43,13 +43,21 @@ Rectangle {
         if(query) {
             const immediate=Search.providerResult(query);
             if(immediate) providers.push(immediate);
+            const clipboard=DesktopTools.clipboardResults(query)
+            for(const row of clipboard)providers.push(row)
+            const windows=LauncherModel.windowResults(query)
+            for(const row of windows)providers.push(row)
+            if(/^(screenshot|capture)(?:\s|$)/i.test(query)) {
+                if(DesktopTools.regionAvailable)providers.unshift({kind:"screenshot",id:"capture-region",name:"Screenshot a region",detail:"Select an area · Copies image to clipboard",mode:"region"})
+                if(DesktopTools.screenshotAvailable)providers.push({kind:"screenshot",id:"capture-output",name:"Screenshot this display",detail:"Copies image to clipboard",mode:"output"})
+            }
             const controls=Navigation.filterControls(query);
             const used={};
             for(let index=0;index<controls.length && providers.length<6;index++) {
                 const control=controls[index];
                 if(used[control.category]) continue;
                 used[control.category]=true;
-                providers.push({kind:"setting-result",id:"setting-"+control.category,category:control.category,name:control.label,detail:"Settings · "+control.section,icon:"preferences-system",section:"Settings"});
+                providers.push({kind:"setting-result",id:"setting-"+control.category,category:control.category,controlId:control.id,name:control.label,detail:"Settings · "+control.section,icon:"preferences-system",section:"Settings"});
             }
             for(let i=0;i<quickActions.length;i++) {
                 const action=quickActions[i];
@@ -62,7 +70,7 @@ Rectangle {
             }
         }
         appRows=found;
-        providerRows=providers.slice(0,3);
+        providerRows=providers.slice(0,5);
         if(LauncherModel.selected>=selectionCount) LauncherModel.selected=0;
     }
     function chooseMode(mode) {
@@ -140,8 +148,10 @@ Rectangle {
         function onApplicationsChanged() {card.rebuild();}
         function onRecentIdsChanged() {card.rebuild();}
         function onGridModeChanged() {card.rebuild();}
+        function onWindowEntriesChanged(){if(card.searching)card.rebuild()}
     }
-    Connections {target:SettingsStore;function onPinnedIdsChanged(){card.rebuild();}}
+    Connections {target:SettingsStore;function onPinnedIdsChanged(){card.rebuild();}function onSearchWindowsChanged(){card.rebuild()}}
+    Connections {target:DesktopTools;function onHistoryChanged(){if(card.searching)card.rebuild()}}
     Component.onCompleted: rebuild()
     Keys.onEscapePressed: {closeRequested();}
     MouseArea {anchors.fill:parent;onClicked:card.focusInput();}

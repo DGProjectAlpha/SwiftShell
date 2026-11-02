@@ -7,6 +7,7 @@ import Quickshell.Io
 import Quickshell.Hyprland
 import "../logic/launcher.js" as Launcher
 import "../logic/monitors.js" as Monitors
+import "../logic/desktoptools.js" as DesktopToolsLogic
 
 Singleton {
     id: root
@@ -30,6 +31,16 @@ Singleton {
     property string gridMode: "all"
     readonly property bool actionBusy: powerProcess.running
 
+    readonly property var windowEntries: {
+        const result=[]
+        for(const top of Hyprland.toplevels.values) {
+            const data=top.lastIpcObject || {}
+            if(data.mapped===false || data.hidden===true)continue
+            result.push({address:top.address,title:top.title || "",appId:top.wayland ? top.wayland.appId : "",handle:top.wayland || null})
+        }
+        return result
+    }
+    function windowResults(query){return SettingsStore.searchWindows ? DesktopToolsLogic.windowResults(windowEntries,query) : []}
     signal controlRequested()
     signal settingsRequested()
     signal inputRequested()
@@ -317,10 +328,25 @@ Singleton {
             root.settingsRequested();
             return;
         }
+        if(row.kind === "window") {
+            root.closeLauncher()
+            if(row.handle)row.handle.activate()
+            else if(!HyprlandModel.activateWindow(row.address))root.notice="That window is no longer available."
+            return
+        }
+        if(row.kind === "clipboard") {
+            Quickshell.clipboardText=row.value
+            root.notice="Copied to clipboard"
+            return
+        }
+        if(row.kind === "screenshot") {
+            root.closeLauncher()
+            DesktopTools.screenshot(row.mode,HyprlandModel.readFocusedOutput())
+            return
+        }
         if (row.kind === "setting-result") {
-            SettingsStore.setSettingsCategory(row.category);
             root.closeLauncher();
-            root.settingsRequested();
+            SettingsModel.requestControl(row.controlId || "",row.category);
             return;
         }
         if (row.kind === "calculation") {

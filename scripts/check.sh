@@ -21,6 +21,8 @@ fi
 "$NODE" "$ROOT/tests/notifications.test.js"
 "$NODE" "$ROOT/tests/overview.test.js"
 "$NODE" "$ROOT/tests/spotlight-providers.test.js"
+"$NODE" "$ROOT/tests/desktop-tools.test.js"
+python3 "$ROOT/tests/test_desktoptools.py"
 python3 "$ROOT/tests/test_networkctl.py"
 python3 "$ROOT/tests/test_powerprofiles.py"
 python3 "$ROOT/tests/test_settingswrite.py"
@@ -80,6 +82,7 @@ QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/t
 QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_notifications.qml" -platform offscreen
 QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_overview.qml" -platform offscreen
 QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_spotlight.qml" -platform offscreen
+QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_desktop_tools.qml" -platform offscreen
 QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_workspace_drag.qml" -platform offscreen
 QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_settings_responsive.qml" -platform offscreen
 QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_appearance_queue.qml" -platform offscreen

@@ -32,6 +32,7 @@ TestCase {
         "shell/popovers/ClockTimer.qml",
         "shell/popovers/ClockStopwatch.qml",
         "shell/services/ClockService.qml",
+        "shell/services/DesktopTools.qml",
         "shell/services/DefaultAppsService.qml",
         "shell/services/ShortcutsService.qml",
         "shell/services/DesktopAppearance.qml",
