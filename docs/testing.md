@@ -993,3 +993,25 @@ acceptance. Scheduled quiet hours use local time; no system-time or suspend test
 was performed. History/drafts remain session-only and HTTP image fetching is not
 supported. Revert this commit for source recovery; turn new settings off/reset
 individual fields in Notifications to keep newer unrelated preferences intact.
+
+## CI compatibility repair — 2026-11-02
+
+GitHub runs 41513275241 (PR) and 41513935523 (main) failed in
+`NotificationCenter::test_banner_previews_and_action_labels_are_plain`: Qt 6.4
+exposes `Item.children` as an indexed QML list without JavaScript iteration.
+The test now traverses by index and requires a matching label, preserving the
+plain-text assertion. The next run (41514946078) passed notifications and exposed
+the same indexed-list limitation in the overview test helper, whose use of
+`children.filter` is now replaced by indexed traversal too. The earlier Bluetooth Connections signal collision was
+already fixed in c3ec14c. The PR runner also spent 6m48s installing dependencies;
+its mirror downloaded 38.3 MB at 98 kB/s and completed successfully. That delay
+was separate from the test failure.
+
+CI now pins Ubuntu 24.04 for the Qt 6.4 compatibility baseline, avoids optional
+APT recommendations, bounds retries/network waits and job/step duration, and
+reports checker versions. Local `scripts/check.sh` passed: static checks cover
+97 QML files and all 19 QML suites passed on Qt 6.12. This test/workflow change
+does not restart SwiftShell or modify desktop configuration. Backups of the
+affected files are in `/tmp/swiftshell-ci-repair-backup`; revert the repair
+commit to restore the previous workflow/test. GitHub validation is recorded in
+the repair PR; offscreen CI does not verify compositor behavior.

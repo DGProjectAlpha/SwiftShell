@@ -8,13 +8,16 @@ on:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    # Keep the Qt 6.4 compatibility check stable as ubuntu-latest advances.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - name: Install the checkers used by scripts/check.sh
+        timeout-minutes: 12
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
+          sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 update
+          sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 install -y --no-install-recommends \
             nodejs \
             python3 \
             qt6-declarative-dev-tools \
@@ -30,5 +33,13 @@ jobs:
             qml6-module-qtquick-layouts \
             qml6-module-qtquick-window \
             qml6-module-qttest
+      - name: Report checker versions
+        run: |
+          python3 --version
+          node --version
+          /usr/lib/qt6/bin/qmltestrunner -help
+        env:
+          QT_QPA_PLATFORM: offscreen
       - name: Run scripts/check.sh
+        timeout-minutes: 8
         run: scripts/check.sh

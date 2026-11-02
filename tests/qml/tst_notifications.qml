@@ -117,11 +117,18 @@ TestCase {
         Services.SettingsStore.setNotificationPreferences({previewMode:"full"})
         verify(!card.hiddenPreview)
         verify(findChild(card,"notificationReplyOpen").visible)
+        let matchingLabels=0
         function labels(item) {
-            if(item.text==="<b>Literal action</b>")compare(item.textFormat,Text.PlainText)
-            for(const child of item.children || [])labels(child)
+            if(item.text==="<b>Literal action</b>") {
+                compare(item.textFormat,Text.PlainText)
+                matchingLabels++
+            }
+            // Qt 6.4 exposes QML children as an indexed list, not a JS iterable.
+            const children=item.children || []
+            for(let i=0;i<children.length;i++)labels(children[i])
         }
         labels(card)
+        verify(matchingLabels>0,"The action label must be checked, not just traversed")
     }
     Component {
         id:scrollingDrawer

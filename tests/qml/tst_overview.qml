@@ -23,7 +23,14 @@ TestCase {
         verify(card!==null);wait(1);
     }
     function cleanup(){card.destroy();card=null;Hyprland.toplevels.values=oldWindows;}
-    function tiles(){return card.desktop.children.filter(function(item){return item.objectName==="overviewWindowTile"});}
+    function tiles() {
+        const items=[]
+        const children=card.desktop.children
+        for(let i=0;i<children.length;i++) {
+            if(children[i].objectName==="overviewWindowTile")items.push(children[i])
+        }
+        return items
+    }
     function test_real_tiling_preserved() {
         const items=tiles();compare(items.length,2);
         compare(items[0].x,1);compare(items[0].y,7);compare(items[0].width,254);compare(items[0].height,280);
