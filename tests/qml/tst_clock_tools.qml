@@ -65,11 +65,14 @@ TestCase {
         panel.showTab("timer");
         const page = findChild(panel, "clockPage").item;
         page.selectedSeconds = 12;
+        waitForRendering(page);
         mouseClick(findChild(page, "timerPrimary"));
         compare(Services.ClockService.timerStatus, "running");
         verify(Services.ClockService.remaining > 11000);
+        waitForRendering(page);
         mouseClick(findChild(page, "timerPrimary"));
         compare(Services.ClockService.timerStatus, "paused");
+        waitForRendering(page);
         mouseClick(findChild(page, "timerPrimary"));
         compare(Services.ClockService.timerStatus, "running");
         waitForRendering(page);
