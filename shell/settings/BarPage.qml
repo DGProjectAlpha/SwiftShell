@@ -17,9 +17,21 @@ Item {
         colorPicker.item.selectedColor=selectedSurface.color
         colorPicker.item.open()
     }
-    property string modulesOutput: ""
+    property alias modulesOutput:page.layoutOutput
+    property string layoutOutput:""
+    readonly property var selectedLayout:SettingsStore.layoutForOutput(layoutOutput)
+    function editLayout(edge,scale,order,sides) {SettingsStore.setOutputLayout(layoutOutput,edge,scale,order,sides)}
+    function editModuleSide(id,side) {
+        const layout=SettingsStore.layoutForOutput(modulesOutput),sides=JSON.parse(layout.sides)
+        sides[id]=side
+        SettingsStore.setOutputLayout(modulesOutput,layout.edge,layout.scale,layout.order,JSON.stringify(sides))
+    }
+    function editModuleOrder(order) {
+        const layout=SettingsStore.layoutForOutput(modulesOutput)
+        SettingsStore.setOutputLayout(modulesOutput,layout.edge,layout.scale,order,layout.sides)
+    }
     readonly property bool customVisibility:Object.prototype.hasOwnProperty.call(JSON.parse(SettingsStore.hiddenOutputsJson),modulesOutput)
-    property string surfaceOutput: ""
+    property alias surfaceOutput:page.layoutOutput
     readonly property var surfaceOverrides: JSON.parse(SettingsStore.barSurfaceOutputsJson)
     readonly property bool hasSurfaceOverride: Object.prototype.hasOwnProperty.call(surfaceOverrides,surfaceOutput)
     readonly property var selectedSurface: hasSurfaceOverride ? surfaceOverrides[surfaceOutput] : ({mode:SettingsStore.barSurfaceMode,color:SettingsStore.barSurfaceColor,opacity:SettingsStore.barSurfaceOpacity})
@@ -45,6 +57,7 @@ Item {
     }
 
     function focusHighlight() {
+        if(page.highlightId==="barEdgeScale"){edgeChoice.forceActiveFocus();return}
         var item = itemFor(page.highlightId)
         if (item && item.forceActiveFocus)
             item.forceActiveFocus()
@@ -202,6 +215,40 @@ Item {
                 label:"Reset background"
                 onActivated:page.editSurface("transparent","#161616",.75)
             }
+        }
+
+        Column {
+            property string controlId:"barEdgeScale"
+            width:parent.width;spacing:Theme.settingsSpacing
+            visible:page.shows("barEdgeScale")
+            SectionHeader {text:"Position & scale"}
+            SettingsRow {
+                width:parent.width;label:"Display"
+                ChoiceBox {
+                    choices:[{label:"All-screen default",value:""}].concat(HyprlandModel.monitorChoices.map(function(m){return {label:m.label,value:m.name}}))
+                    selectedValue:page.layoutOutput
+                    onChosen:function(value){page.layoutOutput=value}
+                }
+            }
+            SettingsRow {
+                width:parent.width;label:"Screen edge"
+                ChoiceBox {
+                    id:edgeChoice
+                    choices:[{label:"Top",value:"top"},{label:"Bottom",value:"bottom"},{label:"Left",value:"left"},{label:"Right",value:"right"}]
+                    selectedValue:page.selectedLayout.edge
+                    onChosen:function(value){page.editLayout(value,page.selectedLayout.scale,page.selectedLayout.order,page.selectedLayout.sides)}
+                }
+            }
+            SettingsRow {
+                width:parent.width;label:"Content scale"
+                ChoiceBox {
+                    choices:[{label:"75%",value:"0.75"},{label:"90%",value:"0.9"},{label:"100%",value:"1"},{label:"110%",value:"1.1"},{label:"125%",value:"1.25"},{label:"150%",value:"1.5"}]
+                    selectedValue:String(page.selectedLayout.scale)
+                    onChosen:function(value){page.editLayout(page.selectedLayout.edge,Number(value),page.selectedLayout.order,page.selectedLayout.sides)}
+                }
+            }
+            Text {width:parent.width;wrapMode:Text.WordWrap;text:"Scales the bar’s controls on this display, in addition to the display’s desktop scale.";color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall}
+            FlatButton {visible:page.layoutOutput!=="";label:"Use all-screen layout";onActivated:SettingsStore.inheritOutputLayout(page.layoutOutput)}
         }
 
         SettingsRow {
@@ -365,7 +412,7 @@ Item {
             }
 
             SettingsRow {
-                width:parent.width;label:"Visibility on"
+                width:parent.width;label:"Customize display"
                 ChoiceBox {
                     choices:[{label:"Default visibility",value:""}].concat(HyprlandModel.monitorChoices.map(function(m){return {label:m.label,value:m.name}}))
                     selectedValue:page.modulesOutput
@@ -383,9 +430,9 @@ Item {
                 text:"Some screens have their own visibility choices. Select a screen above to change its modules."
                 color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall
             }
-            FlatButton {visible:SettingsStore.moduleSidesJson!=="{}";label:"Reset positions";onActivated:SettingsStore.resetModuleSides()}
-            Text {width:parent.width;wrapMode:Text.WordWrap;text:"Position and order apply to all screens. Visibility can be different on each monitor.";color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall}
-            KeyedModel {id:moduleRows;entries:SettingsStore.moduleOrder}
+            FlatButton {label:"Reset grouping";onActivated:{const layout=SettingsStore.layoutForOutput(page.modulesOutput);SettingsStore.setOutputLayout(page.modulesOutput,layout.edge,layout.scale,layout.order,"{}")}}
+            Text {width:parent.width;wrapMode:Text.WordWrap;text:"Choose each display’s visible widgets, grouping and order. On side bars, Left and Right groups become Start and End.";color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall}
+            KeyedModel {id:moduleRows;entries:SettingsStore.layoutForOutput(page.modulesOutput).order}
             Repeater {
                 model: moduleRows
 
@@ -415,21 +462,21 @@ Item {
                     ChoiceBox {
                         width:100;height:Theme.controlHeight
                         choices:[{label:"Left",value:"left"},{label:"Center",value:"center"},{label:"Right",value:"right"}]
-                        selectedValue:Bar.moduleSide(modelData,SettingsStore.moduleSidesJson,SettingsStore.moduleOrder)
-                        onChosen:function(value){SettingsStore.setModuleSide(modelData,value)}
+                        selectedValue:Bar.moduleSide(modelData,SettingsStore.layoutForOutput(page.modulesOutput).sides,SettingsStore.layoutForOutput(page.modulesOutput).order)
+                        onChosen:function(value){page.editModuleSide(modelData,value)}
                     }
                     FlatButton {
                         label: "↑"
                         Accessible.name:"Move "+page.moduleName(modelData)+" earlier"
                         enabled: index > 0
-                        onActivated: SettingsStore.setModuleOrder(Bar.moveModule(SettingsStore.moduleOrder, modelData, -1))
+                        onActivated: page.editModuleOrder(Bar.moveModule(SettingsStore.layoutForOutput(page.modulesOutput).order, modelData, -1))
                     }
 
                     FlatButton {
                         label: "↓"
                         Accessible.name:"Move "+page.moduleName(modelData)+" later"
-                        enabled: index < SettingsStore.moduleOrder.length - 1
-                        onActivated: SettingsStore.setModuleOrder(Bar.moveModule(SettingsStore.moduleOrder, modelData, 1))
+                        enabled: index < SettingsStore.layoutForOutput(page.modulesOutput).order.length - 1
+                        onActivated: page.editModuleOrder(Bar.moveModule(SettingsStore.layoutForOutput(page.modulesOutput).order, modelData, 1))
                     }
                 }
             }

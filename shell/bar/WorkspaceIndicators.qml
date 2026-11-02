@@ -3,8 +3,10 @@ import "../components"
 import "../services"
 import "../themes"
 
-Row {
+Grid {
     id: root
+    property bool vertical:false
+    columns:vertical ? 3 : Math.max(1,stableItems.count)
 
     required property var workspaces
     property string monitorName: ""

@@ -37,7 +37,10 @@ MouseArea {
         onPaint: {
             const c=getContext("2d");c.reset();c.scale(width/24,height/24)
             c.strokeStyle=root.foreground;c.lineWidth=1.7;c.lineCap="round";c.lineJoin="round"
-            if(root.kind==="power") {
+            if(root.kind==="notifications") {
+                c.beginPath();c.moveTo(5,17);c.lineTo(7,14);c.lineTo(7,9);c.arc(12,9,5,Math.PI,0);c.lineTo(17,14);c.lineTo(19,17);c.closePath();c.stroke()
+                c.beginPath();c.arc(12,19,2,0,Math.PI);c.stroke()
+            } else if(root.kind==="power") {
                 c.beginPath();c.arc(12,13,8,-Math.PI*.31,Math.PI*1.31);c.stroke()
                 c.beginPath();c.moveTo(12,2);c.lineTo(12,11);c.stroke()
             } else if(root.kind==="network") {

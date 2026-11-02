@@ -27,12 +27,14 @@
       "tray",
       "battery",
       "network",
-      "power"
+      "power",
+      "notifications"
     ],
     "hiddenModules": [],
     "searchLabel": false,
     "moduleSidesJson": "{}",
     "hiddenOutputsJson": "{}",
+    "layoutOutputsJson": "{}",
     "surfaceMode": "transparent",
     "surfaceColor": "#161616",
     "surfaceOpacity": 0.75,
@@ -64,6 +66,8 @@
   },
   "launcher": {
     "defaultMode": "all",
+    "clipboardHistory": false,
+    "searchWindows": true,
     "pinnedIds": []
   },
   "wallpaper": {
@@ -86,7 +90,11 @@
   "notifications": {
     "ownership": "off",
     "dnd": false,
-    "policiesJson": "{}"
+    "policiesJson": "{}",
+    "bannerDuration": 6,
+    "historyLimit": 60,
+    "screenTarget": "focused",
+    "quietUntil": 0
   },
   "extensionsJson": "{}"
 }

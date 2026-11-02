@@ -12,6 +12,9 @@ Singleton {
     property bool protectedFile: false
     property string persistenceMessage: ""
     property string notificationMessage: ""
+    property var deliveryQueue:[]
+    property string deliverySummary:"Timer finished"
+    property string deliveryBody:"Your countdown has finished."
     property double now: Date.now()
     property int viewers: 0
     readonly property bool interactive: viewers > 0
@@ -57,12 +60,27 @@ Singleton {
         if (previousStatus !== "finished" && next.status === "finished") {
             timerFinished();
             notificationMessage = "Timer finished";
-            if (!notification.running) notification.running = true;
+            deliver("Timer finished","Your countdown has finished.","timer");
         }
     }
     function stopwatch(action) {
         if (!loaded) return;
+        const previous=state.stopwatch.status
         update(Object.assign({}, state, { stopwatch: Tools.stopwatchAction(state.stopwatch, action, Date.now()) }));
+        if(action==="pause" && previous==="running" && elapsed>=1000)
+            deliver("Stopwatch paused",Tools.durationText(elapsed,false)+" elapsed.","stopwatch");
+    }
+    function deliver(summary,body,kind) {
+        if(NotificationsModel.publishLocal(summary,body,kind))return
+        deliveryQueue=deliveryQueue.concat([{summary:summary,body:body}]).slice(-8)
+        deliverNext()
+    }
+    function deliverNext() {
+        if(notification.running || !deliveryQueue.length)return
+        const item=deliveryQueue[0]
+        deliveryQueue=deliveryQueue.slice(1)
+        deliverySummary=item.summary;deliveryBody=item.body
+        notification.running=true
     }
     function tick() {
         now = Date.now();
@@ -100,9 +118,10 @@ Singleton {
     Process {
         id: notification
         // Deliver to the existing notification owner; never claim its D-Bus name.
-        command: ["notify-send", "--app-name=SwiftShell", "--icon=alarm-symbolic", "--expire-time=0", "Timer finished", "Your countdown has finished."]
+        command: ["notify-send", "--app-name=SwiftShell", "--icon=alarm-symbolic", "--expire-time=0", root.deliverySummary, root.deliveryBody]
         onExited: function(code, status) {
-            if (code !== 0) root.notificationMessage = "Timer finished. A desktop notification could not be delivered.";
+            if (code !== 0) root.notificationMessage = "A clock notification could not be delivered.";
+            Qt.callLater(root.deliverNext);
         }
     }
     FileView {

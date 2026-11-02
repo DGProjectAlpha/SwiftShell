@@ -1,4 +1,7 @@
 var CONTROLS = [
+    {id:"notificationDelivery",category:"notifications",section:"Delivery",label:"Notification delivery",keywords:["duration","retention","history","display","banner","timeout","snooze"]},
+    {id:"barEdgeScale",category:"bar",section:"Position & scale",label:"Bar edge and scale",keywords:["left","right","top","bottom","display","monitor","scale","position"]},
+    {id:"workspaceOverview",category:"workspaces",section:"Overview",label:"Workspace overview",keywords:["alt tab","windows","miniatures","overview"]},
     {id:"windowBorders",category:"appearance",section:"Application windows",label:"Window borders",keywords:["border","active","inactive","windows","outline","disable"]},
     {id:"spotlightDefaultMode",category:"spotlight",section:"Spotlight Search",label:"Default search view",keywords:["spotlight","search","all apps","favorites","recent","launcher"]},
     { id:"defaultApps",category:"defaultApps",section:"Applications",label:"Default applications",keywords:["browser","email","calendar","terminal","files","mime"] },

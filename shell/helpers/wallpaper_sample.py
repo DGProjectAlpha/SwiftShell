@@ -4,7 +4,7 @@ import argparse
 import json
 from pathlib import Path
 
-def sample(path, width, height, bar_height, fit):
+def sample(path, width, height, bar_height, fit, edge="top"):
     from PySide6.QtCore import QSize
     from PySide6.QtGui import QImageReader
     source = Path(path)
@@ -29,9 +29,11 @@ def sample(path, width, height, bar_height, fit):
     for region in range(3):
         pixels = []
         for column in range(24):
-            x = width*(region+(column+.5)/24)/3
+            along = (height if edge in ['left','right'] else width)*(region+(column+.5)/24)/3
             for row in range(4):
-                y = max(1,bar_height)*(row+.5)/4
+                cross = max(1,bar_height)*(row+.5)/4
+                x = cross if edge == 'left' else width-cross if edge == 'right' else along
+                y = along if edge in ['left','right'] else height-cross if edge == 'bottom' else cross
                 sx, sy = (x-ox)/scale, (y-oy)/scale
                 if not 0 <= sx < iw or not 0 <= sy < ih:
                     rgb = (0,0,0)
@@ -48,10 +50,11 @@ if __name__ == '__main__':
     parser=argparse.ArgumentParser()
     parser.add_argument('path');parser.add_argument('width',type=int);parser.add_argument('height',type=int)
     parser.add_argument('bar_height',type=int);parser.add_argument('fit',choices=['cover','contain'])
+    parser.add_argument('edge',choices=['top','bottom','left','right'],nargs='?',default='top')
     args=parser.parse_args()
     try:
         if min(args.width,args.height,args.bar_height)<=0:raise ValueError('Invalid wallpaper geometry.')
-        result=sample(args.path,args.width,args.height,args.bar_height,args.fit)
+        result=sample(args.path,args.width,args.height,args.bar_height,args.fit,args.edge)
     except Exception as error:
         result={'ok':False,'reason':str(error) if isinstance(error,ValueError) else 'Image analysis needs the optional Python Qt image decoder.'}
     print(json.dumps(result,separators=(',',':')))

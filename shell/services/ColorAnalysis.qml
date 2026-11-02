@@ -102,7 +102,8 @@ Singleton {
         var choice = Wallpaper.resolveSource(config.path)
         root.nextToken += 1
         var nextOutputs = Object.assign({}, root.outputs)
-        config = Object.assign({}, config, { token: root.nextToken })
+        const layout=SettingsStore.layoutForOutput(name)
+        config = Object.assign({}, config, {token:root.nextToken,edge:layout.edge,barThickness:Math.round((layout.edge === "left" || layout.edge === "right" ? 168 : SettingsStore.barHeight)*layout.scale)})
         nextOutputs[name] = config
         root.outputs = nextOutputs
         if (choice.source !== "file") {
@@ -122,7 +123,7 @@ Singleton {
         activeSample=sampleQueue[0];sampleQueue=sampleQueue.slice(1)
         const job=activeSample
         sampler.command=["python3",Quickshell.shellDir+"/helpers/wallpaper_sample.py",job.path,
-            String(job.config.width),String(job.config.height),String(SettingsStore.barHeight),SettingsStore.wallpaperFit]
+            String(job.config.width),String(job.config.height),String(job.config.barThickness),SettingsStore.wallpaperFit,job.config.edge]
         sampler.running=true
     }
     Process {
@@ -159,8 +160,8 @@ Singleton {
             }
             var decoded = Png.decodePng(request.response)
             var bands = Png.visibleBands(decoded, config.width, config.height,
-                                         SettingsStore.wallpaperFit, SettingsStore.barHeight,
-                                         Wallpaper.cropRect)
+                                         SettingsStore.wallpaperFit, config.barThickness,
+                                         Wallpaper.cropRect,config.edge)
             root.setSample(name, Contrast.analyzeBands(bands, root.sampleForOutput(name)))
         }
         request.send()
@@ -172,5 +173,6 @@ Singleton {
         function onAutomaticGradientChanged() { root.refresh() }
         function onWallpaperFitChanged() { root.refresh() }
         function onBarHeightChanged() { root.refresh() }
+        function onLayoutOutputsJsonChanged(){root.refresh()}
     }
 }

@@ -22,7 +22,13 @@ function focusedTitle(toplevels, monitorName, activeWorkspaceId) {
     return onWorkspace;
 }
 
+function focusCommand(address,mode) {
+    if(typeof address!=="string" || !/^(?:0x)?[a-fA-F0-9]{1,32}$/.test(address))return "";
+    const selector="address:"+(address.indexOf("0x")===0 ? address : "0x"+address);
+    return mode==="legacy" ? "focuswindow "+selector : "eval hl.dispatch(hl.dsp.focus({window="+JSON.stringify(selector)+"}))";
+}
 var swiftshellWindows = {
+    focusCommand:focusCommand,
     focusedTitle: focusedTitle,
 };
 

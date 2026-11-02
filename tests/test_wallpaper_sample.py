@@ -32,6 +32,17 @@ class WallpaperSamplingTests(unittest.TestCase):
             image.save(str(path))
             result=wallpaper_sample.sample(path,200,100,20,'cover')
             self.assertEqual(result['center'],{'r':255,'g':255,'b':255})
+    def test_all_bar_edges_sample_the_displayed_band(self):
+        from PySide6.QtGui import QImage,QColor
+        with tempfile.TemporaryDirectory() as temp:
+            path=Path(temp)/'edges.png';image=QImage(100,100,QImage.Format_RGB32);image.fill(QColor('white'))
+            for y in range(100):
+                for x in range(100):
+                    color='red' if x<10 else 'blue' if x>=90 else 'black' if y>=90 else 'white'
+                    image.setPixelColor(x,y,QColor(color))
+            image.save(str(path))
+            for edge,rgb in [('top',(255,255,255)),('bottom',(0,0,0)),('left',(255,0,0)),('right',(0,0,255))]:
+                self.assertEqual(wallpaper_sample.sample(path,100,100,10,'cover',edge)['center'],dict(zip(('r','g','b'),rgb)))
     def test_missing_source_does_not_expose_filename(self):
         with self.assertRaisesRegex(ValueError,'Wallpaper is missing'):
             wallpaper_sample.sample('/not-a-real-private-file',100,100,10,'cover')

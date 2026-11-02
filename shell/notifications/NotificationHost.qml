@@ -1,10 +1,12 @@
 import QtQuick
+import QtQuick.Controls.Basic as Controls
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Services.Notifications
 import "../logic/notifications.js" as Notifications
 import "../services"
 import "../themes"
+import "../components"
 
 PanelWindow {
     id: host
@@ -13,8 +15,13 @@ PanelWindow {
     exclusionMode: ExclusionMode.Ignore
     focusable: false
     visible: NotificationsModel.center.live.length > 0
-    implicitWidth: 360
-    implicitHeight: Math.max(1, column.implicitHeight + Theme.panelPadding)
+    implicitWidth: 360 + Theme.surfaceShadowInset * 2
+    implicitHeight: Math.max(1,Math.min(column.implicitHeight + Theme.surfaceShadowInset * 2,screen ? screen.height-margins.top-Theme.panelMargin : 700))
+
+    surfaceFormat.opaque: false
+    margins.top: Theme.barHeight + Theme.panelGap
+    margins.right: Theme.panelMargin
+    mask: Region { item:viewport; radius:Theme.radius }
 
     anchors {
         top: true
@@ -29,6 +36,9 @@ PanelWindow {
         var screens = Quickshell.screens || []
         var focused = HyprlandModel.focusedOutput
         var focusedName = focused && focused.name ? String(focused.name) : ""
+        const target=SettingsStore.notificationScreenTarget
+        if(target!=="focused" && target!=="primary") focusedName=target
+        if(target==="primary") focusedName=screens.length>0 ? screens[0].name : ""
         for (var index = 0; index < screens.length; index++) {
             var screen = screens[index]
             if (screen && (screen.name === focusedName
@@ -56,6 +66,8 @@ PanelWindow {
         }
         return {
             id: notification.id,
+            appIcon: notification.appIcon,
+            transient: notification.transient,
             appName: notification.appName,
             summary: notification.summary,
             body: notification.body,
@@ -63,7 +75,9 @@ PanelWindow {
                 || String(notification.urgency) === "Critical" ? "critical" : "normal",
             desktopEntry: notification.desktopEntry,
             actions: actions,
-            expireTimeout: notification.expireTimeout
+            // Quickshell 0.3.2 exposes the D-Bus millisecond value unchanged.
+            // Normalize once into the reducer's seconds contract (native regression).
+            expireTimeout: notification.expireTimeout < 0 ? SettingsStore.notificationDuration : notification.expireTimeout / 1000
         }
     }
 
@@ -84,7 +98,7 @@ PanelWindow {
         var refresh = function () { host.refreshNotification(notification) }
         var names = [
             "appNameChanged", "summaryChanged", "bodyChanged", "urgencyChanged",
-            "desktopEntryChanged", "actionsChanged", "expireTimeoutChanged"
+            "desktopEntryChanged", "actionsChanged", "expireTimeoutChanged", "appIconChanged", "transientChanged"
         ]
         for (var index = 0; index < names.length; index++)
             host.connectSignal(notification, names[index], refresh)
@@ -138,32 +152,31 @@ PanelWindow {
         return found
     }
 
+    function trimNatives() {
+        const ids=NotificationsModel.entries.map(function(item){return item.id})
+        const discarded=nativeList.filter(function(item){return ids.indexOf(item.id)===-1})
+        discarded.forEach(function(item){host.forget(item);Notifications.nativeClose(item,"expire")})
+    }
+
     function refreshNotification(notification) {
         if (!notification || !Notifications.shouldTrack(NotificationsModel.center))
             return
         var route = NotificationsModel.receive(host.snapshot(notification))
-        if (route === "banner")
-            return
-        var previous = host.take(notification.id)
-        try {
-            if (notification.tracked)
-                notification.tracked = false
-            if (previous && previous !== notification && previous.tracked)
-                previous.tracked = false
-        } catch (error) {
-            console.warn("SwiftShell: a hidden notification could not be released")
+        if(route === "drop") {
+            host.forget(notification)
+            Notifications.nativeClose(notification,"dismiss")
         }
+        host.trimNatives()
     }
 
     function accept(notification) {
-        if (!Notifications.shouldTrack(NotificationsModel.center))
-            return
+        if (!Notifications.shouldTrack(NotificationsModel.center)) return
         NotificationsModel.noteServer("running")
         var route = NotificationsModel.receive(host.snapshot(notification))
-        if (route !== "banner")
-            return
+        if (route === "drop") return
         notification.tracked = true
         host.remember(notification)
+        host.trimNatives()
     }
 
     function releaseAll() {
@@ -175,40 +188,44 @@ PanelWindow {
     }
 
     function reconfigure() {
-        NotificationsModel.configure(SettingsStore.notificationOwnership,
-                                     SettingsStore.notificationDnd,
-                                     SettingsStore.notificationPoliciesJson)
-        var current = host.nativeList.slice()
-        for (var index = 0; index < current.length; index++)
-            host.refreshNotification(current[index])
+        NotificationsModel.refreshConfiguration()
+        const current=host.nativeList.slice()
+        current.forEach(function(nativeNotification) {
+            const entries=Notifications.allEntries(NotificationsModel.center)
+            const record=entries.find(function(item){return item.id===nativeNotification.id})
+            if(!record) return
+            const policy=Notifications.policyFor(NotificationsModel.center.policies,record.desktopEntry)
+            if(policy==="hide") NotificationsModel.dismiss(record.id)
+            else if(record.urgency!=="critical" && (NotificationsModel.center.dnd || policy==="quiet"))
+                NotificationsModel.hideBanner(record.id)
+        })
     }
 
-    function requestClose(id, kind) {
-        var nativeNotification = take(id)
-        Notifications.nativeClose(nativeNotification, kind)
-        if (kind === "expire")
-            NotificationsModel.expire(id)
-        else
-            NotificationsModel.dismiss(id)
+    function closeNative(id,kind) {
+        const nativeNotification=take(id)
+        Notifications.nativeClose(nativeNotification,kind)
     }
-
-    function noteClosed(id) {
-        take(id)
-        NotificationsModel.closed(id)
-    }
-
-    function invokeAction(id, identifier) {
-        var nativeNotification = null
-        for (var index = 0; index < nativeList.length; index++) {
-            if (nativeList[index] && nativeList[index].id === id)
-                nativeNotification = nativeList[index]
-        }
-        if (!nativeNotification || !nativeNotification.actions)
-            return
-        for (var actionIndex = 0; actionIndex < nativeNotification.actions.length; actionIndex++) {
-            var action = nativeNotification.actions[actionIndex]
-            if (action && action.identifier === identifier && action.invoke)
+    function invokeAction(id,identifier) {
+        const nativeNotification=nativeList.find(function(item){return item && item.id===id})
+        if(!nativeNotification || !nativeNotification.actions) return
+        for(let index=0;index<nativeNotification.actions.length;index++) {
+            const action=nativeNotification.actions[index]
+            if(action && action.identifier===identifier && action.invoke) {
+                const resident=nativeNotification.resident
                 action.invoke()
+                if(!resident) NotificationsModel.dismiss(id)
+                return
+            }
+        }
+    }
+    Connections {
+        target:NotificationsModel
+        function onCenterChanged(){Qt.callLater(host.trimNatives)}
+        function onCloseRequested(notificationId,kind) {host.closeNative(notificationId,kind)}
+        function onActionRequested(notificationId,identifier) {host.invokeAction(notificationId,identifier)}
+        function onClearRequested() {
+            const historyIds=NotificationsModel.center.history.map(function(item){return item.id})
+            host.nativeList.slice().forEach(function(item){if(historyIds.indexOf(item.id)!==-1) host.closeNative(item.id,"dismiss")})
         }
     }
 
@@ -227,6 +244,7 @@ PanelWindow {
         target: SettingsStore
         function onNotificationDndChanged() { host.reconfigure() }
         function onNotificationPoliciesJsonChanged() { host.reconfigure() }
+        function onNotificationQuietUntilChanged() { host.reconfigure() }
     }
 
     NotificationServer {
@@ -237,112 +255,49 @@ PanelWindow {
         actionsSupported: true
         imageSupported: false
         inlineReplySupported: false
-        persistenceSupported: false
+        persistenceSupported: true
 
         onNotification: function (notification) {
             host.accept(notification)
         }
     }
 
+    BackdropEffect {targetWindow:host;surface:viewport;cornerRadius:Theme.radius;enabled:SettingsStore.panelBlur>0}
+    Flickable {
+        id:viewport
+        anchors.fill:parent
+        contentWidth:width
+        contentHeight:column.implicitHeight+Theme.surfaceShadowInset*2
+        clip:true
+        boundsBehavior:Flickable.StopAtBounds
+        Controls.ScrollBar.vertical:Controls.ScrollBar {policy:Controls.ScrollBar.AsNeeded}
     Column {
-        id: column
-        width: host.width
-        spacing: Theme.panelSpacing
-
+        id:column
+        x:Theme.surfaceShadowInset;y:Theme.surfaceShadowInset
+        width:360
+        spacing:Theme.panelSpacing
         Repeater {
-            model: NotificationsModel.center.live
-
-            delegate: Rectangle {
-                id: banner
+            model:NotificationsModel.center.live
+            delegate:Item {
+                id:banner
                 required property var modelData
-                width: column.width
-                height: card.implicitHeight + Theme.panelPadding * 2
-                radius: Theme.radius
-                color: Theme.panelColor
-
-                Column {
-                    id: card
-                    width: parent.width - Theme.panelPadding * 2
-                    x: Theme.panelPadding
-                    y: Theme.panelPadding
-                    spacing: 4
-
-                    Text {
-                        width: parent.width - 28
-                        text: modelData.preview === true ? "Preview" : modelData.appName
-                        color: Theme.panelMuted
-                        font.family: Theme.fontFamily
-                        font.pixelSize: Theme.fontSizeSmall
-                        elide: Text.ElideRight
-                    }
-
-                    Text {
-                        width: parent.width - 28
-                        text: modelData.summary
-                        color: Theme.panelText
-                        font.family: Theme.fontFamily
-                        font.pixelSize: Theme.fontSize
-                        elide: Text.ElideRight
-                        textFormat: Text.PlainText
-                    }
-
-                    Text {
-                        width: parent.width
-                        text: modelData.body
-                        color: Theme.panelMuted
-                        font.family: Theme.fontFamily
-                        font.pixelSize: Theme.fontSizeSmall
-                        elide: Text.ElideRight
-                        textFormat: Text.PlainText
-                    }
-
-                    Row {
-                        spacing: 8
-                        visible: modelData.actions && modelData.actions.length > 0
-
-                        Repeater {
-                            model: modelData.actions
-
-                            delegate: MouseArea {
-                                id: actionButton
-                                required property var modelData
-                                width: Math.min(96, actionText.implicitWidth + 8)
-                                height: 22
-                                Accessible.role: Accessible.Button
-                                Accessible.name: modelData.text
-                                onClicked: host.invokeAction(banner.modelData.id, modelData.identifier)
-
-                                Text {
-                                    id: actionText
-                                    anchors.centerIn: parent
-                                    text: actionButton.modelData.text
-                                    color: Theme.panelText
-                                    font.family: Theme.fontFamily
-                                    font.pixelSize: Theme.fontSizeSmall
-                                    elide: Text.ElideRight
-                                }
-                            }
-                        }
-                    }
+                width:column.width;height:card.implicitHeight+Theme.panelPadding*2
+                SurfaceShadow {anchors.fill:parent;visible:Theme.shadowOpacity>0}
+                Rectangle {anchors.fill:parent;radius:Theme.radius;color:Theme.floaterSurface}
+                NotificationCard {
+                    id:card
+                    x:Theme.panelPadding;y:Theme.panelPadding
+                    width:parent.width-Theme.panelPadding*2
+                    entry:banner.modelData
                 }
-
                 Timer {
-                    interval: modelData.expireMs > 0 ? modelData.expireMs : 60000
-                    running: modelData.expireMs > 0
+                    interval:Math.max(1,banner.modelData.expireMs-(Date.now()-banner.modelData.receivedAt))
+                    running:banner.modelData.expireMs>0 && !card.hovered
                     repeat: false
-                    onTriggered: host.requestClose(modelData.id, "expire")
-                }
-
-                MouseArea {
-                    anchors.right: parent.right
-                    anchors.top: parent.top
-                    width: 28
-                    height: 28
-                    Accessible.role: Accessible.Button
-                    Accessible.name: "Dismiss"
-                    onClicked: host.requestClose(modelData.id, "dismiss")
+                    onTriggered:NotificationsModel.hideBanner(banner.modelData.id)
                 }
             }
         }
+    }
     }
 }

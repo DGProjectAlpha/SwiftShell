@@ -6,6 +6,7 @@ import Quickshell.Io
 import QtQuick
 import "bar"
 import "launcher"
+import "overview"
 import "services"
 
 ShellRoot {
@@ -28,14 +29,34 @@ ShellRoot {
         target: "swiftshell"
         function diagnostics(): string {
             const w=SettingsModel.nativeWindow
-            return JSON.stringify({spotlight:launcherWindow.diagnostics(),settingsReloads:SettingsStore.externalReloads,settingsOwnReloads:SettingsStore.ignoredOwnReloads,desktopAppearance:{available:DesktopAppearance.available,observed:DesktopAppearance.observed,managed:DesktopAppearance.managed,error:DesktopAppearance.error},settingsPersistence:SettingsStore.persistenceState,barSurfaces:barHost.surfaceDiagnostics(),layerBlurAvailable:SurfaceService.blurAvailable,launcherOpen:LauncherModel.open,launcherOutput:LauncherModel.screen ? LauncherModel.screen.name : "",launcherHasFocus:launcherWindow.searchHasFocus,windowBusy:WindowService.busy || WindowService.queue.length>0 || !!(w && !w.placementReady),settingsOpen:SettingsModel.open,category:SettingsStore.settingsWindowCategory,blurAvailable:WindowService.blurAvailable,blurRegionApplied:WindowService.blurRegionApplied,blurReason:WindowService.blurReason,windowError:WindowService.error,
-                panelBlur:SettingsStore.panelBlur,shadowOpacity:SettingsStore.shadowOpacity,shadowSoftness:SettingsStore.shadowSoftness,window:w ? {pageGeometry:w.activePage() && w.activePage().geometry ? w.activePage().geometry() : null,width:w.width,height:w.height,pageStatus:w.pageStatus,searchHasFocus:w.searchHasFocus,colorPickerOpen:w.activePage() && w.activePage().colorPickerOpen === true,colorPicker:w.activePage() && w.activePage().colorPickerGeometry ? w.activePage().colorPickerGeometry() : null,maximized:WindowService.maximized,qtMaximized:w.maximized,shadowInset:w.shadowInset,resizeRequests:w.resizeRequests,lastResizeAccepted:w.lastResizeAccepted} : null})
+            return JSON.stringify({overview:overviewWindow.diagnostics(),notifications:{owner:SettingsStore.notificationOwnership,server:NotificationsModel.serverState,unread:NotificationsModel.unreadCount,entries:NotificationsModel.entries.map(function(item){return {id:item.id,local:item.local,snoozed:item.snoozedUntil>0,actions:item.actions.length}})},spotlight:launcherWindow.diagnostics(),settingsReloads:SettingsStore.externalReloads,settingsOwnReloads:SettingsStore.ignoredOwnReloads,desktopAppearance:{available:DesktopAppearance.available,observed:DesktopAppearance.observed,managed:DesktopAppearance.managed,error:DesktopAppearance.error},settingsPersistence:SettingsStore.persistenceState,barSurfaces:barHost.surfaceDiagnostics(),layerBlurAvailable:SurfaceService.blurAvailable,launcherOpen:LauncherModel.open,launcherOutput:LauncherModel.screen ? LauncherModel.screen.name : "",launcherHasFocus:launcherWindow.searchHasFocus,windowBusy:WindowService.busy || WindowService.queue.length>0 || !!(w && !w.placementReady),settingsOpen:SettingsModel.open,category:SettingsStore.settingsWindowCategory,blurAvailable:WindowService.blurAvailable,blurRegionApplied:WindowService.blurRegionApplied,blurReason:WindowService.blurReason,windowError:WindowService.error,
+                panelBlur:SettingsStore.panelBlur,shadowOpacity:SettingsStore.shadowOpacity,shadowSoftness:SettingsStore.shadowSoftness,window:w ? {control:w.activePage() ? w.activePage().highlightId : "",pageGeometry:w.activePage() && w.activePage().geometry ? w.activePage().geometry() : null,width:w.width,height:w.height,pageStatus:w.pageStatus,searchHasFocus:w.searchHasFocus,colorPickerOpen:w.activePage() && w.activePage().colorPickerOpen === true,colorPicker:w.activePage() && w.activePage().colorPickerGeometry ? w.activePage().colorPickerGeometry() : null,maximized:WindowService.maximized,qtMaximized:w.maximized,shadowInset:w.shadowInset,resizeRequests:w.resizeRequests,lastResizeAccepted:w.lastResizeAccepted} : null})
         }
         function moduleSide(id: string, side: string): void { if(side === "inherit")SettingsStore.inheritModuleSide(id);else SettingsStore.setModuleSide(id,side) }
         function moduleVisibility(output: string, hiddenJson: string): void {
             try {SettingsStore.setHiddenForOutput(output,JSON.parse(hiddenJson))} catch(error) {}
         }
         function moduleInherit(output: string): void { SettingsStore.inheritHidden(output) }
+        function notification(action: string, id: int): void {
+            if(action === "dismiss")NotificationsModel.dismiss(id)
+            else if(action === "open")NotificationsModel.invoke(id,"default")
+            else if(action === "snooze")NotificationsModel.snooze(id,5)
+            else if(action === "wake")NotificationsModel.showNow(id)
+        }
+        function overview(action: string): void {
+            if(action === "enable-shortcut")OverviewService.enableShortcut()
+            else if(action === "restore-shortcut")OverviewService.restoreShortcut()
+            else if(action === "shortcut-status")OverviewService.shortcutRequest("status")
+            else if(action === "close")OverviewService.closeOverview()
+            else if(action === "open")OverviewService.openOverview()
+            else if(action === "shortcut")OverviewService.shortcut()
+            else OverviewService.toggle()
+        }
+        function barLayout(output: string, edge: string, scale: real): bool {
+            const layout=SettingsStore.layoutForOutput(output)
+            return SettingsStore.setOutputLayout(output,edge,scale,layout.order,layout.sides)
+        }
+        function barLayoutInherit(output: string): void {SettingsStore.inheritOutputLayout(output)}
         function barPanel(output: string, id: string): void { barHost.showPanel(output,id) }
         function clockOptions(hours24: bool, seconds: bool, date: bool, format: string): void {
             if(SettingsStore.setClockOptions(seconds,date,format)) SettingsStore.setUse24Hour(hours24)
@@ -46,6 +67,7 @@ ShellRoot {
         function barInherit(output: string): void { SettingsStore.clearBarSurface(output) }
         function clockTool(action: string, value: string): string {
             if (action === "snapshot") return JSON.stringify(ClockService.state)
+            if(action === "stopwatch" && ["start","pause","lap","reset"].indexOf(value)>=0){ClockService.stopwatch(value);return "ok"}
             if (action === "restore") return ClockService.restore(value) ? "ok" : "invalid"
             return "unsupported"
         }
@@ -87,11 +109,26 @@ ShellRoot {
 
     BarHost { id: barHost }
     LauncherWindow { id: launcherWindow }
+    OverviewWindow {id:overviewWindow}
+    Connections {
+        target:OverviewService
+        function onOpened(){LauncherModel.closeLauncher();barHost.closePanels()}
+    }
+    Connections {
+        target:NotificationsModel
+        function onLocalActionRequested(kind) {
+            const output=HyprlandModel.readFocusedOutput()
+            barHost.showClockTool(output,kind)
+        }
+    }
 
     Connections {
         target: LauncherModel
         function onSettingsRequested() { SettingsModel.show() }
+        function onOpenChanged(){if(LauncherModel.open)OverviewService.closeOverview()}
     }
+
+    Connections {target:SettingsModel;function onOpenChanged(){if(SettingsModel.open)OverviewService.closeOverview()}}
 
     Loader {
         id: wallpaperLoader

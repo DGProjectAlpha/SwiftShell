@@ -18,6 +18,7 @@ Singleton {
     readonly property string clockDateFormat: clockSettings.dateFormat
     readonly property bool searchLabel: barSettings.searchLabel
     readonly property string moduleSidesJson: barSettings.moduleSidesJson
+    readonly property string layoutOutputsJson: barSettings.layoutOutputsJson
     readonly property string hiddenOutputsJson: barSettings.hiddenOutputsJson
     readonly property bool use24Hour: clockSettings.use24Hour
     readonly property bool showWeekNumbers: clockSettings.showWeekNumbers
@@ -53,6 +54,8 @@ Singleton {
     readonly property real iconScale: appearanceSettings.iconScale
     readonly property bool topGradient: appearanceSettings.topGradient
     readonly property string textContrast: appearanceSettings.contrast === "high" ? "high" : "standard"
+    readonly property bool clipboardHistory:launcherSettings.clipboardHistory
+    readonly property bool searchWindows:launcherSettings.searchWindows
     readonly property string launcherDefaultMode: launcherSettings.defaultMode
     readonly property var pinnedIds: Settings.normalizePinnedIds(launcherSettings.pinnedIds)
     readonly property int settingsWindowWidth: windowSettings.width
@@ -77,6 +80,10 @@ Singleton {
     readonly property string notificationOwnership: notificationSettings.ownership === "on" ? "on" : "off"
     readonly property bool notificationDnd: notificationSettings.dnd === true
     readonly property string notificationPoliciesJson: notificationSettings.policiesJson
+    readonly property int notificationDuration: notificationSettings.bannerDuration
+    readonly property int notificationHistoryLimit: notificationSettings.historyLimit
+    readonly property string notificationScreenTarget: notificationSettings.screenTarget
+    readonly property real notificationQuietUntil: notificationSettings.quietUntil
 
     property bool writing: false
     property bool acceptWrites: false
@@ -145,6 +152,7 @@ Singleton {
         barSettings.searchLabel = bar.searchLabel === true
         barSettings.moduleSidesJson = bar.moduleSidesJson || "{}"
         barSettings.hiddenOutputsJson = bar.hiddenOutputsJson || "{}"
+        barSettings.layoutOutputsJson = bar.layoutOutputsJson || "{}"
         barSettings.surfaceColor = bar.surfaceColor || "#161616"
         barSettings.surfaceOpacity = bar.surfaceOpacity === undefined ? .75 : bar.surfaceOpacity
         barSettings.surfaceOutputsJson = bar.surfaceOutputsJson || "{}"
@@ -171,6 +179,8 @@ Singleton {
         appearanceSettings.manualPanel = appearance.manualPanel || ""
         appearanceSettings.manualGradient = appearance.manualGradient || ""
         launcherSettings.defaultMode=launcher.defaultMode || "all"
+        launcherSettings.clipboardHistory=launcher.clipboardHistory === true
+        launcherSettings.searchWindows=launcher.searchWindows !== false
         launcherSettings.pinnedIds = launcher.pinnedIds || []
         wallpaperSettings.enabled = wallpaper.enabled !== false
         wallpaperSettings.fit = wallpaper.fit || "cover"
@@ -188,6 +198,10 @@ Singleton {
         notificationSettings.ownership = notes.ownership === "on" ? "on" : "off"
         notificationSettings.dnd = notes.dnd === true
         notificationSettings.policiesJson = notes.policiesJson || "{}"
+        notificationSettings.bannerDuration = notes.bannerDuration
+        notificationSettings.historyLimit = notes.historyLimit
+        notificationSettings.screenTarget = notes.screenTarget
+        notificationSettings.quietUntil = notes.quietUntil
         adapter.extensionsJson = document.extensionsJson || "{}"
     }
 
@@ -248,6 +262,7 @@ Singleton {
                 searchLabel: barSettings.searchLabel,
                 moduleSidesJson: barSettings.moduleSidesJson,
                 hiddenOutputsJson: barSettings.hiddenOutputsJson,
+                layoutOutputsJson: barSettings.layoutOutputsJson,
                 hiddenModules: barSettings.hiddenModules
             },
             appearance: {
@@ -276,6 +291,8 @@ Singleton {
             },
             launcher: {
                 defaultMode:launcherSettings.defaultMode,
+                clipboardHistory:launcherSettings.clipboardHistory,
+                searchWindows:launcherSettings.searchWindows,
                 pinnedIds: launcherSettings.pinnedIds
             },
             wallpaper: {
@@ -298,7 +315,11 @@ Singleton {
             notifications: {
                 ownership: notificationSettings.ownership,
                 dnd: notificationSettings.dnd,
-                policiesJson: notificationSettings.policiesJson
+                policiesJson: notificationSettings.policiesJson,
+                bannerDuration: notificationSettings.bannerDuration,
+                historyLimit: notificationSettings.historyLimit,
+                screenTarget: notificationSettings.screenTarget,
+                quietUntil: notificationSettings.quietUntil
             },
             extensionsJson: adapter.extensionsJson
         };
@@ -330,6 +351,8 @@ Singleton {
         adapter.shortcutsJson = Settings.validateSettings({ shortcutsJson: JSON.stringify(map) }).settings.shortcutsJson
     }
 
+    function setClipboardHistory(value){launcherSettings.clipboardHistory=value === true}
+    function setSearchWindows(value){launcherSettings.searchWindows=value === true}
     function setLauncherDefaultMode(value) {
         if(["all","favorites","recent"].indexOf(value)<0)return false
         launcherSettings.defaultMode=value
@@ -418,6 +441,7 @@ Singleton {
             searchLabel: barSettings.searchLabel,
             moduleSidesJson: barSettings.moduleSidesJson,
             hiddenOutputsJson: barSettings.hiddenOutputsJson,
+                layoutOutputsJson: barSettings.layoutOutputsJson,
             hiddenModules: barSettings.hiddenModules
         }
     }
@@ -464,6 +488,22 @@ Singleton {
         const outputs=JSON.parse(hiddenOutputsJson)
         delete outputs[output]
         barSettings.hiddenOutputsJson=JSON.stringify(outputs)
+    }
+
+    function layoutForOutput(output) { return Bar.layoutForOutput(layoutOutputsJson,output,moduleOrder,moduleSidesJson) }
+    function setOutputLayout(output, edge, scale, order, sides) {
+        const values=JSON.parse(layoutOutputsJson),next=currentBar()
+        if(["__proto__","constructor","prototype"].indexOf(output)>=0)return false
+        values[output]={edge:edge,scale:scale,order:order,sides:JSON.parse(sides)}
+        next.layoutOutputsJson=JSON.stringify(values)
+        const result=Settings.validateSettings({bar:next})
+        if(!result.ok)return false
+        barSettings.layoutOutputsJson=result.settings.bar.layoutOutputsJson
+        return true
+    }
+    function inheritOutputLayout(output) {
+        const values=JSON.parse(layoutOutputsJson);delete values[output]
+        barSettings.layoutOutputsJson=JSON.stringify(values)
     }
 
     function setUse24Hour(value) {
@@ -678,6 +718,16 @@ Singleton {
         notificationSettings.dnd = value === true
     }
 
+    function setNotificationPreferences(values) {
+        const current = snapshot().notifications
+        Object.keys(values || {}).forEach(function(key) { current[key] = values[key] })
+        const next = Settings.validateSettings({notifications:current}).settings.notifications
+        notificationSettings.bannerDuration = next.bannerDuration
+        notificationSettings.historyLimit = next.historyLimit
+        notificationSettings.screenTarget = next.screenTarget
+        notificationSettings.quietUntil = next.quietUntil
+    }
+
     function setNotificationPolicy(id, value) {
         var map = {}
         try {
@@ -842,11 +892,12 @@ Singleton {
             property string workspaceDispatch: "auto"
             property string placement: "focused"
             property int height: 28
-            property list<string> moduleOrder: ["workspaces", "title", "search", "clock", "control", "media", "tray", "battery", "network", "power"]
+            property list<string> moduleOrder: ["workspaces", "title", "search", "clock", "control", "media", "tray", "battery", "network", "power", "notifications"]
             property list<string> hiddenModules: []
             property bool searchLabel: false
             property string moduleSidesJson: "{}"
             property string hiddenOutputsJson: "{}"
+            property string layoutOutputsJson: "{}"
             property string surfaceMode: "transparent"
             property string surfaceColor: "#161616"
             property real surfaceOpacity: .75
@@ -882,6 +933,8 @@ Singleton {
         property JsonObject launcher: JsonObject {
             id: launcherSettings
             property string defaultMode:"all"
+            property bool clipboardHistory:false
+            property bool searchWindows:true
             property list<string> pinnedIds: []
         }
 
@@ -912,6 +965,10 @@ Singleton {
             property string ownership: "off"
             property bool dnd: false
             property string policiesJson: "{}"
+            property int bannerDuration: 6
+            property int historyLimit: 60
+            property string screenTarget: "focused"
+            property real quietUntil: 0
         }
 
         property string extensionsJson: "{}"

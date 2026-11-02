@@ -15,11 +15,12 @@ Item {
         }
         return total+Math.max(0,shown-1)*Theme.moduleSpacing
     }
-    implicitWidth:row.implicitWidth
-    implicitHeight:Theme.barHeight
+    implicitWidth:strip.barWindow.vertical ? strip.barWindow.railWidth : row.implicitWidth
+    implicitHeight:row.implicitHeight
     KeyedModel { id:stableModules;entries:strip.modules }
-    Row {
+    Grid {
         id:row
+        columns:strip.barWindow.vertical ? 1 : Math.max(1,items.count)
         spacing:Theme.moduleSpacing
         Repeater {
             id:items
@@ -27,9 +28,9 @@ Item {
             delegate:Loader {
                 required property var entry
                 readonly property string moduleId:entry
-                width:moduleId==="title" ? Math.max(0,strip.titleWidth) : implicitWidth
+                width:strip.barWindow.vertical ? strip.barWindow.railWidth : moduleId==="title" ? Math.max(0,strip.titleWidth) : implicitWidth
                 visible:moduleId==="title" ? SettingsStore.showFocusedTitle && strip.barWindow.windowTitle!=="" && width>0 : implicitWidth>0
-                height:Theme.barHeight
+                height:Math.max(Theme.barHeight,implicitHeight)
                 sourceComponent:strip.barWindow.componentFor(moduleId)
             }
         }

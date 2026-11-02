@@ -191,7 +191,7 @@ function pixel(decoded, x, y) {
     };
 }
 
-function visibleBand(decoded, rect, viewWidth, bandStart, bandEnd, barHeight) {
+function visibleBand(decoded, rect, viewWidth, bandStart, bandEnd, barHeight, edge, viewHeight) {
     var red = 0;
     var green = 0;
     var blue = 0;
@@ -199,9 +199,11 @@ function visibleBand(decoded, rect, viewWidth, bandStart, bandEnd, barHeight) {
     var columns = 24;
     var rows = 8;
     for (var row = 0; row < rows; row++) {
-        var viewY = (row + 0.5) * barHeight / rows;
+        var cross = (row + 0.5) * barHeight / rows;
         for (var column = 0; column < columns; column++) {
-            var viewX = bandStart + (column + 0.5) * (bandEnd - bandStart) / columns;
+            var along = bandStart + (column + 0.5) * (bandEnd - bandStart) / columns;
+            var viewX=edge === "left" ? cross : edge === "right" ? viewWidth-cross : along;
+            var viewY=edge === "left" || edge === "right" ? along : edge === "bottom" ? viewHeight-cross : cross;
             var sample = { r: 0, g: 0, b: 0 };
             if (viewX >= rect.x && viewX < rect.x + rect.width
                     && viewY >= rect.y && viewY < rect.y + rect.height) {
@@ -224,7 +226,7 @@ function visibleBand(decoded, rect, viewWidth, bandStart, bandEnd, barHeight) {
     };
 }
 
-function visibleBands(decoded, viewWidth, viewHeight, mode, barHeight, cropRectFn) {
+function visibleBands(decoded, viewWidth, viewHeight, mode, barHeight, cropRectFn, edge) {
     if (!decoded || !decoded.ok)
         return { ok: false, reason: decoded && decoded.reason ? decoded.reason : "That png could not be decoded." };
     var width = Number(viewWidth);
@@ -234,15 +236,15 @@ function visibleBands(decoded, viewWidth, viewHeight, mode, barHeight, cropRectF
             || typeof cropRectFn !== "function")
         return { ok: false, reason: "The output geometry is unavailable." };
     var rect = cropRectFn(decoded.width, decoded.height, width, height, mode);
-    var third = width / 3;
+    var third = (edge === "left" || edge === "right" ? height : width) / 3;
     return {
         ok: true,
         reason: "",
         width: decoded.width,
         height: decoded.height,
-        left: visibleBand(decoded, rect, width, 0, third, top),
-        center: visibleBand(decoded, rect, width, third, third * 2, top),
-        right: visibleBand(decoded, rect, width, third * 2, width, top),
+        left: visibleBand(decoded, rect, width, 0, third, top,edge,height),
+        center: visibleBand(decoded, rect, width, third, third * 2, top,edge,height),
+        right: visibleBand(decoded, rect, width, third * 2, third*3, top,edge,height),
     };
 }
 

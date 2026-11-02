@@ -5,6 +5,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
 import "../logic/workspaces.js" as Workspaces
+import "../logic/windows.js" as Windows
 
 Singleton {
     id: root
@@ -211,6 +212,14 @@ Singleton {
             return null;
         }
         return null;
+    }
+
+    function activateWindow(address) {
+        if(!root.connected)return false
+        const mode=Workspaces.resolveDispatchMode(SettingsStore.workspaceDispatch,root.detectedLua())
+        const command=Windows.focusCommand(address,mode)
+        if(!command)return false
+        try {Hyprland.dispatch(command);return true}catch(error){return false}
     }
 
     function activateWorkspace(id, configuredMode, monitorName) {

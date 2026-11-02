@@ -18,3 +18,6 @@ singleton ShortcutsService 1.0 ShortcutsService.qml
 
 singleton NetworkService 1.0 NetworkService.qml
 singleton PowerProfiles 1.0 PowerProfiles.qml
+
+singleton OverviewService 1.0 OverviewService.qml
+

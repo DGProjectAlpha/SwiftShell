@@ -12,6 +12,11 @@ TestCase {
 
     // Every shell QML document. The static check requires this list to match the tree.
     readonly property var shellFiles: [
+        "shell/services/OverviewService.qml",
+        "shell/overview/OverviewPreview.qml",
+        "shell/overview/OverviewWindowTile.qml",
+        "shell/overview/OverviewWorkspace.qml",
+        "shell/overview/OverviewWindow.qml",
         "shell/components/TrayItemControl.qml",
         "shell/bar/WidgetIndicator.qml",
         "shell/popovers/AudioPanel.qml",
@@ -86,6 +91,8 @@ TestCase {
         "shell/settings/PowerPage.qml",
         "shell/settings/NotificationsPage.qml",
         "shell/notifications/NotificationHost.qml",
+        "shell/notifications/NotificationCard.qml",
+        "shell/notifications/NotificationDrawer.qml",
         "shell/settings/AppearancePage.qml",
         "shell/settings/BarPage.qml",
         "shell/settings/WorkspacesPage.qml",
@@ -189,6 +196,7 @@ TestCase {
                 || path === "shell/bar/BarHost.qml"
                 || path === "shell/bar/BarWindow.qml"
                 || path === "shell/popovers/PopoverHost.qml"
+                || path === "shell/overview/OverviewWindow.qml"
                 || path === "shell/launcher/LauncherWindow.qml"
                 || path === "shell/wallpaper/WallpaperHost.qml"
                 || path === "shell/wallpaper/WallpaperSurface.qml")
@@ -203,6 +211,7 @@ TestCase {
             return false
         return message.indexOf("PopoverHost.qml:") !== -1
             || message.indexOf("BarWindow.qml:") !== -1
+            || message.indexOf("OverviewWindow.qml:17") !== -1
             || message.indexOf("LauncherWindow.qml:19") !== -1
             || message.indexOf("NotificationHost.qml:24") !== -1
             || message.indexOf("WallpaperSurface.qml:25") !== -1
@@ -517,8 +526,8 @@ TestCase {
         verify(findText(powerPage, "Power", 0))
         var notes = componentFor("shell/settings/NotificationsPage.qml").createObject(this)
         verify(notes !== null)
-        verify(findText(notes, "Notification handling is off", 0))
-        verify(findText(notes, "Not SwiftShell", 0))
+        verify(findText(notes, "Choose how notifications appear", 0))
+        verify(findText(notes, "Handled outside SwiftShell", 0))
         verify(findText(notes, "sounds are unavailable", 0))
         UPower.displayDevice.ready = false
         var emptyBattery = componentFor("shell/bar/BatteryModule.qml").createObject(this)

@@ -1,4 +1,4 @@
-var BAR_MODULES = ["workspaces", "title", "search", "clock", "control", "media", "tray", "battery", "network", "power"];
+var BAR_MODULES = ["workspaces", "title", "search", "clock", "control", "media", "tray", "battery", "network", "power", "notifications"];
 
 function clamp01(unit) {
     if (typeof unit !== "number" || !Number.isFinite(unit))
@@ -172,10 +172,21 @@ function modulesForSide(order,hidden,sidesJson,side) {
     return visibleModules(order,hidden).filter(function(id){return moduleSide(id,sidesJson,order)===side;});
 }
 function moduleName(id) {
-    return ({workspaces:"Workspaces",title:"Focused title",search:"Search",clock:"Clock",control:"Audio",media:"Media",tray:"Tray",battery:"Battery",network:"Network & Devices",power:"Power"})[id] || id;
+    return ({workspaces:"Workspaces",title:"Focused title",search:"Search",clock:"Clock",control:"Audio",media:"Media",tray:"Tray",battery:"Battery",network:"Network & Devices",power:"Power",notifications:"Notifications"})[id] || id;
+}
+
+function layoutForOutput(json, output, order, sides) {
+    let values={};
+    try {values=JSON.parse(json || "{}")} catch(error) {}
+    const inherited=values[""] || {};
+    const item=values[output] || inherited;
+    return {edge:item.edge || "top",scale:item.scale || 1,
+        order:item.order ? normalizeModuleOrder(item.order) : normalizeModuleOrder(order),
+        sides:item.sides ? JSON.stringify(item.sides) : sides};
 }
 
 var swiftshellBar = {
+    layoutForOutput: layoutForOutput,
     surfaceForOutput: surfaceForOutput,
     hiddenForOutput:hiddenForOutput,
     moduleSide:moduleSide,

@@ -7,11 +7,16 @@ Scope {
     id: root
 
     function surfaceDiagnostics() {
-        return bars.instances.map(function(w){return {output:w.monitorKey,mode:w.barSurface.mode,color:w.barSurface.color,alpha:w.barSurface.alpha,blurApplied:w.surfaceBlurApplied,height:w.height,tray:w.trayItem && w.trayItem.geometry ? w.trayItem.geometry() : [],clock:w.clockItem ? w.clockItem.labelText : "",clockPrecision:w.clockItem ? w.clockItem.updatePrecision : -1,clockTargets:w.clockItem ? w.clockItem.clickTargets() : null,foreground:{left:w.foregroundFor("workspaces",false),center:w.foregroundFor("title",false),right:w.foregroundFor("clock",false)},contrastAvailable:w.outputAnalysis.available,layout:w.moduleLayout(),modules:{left:w.modulesOn("left"),center:w.modulesOn("center"),right:w.modulesOn("right")},menu:w.menuDiagnostics()}})
+        return bars.instances.map(function(w){return {output:w.monitorKey,edge:w.edge,contentScale:w.contentScale,width:w.width,mode:w.barSurface.mode,color:w.barSurface.color,alpha:w.barSurface.alpha,blurApplied:w.surfaceBlurApplied,height:w.height,tray:w.trayItem && w.trayItem.geometry ? w.trayItem.geometry() : [],clock:w.clockItem ? w.clockItem.labelText : "",clockPrecision:w.clockItem ? w.clockItem.updatePrecision : -1,clockTargets:w.clockItem ? w.clockItem.clickTargets() : null,foreground:{left:w.foregroundFor("workspaces",false),center:w.foregroundFor("title",false),right:w.foregroundFor("clock",false)},contrastAvailable:w.outputAnalysis.available,layout:w.moduleLayout(),modules:{left:w.modulesOn("left"),center:w.modulesOn("center"),right:w.modulesOn("right")},menu:w.menuDiagnostics()}})
     }
     function showPanel(output,id) {
         const selected=bars.instances.find(function(w){return w.monitorKey===output})
         if(selected) selected.showPanel(id)
+    }
+    function closePanels() {for(const w of bars.instances)w.showPanel("close")}
+    function showClockTool(output,tab) {
+        const selected=bars.instances.find(function(w){return w.monitorKey===output}) || bars.instances[0]
+        if(selected)selected.openClockTool(tab)
     }
     property bool refreshingScreens: false
     property var targetScreens: []

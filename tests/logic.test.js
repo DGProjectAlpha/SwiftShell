@@ -1313,7 +1313,7 @@ test("bar exclusion can turn reservation on again and popup focus clears before 
     assert.equal(bar.barMetrics(80, 1).height, 52);
     assert.equal(bar.heightFromUnit(bar.unitFromHeight(28)), 28);
     assert.equal(bar.exclusionUpdate(true, tall.height, 28).zone, 52);
-    assert.deepEqual(bar.visibleModules(bar.BAR_MODULES, ["clock"]), ["workspaces", "title", "search", "control", "media", "tray", "battery", "network", "power"]);
+    assert.deepEqual(bar.visibleModules(bar.BAR_MODULES, ["clock"]), ["workspaces", "title", "search", "control", "media", "tray", "battery", "network", "power", "notifications"]);
     const moved = bar.moveModule(bar.BAR_MODULES, "clock", -1);
     assert.equal(moved[2], "clock");
     assert.equal(moved[3], "search");
@@ -1953,7 +1953,7 @@ test("notifications stay off until ownership is confirmed", function () {
     assert.equal(burst.live.length, notifications.BANNER_CAP);
     assert.equal(burst.history.length, notifications.HISTORY_CAP);
     assert.ok(burst.live.length <= 4);
-    assert.ok(burst.history.length <= 40);
+    assert.ok(burst.history.length <= notifications.HISTORY_CAP);
     assert.deepEqual(burst.lastRoute, { id: 100, disposition: "history" });
     let replacement = notifications.reduceNotifications(notifications.emptyCenter(), {
         type: "configure",

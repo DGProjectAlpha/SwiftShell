@@ -4,6 +4,7 @@ import "../logic/notifications.js" as Notifications
 import "../logic/settingsNav.js" as Nav
 import "../services"
 import "../themes"
+import "../notifications"
 
 Item {
     id: page
@@ -23,7 +24,8 @@ Item {
         return Nav.controlVisible(page.query, id)
     }
 
-    function focusHighlight() {}
+    function focusHighlight() {if(highlightId==="notificationDelivery")deliveryChoice.forceActiveFocus()}
+    onHighlightIdChanged:if(highlightId==="notificationDelivery")revealRequested(deliveryGroup.y,deliveryGroup.height)
 
     function moveHighlight(delta) {
         page.highlightId = Nav.moveSelection(page.query, page.highlightId, delta)
@@ -31,12 +33,12 @@ Item {
 
     function ownershipDetail() {
         if (SettingsStore.notificationOwnership !== "on")
-            return "Not SwiftShell"
+            return "Handled outside SwiftShell"
         if (NotificationsModel.serverState === "running")
-            return "Active; ownership observed from notification traffic"
+            return "SwiftShell notifications are active"
         if (NotificationsModel.serverState === "failed")
-            return "Server component failed"
-        return "Requested; ownership is not observable until traffic arrives"
+            return "Could not start notifications"
+        return "Waiting for the first notification"
     }
 
     Column {
@@ -56,7 +58,7 @@ Item {
         Text {
             width: parent.width
             wrapMode: Text.WordWrap
-            text: "Notification handling is off by default. Enable it only after switching from your current notification app."
+            text: "Choose how notifications appear, when to pause them and which apps may interrupt you."
             color: Theme.settingsMuted
             font.family: Theme.settingsFontFamily
             font.pixelSize: Theme.settingsFontSizeSmall
@@ -96,6 +98,48 @@ Item {
                 SettingsStore.setNotificationDnd(next)
                 NotificationsModel.configure(SettingsStore.notificationOwnership, next, SettingsStore.notificationPoliciesJson)
             }
+        }
+
+        Column {
+            id:deliveryGroup
+            width:parent.width;spacing:Theme.settingsSpacing;visible:page.shows("notificationDelivery")
+        SectionHeader { text:"Delivery" }
+        Text {width:parent.width;text:"Banner duration";color:Theme.settingsText;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSize}
+        ChoiceBox {
+            width:Math.min(320,parent.width)
+            id:deliveryChoice
+            choices:[{label:"3 seconds",value:3},{label:"6 seconds",value:6},{label:"10 seconds",value:10},{label:"15 seconds",value:15},{label:"30 seconds",value:30}]
+            selectedValue:SettingsStore.notificationDuration
+            onChosen:function(value){SettingsStore.setNotificationPreferences({bannerDuration:value})}
+            Accessible.name:"Notification banner duration"
+        }
+        Text {width:parent.width;text:"Show banners on";color:Theme.settingsText;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSize}
+        ChoiceBox {
+            width:Math.min(440,parent.width)
+            choices:[{label:"Focused display",value:"focused"},{label:"First display",value:"primary"}].concat(HyprlandModel.monitorChoices.map(function(m){return {label:m.label,value:m.name}}))
+            selectedValue:SettingsStore.notificationScreenTarget
+            onChosen:function(value){SettingsStore.setNotificationPreferences({screenTarget:value})}
+            Accessible.name:"Notification display"
+        }
+        Text {width:parent.width;text:"History limit";color:Theme.settingsText;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSize}
+        ChoiceBox {
+            width:Math.min(320,parent.width)
+            choices:[{label:"20 notifications",value:20},{label:"60 notifications",value:60},{label:"100 notifications",value:100},{label:"200 notifications",value:200}]
+            selectedValue:SettingsStore.notificationHistoryLimit
+            onChosen:function(value){SettingsStore.setNotificationPreferences({historyLimit:value})}
+            Accessible.name:"Notification history limit"
+        }
+        Text {
+            width:parent.width;wrapMode:Text.WordWrap
+            text:"History stays in memory for this session. Banner duration is used when an app does not request its own timeout. Snooze individual notifications for five minutes, fifteen minutes or an hour."
+            color:Theme.settingsMuted;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall
+        }
+        }
+        Flow {
+            width:parent.width;spacing:4
+            FlatButton {label:"Pause 30 min";onActivated:NotificationsModel.pause(30)}
+            FlatButton {label:"Pause 1 hour";onActivated:NotificationsModel.pause(60)}
+            FlatButton {visible:SettingsStore.notificationQuietUntil>0;label:"Resume notifications";onActivated:NotificationsModel.pause(0)}
         }
 
         Text {
@@ -164,7 +208,7 @@ Item {
         Text {
             width: parent.width
             wrapMode: Text.WordWrap
-            text: "Notification sounds are unavailable."
+            text: "Notification sounds are unavailable. History content is never written to logs or saved to disk."
             color: Theme.settingsMuted
             font.family: Theme.settingsFontFamily
             font.pixelSize: Theme.settingsFontSizeSmall
@@ -180,7 +224,7 @@ Item {
 
         ChoiceBox {
             width:Math.min(360,parent.width)
-            choices:[{label:"Choose an application",value:""}].concat(LauncherModel.applications.map(function(app){return {label:app.name,value:app.id}}))
+            choices:[{label:"Choose an application",value:""},{label:"Clock timers & stopwatch",value:"swiftshell.clock"},{label:"SwiftShell",value:"swiftshell"}].concat(LauncherModel.applications.map(function(app){return {label:app.name,value:app.id}}))
             selectedValue:page.policyApplication
             onChosen:function(value){page.policyApplication=value}
             Accessible.name:"Notification application"
@@ -229,6 +273,12 @@ Item {
                 font.pixelSize: Theme.settingsFontSizeSmall
                 elide: Text.ElideRight
             }
+        }
+
+        Text {
+            width:parent.width;wrapMode:Text.WordWrap
+            text:"Show sends banners and keeps history. Quiet keeps history without ordinary banners. Hide discards notifications from the selected app."
+            color:Theme.settingsMuted;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall
         }
 
         Repeater {

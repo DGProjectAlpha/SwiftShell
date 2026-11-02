@@ -925,11 +925,12 @@ def main():
         if path.name == "SurfaceService.qml":
             if text.count("Process {") != 1 or '"/helpers/windowctl.py","capabilities"' not in text or 'event.name === "configreloaded"' not in text:
                 errors.append("Surface capability probe must be a fixed read-only query on startup/config reload")
-        if "Process {" in text and path.name not in ("HyprlandModel.qml", "DisplayService.qml", "WindowService.qml", "SurfaceService.qml", "DesktopAppearance.qml", "ColorAnalysis.qml", "ClockService.qml", "DefaultAppsService.qml", "ShortcutsService.qml", "LauncherModel.qml", "NetworkService.qml", "PowerProfiles.qml", "SettingsStore.qml"):
+        if "Process {" in text and path.name not in ("HyprlandModel.qml", "DisplayService.qml", "WindowService.qml", "SurfaceService.qml", "OverviewService.qml", "DesktopAppearance.qml", "ColorAnalysis.qml", "ClockService.qml", "DesktopTools.qml", "DefaultAppsService.qml", "ShortcutsService.qml", "LauncherModel.qml", "NetworkService.qml", "PowerProfiles.qml", "SettingsStore.qml"):
             errors.append(str(path.relative_to(ROOT)) + " polls or spawns a process")
         if "Timer {" in text:
             slideshow = path.name == "SlideshowClock.qml" and "Math.max(60000" in text
             banner = path.name == "NotificationHost.qml" and "repeat: false" in text and "repeat: true" not in text
+            notification_deadline = path.name == "NotificationsModel.qml" and "running:root.snoozedCount>0 || SettingsStore.notificationQuietUntil>0" in text and "interval:1000;repeat:true" in text and "Process {" not in text
             snapshot = path.name == "HyprlandModel.qml" and "repeat: false" in text and "repeat: true" not in text
             audit = path.name == "WorkspaceAudit.qml" and "repeat: false" in text and "repeat: true" not in text
             display_confirmation = path.name == "DisplayService.qml" and "running: root.pending" in text
@@ -937,8 +938,8 @@ def main():
             playback = path.name == "MediaSection.qml" and "root.controls.playing" in text and "!Theme.reducedMotion" in text
             clock_ui = path.name == "CalendarPanel.qml" and "SystemClock" in text and "Timer {" not in text.replace("ClockTimer {", "ClockCountdown {")
             recording_timeout = path.name == "ShortcutsPage.qml" and "interval:15000" in text and "ShortcutInhibitor" in text
-            owned_service = path.name in ("ClockService.qml", "DesktopAppearance.qml", "ShortcutsService.qml", "SettingsStore.qml", "NetworkService.qml", "PowerProfiles.qml", "BluetoothSection.qml")
-            if not slideshow and not banner and not snapshot and not audit and not display_confirmation and not window_debounce and not clock_ui and not owned_service and not recording_timeout and not playback:
+            owned_service = path.name in ("ClockService.qml", "DesktopTools.qml", "OverviewService.qml", "DesktopAppearance.qml", "ShortcutsService.qml", "SettingsStore.qml", "NetworkService.qml", "PowerProfiles.qml", "BluetoothSection.qml")
+            if not slideshow and not banner and not notification_deadline and not snapshot and not audit and not display_confirmation and not window_debounce and not clock_ui and not owned_service and not recording_timeout and not playback:
                 errors.append(str(path.relative_to(ROOT)) + " polls or spawns a process")
         errors.extend(nesting_errors(text, str(path.relative_to(ROOT)), component_roots))
         errors.extend(readonly_implicit_errors(text, str(path.relative_to(ROOT)), component_roots))

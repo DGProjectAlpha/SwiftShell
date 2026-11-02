@@ -56,7 +56,7 @@ function workspaceIdsValid(ids) {
     return true;
 }
 
-var BAR_MODULES = ["workspaces", "title", "search", "clock", "control", "media", "tray", "battery", "network", "power"];
+var BAR_MODULES = ["workspaces", "title", "search", "clock", "control", "media", "tray", "battery", "network", "power", "notifications"];
 
 function normalizeModuleOrder(order) {
     const source = asList(order);
@@ -121,6 +121,25 @@ function barSurfaceOutputsValue(value, errors) {
     } catch (error) { errors.push("bar.surfaceOutputsJson"); return "{}"; }
 }
 
+function layoutOutputsValue(value, errors) {
+    if (value === undefined) return "{}";
+    try {
+        if (typeof value !== "string" || value.length>32768) throw new Error();
+        const entries=JSON.parse(value),clean={};
+        if (!isPlainObject(entries) || Object.keys(entries).length>32) throw new Error();
+        for (const key of Object.keys(entries)) {
+            const item=entries[key];
+            if (key.length>256 || /[\x00-\x1f]/.test(key) || ["__proto__","prototype","constructor"].indexOf(key)>=0 || !isPlainObject(item)) throw new Error();
+            if (["top","bottom","left","right"].indexOf(item.edge)<0 || typeof item.scale!=="number" || !Number.isFinite(item.scale) || item.scale<.75 || item.scale>1.5) throw new Error();
+            const entry={edge:item.edge,scale:item.scale};
+            if(item.order!==undefined) {if(!moduleOrderValid(item.order))throw new Error();entry.order=normalizeModuleOrder(item.order)}
+            if(item.sides!==undefined) {const failures=[];entry.sides=JSON.parse(moduleSidesValue(JSON.stringify(item.sides),failures));if(failures.length)throw new Error()}
+            clean[key]=entry;
+        }
+        return JSON.stringify(clean);
+    } catch(error) {errors.push("bar.layoutOutputsJson");return "{}"}
+}
+
 function moduleSidesValue(value, errors) {
     if(value === undefined) return "{}";
     try {
@@ -165,11 +184,12 @@ var DEFAULTS = {
         workspaceDispatch: "auto",
         placement: "focused",
         height: 28,
-        moduleOrder: ["workspaces", "title", "search", "clock", "control", "media", "tray", "battery", "network", "power"],
+        moduleOrder: ["workspaces", "title", "search", "clock", "control", "media", "tray", "battery", "network", "power", "notifications"],
         hiddenModules: [],
         searchLabel: false,
         moduleSidesJson: "{}",
         hiddenOutputsJson: "{}",
+        layoutOutputsJson: "{}",
         surfaceMode: "transparent",
         surfaceColor: "#161616",
         surfaceOpacity: 0.75,
@@ -201,6 +221,8 @@ var DEFAULTS = {
     },
     launcher: {
         defaultMode: "all",
+        clipboardHistory:false,
+        searchWindows:true,
         pinnedIds: [],
     },
     wallpaper: {
@@ -224,6 +246,10 @@ var DEFAULTS = {
         ownership: "off",
         dnd: false,
         policiesJson: "{}",
+        bannerDuration: 6,
+        historyLimit: 60,
+        screenTarget: "focused",
+        quietUntil: 0,
     },
     extensionsJson: "{}",
 };
@@ -397,6 +423,7 @@ function validateSettings(input) {
     const searchLabel=pickBoolean(bar,"searchLabel",DEFAULTS.bar.searchLabel,errors,"bar.searchLabel");
     const moduleSidesJson=moduleSidesValue(bar.moduleSidesJson,errors);
     const hiddenOutputsJson=hiddenOutputsValue(bar.hiddenOutputsJson,errors);
+    const layoutOutputsJson=layoutOutputsValue(bar.layoutOutputsJson,errors);
     const surfaceMode = pickEnum(bar, "surfaceMode", ["transparent","solid","frosted"], DEFAULTS.bar.surfaceMode, errors, "bar.surfaceMode");
     let surfaceColor = DEFAULTS.bar.surfaceColor;
     if (bar.surfaceColor !== undefined) {
@@ -467,8 +494,15 @@ function validateSettings(input) {
     const notificationOwnership = pickEnum(noteSource, "ownership", ["off", "on"], DEFAULTS.notifications.ownership, errors, "notifications.ownership");
     const notificationDnd = pickBoolean(noteSource, "dnd", DEFAULTS.notifications.dnd, errors, "notifications.dnd");
     const notificationPolicies = policiesValue(noteSource.policiesJson, errors);
+    const notificationDuration = pickInt(noteSource,"bannerDuration",3,30,DEFAULTS.notifications.bannerDuration,errors,"notifications.bannerDuration");
+    const notificationHistoryLimit = pickInt(noteSource,"historyLimit",20,200,DEFAULTS.notifications.historyLimit,errors,"notifications.historyLimit");
+    const notificationQuietUntil = pickNumber(noteSource,"quietUntil",0,8640000000000000,0,errors,"notifications.quietUntil");
+    let notificationScreenTarget = typeof noteSource.screenTarget === "string" && /^[a-zA-Z0-9_.:-]{1,80}$/.test(noteSource.screenTarget) ? noteSource.screenTarget : "focused";
+    if(noteSource.screenTarget !== undefined && notificationScreenTarget !== noteSource.screenTarget) errors.push("notifications.screenTarget");
     const shortcutsJson = shortcutsValue(source.shortcutsJson, errors);
 
+    const clipboardHistory=pickBoolean(launcher,"clipboardHistory",false,errors,"launcher.clipboardHistory");
+    const searchWindows=pickBoolean(launcher,"searchWindows",true,errors,"launcher.searchWindows");
     const launcherDefaultMode=pickEnum(launcher,"defaultMode",["all","favorites","recent"],DEFAULTS.launcher.defaultMode,errors,"launcher.defaultMode");
     let pinnedIds = DEFAULTS.launcher.pinnedIds.slice();
     if (!isPlainObject(source.launcher) || launcher.pinnedIds === undefined) {
@@ -522,6 +556,7 @@ function validateSettings(input) {
                 searchLabel: searchLabel,
                 moduleSidesJson: moduleSidesJson,
                 hiddenOutputsJson: hiddenOutputsJson,
+                layoutOutputsJson: layoutOutputsJson,
                 surfaceMode: surfaceMode,
                 surfaceColor: surfaceColor,
                 surfaceOpacity: surfaceOpacity,
@@ -553,6 +588,8 @@ function validateSettings(input) {
             },
             launcher: {
                 defaultMode: launcherDefaultMode,
+                clipboardHistory:clipboardHistory,
+                searchWindows:searchWindows,
                 pinnedIds: pinnedIds,
             },
             wallpaper: {
@@ -576,6 +613,10 @@ function validateSettings(input) {
                 ownership: notificationOwnership,
                 dnd: notificationDnd,
                 policiesJson: notificationPolicies,
+                bannerDuration: notificationDuration,
+                historyLimit: notificationHistoryLimit,
+                screenTarget: notificationScreenTarget,
+                quietUntil: notificationQuietUntil,
             },
             extensionsJson: extensionsJson,
         },
@@ -830,12 +871,12 @@ function extensionsText(source, errors) {
 
     const domainKeys = {
         clock: { use24Hour: true, showSeconds:true, showDate:true, dateFormat:true, showWeekNumbers: true, weekStart: true },
-        bar: { targetMonitor: true, reserveSpace: true, showFocusedTitle: true, workspaceIds: true, workspaceOutputsJson: true, workspaceDispatch: true, placement: true, height: true, moduleOrder: true, hiddenModules: true, searchLabel:true, moduleSidesJson:true, hiddenOutputsJson:true, surfaceMode:true, surfaceColor:true, surfaceOpacity:true, surfaceOutputsJson:true },
+        bar: { targetMonitor: true, reserveSpace: true, showFocusedTitle: true, workspaceIds: true, workspaceOutputsJson: true, workspaceDispatch: true, placement: true, height: true, moduleOrder: true, hiddenModules: true, searchLabel:true, moduleSidesJson:true, hiddenOutputsJson:true, layoutOutputsJson:true, surfaceMode:true, surfaceColor:true, surfaceOpacity:true, surfaceOutputsJson:true },
         appearance: { mode: true, tint: true, panelOpacity: true, panelBlur: true, radius: true, shadowOpacity: true, shadowSoftness: true, motionScale: true, reducedMotion: true, panelPadding: true, panelSpacing: true, fontSize: true, fontWeight: true, iconScale: true, topGradient: true, contrast: true, automaticText: true, automaticGradient: true, manualText: true, manualMuted: true, manualPanel: true, manualGradient: true },
-        launcher: { pinnedIds: true,defaultMode:true },
+        launcher: { pinnedIds: true,defaultMode:true,clipboardHistory:true,searchWindows:true },
         wallpaper: { enabled: true, fit: true, path: true, outputsJson: true, slideshow: true, intervalMinutes: true, order: true, transitionMs: true, slidesJson: true },
         settingsWindow: { width: true, height: true, category: true },
-        notifications: { ownership: true, dnd: true, policiesJson: true },
+        notifications: { ownership: true, dnd: true, policiesJson: true, bannerDuration:true,historyLimit:true,screenTarget:true,quietUntil:true },
     };
     const nested = {};
     const domains = Object.keys(domainKeys);

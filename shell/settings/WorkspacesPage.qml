@@ -19,7 +19,8 @@ Item {
     height: implicitHeight
 
     function moveHighlight(delta) { highlightId = "workspaceOutputs"; revealRequested(0, height) }
-    function focusHighlight() { refreshButton.forceActiveFocus() }
+    function focusHighlight() {if(highlightId==="workspaceOverview")overviewOpen.forceActiveFocus();else refreshButton.forceActiveFocus()}
+    onHighlightIdChanged:if(highlightId==="workspaceOverview")revealRequested(overviewGroup.y,overviewGroup.height)
     function shows(id) { return Nav.controlVisible(query, id) }
 
     Column {
@@ -41,6 +42,23 @@ Item {
             color: Theme.settingsMuted
             font.family: Theme.settingsFontFamily
             font.pixelSize: Theme.settingsFontSizeSmall
+        }
+        Column {
+            width:parent.width;spacing:Theme.settingsSpacing
+            id:overviewGroup
+            SectionHeader {text:"Overview"}
+            SettingsToggle {
+                label:"Alt + Tab opens workspace overview"
+                checked:OverviewService.shortcutEnabled
+                enabled:OverviewService.shortcutEnabled || OverviewService.shortcutCanEnable
+                onToggled:function(value){if(value)OverviewService.enableShortcut();else OverviewService.restoreShortcut()}
+            }
+            FlatButton {id:overviewOpen;label:"Open overview";onActivated:OverviewService.openOverview()}
+            Text {
+                width:parent.width;wrapMode:Text.WordWrap
+                text:OverviewService.shortcutError || (OverviewService.shortcutEnabled ? "Choose a miniature window or desktop to switch. Turn this off to restore window cycling." : OverviewService.shortcutCanEnable ? "Alt + Tab can open a live view of your workspaces and windows." : "Your existing Alt + Tab shortcut is preserved. Open the overview here instead.")
+                color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall
+            }
         }
         ChoiceBox {
             width:Math.min(parent.width,440)

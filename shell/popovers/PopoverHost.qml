@@ -6,6 +6,7 @@ import "../logic/popover.js" as Popover
 import "../themes"
 import "../components"
 import "../services"
+import "../notifications"
 
 PanelWindow {
     id: popup
@@ -81,7 +82,7 @@ PanelWindow {
     }
 
     function openClock(tab,item) {
-        requestedClockTab=tab==="calendar" ? "calendar" : "clock"
+        requestedClockTab=["calendar","timer","stopwatch"].indexOf(tab)>=0 ? tab : "clock"
         if(popupState.visible && popupState.panelId==="calendar" && bodyLoader.item) {
             if(bodyLoader.item.activeTab===requestedClockTab) {close();return}
             bodyLoader.item.showTab(requestedClockTab)
@@ -125,7 +126,15 @@ PanelWindow {
                 gap: Theme.panelGap,
                 align: "end",
             })
-            if (placed) popup.placement=Qt.point(placed.x,placed.y)
+            if (placed) {
+                const gap=Theme.panelGap, margin=Theme.panelMargin
+                if(barWindow.edge==="bottom")placed.y=barWindow.screen.height-barWindow.height-popup.implicitHeight-gap
+                if(barWindow.vertical) {
+                    placed.x=barWindow.edge==="left" ? barWindow.width+gap : barWindow.screen.width-barWindow.width-popup.implicitWidth-gap
+                    placed.y=Math.max(margin,Math.min(mapped.y,popup.screen.height-popup.implicitHeight-margin))
+                }
+                popup.placement=Qt.point(Math.max(margin,placed.x),Math.max(margin,placed.y))
+            }
         } finally {
             applyingAnchor = false
         }
@@ -262,7 +271,7 @@ PanelWindow {
             Loader {
                 id:bodyLoader
                 onLoaded:if(popup.popupState.panelId==="calendar" && item.showTab)item.showTab(popup.requestedClockTab)
-                sourceComponent: popup.popupState.panelId === "control"
+                sourceComponent: popup.popupState.panelId === "notifications" ? notificationPanel : popup.popupState.panelId === "control"
                     ? controlPanel
                     : popup.popupState.panelId === "network" ? networkPanel : popup.popupState.panelId === "power" ? powerPanel : popup.popupState.panelId === "calendar" ? calendarPanel : popup.popupState.panelId === "customize" ? popup.customPanel : null
             }
@@ -274,6 +283,7 @@ PanelWindow {
         CalendarPanel {}
     }
 
+    Component {id:notificationPanel;NotificationDrawer {onSettingsRequested:{popup.close();SettingsStore.setSettingsCategory("notifications");SettingsModel.show()}}}
     Component {id:networkPanel;NetworkPanel {onSettingsRequested:{popup.close();SettingsStore.setSettingsCategory("network");SettingsModel.show()}}}
     Component {id:powerPanel;PowerPanel {onSettingsRequested:{popup.close();SettingsStore.setSettingsCategory("power");SettingsModel.show()}}}
     Component {
