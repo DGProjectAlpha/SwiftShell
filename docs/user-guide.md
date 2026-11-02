@@ -100,3 +100,56 @@ left/center/right placement, module order, optional Search text, 12/24-hour time
 seconds and date styles. Reset positions restores the arrangement derived from
 module order. Calendar and Control Center share the Settings material; Escape or
 an outside click closes them. Opening Settings or Spotlight dismisses bar panels.
+
+### Clock and dedicated bar widgets
+
+Click the **date** for Calendar or the **time** for Clock. Clock offers digital and
+analogue faces, countdown timers, and a stopwatch with laps. Timers keep their
+remaining time across panel closure, sleep and restart. The calendar opens your
+chosen calendar application when one is installed; it does not claim unsupported
+date-specific navigation. Alarms, world clocks and reminders are future features.
+
+The former three-dot menu is now **Audio**. Audio includes device/volume controls
+and playback; the activity animation follows playing state and respects Reduced
+motion. **Network & Devices** and **Power** have their own widgets. Right-click
+blank bar space to choose visible widgets for that monitor. Right-click a tray
+application to open that application's menu; the bar menu no longer intercepts it.
+All published tray items appear. An installed application that is not running or
+not publishing an icon will not appear merely because it has a background process.
+
+### Spotlight Search
+
+Super+Space opens Spotlight. Use All apps, Favorites or Recent; choose the default
+opening view in **Settings → Spotlight Search**. Right-click an app or use Ctrl+D
+to add/remove a favorite. In Favorites, drag tiles to arrange them; Alt+Shift+H/L
+also moves a selected favorite. Ordering and the default view survive restart.
+
+Type an app/setting, calculation such as `2+2`, common unit conversion, or URL.
+When there is no local result, the labeled web result opens only after Enter or a
+click. There are no automatic online suggestions or network requests while typing.
+The bottom icon strip provides Settings and confirmed session actions.
+
+### Desktop appearance and device settings
+
+**Appearance → Window borders** switches active and inactive application borders
+off or changes their width. Corner radius also controls normal desktop windows;
+individual application rules may override it. Blur strength uses the compositor's
+shared blur profile, including other blurred desktop surfaces. SwiftShell writes
+only its own recovery state, never your Lua. Restore desktop appearance returns
+owned options to their recorded originals.
+
+Appearance reflows into two columns in a wide Settings window and stacks on a
+narrow window. Workspaces provides a discovered screen selector and draggable
+indicator handles. Removing an indicator does not close applications or destroy
+that compositor workspace.
+
+**Network & Devices** combines connections and Bluetooth. It offers actual device,
+radio, saved connection, discovery and pairing actions where supported. Enterprise
+Wi-Fi needs an existing profile; pairing may require your system's pairing dialog.
+**Power** exposes the power modes actually provided by your computer.
+
+**Default apps** selects installed applications using standard associations where
+available. Terminal/calendar shell preferences are used by SwiftShell; existing
+custom shortcuts that name a program are not rewritten. **Shortcuts** shows your
+active desktop bindings and lets you record/apply/remove managed actions with
+collision checks and Undo. Existing opaque Lua actions remain read-only.

@@ -775,3 +775,81 @@ explicitly while keeping Basic styling. The pointer regression asserts a real
 window overlay with the expected width. KeyedModel uses explicit dynamic roles
 so older Qt retains object rows without nested-list role type warnings.
 The complete local check suite passed after both corrections.
+
+## Native desktop applications and devices (2026-11-01–02)
+
+The exact staged backend tree and exact staged UI tree independently passed
+`scripts/check.sh`. The final local suite passes 71 Python tests, 16 QML suites,
+the JS regressions, 17 installer cases and static checks for 88 QML documents.
+GitHub's Ubuntu Qt 6.4 runner also passes: timer input waits for rendering after
+layout changes, and the tray script guards a nullable QML context named module.
+The local runtime remains Quickshell 0.3.2 / Qt 6.12 / Hyprland 0.57 on RTX 4070,
+DP-1 scale 1 and HDMI-A-1 scale 1.25. Monitor positions/modes were preserved.
+
+Native evidence:
+
+- `settings-pages.py`: all twelve current sidebar categories loaded on the actual
+  floating window. Bluetooth is included in Network & Devices.
+- `settings-window.py --output DP-1` and `--output HDMI-A-1`: title drag, all four
+  edges/four corners, maximize/restore, minimize/reactivation and saved geometry.
+- `workspace-drag.py`: actual handle movement, named/empty indicators retained,
+  disk readback, unchanged window geometry and scoped preference restoration.
+- `spotlight.py`: actual typed calculation, context/keyboard Favorites, All/Favorites,
+  tile drag ordering, no accidental launch, Settings icon, Escape on both outputs.
+- `launcher-shortcut.py`: actual Super+Space open/repeat toggle/Escape on both.
+- `clock-panel.py`: actual faces, Calendar navigation, timer pause/resume/cancel,
+  stopwatch/laps/reset, rounded blur and Escape on both outputs; exact tool state
+  restored on disk. `clock-tools.py` verifies isolated deadline/restart behavior.
+- `bar-inputs.py`: date→Calendar and time→Clock, direct view switching, dedicated
+  Audio/Network/Power panels, native tray menu open/Escape on both outputs.
+- `bar-persistence.py`: a real visibility checkbox, atomic save, complete scoped
+  SwiftShell restart, per-output readback and restoration of the original override.
+- `settings-external.py`: real external edits, subsequent no-op/actual saves, and
+  malformed/future-file protection without changing live preference values.
+- Native duplicate/rapid save, backed-up v2 migration and expanded workspace/
+  Spotlight opening-mode process-restart readback scripts passed.
+- `tray-native.py`: actual native StatusNotifier ObjectModel order/count, all two
+  currently published items displayed. Seven fixture items test the removed cap.
+  Steam/Discord publish icons; Cachy-Update is installed but not running/publishing.
+- `shortcuts-native.py`: real inhibition captured Super+Space without launching
+  Spotlight; a recorded owned chord was applied/read back/removed. All original
+  94 effective bindings were unchanged.
+- `default-apps.py`: actual xdg-mime selection/readback/backup/Undo in temporary XDG.
+  `network-devices.py`: actual NetworkManager transport/state/view ownership with
+  no connectivity changes. `power-profiles.py`: actual pointer choice, D-Bus
+  readback and exact original Performance mode restoration.
+- `contrast.py`: actual hidden bars and async decoder for JPEG/WebP, displayed crop,
+  opaque material foreground and mixed-band readability. `bar-stability.py`: 11
+  module creations (ten initial plus one deliberate re-add), four retained workspace
+  controls, one settings load through 15 appearance/urgency changes.
+
+Actual compositor runtime readback also passed radius 14, blur size 4/passes 2 and
+border width 0, followed by Restore and exact pre-test option/journal restoration.
+No user Lua, Noctalia, autostart, display modes or unrelated services were changed.
+Backups retained: own state directory backups/20261101T190959Z-native-desktop and
+backups/20261102T111525Z-desktop-activation. Revert the commits for source recovery;
+`python3 shell/helpers/appearancectl.py restore` restores owned desktop options.
+
+Owned checkerboard blur comparisons (on/off edge contrast; smaller means blur):
+HDMI Clock 2.318/4.392, Calendar 3.221/5.274, Audio .868/3.223,
+Power 4.675/6.768, modules 1.369/4.085; DP Clock 2.515/5.414,
+Calendar 3.843/6.662, Audio 1.496/4.409, Power 7.559/9.973,
+modules 2.072/5.397. Full Clock and Calendar/module captures were visually inspected;
+no underlying application pixels were captured. Spotlight was separately inspected
+and measured in decision 0037. Capture files remain under /tmp.
+
+Limits: existing opaque Lua shortcut callbacks are not editable; no calendar app
+is installed; no Wi-Fi connection/disconnection, radio change, Bluetooth pairing,
+real timer notification, shutdown/reboot/suspend/lock or real-player playback was
+performed. Those controls have verified APIs, capability/disabled/error behavior
+and focused tests, but this is not an execution claim. Physical hotplug, sustained
+GPU/gaming load, every wallpaper and comprehensive accessibility remain pending.
+Known Qt Wayland text-input focus warnings remain visible; they were not suppressed.
+
+Final activation at 2026-11-02 12:22 UTC repeated the full scoped-restart visibility
+check, both-output bar/tray inputs, Spotlight keyboard/context/favorite-drag checks
+and all twelve Settings pages against the final source. Adaptive bar text was
+enabled as requested; both outputs reported completed contrast analysis. The
+immediately preceding preferences are retained in own state backup
+`backups/20261102T122221Z-final-contrast`. Final runtime logs had no QML loading
+errors; known Qt text-input and absent legacy request-file warnings remain.

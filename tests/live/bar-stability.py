@@ -2,7 +2,7 @@
 """Opt-in native hidden-bar lifetime regression with isolated preferences."""
 import argparse
 from pathlib import Path
-import os,shutil,subprocess,tempfile,re,sys
+import os,shutil,subprocess,tempfile,re,sys,json
 parser=argparse.ArgumentParser();parser.add_argument('--live',action='store_true',required=True);parser.parse_args()
 root=Path(__file__).parents[2]
 with tempfile.TemporaryDirectory(prefix='swiftshell-flicker-before-') as folder:
@@ -36,5 +36,5 @@ ShellRoot {
  log=result.stdout+result.stderr
  print('Native hidden bar, 15 appearance changes: created',log.count('AUDIT module created'),'destroyed',log.count('AUDIT module destroyed'),'settings loads',log.count('settings loaded'),'workspace creations',log.count('AUDIT workspace created'),'finished','AUDIT finished' in log)
  assert 'AUDIT finished' in log,log
- assert log.count('AUDIT module created')==9,log
+ assert log.count('AUDIT module created')==len(json.loads((root/'shell/config/defaults.json').read_text())['bar']['moduleOrder'])+1,log
  assert log.count('AUDIT workspace created')==4,log

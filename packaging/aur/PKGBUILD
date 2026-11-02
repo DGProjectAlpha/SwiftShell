@@ -10,6 +10,7 @@ arch=('any')
 url='https://github.com/DGProjectAlpha/SwiftShell'
 license=('LicenseRef-None')
 depends=('python' 'quickshell>=0.3.2' 'hyprland>=0.57' 'qt6-base>=6.9' 'qt6-declarative>=6.9' 'wayland-utils')
+optdepends=('pyside6: asynchronous JPEG/WebP wallpaper contrast analysis')
 source=("$pkgname-$pkgver.tar.gz::https://github.com/DGProjectAlpha/SwiftShell/archive/refs/tags/v$pkgver.tar.gz")
 sha256sums=('SKIP')
 

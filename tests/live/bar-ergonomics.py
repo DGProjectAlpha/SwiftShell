@@ -76,10 +76,11 @@ try:
                 # compositor cursor warp to settle, then safely retry the motion.
                 time.sleep(.2)
             result.check_returncode()
+        subprocess.run([str(temp/'keyboard'),'escape'],check=True)
         for m in monitors:
             name=m['name'];width,_=logical_size(m)
             # Actual right-click anywhere on this shell's bar opens its own menu.
-            pointer(m,m['x']+width-100,m['y']+bar(name)['height']/2,'right')
+            pointer(m,m['x']+width*.35,m['y']+bar(name)['height']/2,'right')
             wait(lambda:bar(name)['menu']['visible'] and bar(name)['menu']['id']=='customize')
             time.sleep(.2)
             menu=bar(name)['menu'];geometry=menu['geometry']
@@ -97,24 +98,24 @@ try:
             subprocess.run([str(temp/'keyboard'),'escape'],check=True)
             wait(lambda:not bar(name)['menu']['visible'])
             print('PASS actual right-click, per-output checkbox isolation, bounds and Escape on',name,flush=True)
-            pointer(m,m['x']+width-100,m['y']+bar(name)['height']/2,'right')
+            pointer(m,m['x']+width*.35,m['y']+bar(name)['height']/2,'right')
             wait(lambda:bar(name)['menu']['visible'])
             geometry=bar(name)['menu']['geometry'];item=next(i for i in geometry['items'] if i['module']=='customize')
             pointer(m,geometry['x']+item['x']+item['width']/2,geometry['y']+item['y']+item['height']/2)
             wait(lambda:state()['settingsOpen'] and state()['category']=='bar' and not state()['windowBusy'])
             assert not bar(name)['menu']['visible']
             call('window','close');wait(lambda:not state()['settingsOpen'])
-            pointer(m,m['x']+width-100,m['y']+bar(name)['height']/2,'right')
+            pointer(m,m['x']+width*.35,m['y']+bar(name)['height']/2,'right')
             wait(lambda:bar(name)['menu']['visible'])
             subprocess.run([str(temp/'keyboard'),'toggle'],check=True)
             wait(lambda:state()['launcherOpen'] and all(not b['menu']['visible'] for b in state()['barSurfaces']))
             subprocess.run([str(temp/'keyboard'),'escape'],check=True);wait(lambda:not state()['launcherOpen'])
             print('PASS real Customize bar action and clean launcher focus handoff on',name,flush=True)
 
-            if name in hidden:call('moduleVisibility',name,json.dumps(hidden[name]))
+            if name in hidden:call('moduleVisibility',name,' '+json.dumps(hidden[name]))
             else:call('moduleInherit',name)
             # Place an owned checkerboard beneath each native popup; no private pixels.
-            for panel in ['calendar','control','customize']:
+            for panel in ['calendar','date','control','power','customize']:
                 call('barPanel',name,panel);wait(lambda:bar(name)['menu']['visible']);time.sleep(.25)
                 geometry=bar(name)['menu']['geometry'];assert geometry['height']<=logical_size(m)[1] and geometry['width']<=logical_size(m)[0];call('barPanel',name,'close');wait(lambda:not bar(name)['menu']['visible'])
                 subprocess.run(['qs','-p',str(pattern),'--no-duplicate','--daemonize'],check=True,stdout=subprocess.DEVNULL,env=dict(os.environ,SWIFTSHELL_BLUR_WIDTH=str(round(geometry['width'])+16),SWIFTSHELL_BLUR_HEIGHT=str(round(geometry['height'])+16)))
@@ -139,7 +140,7 @@ try:
                     call('appearance','panelBlur',value);wait(lambda:state()['panelBlur']==int(value));time.sleep(.3)
                     path=Path('/tmp')/f'swiftshell-popover-{name}-{panel}-{label}.png'
                     subprocess.run(['grim','-g',f'{x},{y} 80x80',str(path)],check=True)
-                    if label=='on' and panel in ('calendar','customize'):
+                    if label=='on' and panel in ('calendar','date','customize'):
                         frame=bar(name)['menu']['geometry']
                         assert background['at'][0]<=frame['x'] and background['at'][1]<=frame['y']
                         assert background['at'][0]+background['size'][0]>=frame['x']+frame['width'] and background['at'][1]+background['size'][1]>=frame['y']+frame['height']
@@ -155,7 +156,7 @@ try:
 finally:
     for m in monitors:
         call('barPanel',m['name'],'close')
-        if m['name'] in hidden:call('moduleVisibility',m['name'],json.dumps(hidden[m['name']]))
+        if m['name'] in hidden:call('moduleVisibility',m['name'],' '+json.dumps(hidden[m['name']]))
         else:call('moduleInherit',m['name'])
     call('moduleSide','clock',sides.get('clock','inherit'))
     call('clockOptions',str(clock['use24Hour']).lower(),str(clock.get('showSeconds',False)).lower(),str(clock.get('showDate',False)).lower(),clock.get('dateFormat','short'))

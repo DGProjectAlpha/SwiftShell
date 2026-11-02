@@ -107,3 +107,8 @@ qs kill --id <instance-id>
 ```
 
 Read the instance id from the list before stopping anything. Stopping every Quickshell process can stop the shell you were already using.
+
+JPEG/WebP wallpaper contrast uses optional `pyside6` (already present on the
+reference machine). Without it, the bounded PNG analyzer and neutral readability
+fade remain available. NetworkManager, BlueZ and power-profiles-daemon integrations
+are capability-detected; installing SwiftShell does not replace or restart them.

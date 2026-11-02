@@ -28,3 +28,24 @@ and evidence without modifying that external document.
   Duplicate/queued settings saves have a native regression. See decision 0035.
 - Next: C1/C2 Spotlight app grid/favorites/quick actions and richer search;
   D and later milestones remain separate work, not hidden inside this increment.
+
+## Native desktop application increment (2026-11-02)
+
+- B: Dedicated Audio/playback, Network & Devices and Power widgets replace the
+  overflow menu. All published tray items render with native menus and live roles.
+- C1/C2: Icon-grid Spotlight, saved opening view, Favorites/Recent, persistent drag
+  ordering, local calculations/units, explicit URL/web fallback and icon actions.
+- D: Effective binding viewer plus inhibited recording and owned apply/remove/undo.
+  Existing opaque Lua callback bindings remain read-only; no reconstruction claim.
+- E: Default Applications with verified XDG writes/undo, NetworkManager device
+  controls, bounded Bluetooth discovery/actions and actual power profiles.
+- G: Digital/analogue Clock, improved Calendar, countdown and stopwatch/laps with
+  native restart tests. Alarms, world clocks and reminders remain future work.
+- A/maintenance: Responsive Settings, workspace handle ordering, validated reads,
+  cache-independent atomic preference writes, reversible desktop radius/blur/
+  border controls and stable bar delegates. Real visibility checkbox/restart
+  readback and actual tray menu/Clock-versus-date context tests passed.
+
+Later workspace-layout rules, overview, performance dashboard, clipboard,
+screenshot UI, release onboarding and physical hotplug/GPU-load acceptance remain
+separate work. This increment does not claim the entire long-term roadmap.
