@@ -1804,6 +1804,7 @@ test("shortcut recording cancels, conflicts, and does not invent a bind", functi
 });
 
 test("audio devices, players, and tray items stay actionable", function () {
+    assert.doesNotThrow(function(){require("node:vm").runInNewContext(fs.readFileSync(path.join(__dirname,"../shell/logic/tray.js"),"utf8"),{module:null});});
     const nodes = [
         { id: 4, isSink: true, isStream: false, audio: { volume: 0.5, muted: false }, description: "Speakers" },
         { id: 5, isSink: false, isStream: false, audio: { volume: 0.2, muted: false }, description: "Microphone" },
