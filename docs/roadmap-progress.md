@@ -46,6 +46,28 @@ and evidence without modifying that external document.
   border controls and stable bar delegates. Real visibility checkbox/restart
   readback and actual tray menu/Clock-versus-date context tests passed.
 
-Later workspace-layout rules, overview, performance dashboard, clipboard,
-screenshot UI, release onboarding and physical hotplug/GPU-load acceptance remain
-separate work. This increment does not claim the entire long-term roadmap.
+At that checkpoint, workspace-layout rules, overview, performance dashboard,
+clipboard, screenshot UI, release onboarding and physical hotplug/GPU-load acceptance
+remained separate work. Subsequent progress is recorded below.
+
+
+## Connected desktop increment (2026-11-02)
+
+- Notifications: actual protocol ownership on this session, themed banners/drawer,
+  retained actions, grouping, dismiss/snooze/Show now, DND/pause, per-app policy,
+  duration/display/history settings and bounded session memory. Clock events and
+  live bar activity share it. Sounds/images/inline reply remain future work.
+- Overview: focused-display workspace grid with actual locally rendered window
+  miniatures, blur, pointer/keyboard switching and a reversible guarded Alt+Tab
+  handoff. Missing capture frames use a labeled fallback.
+- Bar: per-display edges, content scaling, order/groups and visibility; actual edge
+  wallpaper sampling and coalesced reservation updates. No monitor modes changed.
+- Devices: authentication/progress/retry/cancel improvements and complete Bluetooth
+  lists. Live connection/pairing side effects still need owner testing.
+- Spotlight: native window switching and precise Settings links, local screenshot
+  actions, optional bounded session clipboard history with explicit clip searches.
+  Screenshot transport used owned pixels; real private clipboard data was not tested.
+
+These changes are separate local commits on codex/live-debug, following the pending
+PR baseline. They are not merged into main and do not claim the remaining roadmap
+or release/GPU/hotplug gates are complete. See the dated native evidence in testing.

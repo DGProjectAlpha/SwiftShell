@@ -28,7 +28,7 @@ static void send_key(struct wl_display *display,struct zwp_virtual_keyboard_v1 *
     wl_display_roundtrip(display);usleep(30000);
 }
 int main(int argc,char **argv){
-    if(argc!=2 || (strcmp(argv[1],"calculation") && strcmp(argv[1],"tab") && strcmp(argv[1],"escape") && strcmp(argv[1],"favorite") && strcmp(argv[1],"menu") && strcmp(argv[1],"enter")))return 2;
+    if(argc!=2 || (strcmp(argv[1],"calculation") && strcmp(argv[1],"tab") && strcmp(argv[1],"escape") && strcmp(argv[1],"favorite") && strcmp(argv[1],"menu") && strcmp(argv[1],"enter") && strcmp(argv[1],"overview")))return 2;
     struct wl_display *display=wl_display_connect(NULL);if(!display)return 3;
     struct wl_registry *registry=wl_display_get_registry(display);wl_registry_add_listener(registry,&listener,NULL);wl_display_roundtrip(display);
     if(!manager || !seat)return 4;
@@ -47,6 +47,10 @@ int main(int argc,char **argv){
         send_key(display,keyboard,state,KEY_EQUAL,1);send_key(display,keyboard,state,KEY_EQUAL,0);
         send_key(display,keyboard,state,KEY_LEFTSHIFT,0);
         send_key(display,keyboard,state,KEY_2,1);send_key(display,keyboard,state,KEY_2,0);
+    } else if(!strcmp(argv[1],"overview")) {
+        send_key(display,keyboard,state,KEY_LEFTALT,1);
+        send_key(display,keyboard,state,KEY_TAB,1);send_key(display,keyboard,state,KEY_TAB,0);
+        send_key(display,keyboard,state,KEY_LEFTALT,0);
     } else if(!strcmp(argv[1],"favorite") || !strcmp(argv[1],"menu")) {
         uint32_t modifier=!strcmp(argv[1],"favorite") ? KEY_LEFTCTRL : KEY_LEFTSHIFT;
         uint32_t code=!strcmp(argv[1],"favorite") ? KEY_D : KEY_F10;

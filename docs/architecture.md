@@ -1,6 +1,6 @@
 # Architecture
 
-SwiftShell's M0/M1 prototype is a Quickshell configuration that draws one transparent bar. It is launched from this repository and does not replace Noctalia or edit the Hyprland configuration.
+SwiftShell is a Quickshell desktop layer with independent per-output bars, native Settings, Spotlight, notifications and workspace overview. Services own system integration; surfaces share theme tokens. Development does not replace Noctalia or rewrite user-authored Hyprland configuration.
 
 ## Boundaries
 
@@ -18,18 +18,13 @@ UI files read service snapshots and theme tokens. They do not call `hyprctl` and
 
 ```text
 shell/shell.qml
-  BarHost
-    one PanelWindow per matching screen
-      WorkspaceIndicators
-      FocusedTitle
-      ClockModule
-      ControlIndicator
-      PopoverHost
-        CalendarPanel
-        ControlCenterPanel
-          AudioSection
-  SettingsStore
-  HyprlandModel
+  BarHost -> per-output BarWindow -> module controls and PopoverHost
+    Clock / Audio / Network / Power / Notifications / module customization
+  LauncherWindow -> app grid and desktop search providers
+  OverviewWindow -> workspace cards -> locally rendered window previews
+  SettingsModel -> native floating SettingsWindow
+  NotificationHost (only when notification ownership is enabled)
+  WallpaperHost and shared service adapters
 ```
 
 ## Theme
@@ -191,3 +186,37 @@ Test-only: Node for `tests/logic.test.js`, Python 3 for `tests/static_check.py`,
 ## Decision
 
 The safe preview behavior is recorded in `docs/decisions/0001-m0-m1-boundaries.md`. The install boundaries are recorded in `docs/decisions/0002-install-boundaries.md`. The original panel boundaries are recorded in `docs/decisions/0003-m2-panels.md`. The color, blur, anchor, and popup-phase corrections are recorded in `docs/decisions/0004-m2-stability.md`.
+
+
+## Notification and overview lifecycle
+
+NotificationsModel is a bounded reducer-backed in-memory store. NotificationHost
+owns protocol objects and uses the installed Quickshell millisecond timeout API;
+archiving a banner retains actions, while client close invalidates them. Model
+signals route dismiss/actions to the host; snooze deadlines and persisted pause
+preferences use a timer only while pending. Native/local Clock entries share the
+same drawer. Local action metadata remains bounded alongside history; no content
+is persisted or logged. Banner height is capped to the output with scrolling.
+
+OverviewService reads live Hyprland toplevel geometry and bridges native foreign
+handles to ScreencopyView. Captures exist only on local GPU surfaces while open,
+with a truthful fallback when a frame is unavailable. No screenshot files are used.
+Focus uses the native handle, with validated address dispatch for missing handles.
+The overviewctl adapter replaces only a source-verified built-in Alt+Tab chord,
+records recovery before mutation and falls back to cycling if shell IPC is absent.
+
+Per-output bar layout is additive validated v3 data: edge, extra content scale,
+module order and groups. Visibility remains independently inherited. Logical
+layout scales the complete control surface, vertical rails stack modules and
+popovers open inward from the selected edge. Reservation changes coalesce after
+orientation dimensions settle. Wallpaper analysis samples that output's actual
+edge/thickness, including the bounded PNG fallback.
+
+DesktopTools provides opt-in event-driven clipboard sampling and typed screenshot
+operations. Clipboard text never enters ordinary launcher ranking: only an explicit
+clip prefix searches bounded session memory, and a deadline removes expired items.
+The helper refuses sensitive MIME hints and bounds input. Screenshots invoke fixed
+argv, validate output connectors/region geometry, close shell overlays before
+capture, and pipe PNG directly to wl-copy without writing files. Source disappearance,
+missing tools and cancellation have truthful outcomes. No launcher query becomes
+shell code. Settings links retain a pending control until the native page is mapped.

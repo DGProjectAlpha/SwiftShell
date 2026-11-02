@@ -112,3 +112,9 @@ JPEG/WebP wallpaper contrast uses optional `pyside6` (already present on the
 reference machine). Without it, the bounded PNG analyzer and neutral readability
 fade remain available. NetworkManager, BlueZ and power-profiles-daemon integrations
 are capability-detected; installing SwiftShell does not replace or restart them.
+
+
+Optional desktop tools: `wl-clipboard` enables opt-in clipboard history and image
+copying; `grim` provides screenshots, and `slurp` provides interactive region
+selection. Missing tools are detected without installing packages or changing
+services. Clipboard history remains disabled until selected in Settings.

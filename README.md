@@ -1,6 +1,6 @@
 # SwiftShell
 
-> **Status:** Local CachyOS validation covers native floating Settings, workspace/display recovery, Clock tools, visual Spotlight, real tray menus, Network & Devices, power profiles and dedicated glass bar panels on mixed-scale monitors. Preferences survive process restarts and malformed/external edits are protected. This remains an alpha; see dated evidence and unperformed checks in `docs/testing.md`.
+> **Status:** Local CachyOS validation now covers actionable notifications and a bar drawer, live workspace previews with a reversible Alt+Tab handoff, independent bar edges/scales/content per display, Clock notifications/activity, native device workflows, and Spotlight window/settings/screenshot tools. Clipboard history is optional and session-only. This remains an alpha; dated evidence and unperformed checks are in `docs/testing.md`.
 >
 > **Purpose:** A clean, understated, keyboard-first, fully integrated desktop shell built with **Quickshell + Qt 6/QML** for **Hyprland on Arch-based systems**. The reference workstation is CachyOS; the installer is not limited to that one machine.
 >

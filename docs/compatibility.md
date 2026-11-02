@@ -102,3 +102,13 @@ Quickshell 0.2.0 accepts `--path` and `--no-duplicate` on the main command, and 
 ## Explicitly out of scope
 
 Network management, Bluetooth, and Hyprland decoration changes are later milestones. Media and tray controls use the Quickshell 0.2 services and stay inside loaders. PNG top-edge sampling is in the wallpaper page. Jpeg and webp are not sampled. The settings window is a `FloatingWindow` with Appearance, Top bar, Wallpaper, Displays, and Shortcuts pages. The shortcut page stores preferred chords and does not read or write compositor binds. It does not edit Hyprland. The wallpaper layer is a background `PanelWindow` and does not stop another wallpaper program. The launcher's power rows call `loginctl` only after a second confirmation. Native Settings blur and transactional display editing are implemented on the current target; the historical table above retains earlier milestone context.
+
+
+2026-11-02 native notification/overview checks: installed Quickshell 0.3.2 exposes
+`Notification.expireTimeout` in milliseconds (unlike historical seconds wording).
+Host normalization is covered by actual D-Bus tests. Native persistence support
+retains actions after banners archive. `HyprlandToplevel.wayland` plus
+`ScreencopyView` supplies actual per-window preview frames on this compositor;
+some clients supply no frame and receive a labeled fallback. The guarded Alt+Tab
+handoff supports only the verified built-in cycle-next binding on the Lua target;
+unknown callbacks are never reconstructed. Settings restore the original chord.

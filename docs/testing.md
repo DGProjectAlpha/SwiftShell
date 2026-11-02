@@ -1,6 +1,6 @@
 # Testing
 
-The cloud environment used to add this prototype has no Hyprland session, no monitors, and no Noctalia installation. Checks here cover logic, source structure, and the installer in a temporary home directory. They do not show pixels.
+Automated logic, QML and installer checks are separate from native desktop acceptance. Dated local evidence below records actual Quickshell/Hyprland tests; older cloud-only entries remain historical and do not imply hardware coverage.
 
 ## Commands
 
@@ -853,3 +853,80 @@ enabled as requested; both outputs reported completed contrast analysis. The
 immediately preceding preferences are retained in own state backup
 `backups/20261102T122221Z-final-contrast`. Final runtime logs had no QML loading
 errors; known Qt text-input and absent legacy request-file warnings remain.
+
+
+## Notifications, overview, per-display bars and desktop tools — 2026-11-02
+
+Target: Quickshell 0.3.2, Qt 6.12.0, Hyprland 0.57 Lua, NVIDIA RTX 4070;
+DP-1 scale 1 and HDMI-A-1 scale 1.25. `scripts/check.sh` passed, including
+96 QML documents, the notification/overview/desktop-tools regressions and all
+existing checks. Each device, notification/overview/bar, and Spotlight commit was
+also checked from its exact staged tree in a temporary checkout. These new commits
+have local evidence; the earlier PR's CI result is not a CI claim for them.
+
+Native checks performed:
+
+- `tests/live/notifications-native.py --live`: private D-Bus session with actual
+  Quickshell server receipt/replacement, client close, native action callback,
+  timeout/history, transient, DND, snooze/wake and 70-notification bounded burst.
+  This caught the installed version's millisecond timeout behavior. Actions remain
+  usable after a banner archives, until the source closes or the user dismisses it.
+- Main session: observed no notification owner, backed up preferences, enabled
+  SwiftShell, verified the resulting bus-owner PID, sent a real `notify-send`,
+  observed receipt and mapped/bounded banner geometry, then dismissed that test ID.
+- `tests/live/clock-notifications.py --live`: actual timer deadline, live bar
+  activity, completion notification, snooze/wake and action opening Timer; actual
+  stopwatch pause notification opening Stopwatch. Original clock tool state restored.
+- `tests/live/overview.py --live`: actual local window preview frames and backdrop
+  blur, workspace counts and keyboard Escape on both outputs; no window pixels
+  were recorded or sent anywhere. Some dormant/minimized clients may supply no
+  frame and receive a labeled fallback card.
+- `tests/live/overview-shortcut.py --live`: actual Alt+Tab activation, repeated chord
+  navigation and Escape on both outputs. The known cycle-next chord was first
+  enabled/restored in a guarded test, leaving unrelated bindings unchanged, then
+  enabled as requested. No Lua files were written.
+- `tests/live/bar-layouts.py --live`: Top/Bottom/Left/Right with .9/1.25 content
+  scales on each monitor, other-output independence and drawer opening; restored
+  original layouts. Reservation updates coalesce so orientation changes do not
+  temporarily reserve an entire screen width.
+- `tests/live/bar-persistence.py --live`: actual checkbox/save/full scoped restart
+  and restoration, including final source activation.
+- `tests/live/spotlight-desktop.py --live`: actual owned native-window activation,
+  precise Settings-control navigation and capability-detected screenshot entries.
+  Existing Spotlight pointer/favorite/context tests and all Settings pages passed.
+- `tests/live/screenshot-tools.py --live`: real `grim` capture strictly inside an
+  opaque owned checkerboard, valid image transport to a private sink. No desktop
+  clipboard change and no unrelated application pixels. Full-display capture and
+  interactive region selection remain user acceptance checks.
+- `tests/live/network-devices.py --live`: actual NetworkManager read-only snapshot,
+  helper transport and view ownership. Python/QML regressions cover authentication
+  validation, retained availability after errors, targeted cancellation and all
+  24 Bluetooth fixture devices instead of the former 16-device truncation.
+- Async wallpaper sampling and bounded PNG fallback now test all four bar edges,
+  including scaled thickness, displayed crop and per-output refresh.
+
+Notification preferences and original activation state are backed up under own
+state `backups/20261102T163711Z-notification-overview`. Source backups include
+`/tmp/swiftshell-notification-bar-20261102T074251` and
+`/tmp/swiftshell-device-workflows-20261102T124420Z`; committed source is the durable
+recovery path. Notifications are now enabled on this session; fresh installs still
+leave ownership off. Alt+Tab's owned recovery journal is mode 600, written before
+mutation; if SwiftShell is absent, its handler falls back to window cycling.
+Restore with `python3 shell/helpers/overviewctl.py restore`, or turn the overview
+shortcut off in Workspaces. Disable SwiftShell notifications in Settings to release
+the bus name; no previous daemon was stopped and none is automatically started.
+
+Limits: notification sounds/images/inline replies and disk-persisted history are
+not provided. Clipboard history defaults off, is bounded to 30 text items/20 minutes
+in memory, excludes advertised sensitive formats and requires explicit `clip`
+searches. Ordinary copied secrets can still enter history if their source supplies
+no privacy hint. Real password-manager behavior, Wi-Fi authentication/connection
+changes, Bluetooth PIN/pairing/cancel side effects, physical monitor hotplug and
+sustained GPU load remain unperformed. Existing system pairing agents are preserved.
+Known Qt Wayland text-input warnings and the absent legacy launcher request file
+remain visible; no claim that every intermittent graphics flicker is eliminated.
+
+Final source activation repeated Clock notification actions, both-output actual
+Alt+Tab, desktop Spotlight activation, native tray/date/time/widget input and all
+twelve Settings pages successfully. The running checkout matches the committed
+feature source; normal source-file watching was restored after verification.

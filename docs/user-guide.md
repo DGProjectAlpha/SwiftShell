@@ -153,3 +153,54 @@ available. Terminal/calendar shell preferences are used by SwiftShell; existing
 custom shortcuts that name a program are not rewritten. **Shortcuts** shows your
 active desktop bindings and lets you record/apply/remove managed actions with
 collision checks and Undo. Existing opaque Lua actions remain read-only.
+
+
+### Notifications and Clock activity
+
+The bell in each bar opens grouped notification history. Open a notification or
+its action buttons, dismiss it, or snooze for 5 minutes, 15 minutes or an hour.
+The Snoozed view offers Show now. Clear history removes archived notifications;
+Do Not Disturb and Pause stop ordinary banners while keeping history. Critical
+notifications can still interrupt. Settings → Notifications controls the display,
+default duration, history limit and per-app Show/Quiet/Hide rules. History lasts
+for the current shell session; app actions stop being available when the source
+closes its notification. Images, inline reply and sounds are not supported yet.
+
+Timer and stopwatch activity appears next to the date/time while running or paused.
+Click it to return to the relevant tool. Timer completion and stopwatch pause use
+the notification drawer, with Open Clock actions that select the correct tab.
+
+### Workspace overview and bar layout
+
+Alt+Tab opens the focused display's workspace overview. Press it again to move the
+selection, use arrow keys or Tab, then Enter to choose a desktop. Click a miniature
+to focus its window; Escape or an empty-background click closes the overview.
+Windows retain their compositor arrangement in each workspace card. A client that
+cannot provide a preview gets a labeled fallback. Workspaces settings provides an
+Open overview button and an Alt+Tab switch; turning the switch off restores the
+original window-cycle binding. Custom/unknown bindings are preserved.
+
+Settings → Top bar lets each display use Top, Bottom, Left or Right placement,
+additional content scaling, widget visibility, grouping and order. Side bars use
+vertical groups. Desktop monitor modes/scales are unchanged; bar scale is extra
+control sizing. Select the same display to change its background. Use the all-screen
+layout option to remove a display override.
+
+### Spotlight desktop tools
+
+Search an open window's title or app name, or type `windows`, then select it to
+focus that window. Settings results open the matching control. Type `screenshot`
+to capture a region or the focused display to the clipboard. Paste the image into
+an app to save/share; Escape cancels region selection.
+
+Clipboard history is off by default. Enable it in Settings → Spotlight Search to
+remember text copied from then on. Type `clip` or `clip some text` to browse/search
+it, then Enter to copy an item. History stays in memory, expires after 20 minutes,
+and keeps at most 30 items. Turning it off or Clear history removes its entries.
+Sensitive-format hints are respected, but text without a hint can include secrets;
+leave history off when that is unsuitable. Open-window search can also be disabled.
+
+Network & Devices now reports operations, recoverable errors and authentication
+retry state. Password entry is masked with an optional Show control. Cancel targets
+only a connection observed activating; a connection that already finished is left
+alone. Bluetooth pairing uses the system's existing PIN/confirmation agent.

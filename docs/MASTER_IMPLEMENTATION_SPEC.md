@@ -6,6 +6,8 @@
 **Audience:** Cursor autonomous coding agent and reviewers  
 **Status:** Long-term instructions for every milestone after the in-flight M3.2 Spotlight / monitor-autodetection work.
 
+> **Current implementation evidence (2026-11-02):** Section 1 records the original baseline. See `docs/roadmap-progress.md`, `docs/testing.md` and `docs/user-guide.md` for the current native Settings, notifications, overview, device and Spotlight implementation. Installed API behavior, including notification timeout units and window preview limitations, is recorded in `docs/compatibility.md`. Safety and opt-in boundaries below still apply.
+
 > **The product:** A fully integrated, elegant desktop shell that a normal user installs with one guided command, without editing JSON, Lua, or twelve unrelated utilities. The UI must feel native and unified: transparent top bar, centered Spotlight, a genuinely floating Settings window, first-class wallpaper/slideshow, responsive color adaptation, reliable system controls and notifications, and polished individually frosted panels.
 >
 > **The aesthetic:** iOS 7-era translucent restraint refined for modern desktops. Near-monochrome, elegant, crisp, understated. Soft Gaussian-looking backdrop blur *when actually supported*. Rounded floating surfaces, no outlines, no permanent colored bar, no oversized Material widgets, no bounce or spring animations.
