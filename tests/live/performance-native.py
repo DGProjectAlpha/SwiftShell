@@ -36,7 +36,7 @@ ShellRoot {
  property var windows:[]
  property bool ready:false
  function label(item) {
-  if(item.objectName==="performanceBarMetric-C")return item
+  if(item.objectName==="performanceBarMetric-cpu")return item
   for(let i=0;i<item.children.length;i++){const found=label(item.children[i]);if(found)return found}
   return null
  }
@@ -58,9 +58,9 @@ ShellRoot {
     anchors.fill:parent
     onPaint:{const c=getContext("2d");for(let y=0;y<height;y+=12)for(let x=0;x<width;x+=12){c.fillStyle=(x+y)%24===0 ? "#464646" : "#252525";c.fillRect(x,y,12,12)}}
    }
-   PerformanceModule {id:module;x:45;y:12;textPrimary:"#ffffff";textHover:"#ffffff"}
+   PerformanceModule {id:module;x:45;y:12;textPrimary:"#ffffff";textMuted:"#cccccc";textHover:"#ffffff"}
    PopoverSurface {x:45;y:55;PerformancePanel {}}
-   function stable(){return initialLabel!==null && root.label(module)===initialLabel}
+   function stable(){return initialLabel!==null && root.label(module)===initialLabel && module.width<200 && module.height>=28}
   }
  }
  Timer {

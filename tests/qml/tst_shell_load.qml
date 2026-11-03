@@ -14,6 +14,7 @@ TestCase {
     readonly property var shellFiles: [
         "shell/settings/BarModuleOrderList.qml",
         "shell/bar/PerformanceModule.qml",
+        "shell/components/PerformanceGlyph.qml",
         "shell/components/PerformanceMetric.qml",
         "shell/popovers/PerformancePanel.qml",
         "shell/services/SystemPerformance.qml",
@@ -131,6 +132,7 @@ TestCase {
     readonly property var readyFiles: [
         "shell/settings/BarModuleOrderList.qml",
         "shell/bar/PerformanceModule.qml",
+        "shell/components/PerformanceGlyph.qml",
         "shell/components/PerformanceMetric.qml",
         "shell/popovers/PerformancePanel.qml",
         "shell/clipboard/ClipboardPanel.qml",

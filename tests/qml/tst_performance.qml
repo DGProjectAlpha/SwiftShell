@@ -70,16 +70,49 @@ TestCase {
         panel=component.createObject(test)
         verify(panel!==null)
         const initialWidth=panel.implicitWidth
-        const original=findChild(panel,"performanceBarMetric-C")
+        const original=findChild(panel,"performanceBarMetric-cpu")
         verify(original!==null)
         service.accept(sample(100))
         compare(panel.implicitWidth,initialWidth)
-        compare(findChild(panel,"performanceBarMetric-C"),original)
+        compare(findChild(panel,"performanceBarMetric-cpu"),original)
         const spy=Qt.createQmlObject('import QtTest; SignalSpy {}',test)
         spy.target=panel;spy.signalName="activated"
         panel.forceActiveFocus();keyClick(Qt.Key_Return)
         compare(spy.count,1)
         spy.destroy()
+    }
+    function test_compact_icons_and_correct_units_update_without_recreating_labels() {
+        const service=Services.SystemPerformance
+        const component=Qt.createComponent("../../shell/bar/PerformanceModule.qml")
+        compare(component.status,Component.Ready,component.errorString())
+        panel=component.createObject(test)
+        verify(panel!==null)
+        service.accept(sample(15))
+        const cpu=findChild(panel,"performanceLoad-cpu"),cpuTemperature=findChild(panel,"performanceTemperature-cpu")
+        const gpu=findChild(panel,"performanceLoad-gpu"),gpuTemperature=findChild(panel,"performanceTemperature-gpu")
+        compare(cpu.text,"15%");compare(cpuTemperature.text,"47°C")
+        compare(gpu.text,"22%");compare(gpuTemperature.text,"40°C")
+        compare(findChild(panel,"performanceLoad-ram").text,"27%")
+        verify(!findChild(panel,"performanceTemperature-ram").visible)
+        compare(findChild(panel,"performanceGlyph-cpu").kind,"cpu")
+        compare(findChild(panel,"performanceGlyph-gpu").kind,"gpu")
+        compare(findChild(panel,"performanceGlyph-ram").kind,"ram")
+        verify(panel.implicitWidth<200,"Five live metrics must fit compact bar clusters")
+        verify(cpu.font.pixelSize>=10);verify(cpuTemperature.font.pixelSize>=10)
+        verify(cpu.height+cpuTemperature.height<=panel.height)
+        const width=panel.implicitWidth,cpuX=cpu.mapToItem(panel,0,0).x,gpuX=gpu.mapToItem(panel,0,0).x
+        const hot=sample(100);hot.cpu.temperature=100;hot.gpus[0].usage=100;hot.gpus[0].temperature=99
+        service.accept(hot)
+        compare(cpu.text,"100%");compare(cpuTemperature.text,"100°C")
+        compare(gpuTemperature.text,"99°C")
+        compare(panel.implicitWidth,width)
+        compare(findChild(panel,"performanceLoad-cpu"),cpu)
+        compare(findChild(panel,"performanceTemperature-cpu"),cpuTemperature)
+        compare(cpu.mapToItem(panel,0,0).x,cpuX);compare(gpu.mapToItem(panel,0,0).x,gpuX)
+        verify(panel.Accessible.name.indexOf("CPU temperature 100 °C")>=0)
+        service.accept({ok:true,cpu:{usage:null,temperature:null},memory:{usage:null,usedBytes:null,totalBytes:null,temperature:null},gpus:[]})
+        compare(cpu.text,"—");compare(cpuTemperature.text,"—")
+        compare(gpu.text,"—");compare(gpuTemperature.text,"—")
     }
     function test_sampler_failure_clears_stale_metrics_and_retry_is_real() {
         const service=Services.SystemPerformance
