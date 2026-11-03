@@ -55,6 +55,16 @@ TestCase {
         verify(!Services.ScreenshotService.busy)
         compare(Services.ScreenshotService.countdown,0)
     }
+    function test_reopening_cancels_previous_capture_instead_of_staying_busy() {
+        Services.ScreenshotService.delaySeconds=5
+        verify(Services.ScreenshotService.capture("region","DP-1"))
+        verify(Services.ScreenshotService.busy)
+        Services.ScreenshotService.show("DP-1")
+        verify(Services.ScreenshotService.open)
+        verify(!Services.ScreenshotService.busy)
+        compare(Services.ScreenshotService.countdown,0)
+        verify(!Services.ScreenshotService.failed)
+    }
     function test_close_and_unavailable_capture_are_truthful() {
         Services.ScreenshotService.open=true
         mouseClick(findChild(panel,"screenshotClose"))

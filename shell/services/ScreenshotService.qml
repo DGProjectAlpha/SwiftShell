@@ -20,13 +20,13 @@ Singleton {
     property bool failed:false
     property bool cancelling:false
     property string action:""
-    readonly property bool busy:bridge.running || countdownTimer.running || settle.running
+    readonly property bool busy:bridge.running || cancelling || countdownTimer.running || settle.running
     readonly property bool capturing:countdownTimer.running || settle.running || (bridge.running && action==="capture")
     readonly property bool hasImage:token!=="" && imageUrl!==""
     readonly property var screen:Quickshell.screens.find(function(screen){return screen.name===root.output}) || Quickshell.screens[0] || null
     signal captureRequested()
     signal saveRequested()
-    function show(outputName) {if(outputName)output=outputName;if(!available){message="Screenshot tools are unavailable.";failed=true}open=true}
+    function show(outputName) {if(capturing)cancel();if(outputName)output=outputName;if(!available){message="Screenshot tools are unavailable.";failed=true}open=true}
     function close() {if(capturing)cancel();open=false}
     function request(next,args) {
         if(bridge.running)return false
@@ -46,7 +46,7 @@ Singleton {
         if(countdown>0){open=true;countdownTimer.start()}else beginCapture()
         return true
     }
-    function beginCapture() {open=false;captureRequested();settle.start()}
+    function beginCapture() {message=mode==="region" ? "Drag to select an area. Press Escape to cancel." : "Capturing this display…";open=false;captureRequested();settle.start()}
     function cancel() {
         countdownTimer.stop();settle.stop()
         if(bridge.running && action==="capture"){cancelling=true;bridge.running=false}
@@ -75,7 +75,7 @@ Singleton {
             if(root.cancelling){root.cancelling=false;return}
             try {
                 const result=JSON.parse(reply.text)
-                root.failed=code!==0 || result.ok!==true
+                root.failed=result.cancelled!==true && (code!==0 || result.ok!==true)
                 root.message=result.message || "The screenshot operation could not finish."
                 if(result.ok && root.action==="capture") {
                     root.token=result.token;root.imageUrl=result.imageUrl

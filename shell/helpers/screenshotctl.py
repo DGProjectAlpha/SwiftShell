@@ -70,7 +70,7 @@ def capture(mode, output="", previous=""):
     argv = ["grim", "-t", "png"]
     if mode == "region":
         try:
-            geometry = bounded_output(["slurp"], 256, 120).decode("ascii").strip()
+            geometry = bounded_output(["slurp", "-d", "-b", "#00000050", "-c", "#f2f2f2", "-s", "#ffffff12"], 256, 120).decode("ascii").strip()
         except ValueError:
             return {"ok": False, "cancelled": True, "message": "Screenshot cancelled."}
         if not re.fullmatch(r"-?\d+,-?\d+ [1-9]\d*x[1-9]\d*", geometry):

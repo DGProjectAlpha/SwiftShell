@@ -13,7 +13,7 @@ Column {
         Text {width:parent.width-close.width;height:Theme.controlHeight;verticalAlignment:Text.AlignVCenter;text:"Screenshot";color:Theme.settingsText;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSize+5;font.weight:Font.Medium}
         FlatButton {id:close;objectName:"screenshotClose";label:"Close";onActivated:ScreenshotService.close()}
     }
-    Text {width:parent.width;text:"Capture an area or a connected display, then copy or save a PNG.";wrapMode:Text.WordWrap;color:Theme.settingsMuted;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall}
+    Text {width:parent.width;text:ScreenshotService.mode==="region" ? "Choose Capture, then drag across the screen to select an area. Escape cancels." : "Capture the selected display, then copy or save a PNG.";wrapMode:Text.WordWrap;color:Theme.settingsMuted;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall}
     Row {
         spacing:6
         FlatButton {objectName:"screenshotArea";label:"Select area";emphasized:ScreenshotService.mode==="region";enabled:ScreenshotService.regionAvailable && !ScreenshotService.busy;onActivated:ScreenshotService.mode="region"}

@@ -1,4 +1,4 @@
-import importlib.util,sys,unittest
+import importlib.util,sys,unittest,subprocess
 from pathlib import Path
 from unittest.mock import patch
 sys.path.insert(0,str(Path(__file__).parents[1]/'shell/helpers'))
@@ -32,4 +32,15 @@ class DesktopTools(unittest.TestCase):
  def test_real_bounded_transport(self):
   self.assertEqual(tools.bounded_output([sys.executable,'-c','print("fixture")'],32),b'fixture\n')
   with self.assertRaises(ValueError):tools.bounded_output([sys.executable,'-c','print("x"*1000)'],32)
+ def test_readers_do_not_inherit_an_open_parent_input_pipe(self):
+  helper=str(Path(__file__).parents[1]/'shell/helpers')
+  code='import sys;sys.path.insert(0,'+repr(helper)+');from desktoptools import bounded_output;print(bounded_output([sys.executable,"-c","import sys;sys.stdin.read();print(123)"],32,1).decode().strip())'
+  process=subprocess.Popen([sys.executable,'-c',code],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL)
+  try:
+   # Keep the parent's pipe open: a selector inheriting it would wait for EOF.
+   self.assertEqual(process.wait(timeout=3),0)
+   self.assertEqual(process.stdout.read().strip(),b'123')
+  finally:
+   if process.poll() is None:process.kill();process.wait()
+   process.stdin.close();process.stdout.close()
 if __name__=='__main__':unittest.main()

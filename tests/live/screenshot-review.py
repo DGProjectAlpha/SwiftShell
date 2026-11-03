@@ -15,7 +15,8 @@ import time
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--live", action="store_true", required=True)
-parser.parse_args()
+parser.add_argument("--interactive", action="store_true")
+args=parser.parse_args()
 ROOT = Path(__file__).parents[2]
 sys.path.insert(0, str(ROOT / "shell/helpers"))
 from displayctl import ipc
@@ -46,6 +47,8 @@ with tempfile.TemporaryDirectory(prefix="swiftshell-screenshot-review-") as temp
     selector = binary / "slurp"
     selector.write_text('#!/usr/bin/env python3\nimport os\nprint(os.environ["SWIFTSHELL_SCREENSHOT_GEOMETRY"])\n')
     selector.chmod(0o700)
+    if args.interactive:
+        selector.unlink()
     copier = binary / "wl-copy"
     copier.write_text('''#!/usr/bin/env python3
 import os,sys
@@ -58,6 +61,16 @@ assert max(colors)>180 and min(colors)<80
 Path(os.environ["SWIFTSHELL_SCREENSHOT_COPY_MARKER"]).write_text("copied PNG")
 ''')
     copier.chmod(0o700)
+    if args.interactive:
+        protocol=ROOT/"tests/protocols/wlr-virtual-pointer-unstable-v1.xml"
+        subprocess.run(["wayland-scanner","client-header",str(protocol),str(folder/"pointer-client.h")],check=True)
+        subprocess.run(["wayland-scanner","private-code",str(protocol),str(folder/"pointer-protocol.c")],check=True)
+        subprocess.run(["cc","-Wall","-Wextra","-Werror","-I"+str(folder),str(ROOT/"tests/helpers/settings-pointer.c"),str(folder/"pointer-protocol.c"),"-lwayland-client","-o",str(folder/"pointer")],check=True)
+    if args.interactive:
+        protocol=ROOT/"tests/protocols/virtual-keyboard-unstable-v1.xml"
+        subprocess.run(["wayland-scanner","client-header",str(protocol),str(folder/"keyboard-client.h")],check=True)
+        subprocess.run(["wayland-scanner","private-code",str(protocol),str(folder/"keyboard-protocol.c")],check=True)
+        subprocess.run(["cc","-Wall","-Wextra","-Werror","-I"+str(folder),str(ROOT/"tests/helpers/launcher-keyboard.c"),str(folder/"keyboard-protocol.c"),"-lwayland-client","-lxkbcommon","-o",str(folder/"keyboard")],check=True)
     qml = shell / "ScreenshotAudit.qml"
     qml.write_text('''//@ pragma UseQApplication
 //@ pragma ShellId swiftshell-screenshot-audit
@@ -131,6 +144,22 @@ ShellRoot {
                 backgrounds=[item for output in json.loads(ipc("j/layers")).values() for group in output.get("levels",{}).values() for item in group if item.get("namespace")=="swiftshell-screenshot-owned-pattern"]
                 pattern=next(item for item in backgrounds if item["x"]<=monitor["x"]+32 and item["y"]<=monitor["y"]+32 and item["x"]+item["w"]>=monitor["x"]+96 and item["y"]+item["h"]>=monitor["y"]+96)
                 call("action", "capture")
+                if args.interactive:
+                    wait(lambda:state()["busy"] and not state()["review"]["visible"])
+                    time.sleep(.8)
+                    namespaces=[item.get("namespace","") for output in json.loads(ipc("j/layers")).values() for group in output.get("levels",{}).values() for item in group]
+                    assert "selection" in namespaces,"Real area selector did not map"
+                    from displayctl import logical_size
+                    mw,mh=map(round,logical_size(monitor))
+                    x=monitor["x"]+32;y=monitor["y"]+32
+                    assert pattern["x"]<=x and pattern["y"]<=y and x+64<=pattern["x"]+pattern["w"] and y+64<=pattern["y"]+pattern["h"]
+                    selection=[str(folder/"pointer"),"32","32",str(mw),str(mh),"64","64",name,str(x),str(y)]
+                    for _ in range(3):
+                        result=subprocess.run(selection)
+                        if result.returncode==0:break
+                        if result.returncode!=6:result.check_returncode()
+                        time.sleep(.15)
+                    result.check_returncode()
                 wait(lambda: state()["hasImage"] and state()["imageReady"] and not state()["busy"])
                 assert not state()["failed"], state()["message"]
                 time.sleep(0.2)
@@ -157,8 +186,27 @@ ShellRoot {
                 print("PASS " + name + ": native screenshot preview, private PNG clipboard transport, native Save As handler and real PNG export", flush=True)
                 call("action", "discard")
                 wait(lambda: not state()["hasImage"] and not state()["busy"])
+                if args.interactive:
+                    def selecting():
+                        return any(item.get("namespace")=="selection" for output in json.loads(ipc("j/layers")).values() for group in output.get("levels",{}).values() for item in group)
+                    call("action","capture")
+                    wait(selecting)
+                    subprocess.run([str(folder/"keyboard"),"escape"],check=True)
+                    wait(lambda:not state()["busy"] and state()["open"])
+                    assert not state()["failed"],"Escape is a cancellation, not an error"
+                    call("action","capture")
+                    wait(selecting)
+                    call("action","close")
+                    wait(lambda:not state()["busy"] and not selecting())
+                    assert not state()["open"]
+                    print("PASS "+name+": real crosshair selection, Escape cancellation and closing removes selector/busy state",flush=True)
                 call("action", "close")
             finally:
+                try:
+                    call("action","close")
+                    wait(lambda:not state()["busy"])
+                except (subprocess.SubprocessError,AssertionError):
+                    pass
                 process.terminate()
                 try:
                     process.wait(timeout=3)
