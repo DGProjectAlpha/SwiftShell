@@ -229,8 +229,8 @@ Rectangle {
                 Column {
                     anchors {left:parent.left;right:parent.right;verticalCenter:parent.verticalCenter;leftMargin:12;rightMargin:12}
                     spacing:2
-                    Text {width:parent.width;text:provider.modelData.name;elide:Text.ElideRight;color:Theme.settingsText;font.family:Theme.settingsFontFamily;font.pixelSize:provider.modelData.kind==="calculation" ? Theme.settingsFontSize+6 : Theme.settingsFontSize;}
-                    Text {width:parent.width;text:provider.modelData.detail || "Enter to select";elide:Text.ElideRight;color:Theme.settingsMuted;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall;}
+                    Text {objectName:"spotlightProviderName-"+provider.index;width:parent.width;textFormat:Text.PlainText;text:provider.modelData.name;elide:Text.ElideRight;color:Theme.settingsText;font.family:Theme.settingsFontFamily;font.pixelSize:provider.modelData.kind==="calculation" ? Theme.settingsFontSize+6 : Theme.settingsFontSize;}
+                    Text {objectName:"spotlightProviderDetail-"+provider.index;width:parent.width;textFormat:Text.PlainText;text:provider.modelData.detail || "Enter to select";elide:Text.ElideRight;color:Theme.settingsMuted;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall;}
                 }
             }
         }
@@ -305,7 +305,7 @@ Rectangle {
             Text {
                 anchors {top:appIcon.bottom;left:parent.left;right:parent.right;topMargin:6;leftMargin:6;rightMargin:6}
                 height:30;maximumLineCount:2;wrapMode:Text.WordWrap;elide:Text.ElideRight;horizontalAlignment:Text.AlignHCenter
-                text:tile.modelData.name;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall;color:Theme.settingsText
+                text:tile.modelData.name;textFormat:Text.PlainText;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall;color:Theme.settingsText
             }
             Text {x:width-19;y:7;visible:SettingsStore.pinnedIds.indexOf(tile.modelData.id)>=0;text:"★";font.pixelSize:10;color:Theme.settingsMuted;}
         }

@@ -155,4 +155,12 @@ TestCase {
         compare(Services.LauncherModel.actionBusy,false);
         Services.LauncherModel.confirmId="";
     }
+    function test_provider_labels_render_literal_text() {
+        card.providerRows=[{kind:"fixture",id:"literal",name:"<b>Literal query</b>",detail:"<i>Literal detail</i>"}]
+        const name=findChild(card,"spotlightProviderName-0"),detail=findChild(card,"spotlightProviderDetail-0")
+        verify(name!==null);verify(detail!==null)
+        compare(name.textFormat,Text.PlainText);compare(detail.textFormat,Text.PlainText)
+        compare(name.text,"<b>Literal query</b>")
+    }
+
 }
