@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Controls.Basic as Controls
 import Quickshell
 import "../components"
 import "../logic/clock.js" as Clock
@@ -37,9 +36,6 @@ MouseArea {
     Accessible.name: "Clock " + label.text
     Accessible.description: "Open Clock, Calendar, Timer and Stopwatch"
 
-    Controls.ToolTip.visible:containsMouse
-    Controls.ToolTip.text:Qt.formatDate(clock.date,"dddd, d MMMM yyyy")
-    Controls.ToolTip.delay:600
     onClicked: activated()
 
     Keys.onPressed: function (event) {

@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Controls.Basic as Controls
 import Quickshell
 import Quickshell.Wayland
 import "../logic/bar.js" as Bar
@@ -308,9 +307,6 @@ PanelWindow {
                 }
             }
 
-            Controls.ToolTip.visible:containsMouse
-            Controls.ToolTip.text:"Search"
-            Controls.ToolTip.delay:600
             Row {
                 id:searchContents
                 anchors.centerIn:parent

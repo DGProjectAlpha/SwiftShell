@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Controls.Basic as Controls
 import "../themes"
 MouseArea {
     id:root
@@ -18,9 +17,6 @@ MouseArea {
     hoverEnabled:true;activeFocusOnTab:true;cursorShape:Qt.PointingHandCursor
     Accessible.role:Accessible.Button
     Accessible.name:label
-    Controls.ToolTip.visible:containsMouse
-    Controls.ToolTip.text:label
-    Controls.ToolTip.delay:600
     onClicked:activated()
     Keys.onPressed:function(event) {
         if(event.key===Qt.Key_Return || event.key===Qt.Key_Enter || event.key===Qt.Key_Space){activated();event.accepted=true}

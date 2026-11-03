@@ -883,6 +883,8 @@ def main():
 
     for path in qml_files:
         text = path.read_text(encoding="utf-8")
+        if (path.parent == SHELL / "bar" or path.name == "TrayItemControl.qml") and "ToolTip" in text:
+            errors.append(str(path.relative_to(ROOT)) + " must not create bar hover hints")
         for token in FORBIDDEN:
             if token in text and not (token == "hyprctl" and path.name == "HyprlandModel.qml"):
                 errors.append(str(path.relative_to(ROOT)) + " contains " + token)
