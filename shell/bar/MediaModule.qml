@@ -1,12 +1,12 @@
 import QtQuick
-import Quickshell.Services.Mpris
+import "../services"
 import "../logic/media.js" as Media
 import "../themes"
 
 Item {
     id: root
 
-    readonly property var player: Media.pickPlayer(Mpris.players)
+    readonly property var player: MediaService.player
     readonly property var controls: Media.mediaControls(player)
     readonly property string line: Media.mediaLine(player)
     property color textPrimary: Theme.textPrimary
@@ -22,6 +22,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         width: Math.min(120, implicitWidth)
         text: root.line
+        textFormat:Text.PlainText
         color: root.textPrimary
         font.family: Theme.fontFamily
         font.pixelSize: Theme.fontSize
@@ -37,15 +38,7 @@ Item {
         visible: root.controls.toggle
         Accessible.role: Accessible.Button
         Accessible.name: root.controls.playing ? "Pause" : "Play"
-        onClicked: {
-            if (!root.player || root.player.canTogglePlaying !== true)
-                return
-            try {
-                root.player.togglePlaying()
-            } catch (error) {
-                console.warn("SwiftShell: playback was not changed")
-            }
-        }
+        onClicked: MediaService.act("toggle")
 
         Text {
             anchors.centerIn: parent

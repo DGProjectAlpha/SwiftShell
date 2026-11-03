@@ -1,31 +1,36 @@
 import QtQuick
-import Quickshell.Services.Mpris
+import Quickshell
 import "../components"
+import "../services"
 import "../logic/media.js" as Media
 import "../themes"
-
 Column {
-    id: root
-
-    spacing: Theme.panelSpacing
-    width: parent ? parent.width : Theme.controlWidth
-
-    readonly property var player: Media.pickPlayer(Mpris.players)
-    readonly property var controls: Media.mediaControls(player)
-
+    id:root
+    spacing:Theme.settingsSpacing+2
+    width:parent ? parent.width : 340
+    readonly property var player:MediaService.player
+    readonly property var controls:MediaService.controls
+    property var gesturePlayer:null
+    property string gestureTrack:""
+    readonly property real displayedPosition:seek.dragging ? seek.draft*MediaService.duration : MediaService.position
+    function diagnostics(){return {players:MediaService.players.length,playing:controls.playing,seek:controls.seek,position:MediaService.position,duration:MediaService.duration,artReady:art.status===Image.Ready,hasArt:controls.art!=="",manualSource:MediaService.selectedId!=="",dragging:seek.dragging}}
+    function beginSeek(){gesturePlayer=player;gestureTrack=MediaService.trackKey}
+    function commitSeek(fraction){MediaService.seek(gesturePlayer,gestureTrack,fraction);gesturePlayer=null;gestureTrack=""}
+    Timer {
+        interval:500;repeat:true
+        running:root.visible && !!root.player && root.controls.playing && root.player.positionSupported===true
+        onTriggered:MediaService.refreshPosition()
+    }
     Row {
         width:parent.width
-        SectionHeader {width:parent.width-36;text:"Now playing"}
+        Text {width:parent.width-indicator.width;text:"Now playing";color:Theme.settingsMuted;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall}
         Row {
-            width:28;height:14;spacing:3
-            visible:root.controls.playing
+            id:indicator;width:26;height:14;spacing:3;visible:root.controls.playing
             Repeater {
                 model:4
                 delegate:Rectangle {
                     required property int index
-                    width:3;height:5+index*2;radius:1.5
-                    anchors.bottom:parent.bottom
-                    color:Theme.settingsMuted
+                    width:3;height:5+index*2;radius:1.5;anchors.bottom:parent.bottom;color:Theme.settingsMuted
                     SequentialAnimation on height {
                         running:root.visible && root.controls.playing && !Theme.reducedMotion
                         loops:Animation.Infinite
@@ -36,93 +41,76 @@ Column {
             }
         }
     }
-
-    ServiceStatus {
-        visible: root.player === null
-        name: "Player"
-        detail: "No player"
+    ChoiceBox {
+        objectName:"mediaSource";width:parent.width
+        visible:MediaService.players.length>1 || MediaService.selectedId!==""
+        choices:MediaService.sourceChoices;selectedValue:MediaService.selectedId
+        Accessible.name:"Media source"
+        onChosen:function(value){MediaService.selectSource(value)}
     }
-
+    Text {
+        visible:root.player===null;width:parent.width;wrapMode:Text.WordWrap;topPadding:6;bottomPadding:8
+        text:"Play something in a media app or browser. Its controls will appear here."
+        color:Theme.settingsMuted;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSize
+    }
     Column {
-        visible: root.player !== null
-        width: parent.width
-        spacing: Theme.panelSpacing
-
+        visible:root.player!==null;width:parent.width;spacing:Theme.settingsSpacing
         Row {
-            spacing: Theme.panelSpacing
-            width: parent.width
-
-            Image {
-                visible: root.controls.art !== ""
-                source: root.controls.art
-                width: 56
-                height: 56
-                fillMode: Image.PreserveAspectCrop
-            }
-
-            Text {
-                width: parent.width - (root.controls.art !== "" ? 56 + Theme.panelSpacing : 0)
-                textFormat:Text.PlainText
-                anchors.verticalCenter:parent.verticalCenter
-                text: Media.mediaLine(root.player)
-                color: Theme.settingsText
-                font.family: Theme.settingsFontFamily
-                font.pixelSize: Theme.settingsFontSize
-                elide: Text.ElideRight
-                wrapMode: Text.NoWrap
-            }
-        }
-
-        Row {
-            spacing: Theme.panelSpacing
-
-            FlatButton {
-                label: "⏮"
-                width:52
-                Accessible.name:"Previous track"
-                enabled: root.controls.previous
-                onActivated: {
-                    if (!root.player || root.player.canGoPrevious !== true)
-                        return
-                    try {
-                        root.player.previous()
-                    } catch (error) {
-                        console.warn("SwiftShell: the player did not go back")
-                    }
+            width:parent.width;spacing:14
+            Rectangle {
+                width:84;height:84;color:Theme.settingsHover
+                Image {
+                    id:art;objectName:"mediaArtwork";anchors.fill:parent
+                    source:root.controls.art;sourceSize:Qt.size(240,240);asynchronous:true
+                    fillMode:Image.PreserveAspectCrop;visible:status===Image.Ready
+                }
+                Text {
+                    anchors.centerIn:parent;visible:art.status!==Image.Ready
+                    text:"♫";color:Theme.settingsMuted;font.family:Theme.settingsFontFamily;font.pixelSize:32
                 }
             }
-
-            FlatButton {
-                label: root.controls.playing ? "Ⅱ" : "▶"
-                width:76
-                Accessible.name:root.controls.playing ? "Pause playback" : "Play"
-                enabled: root.controls.toggle
-                onActivated: {
-                    if (!root.player || root.player.canTogglePlaying !== true)
-                        return
-                    try {
-                        root.player.togglePlaying()
-                    } catch (error) {
-                        console.warn("SwiftShell: playback was not changed")
-                    }
+            Column {
+                width:Math.max(1,parent.width-98);anchors.verticalCenter:parent.verticalCenter;spacing:5
+                Text {
+                    objectName:"mediaTitle";width:parent.width;text:root.player ? (root.player.trackTitle || "Untitled media") : ""
+                    textFormat:Text.PlainText;maximumLineCount:2;wrapMode:Text.WordWrap;elide:Text.ElideRight
+                    color:Theme.settingsText;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSize+2;font.weight:Font.Medium
                 }
-            }
-
-            FlatButton {
-                label: "⏭"
-                width:52
-                Accessible.name:"Next track"
-                enabled: root.controls.next
-                onActivated: {
-                    if (!root.player || root.player.canGoNext !== true)
-                        return
-                    try {
-                        root.player.next()
-                    } catch (error) {
-                        console.warn("SwiftShell: the player did not advance")
-                    }
+                Text {
+                    objectName:"mediaArtist";width:parent.width;text:root.player ? (root.player.trackArtist || root.player.trackAlbum || "") : ""
+                    textFormat:Text.PlainText;elide:Text.ElideRight;color:Theme.settingsMuted;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSize
+                    visible:text!==""
+                }
+                Text {
+                    width:parent.width;text:root.player ? (root.player.identity || "Media player") : ""
+                    textFormat:Text.PlainText;elide:Text.ElideRight;color:Theme.settingsMuted;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall
                 }
             }
         }
+        Column {
+            width:parent.width;spacing:0
+            visible:!!root.player && (root.player.positionSupported===true || MediaService.duration>0)
+            MediaSeekBar {
+                id:seek;objectName:"mediaSeek";width:parent.width
+                enabled:root.controls.seek
+                value:MediaService.duration>0 ? MediaService.position/MediaService.duration : 0
+                valueDescription:Media.timeLabel(root.displayedPosition)+" of "+Media.timeLabel(MediaService.duration)
+                onSeekStarted:root.beginSeek()
+                onSeekCommitted:function(fraction){root.commitSeek(fraction)}
+                onSeekCancelled:{root.gesturePlayer=null;root.gestureTrack=""}
+            }
+            Row {
+                width:parent.width
+                Text {width:parent.width/2;text:Media.timeLabel(root.displayedPosition);color:Theme.settingsMuted;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall}
+                Text {width:parent.width/2;horizontalAlignment:Text.AlignRight;text:MediaService.duration>0 ? Media.timeLabel(MediaService.duration) : "Live";color:Theme.settingsMuted;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall}
+            }
+        }
+        Row {
+            anchors.horizontalCenter:parent.horizontalCenter;spacing:12
+            FlatButton {objectName:"mediaPrevious";label:"⏮";width:48;Accessible.name:"Previous track";enabled:root.controls.previous;onActivated:MediaService.act("previous")}
+            FlatButton {objectName:"mediaPlayPause";label:root.controls.playing ? "Ⅱ" : "▶";width:66;emphasized:true;Accessible.name:root.controls.playing ? "Pause playback" : "Play";enabled:root.controls.toggle;onActivated:MediaService.act("toggle")}
+            FlatButton {objectName:"mediaNext";label:"⏭";width:48;Accessible.name:"Next track";enabled:root.controls.next;onActivated:MediaService.act("next")}
+        }
+        Text {visible:MediaService.error!=="";width:parent.width;wrapMode:Text.WordWrap;text:MediaService.error;color:Theme.settingsMuted;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall}
     }
 }
