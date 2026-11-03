@@ -870,6 +870,9 @@ def main():
     for path in qml_files:
         component_roots[path.stem] = qml_root_type(path.read_text(encoding="utf-8"))
 
+    if "BarModuleOrderList 1.0 BarModuleOrderList.qml" not in (SHELL / "settings" / "qmldir").read_text():
+        errors.append("BarModuleOrderList must be registered for native Quickshell settings imports")
+
     load_test = ROOT / "tests" / "qml" / "tst_shell_load.qml"
     if load_test.is_file():
         load_text = load_test.read_text(encoding="utf-8")
@@ -940,8 +943,9 @@ def main():
             playback = path.name == "MediaSection.qml" and "root.controls.playing" in text and "!Theme.reducedMotion" in text
             clock_ui = path.name == "CalendarPanel.qml" and "SystemClock" in text and "Timer {" not in text.replace("ClockTimer {", "ClockCountdown {")
             recording_timeout = path.name == "ShortcutsPage.qml" and "interval:15000" in text and "ShortcutInhibitor" in text
+            drag_scroll = path.name == "BarModuleOrderList.qml" and "running:handle.drag.active && list.scrollViewport!==null" in text
             owned_service = path.name in ("ClockService.qml", "DesktopTools.qml", "OverviewService.qml", "DesktopAppearance.qml", "ShortcutsService.qml", "SettingsStore.qml", "NetworkService.qml", "PowerProfiles.qml", "BluetoothSection.qml", "ScreenshotService.qml", "ClipboardWindow.qml")
-            if not slideshow and not banner and not notification_deadline and not snapshot and not audit and not display_confirmation and not window_debounce and not clock_ui and not owned_service and not recording_timeout and not playback:
+            if not slideshow and not banner and not notification_deadline and not snapshot and not audit and not display_confirmation and not window_debounce and not clock_ui and not owned_service and not recording_timeout and not playback and not drag_scroll:
                 errors.append(str(path.relative_to(ROOT)) + " polls or spawns a process")
         errors.extend(nesting_errors(text, str(path.relative_to(ROOT)), component_roots))
         errors.extend(readonly_implicit_errors(text, str(path.relative_to(ROOT)), component_roots))

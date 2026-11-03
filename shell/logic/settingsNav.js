@@ -36,7 +36,7 @@ var CONTROLS = [
     { id: "searchLabel", category:"bar", section:"Modules", label:"Search label", keywords:["icon","glyph","search","label"] },
     { id: "clockDisplay", category:"bar", section:"Clock", label:"Clock and date", keywords:["seconds","date","format","weekday","time"] },
     { id: "clock24", category: "bar", section: "Modules", label: "24-hour clock", keywords: ["clock", "time", "hour"] },
-    { id: "moduleOrder", category: "bar", section: "Modules", label: "Module order", keywords: ["reorder", "hide", "workspaces", "search"] },
+    { id: "moduleOrder", category: "bar", section: "Widgets", label: "Widget order", keywords: ["module order", "reorder", "hide", "workspaces", "search"] },
     { id: "wallpaperEnabled", category: "wallpaper", section: "Image", label: "Draw wallpaper", keywords: ["background", "hyprpaper", "swww"] },
     { id: "wallpaperFit", category: "wallpaper", section: "Image", label: "Fit", keywords: ["cover", "contain", "crop", "fill"] },
     { id: "wallpaperPath", category: "wallpaper", section: "Image", label: "Image", keywords: ["file", "choose", "path", "default", "crimson"] },

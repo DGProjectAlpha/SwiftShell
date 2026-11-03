@@ -1067,3 +1067,33 @@ are backed up under own state `backups/20261102T234104Z-desktop-tools`; tracked
 source and `/tmp/swiftshell-desktop-tools-backup` preserve the prior implementation.
 Revert these feature commits for source recovery; hiding a new bar widget or
 disabling history does not modify compositor/session configuration.
+
+## Bar hover and drag ordering — 2026-11-02
+
+Removed hover ToolTips from bar widgets, clock, Search and tray controls; accessible
+names/descriptions and activation/context actions remain. The source regression
+rejects new hover hints in bar components. All existing 22 QML suites and actual
+both-output desktop quick-action clicks/Escape passed after this removal.
+
+Top bar Settings now uses drag handles/drop markers instead of ordering arrows.
+Drag changes remain local until release, Escape cancels even after later pointer
+motion, edge auto-scroll runs only during a drag, and Alt J/K preserves keyboard
+access. A single insertion updates the selected output's existing order, preserving
+its edge, scale, grouping and visibility. Handles/delegates retain their identity.
+
+`scripts/check.sh` passes: 109 QML documents and all 23 QML suites, including seven
+new drag cases for commit-once, cancellation, scrolling, keyboard/visibility/group
+independence and full-page per-monitor isolation. The native Quickshell test caught
+a missing qmldir registration that plain Qt's implicit lookup had accepted; the
+registration and a static regression now cover it.
+
+`tests/live/bar-module-drag.py --live` passed a real pointer drag inside the running
+Settings window, atomic on-disk order readback, unchanged other-output overrides
+and unchanged Settings geometry. It restored the exact preceding default-profile
+override, category, window visibility, cursor and focus. The full pre-test SwiftShell
+preferences remain backed up privately in `/tmp/swiftshell-bar-order-settings-backup.json`.
+No compositor configuration, monitor mode, Noctalia or service was changed. Runtime
+loading/type/binding errors were absent after the corrected build activation; known
+Qt text-input/legacy request-file diagnostics remain. Revert the two bar-polish
+commits for recovery. Physical long-distance drag scrolling and touch input remain
+owner acceptance checks; drag scrolling is covered by QML input tests.

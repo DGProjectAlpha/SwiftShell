@@ -9,6 +9,7 @@ Item {
     id: page
 
     readonly property bool colorPickerOpen: colorPicker.item ? colorPicker.item.opened : false
+    function geometry() {return {output:page.modulesOutput,rows:moduleOrder.geometry()}}
     function colorPickerGeometry() { return colorPickerOpen ? colorPicker.item.geometry() : null }
     property string pickingOutput: ""
     function openSurfaceColorPicker() {
@@ -404,7 +405,7 @@ Item {
 
             Text {
                 width: parent.width
-                text: page.marked("moduleOrder") ? "Module order" : "Module order"
+                text: "Widget order"
                 color: Theme.settingsText
                 font.family: Theme.settingsFontFamily
                 font.pixelSize: Theme.settingsFontSize
@@ -432,53 +433,17 @@ Item {
             }
             FlatButton {label:"Reset grouping";onActivated:{const layout=SettingsStore.layoutForOutput(page.modulesOutput);SettingsStore.setOutputLayout(page.modulesOutput,layout.edge,layout.scale,layout.order,"{}")}}
             Text {width:parent.width;wrapMode:Text.WordWrap;text:"Choose each display’s visible widgets, grouping and order. On side bars, Left and Right groups become Start and End.";color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall}
-            KeyedModel {id:moduleRows;entries:SettingsStore.layoutForOutput(page.modulesOutput).order}
-            Repeater {
-                model: moduleRows
-
-                delegate: Flow {
-                    required property int index
-                    required property var entry
-                    readonly property string modelData:entry
-                    width: modules.width
-                    spacing: Theme.settingsSpacing
-
-                    Text {
-                        width: Math.max(90,Math.min(120,modules.width*.25))
-                        height:Theme.controlHeight
-                        verticalAlignment:Text.AlignVCenter
-                        text: page.moduleName(modelData)
-                        color: Theme.settingsText
-                        font.family: Theme.settingsFontFamily
-                        font.pixelSize: Theme.settingsFontSize
-                        elide: Text.ElideRight
-                    }
-
-                    FlatButton {
-                        label: page.hidden(modelData) ? "Show" : "Hide"
-                        onActivated: SettingsStore.setHiddenForOutput(page.modulesOutput,Bar.toggleHidden(SettingsStore.hiddenForOutput(page.modulesOutput),modelData))
-                    }
-
-                    ChoiceBox {
-                        width:100;height:Theme.controlHeight
-                        choices:[{label:"Left",value:"left"},{label:"Center",value:"center"},{label:"Right",value:"right"}]
-                        selectedValue:Bar.moduleSide(modelData,SettingsStore.layoutForOutput(page.modulesOutput).sides,SettingsStore.layoutForOutput(page.modulesOutput).order)
-                        onChosen:function(value){page.editModuleSide(modelData,value)}
-                    }
-                    FlatButton {
-                        label: "↑"
-                        Accessible.name:"Move "+page.moduleName(modelData)+" earlier"
-                        enabled: index > 0
-                        onActivated: page.editModuleOrder(Bar.moveModule(SettingsStore.layoutForOutput(page.modulesOutput).order, modelData, -1))
-                    }
-
-                    FlatButton {
-                        label: "↓"
-                        Accessible.name:"Move "+page.moduleName(modelData)+" later"
-                        enabled: index < SettingsStore.layoutForOutput(page.modulesOutput).order.length - 1
-                        onActivated: page.editModuleOrder(Bar.moveModule(SettingsStore.layoutForOutput(page.modulesOutput).order, modelData, 1))
-                    }
-                }
+            Text {width:parent.width;wrapMode:Text.WordWrap;text:"Drag a handle to reorder widgets. Group and visibility stay independent.";color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall}
+            BarModuleOrderList {
+                id:moduleOrder
+                objectName:"barModuleOrderList"
+                width:parent.width
+                entries:SettingsStore.layoutForOutput(page.modulesOutput).order
+                hidden:SettingsStore.hiddenForOutput(page.modulesOutput)
+                sides:SettingsStore.layoutForOutput(page.modulesOutput).sides
+                onReordered:function(id,destination){page.editModuleOrder(Bar.moveModuleTo(entries,id,destination))}
+                onVisibilityToggled:function(id){SettingsStore.setHiddenForOutput(page.modulesOutput,Bar.toggleHidden(hidden,id))}
+                onSideChosen:function(id,side){page.editModuleSide(id,side)}
             }
         }
     }

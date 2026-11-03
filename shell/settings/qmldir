@@ -16,3 +16,5 @@ DefaultAppsPage 1.0 DefaultAppsPage.qml
 WorkspaceOrderList 1.0 WorkspaceOrderList.qml
 
 SpotlightPage 1.0 SpotlightPage.qml
+
+BarModuleOrderList 1.0 BarModuleOrderList.qml

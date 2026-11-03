@@ -111,6 +111,14 @@ function moveModule(order, id, delta) {
     return next;
 }
 
+function moveModuleTo(order, id, destination) {
+    const next=normalizeModuleOrder(order),index=next.indexOf(id);
+    if(index<0 || !Number.isInteger(destination) || destination<0 || destination>=next.length || index===destination)return next;
+    next.splice(index,1);
+    next.splice(destination,0,id);
+    return next;
+}
+
 function toggleHidden(hidden, id) {
     const next = normalizeHiddenModules(hidden);
     if (BAR_MODULES.indexOf(id) === -1)
@@ -202,6 +210,7 @@ var swiftshellBar = {
     hiddenModulesValid: hiddenModulesValid,
     visibleModules: visibleModules,
     moveModule: moveModule,
+    moveModuleTo: moveModuleTo,
     toggleHidden: toggleHidden,
     exclusionUpdate: exclusionUpdate,
     layerForBar: layerForBar,

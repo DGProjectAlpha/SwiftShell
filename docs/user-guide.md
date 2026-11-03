@@ -181,7 +181,10 @@ Open overview button and an Alt+Tab switch; turning the switch off restores the
 original window-cycle binding. Custom/unknown bindings are preserved.
 
 Settings → Top bar lets each display use Top, Bottom, Left or Right placement,
-additional content scaling, widget visibility, grouping and order. Side bars use
+additional content scaling, widget visibility, grouping and order. Drag a handle
+in Widget order to move an item; Escape cancels, and the list scrolls at its edges
+while dragging. Alt J/K on a focused handle also reorders. Hover hints no longer
+cover bar controls. Side bars use
 vertical groups. Desktop monitor modes/scales are unchanged; bar scale is extra
 control sizing. Select the same display to change its background. Use the all-screen
 layout option to remove a display override.

@@ -39,3 +39,12 @@ for(const [edge,rgb] of [['top',[255,255,255]],['bottom',[0,0,0]],['left',[255,0
  const bands=Png.visibleBands({ok:true,width:100,height:100,bpp:3,pixels},100,100,'cover',10,Wallpaper.cropRect,edge);
  assert.deepEqual(bands.center,{r:rgb[0],g:rgb[1],b:rgb[2]});
 }
+
+const originalOrder=Bar.normalizeModuleOrder(['clock','search','screenshot']);
+const movedOrder=Bar.moveModuleTo(originalOrder,'clock',2);
+assert.deepEqual(movedOrder.slice(0,3),['search','screenshot','clock']);
+assert.deepEqual(originalOrder.slice(0,3),['clock','search','screenshot']);
+assert.equal(new Set(movedOrder).size,Bar.BAR_MODULES.length);
+for(const destination of [-1,100,1.5,NaN])assert.deepEqual(Bar.moveModuleTo(originalOrder,'clock',destination),originalOrder);
+assert.deepEqual(Bar.moveModuleTo(originalOrder,'missing',1),originalOrder);
+console.log('PASS direct module drop insertion preserves membership and rejects invalid destinations');

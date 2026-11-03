@@ -12,6 +12,7 @@ TestCase {
 
     // Every shell QML document. The static check requires this list to match the tree.
     readonly property var shellFiles: [
+        "shell/settings/BarModuleOrderList.qml",
         "shell/bar/PerformanceModule.qml",
         "shell/components/PerformanceMetric.qml",
         "shell/popovers/PerformancePanel.qml",
@@ -128,6 +129,7 @@ TestCase {
     // These compile with the Qt Quick stubs. shell.qml, BarHost, and BarWindow also
     // reference WlrLayershell, which is a C++ attached property and is not stubbed.
     readonly property var readyFiles: [
+        "shell/settings/BarModuleOrderList.qml",
         "shell/bar/PerformanceModule.qml",
         "shell/components/PerformanceMetric.qml",
         "shell/popovers/PerformancePanel.qml",
