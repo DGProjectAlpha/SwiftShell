@@ -28,8 +28,8 @@ Column {
     SettingsToggle {
         width:parent.width
         label:"Wi-Fi"
-        checked:NetworkService.wifiEnabled
-        enabled:NetworkService.available && !NetworkService.busy && NetworkService.devices.some(function(device){return device.kind==="wifi"})
+        checked:NetworkService.requestedWifiEnabled
+        enabled:NetworkService.available && NetworkService.devices.some(function(device){return device.kind==="wifi"}) && (NetworkService.wifiHardware || NetworkService.requestedWifiEnabled)
         onToggled:function(value){if(value)NetworkService.perform("wifi-radio",{enabled:true});else panel.confirmWifiOff=true}
     }
     Column {
@@ -38,7 +38,7 @@ Column {
         Row {
             spacing:6
             FlatButton {label:"Cancel";onActivated:panel.confirmWifiOff=false}
-            FlatButton {label:"Turn off";enabled:!NetworkService.busy;onActivated:{panel.confirmWifiOff=false;NetworkService.perform("wifi-radio",{enabled:false})}}
+            FlatButton {label:"Turn off";onActivated:{panel.confirmWifiOff=false;NetworkService.perform("wifi-radio",{enabled:false})}}
         }
     }
     FlatButton {label:NetworkService.busy ? "Updating…" : "Manage connections";onActivated:panel.settingsRequested()}

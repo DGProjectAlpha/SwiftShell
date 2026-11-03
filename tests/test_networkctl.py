@@ -44,7 +44,7 @@ class NetworkTests(unittest.TestCase):
             self.assertEqual(nm.call_args.args[0],['--wait','25','connection','up','uuid',BASE['profiles'][0]['id']])
             with self.assertRaises(ValueError):n.request(dict(action='wifi-radio',enabled='false'))
             n.request(dict(action='wifi-radio',enabled=False))
-            self.assertEqual(nm.call_args.args[0],['radio','wifi','off'])
+            self.assertIn(['radio','wifi','off'],[call.args[0] for call in nm.call_args_list])
     def test_backend_errors_do_not_return_private_diagnostics(self):
         failed=subprocess.CompletedProcess([],4,'PRIVATE SSID PASSWORD','PRIVATE USER PATH')
         with patch.object(n.subprocess,'run',return_value=failed):
@@ -102,5 +102,48 @@ class NetworkTests(unittest.TestCase):
             with self.assertRaises(n.NetworkError) as error:n.nm(['connection','up'])
             self.assertEqual(error.exception.code,'authentication-required')
             self.assertNotIn('PRIVATE',str(error.exception))
+
+    def snapshot_nm(self,enabled,fail_access_points=False,fail_details=False):
+        def call(args,**kwargs):
+            if args[:2]==['--get-values','STATE,CONNECTIVITY']:return 'connected:full\n'
+            if args[:2]==['--get-values','WIFI-HW,WIFI']:return 'enabled:'+('enabled' if enabled else 'disabled')+'\n'
+            if 'DEVICE,TYPE,STATE,CONNECTION' in args:return 'wlan0:wifi:disconnected:--\n'
+            if 'GENERAL.STATE,GENERAL.REASON,IP4.ADDRESS,IP4.GATEWAY,IP4.DNS' in args:
+                if fail_details:raise n.NetworkError('Transient device change','not-found')
+                return ''
+            if 'BSSID,SSID,SIGNAL,SECURITY,IN-USE,DEVICE' in args:
+                if fail_access_points:raise n.NetworkError('Transient unavailable radio','not-found')
+                return ''
+            return ''
+        return call
+    def test_disabled_radio_does_not_query_cached_available_access_points(self):
+        with patch.object(n.shutil,'which',return_value='/usr/bin/nmcli'),patch.object(n,'nm',side_effect=self.snapshot_nm(False,True)) as nm:
+            result=n.snapshot()
+            self.assertTrue(result['available']);self.assertFalse(result['wifiEnabled'])
+            self.assertFalse(any('BSSID,SSID,SIGNAL,SECURITY,IN-USE,DEVICE' in call.args[0] for call in nm.call_args_list))
+    def test_radio_startup_ap_failure_preserves_observed_enabled_state(self):
+        with patch.object(n.shutil,'which',return_value='/usr/bin/nmcli'),patch.object(n,'nm',side_effect=self.snapshot_nm(True,True)):
+            result=n.snapshot()
+            self.assertTrue(result['available']);self.assertTrue(result['wifiEnabled'])
+            self.assertEqual(result['networks'],[])
+            self.assertIn('getting ready',result['wifiScanMessage'])
+    def test_transient_device_detail_failure_does_not_hide_radio_or_devices(self):
+        with patch.object(n.shutil,'which',return_value='/usr/bin/nmcli'),patch.object(n,'nm',side_effect=self.snapshot_nm(False,False,True)):
+            result=n.snapshot()
+            self.assertTrue(result['available']);self.assertEqual(len(result['devices']),1)
+            self.assertEqual(result['devices'][0]['addresses'],[])
+    def test_radio_confirmation_waits_for_observed_target(self):
+        with patch.object(n,'radio_state',side_effect=[(True,False),(True,False),(True,True)]),patch.object(n.time,'sleep') as sleep:
+            n.wait_for_radio(True)
+            self.assertEqual(sleep.call_count,2)
+    def test_hardware_blocked_radio_has_a_truthful_typed_error(self):
+        with patch.object(n,'radio_state',return_value=(False,False)),patch.object(n.time,'sleep') as sleep:
+            with self.assertRaises(n.NetworkError) as error:n.wait_for_radio(True)
+            self.assertEqual(error.exception.code,'hardware-blocked');sleep.assert_not_called()
+    def test_radio_request_confirms_target_before_returning_new_snapshot(self):
+        with patch.object(n,'snapshot',return_value=BASE),patch.object(n,'nm') as nm,patch.object(n,'wait_for_radio') as wait:
+            n.request(dict(action='wifi-radio',enabled=True))
+            self.assertEqual(nm.call_args.args[0],['radio','wifi','on'])
+            wait.assert_called_once_with(True)
 
 if __name__=='__main__':unittest.main()
