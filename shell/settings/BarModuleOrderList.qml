@@ -25,7 +25,7 @@ Item {
     }
     function geometry() {
         const out=[]
-        for(let i=0;i<rows.count;i++) {const row=rows.itemAt(i),p=row.mapToItem(null,18,row.height/2);out.push({id:row.entry,x:p.x,y:p.y,height:row.height})}
+        for(let i=0;i<rows.count;i++) {const row=rows.itemAt(i),p=row.mapToItem(null,18,row.height/2);out.push({id:row.entry,x:p.x,y:p.y,height:row.height,visibility:row.visibilityGeometry()})}
         return out
     }
     KeyedModel {id:stable;entries:list.entries}
@@ -40,6 +40,7 @@ Item {
             z:handle.drag.active ? 2 : 0
             function reset(){card.y=0;list.draggingId="";list.dropIndex=-1;list.scrollViewport=null}
             function updateDrop(){const p=card.mapToItem(list,0,card.height/2);list.dropIndex=Math.max(0,Math.min(list.entries.length-1,Math.floor(p.y/list.rowHeight)))}
+            function visibilityGeometry(){const p=visibilityButton.mapToItem(null,0,0);return {x:p.x,y:p.y,width:visibilityButton.width,height:visibilityButton.height,shown:list.hidden.indexOf(row.entry)<0,label:visibilityButton.label}}
             Rectangle {
                 id:card;width:row.width;height:row.height-4
                 radius:Theme.controlRadius;color:handle.drag.active ? Theme.settingsSelected : Theme.settingsHover
@@ -74,7 +75,7 @@ Item {
                 }
                 Row {
                     id:controls;x:list.width<360 ? 42 : parent.width-width-6;y:list.width<360 ? 36 : 2;spacing:6
-                    FlatButton {objectName:"barModuleVisibility-"+row.entry;width:56;label:list.hidden.indexOf(row.entry)>=0 ? "Show" : "Hide";Accessible.name:label+" "+Bar.moduleName(row.entry);onActivated:list.visibilityToggled(row.entry)}
+                    FlatButton {id:visibilityButton;objectName:"barModuleVisibility-"+row.entry;width:56;label:list.hidden.indexOf(row.entry)>=0 ? "Show" : "Hide";Accessible.name:label+" "+Bar.moduleName(row.entry);onActivated:list.visibilityToggled(row.entry)}
                     ChoiceBox {
                         objectName:"barModuleSide-"+row.entry
                         width:100;height:Theme.controlHeight

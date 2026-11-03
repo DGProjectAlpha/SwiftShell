@@ -9,7 +9,15 @@ Item {
     id: page
 
     readonly property bool colorPickerOpen: colorPicker.item ? colorPicker.item.opened : false
-    function geometry() {return {output:page.modulesOutput,rows:moduleOrder.geometry()}}
+    function geometry() {
+        const position=modulesOutputChoice.mapToItem(null,0,0)
+        const items=[],popup=modulesOutputChoice.popup.contentItem
+        if(modulesOutputChoice.popup.visible)for(let i=0;i<modulesOutputChoice.resolvedChoices.length;i++) {
+            const item=popup.itemAtIndex(i)
+            if(item){const point=item.mapToItem(null,0,0);items.push({value:modulesOutputChoice.resolvedChoices[i].value,x:point.x,y:point.y,width:item.width,height:item.height})}
+        }
+        return {output:page.modulesOutput,rows:moduleOrder.geometry(),selector:{x:position.x,y:position.y,width:modulesOutputChoice.width,height:modulesOutputChoice.height,items:items}}
+    }
     function colorPickerGeometry() { return colorPickerOpen ? colorPicker.item.geometry() : null }
     property string pickingOutput: ""
     function openSurfaceColorPicker() {
@@ -20,6 +28,19 @@ Item {
     }
     property alias modulesOutput:page.layoutOutput
     property string layoutOutput:""
+    property bool outputInitialized:false
+    function chooseInitialOutput() {
+        if(outputInitialized)return
+        if(layoutOutput!==""){outputInitialized=true;return}
+        const choices=HyprlandModel.monitorChoices
+        if(!choices.length)return
+        const focused=HyprlandModel.focusedOutput
+        layoutOutput=focused && choices.some(function(choice){return choice.name===focused.name}) ? focused.name : choices[0].name
+        outputInitialized=true
+    }
+    function selectOutput(output) {outputInitialized=true;layoutOutput=output}
+    Component.onCompleted:chooseInitialOutput()
+    Connections {target:HyprlandModel;function onMonitorChoicesChanged(){page.chooseInitialOutput()}}
     readonly property var selectedLayout:SettingsStore.layoutForOutput(layoutOutput)
     function editLayout(edge,scale,order,sides) {SettingsStore.setOutputLayout(layoutOutput,edge,scale,order,sides)}
     function editModuleSide(id,side) {
@@ -147,7 +168,7 @@ Item {
                 ChoiceBox {
                     choices:[{label:"Default appearance",value:""}].concat(HyprlandModel.monitorChoices.map(function(m){return {label:m.label,value:m.name}}))
                     selectedValue:page.surfaceOutput
-                    onChosen:function(value){page.surfaceOutput=value}
+                    onChosen:function(value){page.selectOutput(value)}
                 }
             }
             SettingsToggle {
@@ -228,7 +249,7 @@ Item {
                 ChoiceBox {
                     choices:[{label:"All-screen default",value:""}].concat(HyprlandModel.monitorChoices.map(function(m){return {label:m.label,value:m.name}}))
                     selectedValue:page.layoutOutput
-                    onChosen:function(value){page.layoutOutput=value}
+                    onChosen:function(value){page.selectOutput(value)}
                 }
             }
             SettingsRow {
@@ -415,20 +436,27 @@ Item {
             SettingsRow {
                 width:parent.width;label:"Customize display"
                 ChoiceBox {
-                    choices:[{label:"Default visibility",value:""}].concat(HyprlandModel.monitorChoices.map(function(m){return {label:m.label,value:m.name}}))
+                    id:modulesOutputChoice
+                    objectName:"barModulesOutput"
+                    choices:[{label:"Default for inheriting displays",value:""}].concat(HyprlandModel.monitorChoices.map(function(m){return {label:m.label,value:m.name}}))
                     selectedValue:page.modulesOutput
-                    onChosen:function(value){page.modulesOutput=value}
+                    onChosen:function(value){page.selectOutput(value)}
                 }
+            }
+            Text {
+                width:parent.width;wrapMode:Text.WordWrap
+                text:page.modulesOutput!=="" ? "Visibility changes apply to this display and its right-click menu." : "Displays with their own visibility choices keep them. Select a display to change its bar."
+                color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall
             }
             FlatButton {
                 visible:page.modulesOutput!=="" && page.customVisibility
-                label:"Use all-screen visibility"
+                label:"Use default visibility"
                 onActivated:SettingsStore.inheritHidden(page.modulesOutput)
             }
             Text {
                 width:parent.width;wrapMode:Text.WordWrap
                 visible:page.modulesOutput==="" && Object.keys(JSON.parse(SettingsStore.hiddenOutputsJson)).length>0
-                text:"Some screens have their own visibility choices. Select a screen above to change its modules."
+                text:"Some displays have their own visibility choices. Select one above to change its widgets."
                 color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall
             }
             FlatButton {label:"Reset grouping";onActivated:{const layout=SettingsStore.layoutForOutput(page.modulesOutput);SettingsStore.setOutputLayout(page.modulesOutput,layout.edge,layout.scale,layout.order,"{}")}}
@@ -442,7 +470,7 @@ Item {
                 hidden:SettingsStore.hiddenForOutput(page.modulesOutput)
                 sides:SettingsStore.layoutForOutput(page.modulesOutput).sides
                 onReordered:function(id,destination){page.editModuleOrder(Bar.moveModuleTo(entries,id,destination))}
-                onVisibilityToggled:function(id){SettingsStore.setHiddenForOutput(page.modulesOutput,Bar.toggleHidden(hidden,id))}
+                onVisibilityToggled:function(id){SettingsStore.setHiddenForOutput(page.modulesOutput,Bar.toggleHidden(SettingsStore.hiddenForOutput(page.modulesOutput),id))}
                 onSideChosen:function(id,side){page.editModuleSide(id,side)}
             }
         }
