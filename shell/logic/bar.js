@@ -9,6 +9,33 @@ function snapModulePosition(position, devicePixelRatio, contentScale) {
     return typeof position === "number" && Number.isFinite(position) && devicePixelRatio === 1 && contentScale === 1 ? Math.round(position) : position;
 }
 
+function fullscreenOutputs(toplevels, monitors) {
+    const clients=asModuleList(toplevels),screens=asModuleList(monitors),out=[];
+    function key(workspace) {return workspace ? String(workspace.address || workspace.id || workspace.name || "") : "";}
+    for(let i=0;i<screens.length;i++) {
+        const screen=screens[i],active=screen.specialWorkspace && screen.specialWorkspace.name ? screen.specialWorkspace : screen.activeWorkspace;
+        if(!screen.name || !key(active))continue;
+        for(let j=0;j<clients.length;j++) {
+            const client=clients[j].lastIpcObject || clients[j];
+            // Hyprland 0.57: 1 is maximized, 2 is actual fullscreen.
+            if(client.fullscreen!==2 || client.mapped===false || client.hidden===true)continue;
+            if((client.monitor===screen.id || client.monitor===screen.name) && key(client.workspace)===key(active)) {out.push(screen.name);break;}
+        }
+    }
+    return out;
+}
+
+function peekPointer(point, screen, edge, barWidth, barHeight) {
+    const result={atEdge:false,insideBar:false};
+    if(!point || !screen || !Number.isFinite(point.x) || !Number.isFinite(point.y))return result;
+    const x=point.x-screen.x,y=point.y-screen.y;
+    if(x<0 || y<0 || x>=screen.width || y>=screen.height)return result;
+    const distance=edge==="bottom" ? screen.height-y : edge==="left" ? x : edge==="right" ? screen.width-x : y;
+    result.atEdge=distance<=2;
+    result.insideBar=distance<=(edge==="left" || edge==="right" ? barWidth : barHeight)+4;
+    return result;
+}
+
 function clamp01(unit) {
     if (typeof unit !== "number" || !Number.isFinite(unit))
         return 0;
@@ -207,6 +234,8 @@ var swiftshellBar = {
     surfaceForOutput: surfaceForOutput,
     textRenderMode:textRenderMode,
     snapModulePosition:snapModulePosition,
+    fullscreenOutputs:fullscreenOutputs,
+    peekPointer:peekPointer,
     hiddenForOutput:hiddenForOutput,
     moduleSide:moduleSide,
     modulesForSide:modulesForSide,

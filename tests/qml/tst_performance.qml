@@ -11,6 +11,7 @@ TestCase {
     visible:true;width:500;height:700
     property var panel:null
     property var saved:({})
+    property var peekTarget:null
     Component {
         id:renderContextComponent
         Item {
@@ -36,6 +37,7 @@ TestCase {
     }
     function cleanup() {
         if(panel){panel.destroy();panel=null}
+        if(peekTarget){peekTarget.destroy();peekTarget=null}
         const service=Services.SystemPerformance
         service.viewers=saved.viewers;service.cpu=saved.cpu;service.memory=saved.memory;service.gpus=saved.gpus
         service.cpuHistory=saved.cpuHistory;service.memoryHistory=saved.memoryHistory;service.gpuHistory=saved.gpuHistory
@@ -176,5 +178,37 @@ TestCase {
         panel.devicePixelRatio=1;panel.contentScale=1.25
         const custom=strip.renderingGeometry()
         compare(custom[0].x,10.375);compare(custom[0].y,6.375)
+    }
+    function createPeekController() {
+        peekTarget=Qt.createQmlObject('import QtQuick;QtObject {property bool outputFullscreen:false;property string edge:"top";property real width:1536;property real height:28;property var screen:({x:2560,y:720,width:1536,height:864})}',test)
+        const component=Qt.createComponent("../../shell/services/BarPeekController.qml")
+        compare(component.status,Component.Ready,component.errorString())
+        panel=component.createObject(test,{barWindow:peekTarget})
+        verify(panel!==null)
+    }
+    function test_peek_sampling_requires_opt_in_and_this_outputs_actual_fullscreen() {
+        createPeekController()
+        verify(!panel.watching)
+        peekTarget.outputFullscreen=true;verify(!panel.watching)
+        panel.requested=true;verify(panel.watching)
+        panel.cursor={x:2700,y:721}
+        wait(50);panel.cursor={x:2700,y:760}
+        wait(200);verify(!panel.open) // A short crossing is not a peek request.
+        panel.cursor={x:2700,y:721}
+        tryVerify(function(){return panel.open})
+        peekTarget.outputFullscreen=false
+        verify(!panel.open);verify(!panel.watching)
+    }
+    function test_peek_stays_for_its_popover_then_releases_without_resizing_bar() {
+        createPeekController();peekTarget.outputFullscreen=true;panel.requested=true
+        panel.cursor={x:2700,y:721}
+        tryVerify(function(){return panel.open})
+        panel.popupOpen=true;panel.cursor={x:2700,y:1000}
+        wait(450);verify(panel.open)
+        compare(peekTarget.width,1536);compare(peekTarget.height,28)
+        panel.popupOpen=false
+        tryVerify(function(){return !panel.open})
+        panel.requested=false
+        verify(!panel.watching);compare(panel.cursor,null)
     }
 }

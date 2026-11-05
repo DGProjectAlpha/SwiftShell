@@ -6,6 +6,7 @@ import Quickshell.Io
 import Quickshell.Hyprland
 import "../logic/workspaces.js" as Workspaces
 import "../logic/windows.js" as Windows
+import "../logic/bar.js" as Bar
 
 Singleton {
     id: root
@@ -21,6 +22,7 @@ Singleton {
     property var stagedMonitors: []
     property var stagedWorkspaces: []
     property var monitorChoices: []
+    readonly property var fullscreenOutputs:Bar.fullscreenOutputs(Hyprland.toplevels.values,monitorSnapshot)
 
     function requestSnapshot() {
         if (!root.connected) return;
@@ -82,7 +84,8 @@ Singleton {
         target: Hyprland
         function onRawEvent(event) {
             // Event-triggered, coalesced reads, never periodic polling.
-            if (/^(workspace|focusedmon|monitor|createworkspace|destroyworkspace|moveworkspace|renameworkspace|configreloaded|openwindow|closewindow|movewindow|urgent)/.test(event.name))
+            if (/^fullscreen/.test(event.name))Hyprland.refreshToplevels()
+            if (/^(fullscreen|workspace|focusedmon|monitor|createworkspace|destroyworkspace|moveworkspace|renameworkspace|configreloaded|openwindow|closewindow|movewindow|urgent)/.test(event.name))
                 snapshotDebounce.restart();
         }
     }

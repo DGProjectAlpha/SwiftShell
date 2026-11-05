@@ -284,13 +284,13 @@ PanelWindow {
         CalendarPanel {}
     }
 
-    Component {id:notificationPanel;NotificationDrawer {reading:popup.visible;onSettingsRequested:{popup.close();SettingsStore.setSettingsCategory("notifications");SettingsModel.show()}}}
+    Component {id:notificationPanel;NotificationDrawer {reading:popup.visible;onSettingsRequested:{popup.close();SettingsStore.setSettingsCategory("notifications");SettingsModel.show(popup.barWindow.monitorKey)}}}
     Component {id:performancePanel;PerformancePanel {}}
     Component {id:clipboardPanel;ClipboardPanel {onDetached:popup.close();onDismissed:popup.close()}}
-    Component {id:networkPanel;NetworkPanel {onSettingsRequested:{popup.close();SettingsStore.setSettingsCategory("network");SettingsModel.show()}}}
-    Component {id:powerPanel;PowerPanel {onSettingsRequested:{popup.close();SettingsStore.setSettingsCategory("power");SettingsModel.show()}}}
+    Component {id:networkPanel;NetworkPanel {onSettingsRequested:{popup.close();SettingsStore.setSettingsCategory("network");SettingsModel.show(popup.barWindow.monitorKey)}}}
+    Component {id:powerPanel;PowerPanel {onSettingsRequested:{popup.close();SettingsStore.setSettingsCategory("power");SettingsModel.show(popup.barWindow.monitorKey)}}}
     Component {
         id: controlPanel
-        AudioPanel {onSettingsRequested:{popup.close();SettingsStore.setSettingsCategory("audio");SettingsModel.show()}}
+        AudioPanel {onSettingsRequested:{popup.close();SettingsStore.setSettingsCategory("audio");SettingsModel.show(popup.barWindow.monitorKey)}}
     }
 }

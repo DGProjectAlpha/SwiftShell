@@ -22,15 +22,19 @@ PanelWindow {
     readonly property string edge:outputLayout.edge
     readonly property bool vertical:edge === "left" || edge === "right"
     readonly property real contentScale:outputLayout.scale
+    readonly property bool outputFullscreen:HyprlandModel.fullscreenOutputs.indexOf(monitorKey)>=0
+    readonly property bool peekOpen:peekController.open
     readonly property int barTextRenderType:Bar.textRenderMode(devicePixelRatio,contentScale,typeof Text["CurveRendering"]==="number")==="curve" ? Text["CurveRendering"] : Text.QtRendering
     function snapModule(position) {return Bar.snapModulePosition(position,devicePixelRatio,contentScale)}
     function renderingDiagnostics() {
-        return {devicePixelRatio:devicePixelRatio,screenDevicePixelRatio:screen ? screen.devicePixelRatio : 0,contentScale:contentScale,textMode:barTextRenderType===Text.QtRendering ? "distance-field" : "curve",origins:[leftModules.renderingGeometry(),centerModules.renderingGeometry(),rightModules.renderingGeometry()]}
+        return {devicePixelRatio:devicePixelRatio,screenDevicePixelRatio:screen ? screen.devicePixelRatio : 0,contentScale:contentScale,textMode:barTextRenderType===Text.QtRendering ? "distance-field" : "curve",fullscreen:outputFullscreen,peek:peekOpen,cursorWatching:peekController.watching,origins:[leftModules.renderingGeometry(),centerModules.renderingGeometry(),rightModules.renderingGeometry()]}
     }
     readonly property real railWidth:168
     implicitHeight: vertical ? (screen ? screen.height : 1080) : Math.ceil(Theme.barHeight*contentScale)
     implicitWidth: vertical ? Math.ceil(railWidth*contentScale) : (screen ? screen.width : 1920)
     property Item controlAnchor: null
+    signal dismissPopoutsRequested()
+    function dismissPopouts() {popovers.close();dismissPopoutsRequested()}
     property Item notificationAnchor:null
     property Item networkAnchor:null
     property Item powerAnchor:null
@@ -80,8 +84,9 @@ PanelWindow {
     // Top stays under true fullscreen. Overlay would cover fullscreen clients.
     // keyboardFocus None keeps the bar from taking text input.
     WlrLayershell.namespace: "swiftshell-bar"
-    WlrLayershell.layer: WlrLayer.Top
+    WlrLayershell.layer: window.peekOpen ? WlrLayer.Overlay : WlrLayer.Top
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+    BarPeekController {id:peekController;barWindow:window;requested:SettingsStore.fullscreenBarPeek;popupOpen:popovers.visible}
 
     readonly property bool reserveSpace: SettingsStore.reserveSpace
     readonly property string hyprlandMonitorName: HyprlandModel.hyprlandNameForScreen(modelData)
@@ -227,8 +232,9 @@ PanelWindow {
     MouseArea {
         z:-.5
         anchors.fill:parent
-        acceptedButtons:Qt.RightButton
+        acceptedButtons:Qt.LeftButton | Qt.RightButton
         onClicked:function(mouse) {
+            if(mouse.button!==Qt.RightButton){window.dismissPopouts();return}
             LauncherModel.closeLauncher()
             contextAnchor.x=mouse.x
             popovers.toggle("customize",contextAnchor)
@@ -509,7 +515,7 @@ PanelWindow {
         id:contextPanel
         BarContextMenu {
             outputName:window.monitorKey
-            onCustomizeRequested:{popovers.close();SettingsStore.setSettingsCategory("bar");SettingsModel.show()}
+            onCustomizeRequested:{popovers.close();SettingsStore.setSettingsCategory("bar");SettingsModel.show(window.monitorKey)}
         }
     }
 

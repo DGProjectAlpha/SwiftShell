@@ -2040,6 +2040,32 @@ test("low DPI bar rendering keeps fractional and unavailable-curve fallbacks", f
     assert.equal(bar.snapModulePosition(10.375, undefined, 1), 10.375);
 });
 
+test("fullscreen bar peek is output-local and ignores maximized or inactive workspaces", function () {
+    const monitors=[{id:1,name:"DP-1",activeWorkspace:{address:"gaming"},focused:true},{id:0,name:"HDMI-A-1",activeWorkspace:{address:"5"},focused:false}];
+    const clients=[{lastIpcObject:{fullscreen:2,monitor:1,workspace:{address:"gaming"},mapped:true}},
+        {lastIpcObject:{fullscreen:1,monitor:0,workspace:{address:"5"},mapped:true}},
+        {lastIpcObject:{fullscreen:2,monitor:0,workspace:{address:"4"},mapped:true}}];
+    assert.deepEqual(bar.fullscreenOutputs(clients,monitors),["DP-1"]);
+    monitors[0].focused=false;monitors[1].focused=true;
+    assert.deepEqual(bar.fullscreenOutputs(clients,monitors),["DP-1"]);
+    clients[1].lastIpcObject.fullscreen=2;
+    assert.deepEqual(bar.fullscreenOutputs(clients,monitors),["DP-1","HDMI-A-1"]);
+    clients[1].lastIpcObject.hidden=true;
+    assert.deepEqual(bar.fullscreenOutputs(clients,monitors),["DP-1"]);
+    assert.deepEqual(bar.fullscreenOutputs([],monitors),[]);
+});
+
+test("fullscreen peek edge detection uses logical mixed-scale screen rectangles", function () {
+    const hdmi={x:2560,y:720,width:1536,height:864};
+    assert.deepEqual(bar.peekPointer({x:2700,y:721},hdmi,"top",1536,28),{atEdge:true,insideBar:true});
+    assert.deepEqual(bar.peekPointer({x:2559,y:721},hdmi,"top",1536,28),{atEdge:false,insideBar:false});
+    assert.deepEqual(bar.peekPointer({x:2700,y:760},hdmi,"top",1536,28),{atEdge:false,insideBar:false});
+    assert.deepEqual(bar.peekPointer({x:4095,y:900},hdmi,"right",168,864),{atEdge:true,insideBar:true});
+    assert.deepEqual(bar.peekPointer({x:2561,y:900},hdmi,"left",168,864),{atEdge:true,insideBar:true});
+    assert.deepEqual(bar.peekPointer({x:2700,y:1583},hdmi,"bottom",1536,28),{atEdge:true,insideBar:true});
+    assert.deepEqual(bar.peekPointer(null,hdmi,"top",1536,28),{atEdge:false,insideBar:false});
+});
+
 if (failed > 0) {
     console.error(failed + " test(s) failed");
     process.exit(1);
