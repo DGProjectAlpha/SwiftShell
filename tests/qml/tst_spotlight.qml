@@ -54,6 +54,20 @@ TestCase {
         verify(card.moveFavoriteSelection(-1));
         compare(Services.SettingsStore.pinnedIds.join(","),"app1.desktop,missing.desktop,app0.desktop,app2.desktop");
     }
+    function test_favorite_icons_have_no_star_badge() {
+        Services.SettingsStore.setPinnedIds(["app0.desktop"]);
+        card.chooseMode("favorites");
+        const grid=findChild(card,"spotlightAppGrid");
+        tryCompare(grid,"count",1);
+        const tile=grid.itemAtIndex(0);
+        verify(tile!==null);
+        function check(item) {
+            if(item.text!==undefined)verify(item.text!=="★");
+            for(let i=0;i<item.children.length;i++)check(item.children[i]);
+        }
+        check(tile);
+        compare(Services.SettingsStore.pinnedIds[0],"app0.desktop");
+    }
     function test_all_apps_scroll_and_use_real_grid() {
         compare(card.appRows.length,35);
         const grid=findChild(card,"spotlightAppGrid");

@@ -307,7 +307,6 @@ Rectangle {
                 height:30;maximumLineCount:2;wrapMode:Text.WordWrap;elide:Text.ElideRight;horizontalAlignment:Text.AlignHCenter
                 text:tile.modelData.name;textFormat:Text.PlainText;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall;color:Theme.settingsText
             }
-            Text {x:width-19;y:7;visible:SettingsStore.pinnedIds.indexOf(tile.modelData.id)>=0;text:"★";font.pixelSize:10;color:Theme.settingsMuted;}
         }
         Text {
             anchors.centerIn:parent;width:parent.width-24;horizontalAlignment:Text.AlignHCenter;wrapMode:Text.WordWrap
