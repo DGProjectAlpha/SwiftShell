@@ -16,11 +16,19 @@ Item {
         }
         return out
     }
+    readonly property int layoutCount: {
+        let count=0
+        for(let i=0;i<items.count;i++) {
+            const item=items.itemAt(i)
+            if(item && item.participatesInLayout)count++
+        }
+        return count
+    }
     readonly property real fixedWidth: {
         let total=0,shown=0
         for(let i=0;i<items.count;i++) {
             const item=items.itemAt(i)
-            if(item && item.visible) {shown++;if(item.moduleId!=="title")total+=item.width}
+            if(item && item.participatesInLayout) {shown++;if(item.moduleId!=="title")total+=item.width}
         }
         return total+Math.max(0,shown-1)*Theme.moduleSpacing
     }
@@ -29,7 +37,7 @@ Item {
     KeyedModel { id:stableModules;entries:strip.modules }
     Grid {
         id:row
-        columns:strip.barWindow.vertical ? 1 : Math.max(1,items.count)
+        columns:strip.barWindow.vertical ? 1 : Math.max(1,strip.layoutCount)
         spacing:Theme.moduleSpacing
         Repeater {
             id:items
@@ -42,7 +50,8 @@ Item {
                 implicitWidth:moduleLoader.implicitWidth
                 implicitHeight:moduleLoader.implicitHeight
                 width:strip.barWindow.vertical ? strip.barWindow.railWidth : moduleId==="title" ? Math.max(0,strip.titleWidth) : implicitWidth
-                visible:moduleId==="title" ? SettingsStore.showFocusedTitle && strip.barWindow.windowTitle!=="" && width>0 : implicitWidth>0
+                readonly property bool participatesInLayout:moduleId==="title" ? SettingsStore.showFocusedTitle && strip.barWindow.windowTitle!=="" && width>0 : implicitWidth>0
+                visible:participatesInLayout
                 height:Math.max(Theme.barHeight,implicitHeight)
                 Loader {
                     id:moduleLoader

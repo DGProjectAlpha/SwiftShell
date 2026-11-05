@@ -24,7 +24,8 @@ TestCase {
             property real contentScale:1
             readonly property Item contentItem:bar
             property alias strip:strip
-            function componentFor(id){return weatherModule}
+            function componentFor(id){return id==="weather" ? weatherModule : ordinaryModule}
+            Component {id:ordinaryModule;Item {implicitWidth:28;implicitHeight:28}}
             Component {id:weatherModule;BarUI.WeatherModule {objectName:"weatherModuleInStrip"}}
             BarUI.ModuleStrip {id:strip;barWindow:bar;modules:["weather"]}
         }
@@ -60,6 +61,15 @@ TestCase {
         compare(panel.diagnostics().hours,24)
         verify(findChild(panel,"weatherAirQuality").text.indexOf("32 U.S. AQI")>=0)
         compare(findChild(panel,"weatherRainChart").mode,"probability")
+    }
+    function test_disabled_weather_leaves_no_gap_beside_other_modules() {
+        Services.SettingsStore.setWeatherPreferences({enabled:false})
+        const bar=barFixture.createObject(test)
+        bar.strip.modules=["control","weather"]
+        tryCompare(bar.strip,"implicitWidth",28)
+        bar.strip.modules=["weather","control"]
+        tryCompare(bar.strip,"implicitWidth",28)
+        bar.destroy()
     }
     function test_weather_enables_after_its_module_parent_was_hidden() {
         Services.SettingsStore.setWeatherPreferences({enabled:false})
