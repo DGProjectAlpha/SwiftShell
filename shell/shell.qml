@@ -181,7 +181,7 @@ ShellRoot {
         source: "settings/SettingsWindow.qml"
         onStatusChanged: {
             if (status === Loader.Error)
-                SettingsModel.noteLoadFailed()
+                Qt.callLater(function(){if(settingsLoader.status===Loader.Error && SettingsModel.open)SettingsModel.noteLoadFailed()})
         }
     }
 }

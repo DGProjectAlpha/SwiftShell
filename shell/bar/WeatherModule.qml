@@ -8,7 +8,7 @@ MouseArea {
     property color textMuted:Theme.textMuted
     property color textHover:Theme.textPrimary
     signal activated()
-    implicitWidth:visible ? content.implicitWidth : 0
+    implicitWidth:SettingsStore.weatherEnabled ? content.implicitWidth : 0
     implicitHeight:Theme.barHeight
     width:implicitWidth;height:implicitHeight
     visible:SettingsStore.weatherEnabled

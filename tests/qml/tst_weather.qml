@@ -3,6 +3,7 @@ import QtTest
 import "../../shell/services" as Services
 import "../../shell/popovers" as Popovers
 import "../../shell/settings" as SettingsUI
+import "../../shell/bar" as BarUI
 TestCase {
     id:test
     name:"WeatherSurfaces"
@@ -12,6 +13,22 @@ TestCase {
     property var panel:null
     SignalSpy {id:settingsSpy;target:panel;signalName:"settingsRequested"}
     Component {id:panelComponent;Popovers.WeatherPanel {width:400}}
+    Component {
+        id:barFixture
+        Item {
+            id:bar
+            width:700;height:30
+            property bool vertical:false
+            property real railWidth:168
+            property real devicePixelRatio:1
+            property real contentScale:1
+            readonly property Item contentItem:bar
+            property alias strip:strip
+            function componentFor(id){return weatherModule}
+            Component {id:weatherModule;BarUI.WeatherModule {objectName:"weatherModuleInStrip"}}
+            BarUI.ModuleStrip {id:strip;barWindow:bar;modules:["weather"]}
+        }
+    }
     function fixture() {
         const hours=[],days=[]
         for(let i=0;i<24;i++)hours.push({time:1000+i*3600,day:"2026-11-05",label:String(i).padStart(2,"0")+":00",temperature:8+i*.1,probability:i*4,precipitation:i%4 ? .1 : 0,humidity:70,wind:10,code:61,isDay:i>6 && i<18})
@@ -43,6 +60,24 @@ TestCase {
         compare(panel.diagnostics().hours,24)
         verify(findChild(panel,"weatherAirQuality").text.indexOf("32 U.S. AQI")>=0)
         compare(findChild(panel,"weatherRainChart").mode,"probability")
+    }
+    function test_weather_enables_after_its_module_parent_was_hidden() {
+        Services.SettingsStore.setWeatherPreferences({enabled:false})
+        const bar=barFixture.createObject(test)
+        verify(bar!==null)
+        try {
+            compare(bar.strip.implicitWidth,0)
+            const module=findChild(bar,"weatherModuleInStrip")
+            verify(module!==null)
+            Services.SettingsStore.setWeatherPreferences({enabled:true})
+            tryVerify(function(){return bar.strip.implicitWidth>0})
+            verify(module.visible)
+            Services.SettingsStore.setWeatherPreferences({enabled:false})
+            tryCompare(bar.strip,"implicitWidth",0)
+            Services.SettingsStore.setWeatherPreferences({enabled:true})
+            tryVerify(function(){return bar.strip.implicitWidth>0})
+            compare(findChild(bar,"weatherModuleInStrip"),module)
+        } finally {bar.destroy()}
     }
     function test_daily_row_expands_hourly_and_collapses() {
         const row=findChild(panel,"weatherDay-2026-11-05"),before=panel.implicitHeight
