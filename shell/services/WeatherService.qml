@@ -5,13 +5,13 @@ import Quickshell.Io
 import "../logic/weather.js" as Weather
 Singleton {
     id:root
-    readonly property bool enabled:SettingsStore.weatherEnabled
+    readonly property bool weatherEnabled:SettingsStore.weatherEnabled
     readonly property var location: {
         try {const value=JSON.parse(SettingsStore.weatherLocationJson);return Weather.validLocation(value) ? value : null}
         catch(error){return null}
     }
     readonly property bool configured:location!==null
-    readonly property bool available:enabled && configured && forecast!==null
+    readonly property bool available:weatherEnabled && configured && forecast!==null
     property var forecast:null
     property var searchResults:[]
     property string searchAttribution:""
@@ -35,7 +35,7 @@ Singleton {
         bridge.running=true;return true
     }
     function refresh(force) {
-        if(!enabled || !configured)return false
+        if(!weatherEnabled || !configured)return false
         return request("forecast",{location:location,units:SettingsStore.weatherUnits,refreshMinutes:SettingsStore.weatherRefreshMinutes,force:force===true})
     }
     function search(query) {
@@ -51,12 +51,12 @@ Singleton {
     }
     function locate(){return request("locate",{})}
     function configure() {
-        const next=[enabled,SettingsStore.weatherLocationJson,SettingsStore.weatherUnits].join("|")
+        const next=[weatherEnabled,SettingsStore.weatherLocationJson,SettingsStore.weatherUnits].join("|")
         if(next===configurationKey)return
-        configurationKey=next;generation++;forecast=null;error="";message="";refreshPending=enabled && configured
+        configurationKey=next;generation++;forecast=null;error="";message="";refreshPending=weatherEnabled && configured
         if(bridge.running)return
         refreshPending=false
-        if(enabled && configured)Qt.callLater(function(){root.refresh(false)})
+        if(weatherEnabled && configured)Qt.callLater(function(){root.refresh(false)})
     }
     Component.onCompleted:configureDelay.restart()
     Connections {
@@ -66,8 +66,8 @@ Singleton {
         function onWeatherUnitsChanged(){configureDelay.restart()}
     }
     Timer {id:configureDelay;interval:0;onTriggered:root.configure()}
-    Timer {interval:Math.max(10,SettingsStore.weatherRefreshMinutes)*60000;running:root.enabled && root.configured;repeat:true;onTriggered:root.refresh(false)}
-    Timer {interval:60000;running:root.enabled && root.forecast!==null;repeat:true;onTriggered:root.now=Date.now()}
+    Timer {interval:Math.max(10,SettingsStore.weatherRefreshMinutes)*60000;running:root.weatherEnabled && root.configured;repeat:true;onTriggered:root.refresh(false)}
+    Timer {interval:60000;running:root.weatherEnabled && root.forecast!==null;repeat:true;onTriggered:root.now=Date.now()}
     Process {
         id:bridge
         objectName:"weatherBridge"

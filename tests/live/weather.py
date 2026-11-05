@@ -84,7 +84,7 @@ ShellRoot {
  }
  IpcHandler {
   target:"audit"
-  function state():string {return JSON.stringify({ready:SettingsStore.persistenceState==="ready",persistence:SettingsStore.persistenceState,persistenceMessage:SettingsStore.persistenceMessage,enabled:WeatherService.enabled,configured:WeatherService.configured,available:WeatherService.available,busy:WeatherService.busy,searchCount:WeatherService.searchResults.length,error:!!WeatherService.error,days:WeatherService.forecast ? WeatherService.forecast.days.length : 0,hours:WeatherService.forecast ? WeatherService.forecast.hours.length : 0,units:SettingsStore.weatherUnits,mode:SettingsStore.weatherLocationMode,stale:WeatherService.forecast ? WeatherService.forecast.stale : false,expanded:panel.expandedDay!=="",blur:blur.applied})}
+  function state():string {return JSON.stringify({ready:SettingsStore.persistenceState==="ready",persistence:SettingsStore.persistenceState,persistenceMessage:SettingsStore.persistenceMessage,enabled:WeatherService.weatherEnabled,configured:WeatherService.configured,available:WeatherService.available,busy:WeatherService.busy,searchCount:WeatherService.searchResults.length,error:!!WeatherService.error,days:WeatherService.forecast ? WeatherService.forecast.days.length : 0,hours:WeatherService.forecast ? WeatherService.forecast.hours.length : 0,units:SettingsStore.weatherUnits,mode:SettingsStore.weatherLocationMode,stale:WeatherService.forecast ? WeatherService.forecast.stale : false,expanded:panel.expandedDay!=="",blur:blur.applied})}
   function search():bool{return WeatherService.search("Berlin, Germany")}
   function choose():bool{return WeatherService.choose(WeatherService.searchResults[0])}
   function refresh():bool{return WeatherService.refresh(true)}

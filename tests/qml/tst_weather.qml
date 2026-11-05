@@ -77,7 +77,7 @@ TestCase {
     function test_disabled_weather_has_no_automatic_location_request() {
         Services.SettingsStore.setWeatherPreferences({enabled:false,locationJson:"{}",locationMode:"manual"})
         wait(1)
-        verify(!Services.WeatherService.enabled)
+        verify(!Services.WeatherService.weatherEnabled)
         verify(!Services.WeatherService.configured)
         verify(!Services.WeatherService.refresh(false))
         verify(Services.WeatherService.action!=="locate")
