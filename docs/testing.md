@@ -1224,3 +1224,74 @@ Super+Enter opens Konsole; compare DP-1 text clarity; try real media scrubbing a
 preferred audio devices; inspect dark/light tray popups; configure a weather city;
 and check settings after the next normal login/reboot. The actual game flicker was
 not reproduced by owned fixtures and no VRR/scanout workaround was applied.
+
+## Actual RuneScape fullscreen investigation — 2026-11-05
+
+The owner explicitly authorized launching Steam/RuneScape, joining the selected
+world, display-crossing input, scoped capture and termination afterward. Steam was
+opened on HDMI-A-1 workspace 4. The installed RuneScape app launched into DP-1's
+named gaming workspace in actual fullscreen. The existing linked login and selected
+world were used; no gameplay keys/buttons, graphics settings or purchases were used.
+
+Three passes sent 52 display-boundary crossings with a single persistent
+motion-only Wayland pointer per pass. This exercised normal pointer-driven focus
+between the actual game and Steam rather than relying only on compositor cursor
+warps. The first 20 crossings had no active recording. A 16-second XWayland-window
+recording covered another 16 crossings, followed by a separate 16-second composited
+DP-1 capture with 16 crossings. Recordings/account pixels remain private local
+artifacts and are not included in the repository or uploaded as bug attachments.
+
+Observed evidence:
+
+- Hyprland 0.57.0, exact source commit
+  `0aa6745f705f2c4b0a5004eb019ef76e5bbdb426`; NVIDIA RTX 4070 driver 615.78.08;
+  XWayland 24.1.14. The launched Windows RuneScape client used XWayland.
+- `render:direct_scanout=2`, `misc:vrr=3`,
+  `cursor:no_hardware_cursors=2`, `cursor:no_break_fs_vrr=2`, and
+  `opengl:nvidia_anti_flicker=true`. These values were observed, not changed.
+- DP-1's `directScanoutTo` was `"0"` in all 458 samples. The 120 samples in the
+  non-recorded pass already reported the software-cursor (`SW`) scanout blocker.
+  During compositor capture some samples additionally reported `RECORD`.
+- DP-1 VRR stayed enabled while focus repeatedly switched between the game and
+  Steam. HDMI-A-1 VRR stayed disabled. This does not measure instantaneous panel
+  refresh intervals or exclude low-framerate-compensation/brightness effects.
+- The app recording contained 480 frames at 30 fps. The composited output capture
+  contained 320 frames at 20 fps. Neither contained a black frame or a large global
+  brightness flash. Their mean luma ranges were approximately 65.06–66.26 and
+  65.77–65.97 respectively on the decoded 8-bit scale. These sampled digital
+  buffers cannot prove that a brief physical monitor/VRR flicker did not occur.
+- Current compositor logging is disabled. Empty rolling-log keyword counts are
+  consequently not evidence that modesetting or driver problems never occurred.
+
+The exact-version upstream source clarifies the bypass hypothesis:
+
+- [CMonitor::isDSBlocked](https://github.com/hyprwm/Hyprland/blob/0aa6745f705f2c4b0a5004eb019ef76e5bbdb426/src/output/Monitor.cpp#L1899)
+  includes software-cursor and recording blockers.
+- [CMonitor::shouldUseSoftwareCursors](https://github.com/hyprwm/Hyprland/blob/0aa6745f705f2c4b0a5004eb019ef76e5bbdb426/src/output/Monitor.cpp#L2196)
+  selects software cursors in auto mode on NVIDIA when any monitor has active VRR.
+- [VRR policy](https://github.com/hyprwm/Hyprland/blob/0aa6745f705f2c4b0a5004eb019ef76e5bbdb426/src/config/shared/monitor/MonitorRuleManager.cpp#L197)
+  uses the output's fullscreen workspace/content state; changing the focused
+  monitor alone does not require disabling that fullscreen output's VRR.
+- [Hyprland's FAQ](https://wiki.hypr.land/faq/)
+  documents refresh-rate-dependent panel brightness flicker. VRR staying enabled
+  does not imply that the frame intervals or brightness remain constant.
+- Hyprland 0.57 also introduced relevant auto-HDR behavior; the local option is on
+  and DP-1 advertises HDR capability. An
+  [upstream report](https://github.com/hyprwm/Hyprland/discussions/16756)
+  describes fullscreen mode blinks, but concerns different hardware and does not
+  establish that this machine has the same fault.
+
+Conclusion: compositor bypass is technically possible, but was not active in
+this observed RuneScape session. VRR/frame-pacing or another output/driver issue
+remains a hypothesis, not a diagnosis. No shell fix, permanent VRR change,
+monitor-mode change, cursor-policy change, driver update or HDR change was applied.
+A useful next controlled test requires physical observation: temporarily disable
+VRR only for the affected game, compare foreground/background game frame limits,
+and restore the original behavior. Test forced composition and auto-HDR separately
+if needed; do not change all of them at once or rewrite monitor configuration.
+
+Both launched RuneScape processes were terminated using exact PID/name identity
+checks. Prior workspaces, active window and cursor were restored. Steam was left
+open on workspace 4. Readback confirmed unchanged observed compositor options and
+monitor modes, positions, transforms and scales. The issue remains unconfirmed;
+these tests do not establish a resolution of the owner's reported flicker.
