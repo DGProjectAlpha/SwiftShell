@@ -19,7 +19,18 @@ Singleton {
     property bool reloadPending:false
     property bool restorePending:false
     property string activeAction: ""
+    property var lastOpacityPreference:null
     readonly property bool busy: worker.running
+    function syncOpaqueWindows(explicitChange) {
+        if(!SettingsStore.acceptWrites || !available || typeof SettingsStore.opaqueWindows!=="boolean")return
+        const wanted=SettingsStore.opaqueWindows
+        if(lastOpacityPreference===wanted)return
+        const initiallyUnmanaged=lastOpacityPreference===null && Object.keys(managed).length===0
+        lastOpacityPreference=wanted
+        // Fresh installs retain compositor settings until an explicit edit opts in.
+        if(initiallyUnmanaged && !explicitChange)return
+        request("apply",{opaqueWindows:wanted})
+    }
     function request(action, patch) {
         if(action==="restore") {
             pending={};restorePending=true;requestedAction=reloadPending ? "reload" : "restore"
@@ -49,6 +60,8 @@ Singleton {
     Connections {
         target:SettingsStore
         function onRadiusChanged() { if(SettingsStore.acceptWrites)root.request("apply",{radius:SettingsStore.radius}) }
+        function onOpaqueWindowsChanged() {root.syncOpaqueWindows(true)}
+        function onAcceptWritesChanged() {root.syncOpaqueWindows(false)}
         function onPanelBlurChanged() {
             const previous=root.previousBlur,value=SettingsStore.panelBlur
             root.previousBlur=value
@@ -70,6 +83,7 @@ Singleton {
                 const result=JSON.parse(reply.text)
                 if(code!==0 || !result.ok)throw new Error(result.message || "Desktop appearance is unavailable.")
                 root.available=result.available;root.observed=result.observed;root.managed=result.managed;root.error=""
+                if(root.activeAction==="resume")Qt.callLater(function(){root.syncOpaqueWindows(false)})
             } catch(error) {root.error=error.message;root.available=false}
             if(root.reloadPending)root.requestedAction="reload"
             else if(root.restorePending)root.requestedAction="restore"
