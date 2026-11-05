@@ -21,7 +21,7 @@ def dispatch(expression):assert ipc('eval hl.dispatch('+expression+')').strip()=
 original=state();monitors=json.loads(ipc('j/monitors'))
 focus=next(m['name'] for m in monitors if m['focused']);cursor=json.loads(ipc('j/cursorpos'));active=json.loads(ipc('j/activewindow')).get('address')
 backup=Path('/tmp/swiftshell-bar-order-settings-backup.json');shutil.copy2(config,backup);backup.chmod(0o600)
-prior=overrides();order=None;changed=False
+prior=overrides();order=None;changed=False;selected_output=None
 try:
     with tempfile.TemporaryDirectory(prefix='swiftshell-bar-order-') as directory:
         directory = Path(directory)
@@ -40,7 +40,8 @@ try:
         subprocess.run([str(directory/'keyboard'),'enter'],check=True)
         wait(lambda:state()['category']=='bar' and state()['window'] and state()['window']['pageGeometry'] and not state()['windowBusy'])
         time.sleep(.3)
-        assert page()['output']=='','Test expects the default layout editor'
+        selected_output=page()['output']
+        assert selected_output in {monitor['name'] for monitor in monitors},'Editor must default to a connected display'
         geometry=window();order=[row['id'] for row in page()['rows']]
         candidates=[row for row in page()['rows'] if 180<row['y']<geometry['size'][1]-60]
         assert len(candidates)>=2,'At least two handles must be visible in the real Settings viewport'
@@ -70,18 +71,18 @@ try:
             time.sleep(.2)
         result.check_returncode()
         wait(lambda:[row['id'] for row in page()['rows']]==expected)
-        wait(lambda:state()['settingsPersistence']=='ready' and overrides().get('',{}).get('order')==expected)
-        assert {k:v for k,v in overrides().items() if k}=={k:v for k,v in prior.items() if k}
+        wait(lambda:state()['settingsPersistence']=='ready' and overrides().get(selected_output,{}).get('order')==expected)
+        assert {k:v for k,v in overrides().items() if k!=selected_output}=={k:v for k,v in prior.items() if k!=selected_output}
         after=window();assert after['at']==geometry['at'] and after['size']==geometry['size']
         print('PASS native top-bar module drag: real handle drop, atomic disk readback, other-output overrides preserved and unchanged Settings geometry',flush=True)
 finally:
     if changed:
         document=json.loads(config.read_text());current=json.loads(document['bar'].get('layoutOutputsJson','{}'))
-        if '' in prior:current['']=prior['']
-        else:current.pop('',None)
+        if selected_output in prior:current[selected_output]=prior[selected_output]
+        else:current.pop(selected_output,None)
         document['bar']['layoutOutputsJson']=json.dumps(current,separators=(',',':'))
         atomic(config,document)
-        wait(lambda:state()['settingsPersistence']=='ready' and overrides().get('')==prior.get('') and [row['id'] for row in page()['rows']]==order)
+        wait(lambda:state()['settingsPersistence']=='ready' and overrides().get(selected_output)==prior.get(selected_output) and [row['id'] for row in page()['rows']]==order)
     call('launcher','close');call('settings',original['category']);wait(lambda:not state()['windowBusy'])
     if not original['settingsOpen']:call('window','close');wait(lambda:not state()['settingsOpen'])
     if active and any(w['address']==active for w in json.loads(ipc('j/clients'))):dispatch('hl.dsp.focus({window='+json.dumps('address:'+active)+'})')

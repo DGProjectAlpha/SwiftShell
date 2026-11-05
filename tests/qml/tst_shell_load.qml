@@ -12,6 +12,21 @@ TestCase {
 
     // Every shell QML document. The static check requires this list to match the tree.
     readonly property var shellFiles: [
+        "shell/settings/WeatherPage.qml",
+        "shell/services/WeatherService.qml",
+        "shell/services/BarPeekController.qml",
+        "shell/popovers/WeatherPanel.qml",
+        "shell/components/WeatherHours.qml",
+        "shell/components/WeatherGlyph.qml",
+        "shell/components/PrecipitationChart.qml",
+        "shell/bar/WeatherModule.qml",
+        "shell/components/MediaTransportButton.qml",
+        "shell/services/AudioService.qml",
+        "shell/components/TrayMenuWindow.qml",
+        "shell/components/TrayMenuContent.qml",
+        "shell/components/TrayMenu.qml",
+        "shell/services/MediaService.qml",
+        "shell/components/MediaSeekBar.qml",
         "shell/settings/BarModuleOrderList.qml",
         "shell/bar/PerformanceModule.qml",
         "shell/components/PerformanceGlyph.qml",
@@ -74,6 +89,8 @@ TestCase {
         "shell/components/KeyedModel.qml",
         "shell/components/BackdropEffect.qml",
         "shell/components/CompactSlider.qml",
+        "shell/components/SettingsSection.qml",
+        "shell/settings/SettingsPreview.qml",
         "shell/components/SectionHeader.qml",
         "shell/components/ServiceStatus.qml",
         "shell/components/SettingsRow.qml",
@@ -130,6 +147,16 @@ TestCase {
     // These compile with the Qt Quick stubs. shell.qml, BarHost, and BarWindow also
     // reference WlrLayershell, which is a C++ attached property and is not stubbed.
     readonly property var readyFiles: [
+        "shell/settings/WeatherPage.qml",
+        "shell/popovers/WeatherPanel.qml",
+        "shell/components/PrecipitationChart.qml",
+        "shell/components/WeatherHours.qml",
+        "shell/components/WeatherGlyph.qml",
+        "shell/bar/WeatherModule.qml",
+        "shell/components/MediaTransportButton.qml",
+        "shell/components/TrayMenuContent.qml",
+        "shell/components/TrayMenu.qml",
+        "shell/components/MediaSeekBar.qml",
         "shell/settings/BarModuleOrderList.qml",
         "shell/bar/PerformanceModule.qml",
         "shell/components/PerformanceGlyph.qml",
@@ -164,6 +191,8 @@ TestCase {
         "shell/components/BarLabel.qml",
         "shell/components/FlatButton.qml",
         "shell/components/CompactSlider.qml",
+        "shell/components/SettingsSection.qml",
+        "shell/settings/SettingsPreview.qml",
         "shell/components/SectionHeader.qml",
         "shell/components/ServiceStatus.qml",
         "shell/components/SettingsRow.qml",
@@ -224,6 +253,7 @@ TestCase {
                 || path === "shell/popovers/PopoverHost.qml"
                 || path === "shell/overview/OverviewWindow.qml"
                 || path === "shell/screenshots/ScreenshotWindow.qml"
+                || path === "shell/components/TrayMenuWindow.qml"
                 || path === "shell/launcher/LauncherWindow.qml"
                 || path === "shell/wallpaper/WallpaperHost.qml"
                 || path === "shell/wallpaper/WallpaperSurface.qml")
@@ -240,6 +270,7 @@ TestCase {
             || message.indexOf("BarWindow.qml:") !== -1
             || message.indexOf("OverviewWindow.qml:17") !== -1
             || message.indexOf("ScreenshotWindow.qml:18") !== -1
+            || message.indexOf("TrayMenuWindow.qml:") !== -1
             || message.indexOf("LauncherWindow.qml:19") !== -1
             || message.indexOf("NotificationHost.qml:24") !== -1
             || message.indexOf("WallpaperSurface.qml:25") !== -1

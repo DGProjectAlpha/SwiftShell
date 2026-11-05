@@ -247,3 +247,30 @@ not your system volume. DND, quiet hours, silent hints and rapid replacement upd
 do not cause repeated sounds. Missing multimedia support or an audio output has a
 clear unavailable state. Preview banner shows an actual temporary banner when
 SwiftShell owns notifications, without adding history or sounding an alert.
+
+### Weather
+
+Open **Settings → Weather**, enable weather and search for a city, postal code or
+address. Choose a result to show current conditions, hourly weather, seven daily
+forecasts and air quality. Expand a day for its hourly outlook. Choose Celsius or
+Fahrenheit and the update interval in Settings. **Top bar → Widgets → Weather**
+controls its position and visibility independently on each display.
+
+Weather starts off. Search sends the entered place to the named map provider;
+**Use approximate location** performs an explicit IP-based lookup. Nothing looks
+up your location automatically. Cached forecasts stay available offline and show
+their age. Weather is an estimate rather than an emergency-alert service.
+
+### Settings sections and appearance
+
+Click a section heading to collapse or expand it. Settings remembers that choice;
+a search temporarily opens matching sections. Dragging a slider highlights its
+thumb and track and stays within the control. One drag is one Appearance Undo
+step. **Appearance → Colors → Accent color** sets the shared control accent.
+**Application windows → Keep windows opaque** prevents inactive videos and apps
+from fading into the wallpaper when the desktop appearance integration is enabled.
+
+Settings opens on the display where its button was clicked. Reopening keeps its
+saved size and centers it on that display. Resize at the visible window edge or
+corner. **Top bar → Peek in fullscreen** optionally reveals the bar when the
+pointer pauses at its display edge; it starts off.

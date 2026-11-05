@@ -1097,3 +1097,70 @@ loading/type/binding errors were absent after the corrected build activation; kn
 Qt text-input/legacy request-file diagnostics remain. Revert the two bar-polish
 commits for recovery. Physical long-distance drag scrolling and touch input remain
 owner acceptance checks; drag scrolling is covered by QML input tests.
+
+## Real area selection and display-scoped visibility correction — 2026-11-02
+
+The actual slurp selector reproduced the user-reported invisible/stuck capture:
+its process inherited an open input pipe and waited for input before mapping any
+selection layer. Bounded read-only child tools now receive DEVNULL stdin. A real
+subprocess regression keeps its parent pipe open to catch this. Screenshot tools
+also cancel unfinished work when reopened, wait for cancellation before accepting
+a new capture, treat Escape as normal cancellation, and explain the area gesture.
+
+`tests/live/screenshot-review.py --live --interactive` now uses the installed slurp
+instead of a geometry stub. Both monitors passed real selector mapping, actual
+64×64 area drags over an opaque owned checkerboard, image preview, private PNG
+clipboard decoding, native Save As handler export, Escape cancellation and close
+cleanup with no remaining selector or busy state. No unrelated screen pixels or
+actual clipboard data were used. This supersedes the earlier unperformed real
+area-selection limitation; physical user selection and paste remain acceptance
+checks. The generated screenshots remain owned fixture images.
+
+Show/Hide had been editing inherited defaults while both connectors had explicit
+visibility overrides. Settings now chooses the focused connector once, preserves
+that choice when focus moves, and clearly labels the default-for-inheriting-displays
+option. `bar-visibility.py --live` passed actual display-dropdown/Show-Hide and
+right-click-checkbox interactions in both directions on both monitors, disk
+readback and preservation/restoration of other-display overrides. The adapted
+`bar-module-drag.py --live` also passed selected-connector ordering/persistence
+and scoped restoration. Source backups are under `/tmp/swiftshell-screenshot-selector-backup`
+and `/tmp/swiftshell-bar-visibility-*.bak`; committed source is the recovery path.
+
+## Settings interaction, persistence and weather integration — 2026-11-05
+
+The Settings rebuild uses shared collapsible sections, searchable controls, a live
+appearance sample, consistent Undo/Reset and visible-frame resize bands. Native
+`tests/live/settings-ux.py --live` passed on HDMI-A-1 and DP-1: requested-output
+first map, centering, resizing at the painted corner, collapse/search restoration,
+slider drag without page scroll, one Undo step per gesture and saved size on
+reopen. Captures contain only the owned QML surface. Bluetooth appears near the
+top of Network & Devices. Shared controls use the optional appearance accent.
+
+`tests/live/settings-cold-start.py --live` passed a write followed by two fresh
+Quickshell processes with temporary preferences: accent, opaque-window preference,
+fullscreen peek, collapsed sections, weather units/query and per-output hidden
+widgets survived. This is process-restart evidence, **not an actual machine reboot**.
+`scripts/test-settings-save-native.sh` passed duplicate/rapid writes and backed-up
+v2 migration; `tests/live/settings-external.py --live` passed external readback and
+malformed/future-file protection. Atomic writes now merge locally changed leaves
+against the locked latest disk document. Canonical comparisons prevent an endless
+Saving state caused solely by property order. Unreadable settings stay protected.
+
+Weather is a sidebar category, local Settings search result and selectable bar
+widget with an output-anchored frosted forecast. It starts disabled. Location
+search and approximate-IP lookup require explicit user actions; installation does
+not request location. Public API evidence uses Berlin and a temporary cache;
+user-location/IP lookup was not performed. See decision 0046 for transport,
+caching, units, forecast and air-quality test evidence.
+
+`tests/live/bar-stability.py --live` passed 15 appearance/workspace changes with
+stable module identities and a single preferences load; the only extra module
+creation was the deliberate Battery hide/show. This does not prove every reported
+intermittent frame flicker is gone. Real game fullscreen flicker was not reproduced
+by owned dual-output fixtures, so no VRR/direct-scanout or display modes were changed.
+
+Recovery: revert the corresponding feature commits and restart only this checkout
+with `scripts/stop.sh` followed by `scripts/launch.sh`. Temporary source backups
+include `/tmp/swiftshell-nov5-resume-backup.tgz`. Disabling the optional opacity
+integration restores only its owned runtime keys; no user Lua, startup or Noctalia
+files are changed by the Settings/weather slices.
