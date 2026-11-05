@@ -835,7 +835,7 @@ Singleton {
     }
 
     // Render live previews immediately; coalesce disk work while dragging controls.
-    Timer { id:saveDelay;interval:120;repeat:false;onTriggered:root.writeLatest() }
+    Timer { id:saveDelay;objectName:"settingsSaveDelay";interval:120;repeat:false;onTriggered:root.writeLatest() }
 
     Timer {
         id:readDelay
@@ -870,6 +870,9 @@ Singleton {
                     return;
                 }
             }
+            // An asynchronous reload may finish after a drag or write starts.
+            // Its result must not replace the live draft or clear writer state.
+            if(root.writing || saveDelay.running) {readDelay.restart();return;}
             root.externalReloads++;
             root.acceptWrites = false;
             root.protectFile = false;
@@ -907,6 +910,7 @@ Singleton {
             root.acceptWrites = true;
         }
         onLoadFailed: function (error) {
+            if(root.writing || saveDelay.running) {readDelay.restart();return;}
             if(error!==FileViewError.FileNotFound || root.persistedDocument!=="") {
                 root.protectFile=true;root.acceptWrites=false;root.persistenceState="protected"
                 root.persistenceMessage="Saved settings could not be read. Existing preferences were preserved; saving is paused until the file is readable."
