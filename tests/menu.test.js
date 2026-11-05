@@ -1,0 +1,15 @@
+const assert=require('node:assert/strict');
+const menu=require('../shell/logic/menu.js');
+assert.equal(menu.caption('Open & Play\tCtrl+P'),'Open & Play');
+assert.equal(menu.shortcut('&Open\tCtrl+O'),'Ctrl+O');
+assert.equal(menu.mnemonic('Save && E&xit'),'x');
+const rows=[{text:'Unavailable',enabled:false},{isSeparator:true},{text:'&Open'},{text:'Q&uit'}];
+assert.equal(menu.nextIndex(rows,-1,1),2);
+assert.equal(menu.nextIndex(rows,2,1),3);
+assert.equal(menu.nextIndex(rows,2,-1),3);
+assert.equal(menu.nextIndex([{enabled:false},{isSeparator:true}],0,1),-1);
+assert.equal(menu.matchingIndex(rows,2,'q',false),3);
+assert.equal(menu.matchingIndex(rows,2,'u',true),3);
+assert.equal(menu.matchingIndex(rows,2,'unavailable',false),-1);
+assert.deepEqual(menu.values({values:{0:rows[2],1:rows[3],length:2}}),[rows[2],rows[3]]);
+console.log('Tray menu navigation, native captions, disabled/separator guards and Qt6.4 indexed models passed');
