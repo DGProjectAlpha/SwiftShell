@@ -1185,3 +1185,42 @@ weather off/on/off/on with one retained instance; five QML persistence cases cov
 late reads/errors preserving drafts and the in-flight writer. A source-handler
 regression covers deferred Settings load failure and stale callback guards. These
 prevent a missing component from recursively changing its own Loader binding.
+
+## Final activation and integration evidence — 2026-11-05
+
+The checkout was restarted by selecting its exact SwiftShell instance ID; unrelated
+Quickshell/Noctalia processes were not targeted. `scripts/check.sh` exited 0 with
+127 production QML documents, 29 QML suites and 218 passing QML cases, plus the
+logic/Python/installer suites. No QML warning lines occurred. The subsequent pure
+scroll-target change passed its logic regressions and the real pointer tests below.
+CI now explicitly installs Lua 5.4 for source validation tests; no package was
+installed on the owner's workstation.
+
+After activation, `settings-pages.py --live` loaded all 13 sidebar categories,
+including Weather. `bar-visibility.py --live` passed both-output native display
+selection, Show/Hide, right-click synchronization and disk readback; it initially
+caught oversized-section search navigation hiding the selector. The corrected
+scroll target reveals the beginning of tall sections. `bar-module-drag.py --live`
+passed real drag/drop, atomic order readback, other-output preservation and stable
+Settings geometry. Both tests restored preceding preferences and focus. Current
+runtime logs contain no QML type/loading/reference/binding-loop errors.
+
+A disabled weather widget initially left a trailing 12 px Grid gap. The ten-case
+Weather QML suite now covers both module orders with a neighboring control; Grid
+columns count participating widgets. Native `bar-stability.py --live` still passed
+15 appearance/workspace updates without recreating unaffected modules. Actual bar
+layout returned to its preceding width on both outputs.
+
+Final readback: DP-1 2560×1440 at 164.834 Hz, scale 1; HDMI-A-1 1920×1080 at 60 Hz,
+scale 1.25; original positions and transforms retained. The checksum of binds.lua,
+monitors.lua and decorations.lua is unchanged. Only the authorized TERMINAL literal
+changed in variables.lua. All 94 effective bindings remain present and automatic
+config reload is enabled as before. Active/inactive compositor opacity reads 1/1
+for the already opted-in desktop appearance integration. The new weather/location
+and fullscreen-peek preferences remain opt-in. Source watching is restored.
+
+Owner acceptance: play the fullscreen game while crossing displays; verify
+Super+Enter opens Konsole; compare DP-1 text clarity; try real media scrubbing and
+preferred audio devices; inspect dark/light tray popups; configure a weather city;
+and check settings after the next normal login/reboot. The actual game flicker was
+not reproduced by owned fixtures and no VRR/scanout workaround was applied.
