@@ -16,6 +16,16 @@ Singleton {
     readonly property bool clockSeconds: clockSettings.showSeconds
     readonly property bool clockDate: clockSettings.showDate
     readonly property string clockDateFormat: clockSettings.dateFormat
+    readonly property bool fullscreenBarPeek:barSettings.fullscreenPeek
+    readonly property string accentColor:appearanceSettings.accentColor
+    readonly property bool opaqueWindows:appearanceSettings.opaqueWindows
+    readonly property string settingsSectionsJson:windowSettings.sectionsJson
+    readonly property bool weatherEnabled:weatherSettings.enabled
+    readonly property string weatherLocationMode:weatherSettings.locationMode
+    readonly property string weatherQuery:weatherSettings.query
+    readonly property string weatherLocationJson:weatherSettings.locationJson
+    readonly property string weatherUnits:weatherSettings.units
+    readonly property int weatherRefreshMinutes:weatherSettings.refreshMinutes
     readonly property bool searchLabel: barSettings.searchLabel
     readonly property string moduleSidesJson: barSettings.moduleSidesJson
     readonly property string layoutOutputsJson: barSettings.layoutOutputsJson
@@ -107,10 +117,12 @@ Singleton {
     property int externalReloads: 0
     property int ignoredOwnReloads: 0
 
+    function documentText() {return JSON.stringify(Settings.validateSettings(root.snapshot()).settings)}
+
     function writeLatest() {
         if (!root.acceptWrites || root.protectFile || root.pendingPlan)
             return
-        var document = JSON.stringify(root.snapshot())
+        var document = root.documentText()
         if (root.writing) {
             root.writePending = document !== root.inflightDocument
             return
@@ -138,6 +150,13 @@ Singleton {
         var wallpaper = document.wallpaper || {}
         var window = document.settingsWindow || {}
         var notes = document.notifications || {}
+        const weather=document.weather || {}
+        weatherSettings.enabled=weather.enabled===true
+        weatherSettings.locationMode=weather.locationMode || "manual"
+        weatherSettings.query=weather.query || ""
+        weatherSettings.locationJson=weather.locationJson || "{}"
+        weatherSettings.units=weather.units || "metric"
+        weatherSettings.refreshMinutes=weather.refreshMinutes || 15
         adapter.version = document.version
         clockSettings.use24Hour = clock.use24Hour === true
         clockSettings.showSeconds = clock.showSeconds === true
@@ -156,6 +175,7 @@ Singleton {
         barSettings.moduleOrder = bar.moduleOrder || []
         barSettings.hiddenModules = bar.hiddenModules || []
         barSettings.surfaceMode = bar.surfaceMode || "transparent"
+        barSettings.fullscreenPeek=bar.fullscreenPeek===true
         barSettings.searchLabel = bar.searchLabel === true
         barSettings.moduleSidesJson = bar.moduleSidesJson || "{}"
         barSettings.hiddenOutputsJson = bar.hiddenOutputsJson || "{}"
@@ -163,6 +183,8 @@ Singleton {
         barSettings.surfaceColor = bar.surfaceColor || "#161616"
         barSettings.surfaceOpacity = bar.surfaceOpacity === undefined ? .75 : bar.surfaceOpacity
         barSettings.surfaceOutputsJson = bar.surfaceOutputsJson || "{}"
+        appearanceSettings.accentColor=appearance.accentColor || ""
+        appearanceSettings.opaqueWindows=appearance.opaqueWindows!==false
         appearanceSettings.mode = appearance.mode || "dark"
         appearanceSettings.tint = appearance.tint || "neutral"
         appearanceSettings.panelOpacity = appearance.panelOpacity
@@ -200,6 +222,7 @@ Singleton {
         wallpaperSettings.slidesJson = wallpaper.slidesJson || "[]"
         windowSettings.width = window.width
         windowSettings.height = window.height
+        windowSettings.sectionsJson=window.sectionsJson || "{}"
         windowSettings.category = window.category || "appearance"
         adapter.shortcutsJson = document.shortcutsJson || "{}"
         notificationSettings.ownership = notes.ownership === "on" ? "on" : "off"
@@ -273,6 +296,7 @@ Singleton {
                 surfaceColor: barSettings.surfaceColor,
                 surfaceOpacity: barSettings.surfaceOpacity,
                 surfaceOutputsJson: barSettings.surfaceOutputsJson,
+                fullscreenPeek:barSettings.fullscreenPeek,
                 searchLabel: barSettings.searchLabel,
                 moduleSidesJson: barSettings.moduleSidesJson,
                 hiddenOutputsJson: barSettings.hiddenOutputsJson,
@@ -280,6 +304,7 @@ Singleton {
                 hiddenModules: barSettings.hiddenModules
             },
             appearance: {
+                accentColor:appearanceSettings.accentColor,opaqueWindows:appearanceSettings.opaqueWindows,
                 mode: appearanceSettings.mode,
                 tint: appearanceSettings.tint,
                 panelOpacity: appearanceSettings.panelOpacity,
@@ -323,8 +348,10 @@ Singleton {
             settingsWindow: {
                 width: windowSettings.width,
                 height: windowSettings.height,
+                sectionsJson:windowSettings.sectionsJson,
                 category: windowSettings.category
             },
+            weather:{enabled:weatherSettings.enabled,locationMode:weatherSettings.locationMode,query:weatherSettings.query,locationJson:weatherSettings.locationJson,units:weatherSettings.units,refreshMinutes:weatherSettings.refreshMinutes},
             shortcutsJson: adapter.shortcutsJson,
             notifications: {
                 ownership: notificationSettings.ownership,
@@ -404,7 +431,9 @@ Singleton {
     }
 
     function setAppearance(next) {
-        const appearance = Settings.validateSettings({ appearance: next }).settings.appearance
+        const appearance = Settings.validateSettings({ appearance: Object.assign({},root.snapshot().appearance,next) }).settings.appearance
+        appearanceSettings.accentColor=appearance.accentColor
+        appearanceSettings.opaqueWindows=appearance.opaqueWindows
         appearanceSettings.mode = appearance.mode
         appearanceSettings.tint = appearance.tint
         appearanceSettings.panelOpacity = appearance.panelOpacity
@@ -427,6 +456,22 @@ Singleton {
         appearanceSettings.manualMuted = appearance.manualMuted
         appearanceSettings.manualPanel = appearance.manualPanel
         appearanceSettings.manualGradient = appearance.manualGradient
+    }
+
+    function setWeatherPreferences(patch) {
+        const result=Settings.validateSettings({weather:Object.assign({},root.snapshot().weather,patch)})
+        if(!result.ok)return false
+        const next=result.settings.weather
+        weatherSettings.enabled=next.enabled;weatherSettings.locationMode=next.locationMode;weatherSettings.query=next.query;weatherSettings.locationJson=next.locationJson;weatherSettings.units=next.units;weatherSettings.refreshMinutes=next.refreshMinutes;return true
+    }
+    function setFullscreenBarPeek(value) {barSettings.fullscreenPeek=value===true}
+    function setSettingsSection(id,expanded) {
+        if(typeof id!=="string" || !/^[a-zA-Z][a-zA-Z0-9_.-]{0,79}$/.test(id) || ["constructor","prototype","__proto__"].indexOf(id)>=0 || typeof expanded!=="boolean")return false
+        const states=JSON.parse(windowSettings.sectionsJson || "{}")
+        states[id]=expanded
+        const result=Settings.validateSettings({settingsWindow:{sectionsJson:JSON.stringify(states)}})
+        if(!result.ok)return false
+        windowSettings.sectionsJson=result.settings.settingsWindow.sectionsJson;return true
     }
 
     function setAppearanceMode(mode) {
@@ -459,6 +504,7 @@ Singleton {
             surfaceColor: barSettings.surfaceColor,
             surfaceOpacity: barSettings.surfaceOpacity,
             surfaceOutputsJson: barSettings.surfaceOutputsJson,
+            fullscreenPeek:barSettings.fullscreenPeek,
             searchLabel: barSettings.searchLabel,
             moduleSidesJson: barSettings.moduleSidesJson,
             hiddenOutputsJson: barSettings.hiddenOutputsJson,
@@ -801,6 +847,7 @@ Singleton {
     }
     FileView {
         id:settingsReader
+        objectName:"settingsPreferencesReader"
         path:root.settingsPath
         preload:true
         watchChanges:true
@@ -853,14 +900,20 @@ Singleton {
                 console.warn("SwiftShell: settings need attention:", decision.errors.join(", "));
             else
                 console.info("SwiftShell: settings loaded");
-            root.persistedDocument = JSON.stringify(root.snapshot());
+            root.persistedDocument = root.documentText();
             root.inflightDocument = "";
             root.writePending = false;
             root.persistenceState = "ready";
             root.acceptWrites = true;
         }
         onLoadFailed: function (error) {
-            console.warn("SwiftShell: settings file is missing or unreadable; using built-in defaults", error);
+            if(error!==FileViewError.FileNotFound || root.persistedDocument!=="") {
+                root.protectFile=true;root.acceptWrites=false;root.persistenceState="protected"
+                root.persistenceMessage="Saved settings could not be read. Existing preferences were preserved; saving is paused until the file is readable."
+                console.warn("SwiftShell: unreadable settings were left unchanged")
+                return
+            }
+            root.persistedDocument=root.documentText()
             root.persistenceState = "ready";
             root.persistenceMessage = "Using built-in defaults. The settings file will be created when a value changes.";
             root.acceptWrites = true;
@@ -876,7 +929,11 @@ Singleton {
         id:settingsWriter
         command:["python3",Quickshell.shellDir+"/helpers/settingswrite.py"]
         stdinEnabled:true
-        onStarted:write(root.inflightDocument+"\n")
+        onStarted: {
+            let base=null
+            try {base=JSON.parse(root.persistedDocument)}catch(error){}
+            write(JSON.stringify({document:JSON.parse(root.inflightDocument),base:base})+"\n")
+        }
         stdout:StdioCollector {id:writeReply;waitForEnd:true}
         onExited:function(code,status) {
             let result={ok:false,message:"Settings could not be saved."}
@@ -889,9 +946,17 @@ Singleton {
                 root.persistenceMessage=result.message || "Settings could not be saved. Your changes remain active for this session."
                 return
             }
-            root.persistedDocument=root.inflightDocument;root.inflightDocument=""
+            const saved=Settings.validateSettings(result.document || JSON.parse(root.inflightDocument))
+            if(!saved.ok) {
+                root.inflightDocument="";root.protectFile=true;root.persistenceState="protected"
+                root.persistenceMessage="Settings changed outside SwiftShell and need attention before further saves.";return
+            }
+            const latest=JSON.parse(root.documentText())
+            const rebased=Settings.mergeSettingsChanges(JSON.parse(root.inflightDocument),latest,saved.settings)
+            root.suppressAdapterWrite=true;root.applyDocument(rebased);root.suppressAdapterWrite=false
+            root.persistedDocument=JSON.stringify(saved.settings);root.inflightDocument=""
             root.persistenceMessage="";root.acceptWrites=true
-            const dirty=JSON.stringify(root.snapshot())!==root.persistedDocument
+            const dirty=root.documentText()!==root.persistedDocument
             root.writePending=dirty
             root.persistenceState=dirty ? "saving" : "ready"
             if(dirty)saveDelay.restart();else saveDelay.stop()
@@ -925,6 +990,7 @@ Singleton {
             property int height: 28
             property list<string> moduleOrder: ["workspaces", "title", "search", "clock", "control", "media", "tray", "battery", "network", "power", "notifications", "screenshot", "clipboard", "performance"]
             property list<string> hiddenModules: []
+            property bool fullscreenPeek:false
             property bool searchLabel: false
             property string moduleSidesJson: "{}"
             property string hiddenOutputsJson: "{}"
@@ -937,6 +1003,8 @@ Singleton {
 
         property JsonObject appearance: JsonObject {
             id: appearanceSettings
+            property string accentColor:""
+            property bool opaqueWindows:true
             property string mode: "dark"
             property string tint: "neutral"
             property real panelOpacity: 0.92
@@ -959,6 +1027,16 @@ Singleton {
             property string manualMuted: ""
             property string manualPanel: ""
             property string manualGradient: ""
+        }
+
+        property JsonObject weather: JsonObject {
+            id:weatherSettings
+            property bool enabled:false
+            property string locationMode:"manual"
+            property string query:""
+            property string locationJson:"{}"
+            property string units:"metric"
+            property int refreshMinutes:15
         }
 
         property JsonObject launcher: JsonObject {
@@ -984,6 +1062,7 @@ Singleton {
 
         property JsonObject settingsWindow: JsonObject {
             id: windowSettings
+            property string sectionsJson:"{}"
             property int width: 1000
             property int height: 700
             property string category: "appearance"

@@ -294,7 +294,7 @@ test("version 1 settings migrate and unknown keys stay in the extension bag", fu
     const sized = settings.validateSettings({
         settingsWindow: { width: 10, height: 5000, category: "widgets" },
     }).settings.settingsWindow;
-    assert.deepEqual(sized, { width: 640, height: 1200, category: "appearance" });
+    assert.deepEqual(sized, { width: 640, height: 1200, category: "appearance", sectionsJson:"{}" });
     assert.equal(settings.opacityFromUnit(0), 0.72);
     assert.equal(settings.opacityFromUnit(1), 0.96);
     assert.equal(settings.unitFromOpacity(0.92), (0.92 - 0.72) / 0.24);
