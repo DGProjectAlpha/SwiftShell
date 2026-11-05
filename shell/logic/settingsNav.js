@@ -1,4 +1,5 @@
 var CONTROLS = [
+    {id:"weatherEnabled",category:"weather",section:"Weather",label:"Enable weather",keywords:["weather","enable","disable","widget"]},
     {id:"weatherLocation",category:"weather",section:"Location",label:"Weather location",keywords:["weather","forecast","city","address","postal","zip","automatic"]},
     {id:"weatherUnits",category:"weather",section:"Forecast",label:"Weather units",keywords:["weather","temperature","celsius","fahrenheit"]},
     {id:"weatherRefresh",category:"weather",section:"Forecast",label:"Weather updates",keywords:["weather","refresh","interval","forecast"]},

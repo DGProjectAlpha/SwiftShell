@@ -1295,3 +1295,24 @@ checks. Prior workspaces, active window and cursor were restored. Steam was left
 open on workspace 4. Readback confirmed unchanged observed compositor options and
 monitor modes, positions, transforms and scales. The issue remains unconfirmed;
 these tests do not establish a resolution of the owner's reported flicker.
+
+## Weather Settings keyboard/search polish — 2026-11-05
+
+Weather Settings now uses the shared Settings search index and exact control IDs.
+Search for Fahrenheit, refresh or postal location reveals and focuses the relevant
+control instead of always jumping to the location input. Enable weather is indexed,
+and keyboard selection stays within Weather's matching controls. The location
+field is reachable with Tab and uses the shared accent focus outline. Enter and
+the Search button now use identical minimum-length/busy validation, preventing
+invalid or duplicate helper requests from keyboard submission.
+
+The Weather QML suite passes 13 cases, including exact search focus, bounded
+keyboard navigation and Enter/button validation. `scripts/check.sh` exits 0 with
+29 QML suites / 221 passing QML cases and no QML warnings. The isolated native
+`tests/live/settings-weather-navigation.py --live` passed on HDMI-A-1 and DP-1:
+Fahrenheit, refresh, postal and enable-weather search all focused their exact
+controls. Private preferences retained weather disabled and no location/network
+request was made. No user compositor configuration or display settings changed.
+Source backup: `/tmp/swiftshell-weather-navigation-backup`; revert this feature
+commit for recovery. Real location-provider behavior was not retested because
+this slice changes navigation and submission validation only.

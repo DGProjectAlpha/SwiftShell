@@ -119,6 +119,53 @@ TestCase {
         compare(findChild(page,"weatherUnits").selectedValue,"metric")
         page.destroy()
     }
+    function test_settings_search_focuses_the_matched_weather_control() {
+        const component=Qt.createComponent("../../shell/settings/WeatherPage.qml")
+        compare(component.status,Component.Ready,component.errorString())
+        const page=component.createObject(test,{width:560,query:"fahrenheit"})
+        verify(page!==null)
+        tryCompare(page,"highlightId","weatherUnits")
+        const units=findChild(page,"weatherUnits"),interval=findChild(page,"weatherInterval")
+        verify(units.visible);verify(!interval.visible)
+        page.focusHighlight();tryCompare(units,"activeFocus",true)
+        page.query="refresh"
+        tryCompare(page,"highlightId","weatherRefresh")
+        verify(interval.visible);verify(!units.visible)
+        page.focusHighlight();tryCompare(interval,"activeFocus",true)
+        page.query="postal"
+        tryCompare(page,"highlightId","weatherLocation")
+        page.focusHighlight();tryCompare(findChild(page,"weatherLocationSearch"),"activeFocus",true)
+        page.destroy()
+    }
+    function test_weather_keyboard_navigation_stays_in_its_category() {
+        const component=Qt.createComponent("../../shell/settings/WeatherPage.qml")
+        const page=component.createObject(test,{width:560})
+        compare(page.highlightId,"weatherEnabled")
+        for(const id of ["weatherLocation","weatherUnits","weatherRefresh","weatherRefresh"]) {
+            page.moveHighlight(1);compare(page.highlightId,id)
+        }
+        page.moveHighlight(-1);compare(page.highlightId,"weatherUnits")
+        page.destroy()
+    }
+    function test_location_enter_respects_the_search_button_validation() {
+        const component=Qt.createComponent("../../shell/settings/WeatherPage.qml")
+        const page=component.createObject(test,{width:560})
+        const input=findChild(page,"weatherLocationSearch"),button=findChild(page,"weatherSearchButton")
+        Services.WeatherService.action=""
+        input.text="x";input.forceActiveFocus()
+        compare(button.enabled,false)
+        keyClick(Qt.Key_Return)
+        compare(Services.WeatherService.action,"")
+        compare(page.submitLocation(),false)
+        input.text="Owned city"
+        verify(button.enabled)
+        verify(page.submitLocation())
+        compare(Services.WeatherService.action,"search")
+        const bridge=findChild(Services.WeatherService,"weatherBridge")
+        verify(bridge.running)
+        compare(page.submitLocation(),false)
+        bridge.running=false;page.destroy()
+    }
     function test_disabled_weather_has_no_automatic_location_request() {
         Services.SettingsStore.setWeatherPreferences({enabled:false,locationJson:"{}",locationMode:"manual"})
         wait(1)
