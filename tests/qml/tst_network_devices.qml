@@ -108,8 +108,13 @@ TestCase {
     function test_radio_off_confirmation_is_visible_and_request_runs_after_snapshot() {
         Services.NetworkService.wifiEnabled=true;Services.NetworkService.wifiHardware=true
         Services.NetworkService.devices=[{id:"wlan-test",kind:"wifi",state:"disconnected",connected:false,available:true,connection:"",addresses:[]}]
-        page.y=-250
         const toggle=findChild(page,"networkWifiToggle")
+        waitForRendering(page)
+        // Simulate a scrolled page while keeping the actual toggle visible.
+        // Its position differs across Qt versions, font metrics and sections.
+        page.y+=100-toggle.mapToItem(test,0,0).y
+        waitForRendering(page)
+        verify(toggle.mapToItem(test,0,0).y>=0)
         mouseClick(toggle,20,toggle.height/2)
         tryCompare(page,"confirmationOpen",true)
         const dialog=findChild(page,"networkDisconnectDialog")
