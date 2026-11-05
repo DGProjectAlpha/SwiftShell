@@ -53,6 +53,7 @@ MouseArea {
                     spacing:0
                     Text {
                         objectName:"performanceLoad-"+modelData
+                        renderType:Theme.barTextRendering(root)
                         width:parent.width;height:root.valueSize+1
                         text:SystemPerformance.percent(usage)
                         textFormat:Text.PlainText
@@ -63,6 +64,7 @@ MouseArea {
                     }
                     Text {
                         objectName:"performanceTemperature-"+modelData
+                        renderType:Theme.barTextRendering(root)
                         width:parent.width;height:root.temperatureSize+1
                         visible:thermal
                         text:root.compactTemperature(temperature)

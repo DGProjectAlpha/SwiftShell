@@ -1,6 +1,9 @@
 import QtQuick
 import QtTest
 import "../../shell/services" as Services
+import "../../shell/bar" as BarUI
+import "../../shell/components" as Components
+import "../../shell/logic/bar.js" as Bar
 TestCase {
     id:test
     name:"SystemPerformance"
@@ -8,6 +11,23 @@ TestCase {
     visible:true;width:500;height:700
     property var panel:null
     property var saved:({})
+    Component {
+        id:renderContextComponent
+        Item {
+            id:context
+            width:500;height:100
+            property real devicePixelRatio:1
+            property real contentScale:1
+            property bool vertical:false
+            property real railWidth:168
+            property bool curveAvailable:typeof Text["CurveRendering"]==="number"
+            readonly property int barTextRenderType:Bar.textRenderMode(devicePixelRatio,contentScale,curveAvailable)==="curve" ? Text["CurveRendering"] : Text.QtRendering
+            readonly property Item contentItem:context
+            function componentFor(id){return renderModule}
+            Component {id:renderModule;Item {implicitWidth:37.375;implicitHeight:30;Components.BarLabel {objectName:"renderLabel";text:"12:34"}}}
+            BarUI.ModuleStrip {objectName:"renderStrip";x:10.375;y:6.375;barWindow:context;modules:["search","clock","network"]}
+        }
+    }
     function init() {
         const service=Services.SystemPerformance
         saved={viewers:service.viewers,failed:service.failed,cpu:service.cpu,memory:service.memory,gpus:service.gpus,cpuHistory:service.cpuHistory,memoryHistory:service.memoryHistory,gpuHistory:service.gpuHistory,available:service.available,error:service.error}
@@ -124,5 +144,37 @@ TestCase {
         compare(service.percent(service.cpu.usage),"—")
         compare(service.cpuHistory.length,0)
         service.retry();verify(!service.failed);verify(service.sampling)
+    }
+    function test_low_dpi_rendering_context_has_guarded_fallback() {
+        panel=renderContextComponent.createObject(test)
+        verify(panel!==null)
+        const label=findChild(panel,"renderLabel")
+        verify(label!==null)
+        const expected=typeof Text["CurveRendering"]==="number" ? Text["CurveRendering"] : Text.QtRendering
+        compare(label.renderType,expected)
+        panel.devicePixelRatio=1.25
+        compare(label.renderType,Text.QtRendering)
+        panel.devicePixelRatio=1;panel.contentScale=.9
+        compare(label.renderType,Text.QtRendering)
+        panel.contentScale=1;panel.curveAvailable=false
+        compare(label.renderType,Text.QtRendering)
+        const component=Qt.createComponent("../../shell/components/BarLabel.qml")
+        const standalone=component.createObject(test,{text:"Outside bar"})
+        compare(standalone.renderType,Text.QtRendering)
+        standalone.destroy()
+    }
+    function test_module_origins_snap_only_on_unscaled_one_to_one_output() {
+        panel=renderContextComponent.createObject(test)
+        verify(panel!==null)
+        const strip=findChild(panel,"renderStrip")
+        const aligned=strip.renderingGeometry()
+        compare(aligned.length,3)
+        for(let i=0;i<aligned.length;i++){compare(aligned[i].x,Math.round(aligned[i].x));compare(aligned[i].y,Math.round(aligned[i].y))}
+        panel.devicePixelRatio=1.25
+        const fractional=strip.renderingGeometry()
+        compare(fractional[0].x,10.375);compare(fractional[0].y,6.375)
+        panel.devicePixelRatio=1;panel.contentScale=1.25
+        const custom=strip.renderingGeometry()
+        compare(custom[0].x,10.375);compare(custom[0].y,6.375)
     }
 }

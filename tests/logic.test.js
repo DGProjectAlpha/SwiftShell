@@ -2027,6 +2027,19 @@ test("desktop quick tool panels open, switch, and release focus", function () {
     }
 });
 
+test("low DPI bar rendering keeps fractional and unavailable-curve fallbacks", function () {
+    assert.equal(bar.textRenderMode(1, 1, true), "curve");
+    assert.equal(bar.textRenderMode(1, 1, false), "distance-field");
+    assert.equal(bar.textRenderMode(1.25, 1, true), "distance-field");
+    assert.equal(bar.textRenderMode(1, .9, true), "distance-field");
+    assert.equal(bar.textRenderMode(undefined, 1, true), "distance-field");
+    assert.equal(bar.snapModulePosition(10.375, 1, 1), 10);
+    assert.equal(bar.snapModulePosition(-10.375, 1, 1), -10);
+    assert.equal(bar.snapModulePosition(10.375, 1.25, 1), 10.375);
+    assert.equal(bar.snapModulePosition(10.375, 1, 1.25), 10.375);
+    assert.equal(bar.snapModulePosition(10.375, undefined, 1), 10.375);
+});
+
 if (failed > 0) {
     console.error(failed + " test(s) failed");
     process.exit(1);

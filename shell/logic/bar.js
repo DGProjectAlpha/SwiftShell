@@ -1,5 +1,14 @@
 var BAR_MODULES = ["workspaces", "title", "search", "clock", "control", "media", "tray", "battery", "network", "power", "notifications", "screenshot", "clipboard", "performance"];
 
+function textRenderMode(devicePixelRatio, contentScale, curveAvailable) {
+    return devicePixelRatio === 1 && contentScale === 1 && curveAvailable === true ? "curve" : "distance-field";
+}
+
+function snapModulePosition(position, devicePixelRatio, contentScale) {
+    // Fractional-DPI and user-scaled bars retain their existing rendering/layout.
+    return typeof position === "number" && Number.isFinite(position) && devicePixelRatio === 1 && contentScale === 1 ? Math.round(position) : position;
+}
+
 function clamp01(unit) {
     if (typeof unit !== "number" || !Number.isFinite(unit))
         return 0;
@@ -196,6 +205,8 @@ function layoutForOutput(json, output, order, sides) {
 var swiftshellBar = {
     layoutForOutput: layoutForOutput,
     surfaceForOutput: surfaceForOutput,
+    textRenderMode:textRenderMode,
+    snapModulePosition:snapModulePosition,
     hiddenForOutput:hiddenForOutput,
     moduleSide:moduleSide,
     modulesForSide:modulesForSide,

@@ -17,6 +17,7 @@ Item {
     visible: player !== null
 
     Text {
+        renderType:Theme.barTextRendering(root)
         id: label
         anchors.left: parent.left
         anchors.verticalCenter: parent.verticalCenter
@@ -41,6 +42,7 @@ Item {
         onClicked: MediaService.act("toggle")
 
         Text {
+            renderType:Theme.barTextRendering(root)
             anchors.centerIn: parent
             text: root.controls.playing ? "Pause" : "Play"
             color: root.textMuted

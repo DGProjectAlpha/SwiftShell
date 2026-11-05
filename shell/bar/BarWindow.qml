@@ -22,6 +22,11 @@ PanelWindow {
     readonly property string edge:outputLayout.edge
     readonly property bool vertical:edge === "left" || edge === "right"
     readonly property real contentScale:outputLayout.scale
+    readonly property int barTextRenderType:Bar.textRenderMode(devicePixelRatio,contentScale,typeof Text["CurveRendering"]==="number")==="curve" ? Text["CurveRendering"] : Text.QtRendering
+    function snapModule(position) {return Bar.snapModulePosition(position,devicePixelRatio,contentScale)}
+    function renderingDiagnostics() {
+        return {devicePixelRatio:devicePixelRatio,screenDevicePixelRatio:screen ? screen.devicePixelRatio : 0,contentScale:contentScale,textMode:barTextRenderType===Text.QtRendering ? "distance-field" : "curve",origins:[leftModules.renderingGeometry(),centerModules.renderingGeometry(),rightModules.renderingGeometry()]}
+    }
     readonly property real railWidth:168
     implicitHeight: vertical ? (screen ? screen.height : 1080) : Math.ceil(Theme.barHeight*contentScale)
     implicitWidth: vertical ? Math.ceil(railWidth*contentScale) : (screen ? screen.width : 1920)
@@ -188,6 +193,7 @@ PanelWindow {
 
     Item {
         id:moduleCanvas
+        readonly property int barTextRenderType:window.barTextRenderType
         width:window.width/window.contentScale
         height:window.height/window.contentScale
         scale:window.contentScale
@@ -195,15 +201,15 @@ PanelWindow {
         ModuleStrip {
             id:leftModules
             barWindow:window;modules:window.modulesOn("left")
-            x:window.vertical ? 0 : Theme.marginH
-            y:window.vertical ? Theme.marginH : 0
+            x:window.snapModule(window.vertical ? 0 : Theme.marginH)
+            y:window.snapModule(window.vertical ? Theme.marginH : 0)
             onWidthChanged:if(popovers)popovers.reposition()
         }
         ModuleStrip {
             id:rightModules
             barWindow:window;modules:window.modulesOn("right")
-            x:window.vertical ? 0 : moduleCanvas.width-Theme.marginH-width
-            y:window.vertical ? Math.max(leftModules.y+leftModules.height+Theme.moduleSpacing,moduleCanvas.height-Theme.marginH-height) : 0
+            x:window.snapModule(window.vertical ? 0 : moduleCanvas.width-Theme.marginH-width)
+            y:window.snapModule(window.vertical ? Math.max(leftModules.y+leftModules.height+Theme.moduleSpacing,moduleCanvas.height-Theme.marginH-height) : 0)
             onXChanged:if(popovers)popovers.reposition()
         }
         ModuleStrip {
@@ -212,8 +218,8 @@ PanelWindow {
             readonly property real freeLeft:leftModules.x+leftModules.width+Theme.moduleSpacing
             readonly property real freeRight:rightModules.x-Theme.moduleSpacing
             titleWidth:window.vertical ? window.railWidth-16 : Math.min(480,Math.max(0,freeRight-freeLeft-fixedWidth))
-            x:window.vertical ? 0 : Math.max(freeLeft,Math.min((moduleCanvas.width-width)/2,freeRight-width))
-            y:window.vertical ? Math.max(leftModules.y+leftModules.height+Theme.moduleSpacing,Math.min((moduleCanvas.height-height)/2,rightModules.y-height-Theme.moduleSpacing)) : 0
+            x:window.snapModule(window.vertical ? 0 : Math.max(freeLeft,Math.min((moduleCanvas.width-width)/2,freeRight-width)))
+            y:window.snapModule(window.vertical ? Math.max(leftModules.y+leftModules.height+Theme.moduleSpacing,Math.min((moduleCanvas.height-height)/2,rightModules.y-height-Theme.moduleSpacing)) : 0)
             onXChanged:if(popovers)popovers.reposition()
         }
     }
