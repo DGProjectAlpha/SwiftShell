@@ -74,6 +74,8 @@ TestCase {
     }
     function test_pointer_controls_and_plain_text_title() {
         compare(findChild(section,"mediaTitle").textFormat,Text.PlainText)
+        verify(findChild(section,"mediaPlayPause").height>=44)
+        verify(findChild(section,"mediaPrevious").height>=44)
         mouseClick(findChild(section,"mediaPlayPause"));compare(primary.toggles,1)
         mouseClick(findChild(section,"mediaNext"));compare(primary.skips,1)
         mouseClick(findChild(section,"mediaPrevious"));compare(primary.backs,1)

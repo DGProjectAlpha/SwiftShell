@@ -32,7 +32,7 @@ Column {
                     required property int index
                     width:3;height:5+index*2;radius:1.5;anchors.bottom:parent.bottom;color:Theme.settingsMuted
                     SequentialAnimation on height {
-                        running:root.visible && root.controls.playing && !Theme.reducedMotion
+                        running:root.visible && root.controls.playing && !Theme.reducedMotion && Theme.motionHover>0
                         loops:Animation.Infinite
                         NumberAnimation {to:13;duration:420+index*80;easing.type:Easing.InOutSine}
                         NumberAnimation {to:4;duration:360+index*90;easing.type:Easing.InOutSine}
@@ -106,10 +106,10 @@ Column {
             }
         }
         Row {
-            anchors.horizontalCenter:parent.horizontalCenter;spacing:12
-            FlatButton {objectName:"mediaPrevious";label:"⏮";width:48;Accessible.name:"Previous track";enabled:root.controls.previous;onActivated:MediaService.act("previous")}
-            FlatButton {objectName:"mediaPlayPause";label:root.controls.playing ? "Ⅱ" : "▶";width:66;emphasized:true;Accessible.name:root.controls.playing ? "Pause playback" : "Play";enabled:root.controls.toggle;onActivated:MediaService.act("toggle")}
-            FlatButton {objectName:"mediaNext";label:"⏭";width:48;Accessible.name:"Next track";enabled:root.controls.next;onActivated:MediaService.act("next")}
+            anchors.horizontalCenter:parent.horizontalCenter;spacing:18
+            MediaTransportButton {objectName:"mediaPrevious";kind:"previous";label:"Previous track";enabled:root.controls.previous;onActivated:MediaService.act("previous")}
+            MediaTransportButton {objectName:"mediaPlayPause";kind:root.controls.playing ? "pause" : "play";label:root.controls.playing ? "Pause playback" : "Play";emphasized:true;enabled:root.controls.toggle;onActivated:MediaService.act("toggle")}
+            MediaTransportButton {objectName:"mediaNext";kind:"next";label:"Next track";enabled:root.controls.next;onActivated:MediaService.act("next")}
         }
         Text {visible:MediaService.error!=="";width:parent.width;wrapMode:Text.WordWrap;text:MediaService.error;color:Theme.settingsMuted;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall}
     }

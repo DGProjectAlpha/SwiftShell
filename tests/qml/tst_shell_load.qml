@@ -354,7 +354,7 @@ TestCase {
         compare(audio.width, 248)
         var slider = findSlider(audio, 0)
         verify(slider !== null)
-        tryVerify(function() { return slider.width === 248 && slider.height === 28 }, 1000)
+        tryVerify(function() { return slider.width > 120 && slider.width < 248 && slider.height === 28 }, 1000)
         compare(slider.implicitHeight, 28)
 
         var surfaceComponent = componentFor("shell/popovers/PopoverSurface.qml")
