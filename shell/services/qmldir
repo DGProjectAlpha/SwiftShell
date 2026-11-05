@@ -28,3 +28,9 @@ singleton SystemPerformance 1.0 SystemPerformance.qml
 singleton ClipboardModel 1.0 ClipboardModel.qml
 
 singleton ScreenshotService 1.0 ScreenshotService.qml
+
+singleton MediaService 1.0 MediaService.qml
+
+singleton AudioService 1.0 AudioService.qml
+
+BarPeekController 1.0 BarPeekController.qml
