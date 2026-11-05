@@ -214,6 +214,10 @@ function scrollTarget(contentY, viewport, itemY, itemHeight) {
     const view = typeof viewport === "number" && Number.isFinite(viewport) ? viewport : 0;
     const top = typeof itemY === "number" && Number.isFinite(itemY) ? itemY : 0;
     const height = typeof itemHeight === "number" && Number.isFinite(itemHeight) ? itemHeight : 0;
+    // A section taller than the viewport must reveal its heading and first
+    // control rather than aligning its bottom and hiding the entry controls.
+    if (view > 0 && height >= view)
+        return Math.max(0, top);
     if (top < y)
         return Math.max(0, top);
     if (view > 0 && top + height > y + view)

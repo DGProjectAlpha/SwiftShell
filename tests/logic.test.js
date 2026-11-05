@@ -366,6 +366,8 @@ test("settings search, density, and undo stay on real appearance fields", functi
     assert.equal(settingsNav.scrollTarget(100, 80, 40, 20), 40);
     assert.equal(settingsNav.scrollTarget(0, 80, 90, 20), 30);
     assert.equal(settingsNav.scrollTarget(10, 80, 20, 20), 10);
+    assert.equal(settingsNav.scrollTarget(0, 400, 700, 900), 700);
+    assert.equal(settingsNav.scrollTarget(900, 400, 700, 900), 700);
     let history = settings.initialHistory(settings.DEFAULTS.appearance);
     history = settings.reduceAppearanceHistory(history, {
         type: "edit",
