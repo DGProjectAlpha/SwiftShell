@@ -39,11 +39,12 @@ PanelWindow {
     property Item networkAnchor:null
     property Item powerAnchor:null
     property Item performanceAnchor:null
+    property Item weatherAnchor:null
     property Item clipboardAnchor:null
     property Item screenshotAnchor:null
     function quickToolTargets() {
         const result={}
-        const items={screenshot:screenshotAnchor,clipboard:clipboardAnchor,performance:performanceAnchor}
+        const items={screenshot:screenshotAnchor,clipboard:clipboardAnchor,performance:performanceAnchor,weather:weatherAnchor}
         for(const id of Object.keys(items)) {
             const item=items[id]
             if(item) {const rect=contentItem.mapFromItem(item,0,0,item.width,item.height);result[id]={x:rect.x,y:rect.y,width:rect.width,height:rect.height}}
@@ -68,6 +69,7 @@ PanelWindow {
         else if(id === "network" && networkAnchor)popovers.toggle(id,networkAnchor)
         else if(id === "power" && powerAnchor)popovers.toggle(id,powerAnchor)
         else if(id === "notifications" && notificationAnchor)popovers.toggle(id,notificationAnchor)
+        else if(id === "weather")popovers.toggle(id,weatherAnchor || contextAnchor)
         else if(id === "performance")popovers.toggle(id,performanceAnchor || contextAnchor)
         else if(id === "clipboard")popovers.toggle(id,clipboardAnchor || contextAnchor)
         else if(id === "screenshot") {popovers.close();ScreenshotService.show(monitorKey)}
@@ -257,6 +259,7 @@ PanelWindow {
         if (id === "notifications")return notificationComponent
         if (id === "screenshot")return screenshotComponent
         if (id === "clipboard")return clipboardComponent
+        if (id === "weather")return weatherComponent
         if (id === "performance")return performanceComponent
         if (id === "media")
             return mediaComponent
@@ -553,6 +556,19 @@ PanelWindow {
             Component.onCompleted:window.performanceAnchor=performanceIndicator
             Component.onDestruction:if(window.performanceAnchor===performanceIndicator)window.performanceAnchor=null
             onActivated:{LauncherModel.closeLauncher();popovers.toggle("performance",performanceIndicator)}
+        }
+    }
+
+    Component {
+        id:weatherComponent
+        WeatherModule {
+            id:weatherIndicator
+            textPrimary:window.foregroundFor("weather",false)
+            textMuted:window.foregroundFor("weather",true)
+            textHover:window.foregroundFor("weather",false)
+            Component.onCompleted:window.weatherAnchor=weatherIndicator
+            Component.onDestruction:if(window.weatherAnchor===weatherIndicator)window.weatherAnchor=null
+            onActivated:{LauncherModel.closeLauncher();popovers.toggle("weather",weatherIndicator)}
         }
     }
 

@@ -272,7 +272,7 @@ PanelWindow {
             Loader {
                 id:bodyLoader
                 onLoaded:if(popup.popupState.panelId==="calendar" && item.showTab)item.showTab(popup.requestedClockTab)
-                sourceComponent: popup.popupState.panelId === "performance" ? performancePanel : popup.popupState.panelId === "clipboard" ? clipboardPanel : popup.popupState.panelId === "notifications" ? notificationPanel : popup.popupState.panelId === "control"
+                sourceComponent: popup.popupState.panelId === "weather" ? weatherPanel : popup.popupState.panelId === "performance" ? performancePanel : popup.popupState.panelId === "clipboard" ? clipboardPanel : popup.popupState.panelId === "notifications" ? notificationPanel : popup.popupState.panelId === "control"
                     ? controlPanel
                     : popup.popupState.panelId === "network" ? networkPanel : popup.popupState.panelId === "power" ? powerPanel : popup.popupState.panelId === "calendar" ? calendarPanel : popup.popupState.panelId === "customize" ? popup.customPanel : null
             }
@@ -285,6 +285,7 @@ PanelWindow {
     }
 
     Component {id:notificationPanel;NotificationDrawer {reading:popup.visible;onSettingsRequested:{popup.close();SettingsStore.setSettingsCategory("notifications");SettingsModel.show(popup.barWindow.monitorKey)}}}
+    Component {id:weatherPanel;WeatherPanel {onSettingsRequested:{popup.close();SettingsStore.setSettingsCategory("weather");SettingsModel.show(popup.barWindow.monitorKey)}}}
     Component {id:performancePanel;PerformancePanel {}}
     Component {id:clipboardPanel;ClipboardPanel {onDetached:popup.close();onDismissed:popup.close()}}
     Component {id:networkPanel;NetworkPanel {onSettingsRequested:{popup.close();SettingsStore.setSettingsCategory("network");SettingsModel.show(popup.barWindow.monitorKey)}}}

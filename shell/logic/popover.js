@@ -105,7 +105,7 @@ function popupModel() {
 }
 
 function knownPanel(id) {
-    return id === "calendar" || id === "control" || id === "customize" || id === "network" || id === "power" || id === "notifications" || id === "clipboard" || id === "performance";
+    return id === "calendar" || id === "control" || id === "customize" || id === "network" || id === "power" || id === "notifications" || id === "clipboard" || id === "performance" || id === "weather";
 }
 
 function clonePopup(state) {

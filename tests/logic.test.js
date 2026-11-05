@@ -342,10 +342,10 @@ test("settings window lifecycle and unprobed blur capabilities remain honest", f
 test("settings search, density, and undo stay on real appearance fields", function () {
     assert.equal(settingsNav.navigationLayout(719), "stacked");
     assert.equal(settingsNav.navigationLayout(720), "columns");
-    assert.equal(settingsNav.categories().length, 12);
+    assert.equal(settingsNav.categories().length, 13);
     assert.equal(settingsNav.categories()[0].id, "appearance");
     assert.equal(settingsNav.categories()[1].id, "bar");
-    assert.deepEqual(settingsNav.categories().slice(2).map(c => c.id), ["spotlight", "wallpaper", "displays", "workspaces", "shortcuts", "defaultApps", "audio", "network", "power", "notifications"]);
+    assert.deepEqual(settingsNav.categories().slice(2).map(c => c.id), ["spotlight", "wallpaper", "displays", "workspaces", "shortcuts", "defaultApps", "audio", "network", "power", "notifications", "weather"]);
     assert.equal(settingsNav.categoryFor(settingsNav.firstControlId("cover")), "wallpaper");
     assert.equal(settingsNav.filterControls("").length, settingsNav.CONTROLS.length);
     assert.equal(settingsNav.filterControls("not-a-setting").length, 0);
@@ -1313,7 +1313,7 @@ test("bar exclusion can turn reservation on again and popup focus clears before 
     assert.equal(bar.barMetrics(80, 1).height, 52);
     assert.equal(bar.heightFromUnit(bar.unitFromHeight(28)), 28);
     assert.equal(bar.exclusionUpdate(true, tall.height, 28).zone, 52);
-    assert.deepEqual(bar.visibleModules(bar.BAR_MODULES, ["clock"]), ["workspaces", "title", "search", "control", "media", "tray", "battery", "network", "power", "notifications", "screenshot", "clipboard", "performance"]);
+    assert.deepEqual(bar.visibleModules(bar.BAR_MODULES, ["clock"]), ["workspaces", "title", "search", "control", "media", "tray", "battery", "network", "power", "notifications", "screenshot", "clipboard", "performance", "weather"]);
     const moved = bar.moveModule(bar.BAR_MODULES, "clock", -1);
     assert.equal(moved[2], "clock");
     assert.equal(moved[3], "search");
@@ -2016,7 +2016,7 @@ test("notifications stay off until ownership is confirmed", function () {
 
 // Every newly exposed bar action must be accepted by the real popup reducer.
 test("desktop quick tool panels open, switch, and release focus", function () {
-    for (const id of ["clipboard", "performance"]) {
+    for (const id of ["clipboard", "performance", "weather"]) {
         let state=popover.reducePopup(popover.popupModel(),{type:"toggle",id:id},{instantOpen:true,instantClose:true});
         assert.equal(state.panelId,id);
         assert.equal(state.visible,true);
@@ -2064,6 +2064,20 @@ test("fullscreen peek edge detection uses logical mixed-scale screen rectangles"
     assert.deepEqual(bar.peekPointer({x:2561,y:900},hdmi,"left",168,864),{atEdge:true,insideBar:true});
     assert.deepEqual(bar.peekPointer({x:2700,y:1583},hdmi,"bottom",1536,28),{atEdge:true,insideBar:true});
     assert.deepEqual(bar.peekPointer(null,hdmi,"top",1536,28),{atEdge:false,insideBar:false});
+});
+
+test("weather is discoverable and popovers share its exclusive lifecycle", function () {
+    assert.equal(settingsNav.categoryFor("weatherLocation"), "weather");
+    assert.equal(settingsNav.categoryFor("automaticText"), "appearance");
+    assert.equal(settingsNav.categoryFor("manualText"), "appearance");
+    for (const id of ["accentColor", "opaqueWindows", "fullscreenBarPeek"])
+        assert.ok(settingsNav.CONTROLS.some(item => item.id === id));
+    assert.equal(bar.moduleName("weather"), "Weather");
+    const opened = popover.reducePopup(popover.popupModel(), {type:"toggle",id:"weather"}, {instantOpen:true});
+    assert.equal(opened.panelId, "weather");
+    assert.equal(opened.visible, true);
+    const switched = popover.reducePopup(opened, {type:"toggle",id:"control"}, {instantOpen:true});
+    assert.equal(switched.panelId, "control");
 });
 
 if (failed > 0) {

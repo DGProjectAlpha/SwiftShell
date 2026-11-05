@@ -1,4 +1,4 @@
-var BAR_MODULES = ["workspaces", "title", "search", "clock", "control", "media", "tray", "battery", "network", "power", "notifications", "screenshot", "clipboard", "performance"];
+var BAR_MODULES = ["workspaces", "title", "search", "clock", "control", "media", "tray", "battery", "network", "power", "notifications", "screenshot", "clipboard", "performance", "weather"];
 
 function textRenderMode(devicePixelRatio, contentScale, curveAvailable) {
     return devicePixelRatio === 1 && contentScale === 1 && curveAvailable === true ? "curve" : "distance-field";
@@ -216,7 +216,7 @@ function modulesForSide(order,hidden,sidesJson,side) {
     return visibleModules(order,hidden).filter(function(id){return moduleSide(id,sidesJson,order)===side;});
 }
 function moduleName(id) {
-    return ({workspaces:"Workspaces",title:"Focused title",search:"Search",clock:"Clock",control:"Audio",media:"Media",tray:"Tray",battery:"Battery",network:"Network & Devices",power:"Power",notifications:"Notifications",screenshot:"Screenshot",clipboard:"Clipboard",performance:"Performance"})[id] || id;
+    return ({workspaces:"Workspaces",title:"Focused title",search:"Search",clock:"Clock",control:"Audio",media:"Media",tray:"Tray",battery:"Battery",network:"Network & Devices",power:"Power",notifications:"Notifications",screenshot:"Screenshot",clipboard:"Clipboard",performance:"Performance",weather:"Weather"})[id] || id;
 }
 
 function layoutForOutput(json, output, order, sides) {

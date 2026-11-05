@@ -104,7 +104,7 @@ ShellRoot {
             SettingsModel.windowActionRequested(action)
         }
         function settings(category: string): void {
-            const allowed = ["appearance","bar","spotlight","wallpaper","displays","workspaces","shortcuts","defaultApps","audio","network","bluetooth","power","notifications"]
+            const allowed = ["appearance","bar","spotlight","wallpaper","displays","workspaces","shortcuts","defaultApps","audio","network","bluetooth","power","notifications", "weather"]
             if (allowed.indexOf(category) >= 0) SettingsStore.setSettingsCategory(category)
             SettingsModel.show()
             SettingsModel.windowActionRequested("clear-search")

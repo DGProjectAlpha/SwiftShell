@@ -1,4 +1,11 @@
 var CONTROLS = [
+    {id:"weatherLocation",category:"weather",section:"Location",label:"Weather location",keywords:["weather","forecast","city","address","postal","zip","automatic"]},
+    {id:"weatherUnits",category:"weather",section:"Forecast",label:"Weather units",keywords:["weather","temperature","celsius","fahrenheit"]},
+    {id:"weatherRefresh",category:"weather",section:"Forecast",label:"Weather updates",keywords:["weather","refresh","interval","forecast"]},
+    {id:"accentColor",category:"appearance",section:"Colors",label:"Accent color",keywords:["color","buttons","sliders","accent"]},
+    {id:"opaqueWindows",category:"appearance",section:"Application windows",label:"Keep windows opaque",keywords:["opacity","inactive","transparent","video","focus"]},
+    {id:"fullscreenBarPeek",category:"bar",section:"Placement",label:"Peek in fullscreen",keywords:["fullscreen","game","edge","peek","reveal"]},
+
     {id:"notificationQuietHours",category:"notifications",section:"Quiet hours",label:"Scheduled quiet hours",keywords:["schedule","overnight","days","week","quiet","sleep"]},
     {id:"notificationPrivacy",category:"notifications",section:"Privacy",label:"Notification previews",keywords:["privacy","hide","body","preview","messages","content"]},
     {id:"notificationSound",category:"notifications",section:"Sound",label:"Notification sound",keywords:["sound","volume","audio","silent","mute"]},
@@ -42,8 +49,8 @@ var CONTROLS = [
     { id: "wallpaperPath", category: "wallpaper", section: "Image", label: "Image", keywords: ["file", "choose", "path", "default", "crimson"] },
     { id: "wallpaperOutput", category: "wallpaper", section: "Outputs", label: "Per output", keywords: ["monitor", "display", "screen"] },
     { id: "slideshow", category: "wallpaper", section: "Slideshow", label: "Slideshow", keywords: ["folder", "interval", "shuffle", "crossfade"] },
-    { id: "automaticText", category: "wallpaper", section: "Contrast", label: "Automatic text", keywords: ["contrast", "foreground", "readable"] },
-    { id: "manualText", category: "wallpaper", section: "Contrast", label: "Manual text", keywords: ["hex", "color", "foreground"] },
+    { id: "automaticText", category: "appearance", section: "Contrast", label: "Automatic text", keywords: ["contrast", "foreground", "readable"] },
+    { id: "manualText", category: "appearance", section: "Contrast", label: "Manual text", keywords: ["hex", "color", "foreground"] },
     { id: "displayLayout", category: "displays", section: "Arrangement", label: "Arrangement", keywords: ["monitor", "display", "scale", "preview"] },
     { id: "preferredChord", category: "shortcuts", section: "Chords", label: "Preferred chord", keywords: ["shortcut", "record", "spotlight", "super"] },
     { id: "audioOutput", category: "audio", section: "Audio", label: "Output", keywords: ["volume", "sink", "pipewire", "mute"] },
@@ -140,6 +147,7 @@ function categories() {
         { id: "network", label: "Network & Devices" },
         { id: "power", label: "Power" },
         { id: "notifications", label: "Notifications" },
+        { id: "weather", label: "Weather" },
     ];
 }
 

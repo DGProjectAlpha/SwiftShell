@@ -31,7 +31,8 @@
       "notifications",
       "screenshot",
       "clipboard",
-      "performance"
+      "performance",
+      "weather"
     ],
     "hiddenModules": [],
     "searchLabel": false,
