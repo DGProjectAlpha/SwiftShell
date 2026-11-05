@@ -1164,3 +1164,24 @@ with `scripts/stop.sh` followed by `scripts/launch.sh`. Temporary source backups
 include `/tmp/swiftshell-nov5-resume-backup.tgz`. Disabling the optional opacity
 integration restores only its owned runtime keys; no user Lua, startup or Noctalia
 files are changed by the Settings/weather slices.
+
+## Source-backed shortcuts and selected terminal — 2026-11-05
+
+Decision 0048 records the actual Hyprland 0.57 Lua API and recovery design.
+`tests/live/source-shortcuts.py --live` passed source span editing, preservation of
+the original callback, exact Undo and independent helper-death recovery. The native
+recorder test `source-shortcuts-ui.py --live` additionally passed real shortcut
+inhibition/recording, source apply and Undo without changing unrelated bindings.
+Source/default-app/legacy-helper unit suites passed 16/13/12 tests respectively.
+The real selected Konsole default now updates the existing desktop terminal action;
+only its literal variable and one callback changed, with the other 93 bindings and
+other source files verified unchanged. The original automatic-reload setting and
+file permissions were preserved. No full Hyprland reload or app launch occurred.
+Super+Enter and actual login/reboot remain owner acceptance checks.
+
+Final review also caught the disabled-weather zero-width latch and asynchronous
+settings-reader completion during a save. Real ModuleStrip regression covers
+weather off/on/off/on with one retained instance; five QML persistence cases cover
+late reads/errors preserving drafts and the in-flight writer. A source-handler
+regression covers deferred Settings load failure and stale callback guards. These
+prevent a missing component from recursively changing its own Loader binding.

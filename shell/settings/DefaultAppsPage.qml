@@ -43,7 +43,7 @@ Column {
                     }
                     Text {
                         width:parent.width
-                        text:roleRow.modelData.choices.length===0 ? "No installed application advertises this role." : roleRow.modelData.shellOnly ? "Used by SwiftShell. This role has no standard desktop-wide association." : "Desktop default · "+roleRow.modelData.currentName
+                        text:roleRow.modelData.choices.length===0 ? "No installed application advertises this role." : roleRow.modelData.desktopLinked ? "Desktop terminal shortcut · "+roleRow.modelData.currentName : roleRow.modelData.shellOnly ? "Used by SwiftShell. This role has no standard desktop-wide association." : "Desktop default · "+roleRow.modelData.currentName
                         color:Theme.settingsMuted
                         font.family:Theme.settingsFontFamily
                         font.pixelSize:Theme.settingsFontSizeSmall

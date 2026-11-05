@@ -39,10 +39,12 @@ python3 "$ROOT/tests/test_appearancectl.py"
 python3 "$ROOT/tests/test_wallpaper_sample.py"
 python3 "$ROOT/tests/test_defaultapps.py"
 python3 "$ROOT/tests/test_shortcutsctl.py"
+python3 "$ROOT/tests/test_hyprsource.py"
 python3 "$ROOT/tests/test_overviewctl.py"
 python3 "$ROOT/tests/test_displays.py"
 python3 "$ROOT/tests/test_windowctl.py"
 "$NODE" "$ROOT/tests/settings_files.test.js"
+"$NODE" "$ROOT/tests/settings-loader.test.js"
 sh "$ROOT/tests/install_flow.sh"
 
 QMLTESTRUNNER=""
@@ -99,6 +101,7 @@ QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/t
 QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_bar_module_drag.qml" -platform offscreen
 QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_settings_responsive.qml" -platform offscreen
 QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_settings_ux.qml" -platform offscreen
+QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_settings_persistence.qml" -platform offscreen
 QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_appearance_queue.qml" -platform offscreen
 QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_network_devices.qml" -platform offscreen
 QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_power_profiles.qml" -platform offscreen

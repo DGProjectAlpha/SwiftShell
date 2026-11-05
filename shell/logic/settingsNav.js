@@ -52,7 +52,7 @@ var CONTROLS = [
     { id: "automaticText", category: "appearance", section: "Contrast", label: "Automatic text", keywords: ["contrast", "foreground", "readable"] },
     { id: "manualText", category: "appearance", section: "Contrast", label: "Manual text", keywords: ["hex", "color", "foreground"] },
     { id: "displayLayout", category: "displays", section: "Arrangement", label: "Arrangement", keywords: ["monitor", "display", "scale", "preview"] },
-    { id: "preferredChord", category: "shortcuts", section: "Chords", label: "Preferred chord", keywords: ["shortcut", "record", "spotlight", "super"] },
+    { id: "desktopShortcuts", category: "shortcuts", section: "Keyboard", label: "Desktop shortcuts", keywords: ["shortcut", "hotkeys", "keyboard", "record", "hyprland", "super"] },
     { id: "audioOutput", category: "audio", section: "Audio", label: "Output", keywords: ["volume", "sink", "pipewire", "mute"] },
     { id: "audioInput", category: "audio", section: "Audio", label: "Input", keywords: ["microphone", "source", "input"] },
     { id: "audioStream", category: "audio", section: "Audio", label: "Application streams", keywords: ["stream", "app", "volume"] },

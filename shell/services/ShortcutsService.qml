@@ -8,6 +8,7 @@ Singleton {
     property var effective:[]
     property var actions:[]
     property var warnings:[]
+    property int sourceEditable:0
     property bool available:false
     property bool canUndo:false
     property string error:""
@@ -44,7 +45,7 @@ Singleton {
                 const result=JSON.parse(reply.text)
                 if(code!==0 || !result.ok)throw new Error(result.message || "Desktop shortcuts are unavailable.")
                 root.effective=result.effective || [];root.actions=result.actions || [];root.warnings=result.warnings || []
-                root.available=result.available===true;root.canUndo=result.canUndo===true
+                root.available=result.available===true;root.canUndo=result.canUndo===true;root.sourceEditable=result.sourceEditable || 0
                 root.error="";success=true
             } catch(failure) {root.error=failure.message}
             root.completed(root.action,success)

@@ -565,7 +565,7 @@ TestCase {
         verify(findText(displays, "No outputs are connected", 0))
         var shortcuts = componentFor("shell/settings/ShortcutsPage.qml").createObject(this)
         verify(shortcuts !== null)
-        verify(findText(shortcuts, "Changes apply immediately", 0))
+        verify(findText(shortcuts, "saved to your desktop configuration", 0))
         var audioPage = componentFor("shell/settings/AudioPage.qml").createObject(this)
         verify(audioPage !== null)
         verify(findText(audioPage, "Adjust speakers", 0))

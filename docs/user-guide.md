@@ -274,3 +274,17 @@ Settings opens on the display where its button was clicked. Reopening keeps its
 saved size and centers it on that display. Resize at the visible window edge or
 corner. **Top bar → Peek in fullscreen** optionally reveals the bar when the
 pointer pauses at its display edge; it starts off.
+
+### Desktop shortcuts
+
+**Settings → Shortcuts** shows your desktop's effective shortcuts. Choose **Change**
+where available, press a new combination and apply it. Capture temporarily inhibits
+global shortcuts so recording a key does not launch its action. The original action
+stays the same, changes are saved to their original configuration, and **Undo change**
+restores the preceding edit. Generated or ambiguous shortcuts stay visible but
+cannot yet be edited individually. Existing 60% keyboard combinations are retained.
+
+Selecting a terminal in **Default apps** also updates a safely recognized desktop
+terminal shortcut. On the reference desktop, Super+Enter now follows Konsole.
+**Undo** in the terminal row restores the preceding choice. Configurations which
+cannot be safely linked explicitly show that the choice is used only by SwiftShell.
