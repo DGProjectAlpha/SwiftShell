@@ -2080,6 +2080,19 @@ test("weather is discoverable and popovers share its exclusive lifecycle", funct
     assert.equal(switched.panelId, "control");
 });
 
+test("concurrent output and section map edits keep independent changes", function () {
+    const base={bar:{hiddenOutputsJson:JSON.stringify({"DP-1":[],"HDMI-A-1":[]})},settingsWindow:{sectionsJson:"{}"}};
+    const local=JSON.parse(JSON.stringify(base)),current=JSON.parse(JSON.stringify(base));
+    local.bar.hiddenOutputsJson=JSON.stringify({"DP-1":["tray"],"HDMI-A-1":[]});
+    current.bar.hiddenOutputsJson=JSON.stringify({"DP-1":[],"HDMI-A-1":["clock"]});
+    local.settingsWindow.sectionsJson=JSON.stringify({"appearance.surface":false});
+    current.settingsWindow.sectionsJson=JSON.stringify({"bar.layout":false});
+    const merged=settings.mergeSettingsChanges(base,local,current);
+    assert.deepEqual(JSON.parse(merged.bar.hiddenOutputsJson),{"DP-1":["tray"],"HDMI-A-1":["clock"]});
+    assert.deepEqual(JSON.parse(merged.settingsWindow.sectionsJson),{"appearance.surface":false,"bar.layout":false});
+    assert.deepEqual(settings.mergeSettingsChanges({locationJson:'{"latitude":1,"longitude":2}'},{locationJson:'{"latitude":3,"longitude":2}'},{locationJson:'{"latitude":1,"longitude":4}'}),{locationJson:'{"latitude":3,"longitude":2}'});
+});
+
 if (failed > 0) {
     console.error(failed + " test(s) failed");
     process.exit(1);

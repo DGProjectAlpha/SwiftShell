@@ -17,6 +17,21 @@ class AtomicPreferencesTests(unittest.TestCase):
             self.assertEqual(saved['bar']['hiddenModules'],['clock'])
             self.assertEqual(saved['futureSetting'],{'keep':True})
             self.assertEqual(result['document'],saved)
+    def test_independent_encoded_monitor_and_section_maps_merge(self):
+        base={'bar':{'hiddenOutputsJson':json.dumps({'DP-1':[],'HDMI-A-1':[]})},'settingsWindow':{'sectionsJson':'{}'}}
+        local=json.loads(json.dumps(base));current=json.loads(json.dumps(base))
+        local['bar']['hiddenOutputsJson']=json.dumps({'DP-1':['tray'],'HDMI-A-1':[]})
+        current['bar']['hiddenOutputsJson']=json.dumps({'DP-1':[],'HDMI-A-1':['clock']})
+        local['settingsWindow']['sectionsJson']='{"appearance.surface":false}'
+        current['settingsWindow']['sectionsJson']='{"bar.layout":false}'
+        result=settingswrite.merge_changes(base,local,current)
+        self.assertEqual(json.loads(result['bar']['hiddenOutputsJson']),{'DP-1':['tray'],'HDMI-A-1':['clock']})
+        self.assertEqual(json.loads(result['settingsWindow']['sectionsJson']),{'appearance.surface':False,'bar.layout':False})
+    def test_coordinates_are_replaced_together_not_merged_between_places(self):
+        base={'locationJson':'{"latitude":1,"longitude":2}'}
+        desired={'locationJson':'{"latitude":3,"longitude":2}'}
+        current={'locationJson':'{"latitude":1,"longitude":4}'}
+        self.assertEqual(settingswrite.merge_changes(base,desired,current),desired)
     def test_newer_changed_leaf_wins_without_replacing_its_siblings(self):
         base={'appearance':{'mode':'dark','radius':8},'list':[1,2]}
         local={'appearance':{'mode':'dark','radius':10},'list':[2,1]}

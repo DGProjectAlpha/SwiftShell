@@ -337,6 +337,16 @@ function pickNumber(source, key, min, max, fallback, errors, label) {
     return fallback;
 }
 
+function mergeSettingsMapField(key,base,desired,current) {
+    const fields=["workspaceOutputsJson","moduleSidesJson","hiddenOutputsJson","layoutOutputsJson","surfaceOutputsJson","outputsJson","sectionsJson","shortcutsJson","policiesJson","extensionsJson"];
+    if(fields.indexOf(key)<0 || typeof base!=="string" || typeof desired!=="string" || typeof current!=="string")return null;
+    try {
+        const values=[JSON.parse(base),JSON.parse(desired),JSON.parse(current)];
+        if(!values.every(isPlainObject))return null;
+        return JSON.stringify(mergeSettingsChanges(values[0],values[1],values[2]));
+    } catch(error) {return null;}
+}
+
 function mergeSettingsChanges(base,desired,current) {
     if(!isPlainObject(base) || !isPlainObject(desired) || !isPlainObject(current))return JSON.parse(JSON.stringify(desired));
     const out=JSON.parse(JSON.stringify(current));
@@ -347,7 +357,10 @@ function mergeSettingsChanges(base,desired,current) {
         if(before && after && JSON.stringify(base[key])===JSON.stringify(desired[key]))continue;
         if(!after)delete out[key];
         else if(isPlainObject(base[key]) && isPlainObject(desired[key]))out[key]=mergeSettingsChanges(base[key],desired[key],isPlainObject(out[key]) ? out[key] : {});
-        else out[key]=JSON.parse(JSON.stringify(desired[key]));
+        else {
+            const merged=mergeSettingsMapField(key,base[key],desired[key],out[key]);
+            out[key]=merged===null ? JSON.parse(JSON.stringify(desired[key])) : merged;
+        }
     }
     return out;
 }

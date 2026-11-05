@@ -8,6 +8,24 @@ from pathlib import Path
 import tempfile
 
 
+# JsonAdapter stores independent per-output/section maps as JSON strings. Merge
+# their entries too; locations and ordered arrays remain atomic preferences.
+MAP_FIELDS={'workspaceOutputsJson','moduleSidesJson','hiddenOutputsJson','layoutOutputsJson',
+            'surfaceOutputsJson','outputsJson','sectionsJson','shortcutsJson','policiesJson','extensionsJson'}
+
+
+def merge_map_field(key, base, desired, current):
+    if key not in MAP_FIELDS or not all(isinstance(value,str) for value in (base,desired,current)):
+        return None
+    try:
+        values=[json.loads(value) for value in (base,desired,current)]
+    except ValueError:
+        return None
+    if not all(isinstance(value,dict) for value in values):
+        return None
+    return json.dumps(merge_changes(*values),separators=(',',':'),ensure_ascii=False)
+
+
 def merge_changes(base, desired, current):
     """Apply only this writer's changed leaves, retaining other writers' work."""
     if not all(isinstance(value, dict) for value in (base, desired, current)):
@@ -21,7 +39,8 @@ def merge_changes(base, desired, current):
         elif isinstance(base.get(key),dict) and isinstance(desired[key],dict):
             result[key]=merge_changes(base[key],desired[key],result.get(key,{}))
         else:
-            result[key]=copy.deepcopy(desired[key])
+            merged=merge_map_field(key,base.get(key),desired[key],result.get(key))
+            result[key]=merged if merged is not None else copy.deepcopy(desired[key])
     return result
 
 
