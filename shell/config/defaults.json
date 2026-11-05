@@ -28,10 +28,15 @@
       "battery",
       "network",
       "power",
-      "notifications"
+      "notifications",
+      "screenshot",
+      "clipboard",
+      "performance",
+      "weather"
     ],
     "hiddenModules": [],
     "searchLabel": false,
+    "fullscreenPeek": false,
     "moduleSidesJson": "{}",
     "hiddenOutputsJson": "{}",
     "layoutOutputsJson": "{}",
@@ -42,6 +47,8 @@
   },
   "appearance": {
     "mode": "dark",
+    "accentColor": "",
+    "opaqueWindows": true,
     "tint": "neutral",
     "panelOpacity": 0.92,
     "panelBlur": 1,
@@ -84,7 +91,16 @@
   "settingsWindow": {
     "width": 1000,
     "height": 700,
-    "category": "appearance"
+    "category": "appearance",
+    "sectionsJson": "{}"
+  },
+  "weather": {
+    "enabled": false,
+    "locationMode": "manual",
+    "query": "",
+    "locationJson": "{}",
+    "units": "metric",
+    "refreshMinutes": 15
   },
   "shortcutsJson": "{}",
   "notifications": {

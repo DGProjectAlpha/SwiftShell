@@ -118,8 +118,6 @@ function audioDevices(nodes, role) {
         if (id === "")
             continue;
         out.push({ id: id, label: nodeName(node) });
-        if (out.length === 8)
-            break;
     }
     return out;
 }
@@ -137,11 +135,9 @@ function audioStreams(nodes) {
         out.push({
             id: id,
             label: nodeName(node),
-            volume: clampVolume(node.audio.volume),
-            muted: node.audio.muted === true,
+            volume: node.ready===true ? clampVolume(node.audio.volume) : null,
+            muted: node.ready===true && node.audio.muted === true,
         });
-        if (out.length === 6)
-            break;
     }
     return out;
 }
@@ -177,5 +173,5 @@ var swiftshellAudio = {
     selectDefault: selectDefault,
 };
 
-if (typeof module !== "undefined" && module.exports)
+if (typeof module !== "undefined" && module && module.exports)
     module.exports = swiftshellAudio;

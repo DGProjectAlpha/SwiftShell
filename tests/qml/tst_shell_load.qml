@@ -12,6 +12,35 @@ TestCase {
 
     // Every shell QML document. The static check requires this list to match the tree.
     readonly property var shellFiles: [
+        "shell/settings/WeatherPage.qml",
+        "shell/services/WeatherService.qml",
+        "shell/services/BarPeekController.qml",
+        "shell/popovers/WeatherPanel.qml",
+        "shell/components/WeatherHours.qml",
+        "shell/components/WeatherGlyph.qml",
+        "shell/components/PrecipitationChart.qml",
+        "shell/bar/WeatherModule.qml",
+        "shell/components/MediaTransportButton.qml",
+        "shell/services/AudioService.qml",
+        "shell/components/TrayMenuWindow.qml",
+        "shell/components/TrayMenuContent.qml",
+        "shell/components/TrayMenu.qml",
+        "shell/services/MediaService.qml",
+        "shell/components/MediaSeekBar.qml",
+        "shell/settings/BarModuleOrderList.qml",
+        "shell/bar/PerformanceModule.qml",
+        "shell/components/PerformanceGlyph.qml",
+        "shell/components/PerformanceMetric.qml",
+        "shell/popovers/PerformancePanel.qml",
+        "shell/services/SystemPerformance.qml",
+        "shell/services/ClipboardModel.qml",
+        "shell/services/ScreenshotService.qml",
+        "shell/clipboard/ClipboardPanel.qml",
+        "shell/clipboard/ClipboardWindow.qml",
+        "shell/screenshots/ScreenshotPanel.qml",
+        "shell/screenshots/ScreenshotSaveDialog.qml",
+        "shell/screenshots/ScreenshotWindow.qml",
+
         "shell/services/OverviewService.qml",
         "shell/overview/OverviewPreview.qml",
         "shell/overview/OverviewWindowTile.qml",
@@ -60,6 +89,8 @@ TestCase {
         "shell/components/KeyedModel.qml",
         "shell/components/BackdropEffect.qml",
         "shell/components/CompactSlider.qml",
+        "shell/components/SettingsSection.qml",
+        "shell/settings/SettingsPreview.qml",
         "shell/components/SectionHeader.qml",
         "shell/components/ServiceStatus.qml",
         "shell/components/SettingsRow.qml",
@@ -116,6 +147,24 @@ TestCase {
     // These compile with the Qt Quick stubs. shell.qml, BarHost, and BarWindow also
     // reference WlrLayershell, which is a C++ attached property and is not stubbed.
     readonly property var readyFiles: [
+        "shell/settings/WeatherPage.qml",
+        "shell/popovers/WeatherPanel.qml",
+        "shell/components/PrecipitationChart.qml",
+        "shell/components/WeatherHours.qml",
+        "shell/components/WeatherGlyph.qml",
+        "shell/bar/WeatherModule.qml",
+        "shell/components/MediaTransportButton.qml",
+        "shell/components/TrayMenuContent.qml",
+        "shell/components/TrayMenu.qml",
+        "shell/components/MediaSeekBar.qml",
+        "shell/settings/BarModuleOrderList.qml",
+        "shell/bar/PerformanceModule.qml",
+        "shell/components/PerformanceGlyph.qml",
+        "shell/components/PerformanceMetric.qml",
+        "shell/popovers/PerformancePanel.qml",
+        "shell/clipboard/ClipboardPanel.qml",
+        "shell/clipboard/ClipboardWindow.qml",
+        "shell/screenshots/ScreenshotPanel.qml",
         "shell/components/TrayItemControl.qml",
         "shell/bar/WidgetIndicator.qml",
         "shell/popovers/AudioPanel.qml",
@@ -142,6 +191,8 @@ TestCase {
         "shell/components/BarLabel.qml",
         "shell/components/FlatButton.qml",
         "shell/components/CompactSlider.qml",
+        "shell/components/SettingsSection.qml",
+        "shell/settings/SettingsPreview.qml",
         "shell/components/SectionHeader.qml",
         "shell/components/ServiceStatus.qml",
         "shell/components/SettingsRow.qml",
@@ -186,7 +237,8 @@ TestCase {
             return message.indexOf('module "QtQuick.Effects" is not installed') !== -1
                 || message.indexOf('RectangularShadow is not a type') !== -1
         if (path === "shell/settings/ImageDialog.qml"
-                || path === "shell/settings/FolderPicker.qml")
+                || path === "shell/settings/FolderPicker.qml"
+                || path === "shell/screenshots/ScreenshotSaveDialog.qml")
             return message.indexOf('module "QtQuick.Dialogs" is not installed') !== -1
         if (path === "shell/settings/FolderScanner.qml")
             return message.indexOf('module "Qt.labs.folderlistmodel" is not installed') !== -1
@@ -200,6 +252,8 @@ TestCase {
                 || path === "shell/bar/BarWindow.qml"
                 || path === "shell/popovers/PopoverHost.qml"
                 || path === "shell/overview/OverviewWindow.qml"
+                || path === "shell/screenshots/ScreenshotWindow.qml"
+                || path === "shell/components/TrayMenuWindow.qml"
                 || path === "shell/launcher/LauncherWindow.qml"
                 || path === "shell/wallpaper/WallpaperHost.qml"
                 || path === "shell/wallpaper/WallpaperSurface.qml")
@@ -215,6 +269,8 @@ TestCase {
         return message.indexOf("PopoverHost.qml:") !== -1
             || message.indexOf("BarWindow.qml:") !== -1
             || message.indexOf("OverviewWindow.qml:17") !== -1
+            || message.indexOf("ScreenshotWindow.qml:18") !== -1
+            || message.indexOf("TrayMenuWindow.qml:") !== -1
             || message.indexOf("LauncherWindow.qml:19") !== -1
             || message.indexOf("NotificationHost.qml:24") !== -1
             || message.indexOf("WallpaperSurface.qml:25") !== -1
@@ -329,7 +385,7 @@ TestCase {
         compare(audio.width, 248)
         var slider = findSlider(audio, 0)
         verify(slider !== null)
-        tryVerify(function() { return slider.width === 248 && slider.height === 28 }, 1000)
+        tryVerify(function() { return slider.width > 120 && slider.width < 248 && slider.height === 28 }, 1000)
         compare(slider.implicitHeight, 28)
 
         var surfaceComponent = componentFor("shell/popovers/PopoverSurface.qml")
@@ -509,7 +565,7 @@ TestCase {
         verify(findText(displays, "No outputs are connected", 0))
         var shortcuts = componentFor("shell/settings/ShortcutsPage.qml").createObject(this)
         verify(shortcuts !== null)
-        verify(findText(shortcuts, "Changes apply immediately", 0))
+        verify(findText(shortcuts, "saved to your desktop configuration", 0))
         var audioPage = componentFor("shell/settings/AudioPage.qml").createObject(this)
         verify(audioPage !== null)
         verify(findText(audioPage, "Adjust speakers", 0))

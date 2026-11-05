@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+import shlex
 import subprocess
 import sys
 from urllib.parse import urlparse
@@ -83,7 +84,7 @@ def desktop_entries():
                     continue
                 name = entry.get('Name[' + language + ']', entry.get('Name[' + language.split('_')[0] + ']', entry.get('Name', desktop_id)))
                 entries[desktop_id] = dict(id=desktop_id, name=name, icon=entry.get('Icon', ''),
-                    path=str(path), mimes=entry.get('MimeType', '').split(';'), categories=entry.get('Categories', '').split(';'))
+                    path=str(path), exec=entry.get('Exec',''), mimes=entry.get('MimeType', '').split(';'), categories=entry.get('Categories', '').split(';'))
             except (OSError, UnicodeError, configparser.Error, KeyError):
                 continue
     return entries
@@ -172,6 +173,40 @@ def assign(mime, desktop_id, expected=''):
         remove_owned_default(mime, expected)
 
 
+def terminal_command(entry):
+    try:parts=shlex.split(entry.get('exec',''))
+    except ValueError:raise ValueError('The terminal application has an invalid launch command.') from None
+    args=[]
+    for part in parts:
+        if part in ('%f','%F','%u','%U','%i','%c','%k'):continue
+        part=part.replace('%%','%')
+        if '%' in part or any(ord(char)<32 for char in part):raise ValueError('The terminal application uses unsupported launch arguments.')
+        args.append(part)
+    if not args:raise ValueError('The terminal application has no launch command.')
+    return shlex.join(args)
+
+
+def desktop_terminal(entries):
+    import hyprsource
+    try:matched=hyprsource.terminal_binding()
+    except (OSError,ValueError,UnicodeError):return '',None
+    if matched is None:return '',None
+    configured=matched['variable']['value']
+    try:executable=shlex.split(configured)[0]
+    except (ValueError,IndexError):return '',matched
+    for entry in candidates('terminal',entries):
+        try:program=shlex.split(terminal_command(entry))[0]
+        except (ValueError,IndexError):continue
+        if program==executable or shutil.which(program) and shutil.which(program)==shutil.which(executable):return entry['id'],matched
+    return '',matched
+
+
+def rollback_terminal(change):
+    if change and change.get('transaction'):
+        import hyprsource
+        hyprsource.recover(hyprsource.state_root()/(change['transaction']+'.json'))
+
+
 def choose(role, desktop_id):
     if role not in ROLES or not isinstance(desktop_id, str) or not ID.fullmatch(desktop_id):
         raise ValueError('Choose an installed application.')
@@ -186,7 +221,11 @@ def choose(role, desktop_id):
     before = {mime: query(mime) for mime in changed_mimes}
     backup()
     applied = []
+    terminal_change=None
     try:
+        if role=="terminal":
+            import hyprsource
+            terminal_change=hyprsource.sync_terminal(terminal_command(app))
         for mime in changed_mimes:
             assign(mime, desktop_id)
             applied.append(mime)
@@ -199,8 +238,12 @@ def choose(role, desktop_id):
         assigned = dict(previous_role.get('assigned', {}))
         assigned.update({mime: desktop_id for mime in changed_mimes})
         roles[role] = {'id': desktop_id, 'previous': previous, 'assigned': assigned}
+        if terminal_change and terminal_change.get('supported'):
+            original=previous_role.get('desktopTerminal',{}).get('originalCommand',terminal_change['previousCommand'])
+            roles[role]['desktopTerminal']={'originalCommand':original,'assignedCommand':terminal_command(app)}
         atomic(state_path(), settings)
     except Exception:
+        rollback_terminal(terminal_change)
         for mime in reversed(applied):
             assign(mime, before[mime], desktop_id)
         raise
@@ -218,13 +261,21 @@ def reset(role):
         raise ValueError('Another application changed these defaults. Refresh before changing them again.')
     backup()
     restored = []
+    terminal_change=None
     try:
+        if role=="terminal" and saved.get('desktopTerminal'):
+            import hyprsource
+            matched=hyprsource.terminal_binding()
+            if matched is None or matched['variable']['value']!=saved['desktopTerminal']['assignedCommand']:
+                raise ValueError('Your desktop terminal was changed elsewhere. Refresh before undoing this selection.')
+            terminal_change=hyprsource.sync_terminal(saved['desktopTerminal']['originalCommand'])
         for mime, desktop_id in assigned.items():
             assign(mime, saved['previous'].get(mime, ''), desktop_id)
             restored.append(mime)
         del settings['roles'][role]
         atomic(state_path(), settings)
     except Exception:
+        rollback_terminal(terminal_change)
         for mime in restored:
             assign(mime, assigned[mime])
         raise
@@ -233,15 +284,18 @@ def reset(role):
 def snapshot():
     entries = desktop_entries()
     saved = preferences().get('roles', {})
+    desktop_terminal_id,terminal_source=desktop_terminal(entries)
     roles = []
     for role, (label, mimes, _) in ROLES.items():
         options = candidates(role, entries)
         current = query(mimes[0]) if mimes else ''
         if role in ('terminal', 'calendar') and saved.get(role, {}).get('id') in entries:
             current = saved[role]['id']
+        if role=='terminal' and desktop_terminal_id:current=desktop_terminal_id
         selected = entries.get(current)
         roles.append(dict(id=role, label=label, current=current, currentName=selected['name'] if selected else
             ('Not selected' if not current else current.removesuffix('.desktop')),
+            desktopLinked=role=='terminal' and bool(desktop_terminal_id),desktopAvailable=role=='terminal' and terminal_source is not None,
             shellOnly=not mimes or (selected is not None and not any(mime in selected['mimes'] for mime in mimes)),
             canReset=role in saved, choices=[{key: item[key] for key in ('id', 'name', 'icon')} for item in options]))
     return {'ok': True, 'roles': roles, 'available': shutil.which('xdg-mime') is not None}
@@ -260,6 +314,7 @@ def launch(role, target=''):
     entries = desktop_entries()
     saved = preferences().get('roles', {}).get(role, {})
     current = saved.get('id', '') if role in ('terminal', 'calendar') else ''
+    if role=='terminal':current=desktop_terminal(entries)[0] or current
     if not current and ROLES[role][1]:
         current = query(ROLES[role][1][0])
     if current not in entries:

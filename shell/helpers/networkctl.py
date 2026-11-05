@@ -10,6 +10,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 
 UUID = re.compile(r'^[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$')
 MAC = re.compile(r'^(?:[0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}$')
@@ -67,7 +68,12 @@ def rows(args):
 
 def device_details(name):
     detail = {}
-    lines = rows(['--fields','GENERAL.STATE,GENERAL.REASON,IP4.ADDRESS,IP4.GATEWAY,IP4.DNS','device','show',name])
+    try:
+        lines = rows(['--fields','GENERAL.STATE,GENERAL.REASON,IP4.ADDRESS,IP4.GATEWAY,IP4.DNS','device','show',name])
+    except NetworkError:
+        # Interfaces can disappear/change while NetworkManager enumerates them.
+        # A transient address lookup must not invalidate the radio state.
+        lines = []
     for parts in lines:
         if len(parts)>=2:
             detail[parts[0]]=parts[1]
@@ -76,11 +82,28 @@ def device_details(name):
     return dict(addresses=addresses,gateway=detail.get('IP4.GATEWAY',''),dns=dns)
 
 
+def radio_state():
+    values=fields(nm(['--get-values','WIFI-HW,WIFI','general']).strip())
+    return bool(values and values[0]=='enabled'),len(values)>1 and values[1]=='enabled'
+
+
+def wait_for_radio(enabled):
+    deadline=time.monotonic()+3
+    while True:
+        hardware,current=radio_state()
+        if current==enabled:return
+        if enabled and not hardware:
+            raise NetworkError('Wi-Fi is blocked by a hardware switch or airplane mode.','hardware-blocked')
+        if time.monotonic()>=deadline:
+            raise NetworkError('The Wi-Fi radio did not change. Refresh its status and try again.','radio-unconfirmed')
+        time.sleep(.1)
+
+
 def snapshot():
     if not shutil.which('nmcli'):
         return dict(ok=True,available=False,reason='NetworkManager tools are not installed.',devices=[],networks=[],profiles=[],wifiEnabled=False,wifiHardware=False)
     state = fields(nm(['--get-values','STATE,CONNECTIVITY','general']).strip())
-    radio = nm(['--get-values','WIFI-HW,WIFI','general']).strip().split(':')
+    wifi_hardware,wifi_enabled=radio_state()
     devices = []
     for row in rows(['--fields','DEVICE,TYPE,STATE,CONNECTION','device','status']):
         if len(row)!=4 or row[1] not in NETWORK_TYPES or not DEVICE.fullmatch(row[0]):
@@ -94,8 +117,16 @@ def snapshot():
             continue
         profiles.append(dict(name=row[0],id=row[1],kind='wifi' if row[2] in ('802-11-wireless','wifi') else 'ethernet',device='' if row[3]=='--' else row[3]))
     networks = []
-    if any(device['kind']=='wifi' and device['available'] for device in devices):
-        for row in rows(['--fields','BSSID,SSID,SIGNAL,SECURITY,IN-USE,DEVICE','device','wifi','list','--rescan','no']):
+    scan_message=''
+    if wifi_enabled and any(device['kind']=='wifi' and device['available'] for device in devices):
+        try:
+            access_points=rows(['--fields','BSSID,SSID,SIGNAL,SECURITY,IN-USE,DEVICE','device','wifi','list','--rescan','no'])
+        except NetworkError:
+            # The radio write may already have succeeded while the supplicant is
+            # still coming up. Keep that observed state and let events refresh APs.
+            access_points=[]
+            scan_message='Wi-Fi is getting ready. Refresh to check nearby networks.'
+        for row in access_points:
             if len(row)!=6 or not MAC.fullmatch(row[0]) or not DEVICE.fullmatch(row[5]) or not row[1]:
                 continue
             security='' if row[3]=='--' else row[3]
@@ -106,7 +137,7 @@ def snapshot():
             networks.append(dict(id=row[0],name=row[1],signal=signal,security=security,active=row[4]=='*',device=row[5],supported=personal))
     networks.sort(key=lambda row:(not row['active'],-row['signal'],row['name'].casefold()))
     return dict(ok=True,available=True,state=state[0] if state else '',connectivity=state[1] if len(state)>1 else '',
-                devices=devices,profiles=profiles,networks=networks,wifiHardware=bool(radio and radio[0]=='enabled'),wifiEnabled=len(radio)>1 and radio[1]=='enabled')
+                devices=devices,profiles=profiles,networks=networks,wifiHardware=wifi_hardware,wifiEnabled=wifi_enabled,wifiScanMessage=scan_message)
 
 
 def active_connections():
@@ -153,6 +184,7 @@ def request(payload):
     if action=='wifi-radio':
         if type(payload.get('enabled')) is not bool:raise ValueError('Choose whether Wi-Fi is enabled.')
         nm(['radio','wifi','on' if payload['enabled'] else 'off'])
+        wait_for_radio(payload['enabled'])
     elif action in ('device-connect','device-disconnect','scan','wifi-connect'):
         name=payload.get('device','')
         device=next((row for row in current['devices'] if row['id']==name),None)

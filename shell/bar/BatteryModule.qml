@@ -14,6 +14,7 @@ Item {
     visible: report.available
 
     Text {
+        renderType:Theme.barTextRendering(root)
         id: label
         anchors.verticalCenter: parent.verticalCenter
         text: root.report.text

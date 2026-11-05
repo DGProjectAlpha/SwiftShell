@@ -86,3 +86,16 @@ by default. No real Wi-Fi authentication or Bluetooth pairing was attempted.
 
 Still pending: optional persistent history/privacy design, lock/suspend acceptance,
 physical hotplug/GPU load, richer Clock utilities and later roadmap milestones.
+
+
+## Desktop quick tools (2026-11-02)
+
+Screenshot now has a shared themed review surface, area/display capture, cancellable
+delay, explicit PNG copy and native Save As. Spotlight and a new bar camera use the
+same service. Clipboard's opt-in text history has a searchable bar panel and an
+independent native Keep open window. A demand-driven shared telemetry adapter
+provides CPU/GPU/RAM bar usage and themed recent-history/temperature detail.
+Cachy-Update and other terminal desktop entries now use the selected terminal
+instead of Quickshell's terminal-ignoring execute path. New widgets participate in
+existing per-output visibility/order/scale settings. Native two-output and full
+automated checks passed; limits and recovery are recorded in docs/testing.md.

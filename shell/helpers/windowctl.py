@@ -35,7 +35,35 @@ def blur_capability():
     return result
 
 
-def run(action,owner):
+def launch_output(outputs, requested=''):
+    usable=[m for m in outputs if not m.get('disabled', False)]
+    return next((m for m in usable if m.get('name')==requested),
+                next((m for m in usable if m.get('focused')), usable[0] if usable else None))
+
+
+def centered_geometry(saved, monitor):
+    # Persist size; every explicit launch is centered on its requested output.
+    scale=max(.25,float(monitor.get('scale',1)))
+    width,height=round(monitor['width']/scale),round(monitor['height']/scale)
+    if int(monitor.get('transform',0)) % 2:
+        width,height=height,width
+    reserved=monitor.get('reserved',[0,0,0,0])
+    left,top,right,bottom=[max(0,round(value)) for value in reserved]
+    available_width=max(1,width-left-right)
+    available_height=max(1,height-top-bottom)
+    def size(name, fallback, minimum, maximum):
+        value=saved.get(name,fallback)
+        if isinstance(value,bool) or not isinstance(value,(int,float)) or not 0<value<100000:
+            value=fallback
+        return min(max(minimum,round(value)),maximum)
+    w=size('width',1000,640,available_width)
+    h=size('height',700,440,available_height)
+    return {'x':round(monitor['x']+left+(available_width-w)/2),
+            'y':round(monitor['y']+top+(available_height-h)/2),
+            'width':w,'height':h,'monitor':monitor['name']}
+
+
+def run(action,owner,output=""):
     if action=='capabilities':return dict(ok=True,**blur_capability())
     folder=Path(os.environ.get('XDG_STATE_HOME',str(Path.home()/'.local/state')))/'swiftshell'
     geometry=folder/'settings-window.json'
@@ -44,10 +72,15 @@ def run(action,owner):
     result={'ok':True,'geometry':saved,'blurAvailable':False,'blurReason':'Backdrop blur is unavailable.'}
     if action=='prepare':
         result.update(blur_capability())
+        monitor=launch_output(json.loads(ipc('j/monitors')),output)
+        if monitor:
+            result['geometry']=centered_geometry(saved,monitor)
+            result['output']=monitor['name']
         # Temporary rule scoped to this exact application/title. No config file writes.
         code='if _G.__swiftshell_settings_rule then _G.__swiftshell_settings_rule:set_enabled(false) end; '
         code+=f'_G.__swiftshell_settings_owner={owner}; '
-        code+='_G.__swiftshell_settings_rule=hl.window_rule({name="swiftshell-owned-settings",match={class="^org\\\\.quickshell$",title="^SwiftShell Settings$"},float=true,center=true,border_size=0,rounding=0,no_shadow=true,no_blur=false})'
+        monitor_rule='monitor='+json.dumps(monitor['name'],ensure_ascii=False)+',' if monitor else ''
+        code+='_G.__swiftshell_settings_rule=hl.window_rule({'+monitor_rule+'name="swiftshell-owned-settings",match={class="^org\\\\.quickshell$",title="^SwiftShell Settings$"},float=true,center=true,no_anim=true,no_initial_focus=true,border_size=0,rounding=0,no_shadow=true,no_blur=false})'
         if ipc('eval '+code).strip()!='ok':raise ValueError('Could not prepare the floating Settings window.')
         return result
     w=own_window(owner)
@@ -61,21 +94,17 @@ def run(action,owner):
     def remember():
         if w.get('fullscreen',0)==0 and not w.get('workspace',{}).get('name','').startswith('special:'):
             monitors=snapshot()
-            monitor=next((m['name'] for m in monitors if m['x']<=w['at'][0]<m['x']+m['width']/m['scale']), '')
+            monitor=next((m['name'] for m in monitors if m['x']<=w['at'][0]+w['size'][0]/2<m['x']+m['width']/m['scale'] and m['y']<=w['at'][1]+w['size'][1]/2<m['y']+m['height']/m['scale']), '')
             atomic(geometry,{'x':w['at'][0],'y':w['at'][1],'width':w['size'][0],'height':w['size'][1],'monitor':monitor})
     if action=='remember':remember()
     elif action=='mapped':
         if not w.get('floating'):dispatch('hl.dsp.window.float({window='+selector+',action="enable"})')
-        if saved:
-            monitors=snapshot()
-            m=next((m for m in monitors if m['name']==saved.get('monitor') and m['enabled']),next((m for m in monitors if m['enabled']),None))
-            if m:
-                width=min(max(640,int(saved.get('width',1000))),round(m['width']/m['scale']))
-                height=min(max(440,int(saved.get('height',700))),round(m['height']/m['scale']))
-                x=max(m['x'],min(int(saved.get('x',m['x'])),m['x']+round(m['width']/m['scale'])-width))
-                y=max(m['y']+28,min(int(saved.get('y',m['y']+40)),m['y']+round(m['height']/m['scale'])-height))
-                dispatch(f'hl.dsp.window.resize({{window={selector},x={width},y={height}}})')
-                dispatch(f'hl.dsp.window.move({{window={selector},x={x},y={y}}})')
+        monitor=launch_output(json.loads(ipc('j/monitors')),output)
+        if monitor:
+            placed=centered_geometry(saved,monitor)
+            dispatch(f'hl.dsp.window.resize({{window={selector},x={placed["width"]},y={placed["height"]}}})')
+            dispatch(f'hl.dsp.window.move({{window={selector},x={placed["x"]},y={placed["y"]}}})')
+            result['output']=monitor['name']
         dispatch('hl.dsp.focus({window='+selector+'})')
         dispatch('hl.dsp.window.alter_zorder({window='+selector+',mode="top"})')
     elif action in ('blur-on','blur-off'):
@@ -102,6 +131,13 @@ def run(action,owner):
             target=int(key) if key.isdecimal() and int(key)>0 else ('name:'+key.removeprefix('name:'))
             dispatch('hl.dsp.window.move({window='+selector+',workspace='+json.dumps(target)+',follow=false})')
             minimized.unlink(missing_ok=True)
+        if output:
+            monitor=launch_output(json.loads(ipc('j/monitors')),output)
+            if monitor:
+                placed=centered_geometry({'width':w['size'][0],'height':w['size'][1]},monitor)
+                dispatch(f'hl.dsp.window.resize({{window={selector},x={placed["width"]},y={placed["height"]}}})')
+                dispatch(f'hl.dsp.window.move({{window={selector},x={placed["x"]},y={placed["y"]}}})')
+                result['output']=monitor['name']
         dispatch('hl.dsp.focus({window='+selector+'})')
         dispatch('hl.dsp.window.alter_zorder({window='+selector+',mode="top"})')
     elif action!='status':raise ValueError('Unknown window action.')
@@ -114,8 +150,9 @@ def run(action,owner):
 if __name__=='__main__':
     parser=argparse.ArgumentParser()
     parser.add_argument('action',choices=['capabilities','prepare','mapped','remember','minimize','maximize','blur-on','blur-off','activate','status','cleanup'])
+    parser.add_argument('--output',default='')
     parser.add_argument('--owner-pid',type=int,default=os.getppid())
     args=parser.parse_args()
-    try:result=run(args.action,args.owner_pid)
+    try:result=run(args.action,args.owner_pid,args.output)
     except Exception as error:result={'ok':False,'message':str(error) if isinstance(error,ValueError) else 'Window integration is unavailable.'}
     print(json.dumps(result,separators=(',',':')))

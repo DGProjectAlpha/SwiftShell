@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Controls.Basic as Controls
 import Quickshell
 import Quickshell.Wayland
 import "../logic/bar.js" as Bar
@@ -23,13 +22,35 @@ PanelWindow {
     readonly property string edge:outputLayout.edge
     readonly property bool vertical:edge === "left" || edge === "right"
     readonly property real contentScale:outputLayout.scale
+    readonly property bool outputFullscreen:HyprlandModel.fullscreenOutputs.indexOf(monitorKey)>=0
+    readonly property bool peekOpen:peekController.open
+    readonly property int barTextRenderType:Bar.textRenderMode(devicePixelRatio,contentScale,typeof Text["CurveRendering"]==="number")==="curve" ? Text["CurveRendering"] : Text.QtRendering
+    function snapModule(position) {return Bar.snapModulePosition(position,devicePixelRatio,contentScale)}
+    function renderingDiagnostics() {
+        return {devicePixelRatio:devicePixelRatio,screenDevicePixelRatio:screen ? screen.devicePixelRatio : 0,contentScale:contentScale,textMode:barTextRenderType===Text.QtRendering ? "distance-field" : "curve",fullscreen:outputFullscreen,peek:peekOpen,cursorWatching:peekController.watching,origins:[leftModules.renderingGeometry(),centerModules.renderingGeometry(),rightModules.renderingGeometry()]}
+    }
     readonly property real railWidth:168
     implicitHeight: vertical ? (screen ? screen.height : 1080) : Math.ceil(Theme.barHeight*contentScale)
     implicitWidth: vertical ? Math.ceil(railWidth*contentScale) : (screen ? screen.width : 1920)
     property Item controlAnchor: null
+    signal dismissPopoutsRequested()
+    function dismissPopouts() {popovers.close();dismissPopoutsRequested()}
     property Item notificationAnchor:null
     property Item networkAnchor:null
     property Item powerAnchor:null
+    property Item performanceAnchor:null
+    property Item weatherAnchor:null
+    property Item clipboardAnchor:null
+    property Item screenshotAnchor:null
+    function quickToolTargets() {
+        const result={}
+        const items={screenshot:screenshotAnchor,clipboard:clipboardAnchor,performance:performanceAnchor,weather:weatherAnchor}
+        for(const id of Object.keys(items)) {
+            const item=items[id]
+            if(item) {const rect=contentItem.mapFromItem(item,0,0,item.width,item.height);result[id]={x:rect.x,y:rect.y,width:rect.width,height:rect.height}}
+        }
+        return result
+    }
     property Item calendarAnchor: null
     property var clockItem: null
     property var trayItem:null
@@ -48,6 +69,10 @@ PanelWindow {
         else if(id === "network" && networkAnchor)popovers.toggle(id,networkAnchor)
         else if(id === "power" && powerAnchor)popovers.toggle(id,powerAnchor)
         else if(id === "notifications" && notificationAnchor)popovers.toggle(id,notificationAnchor)
+        else if(id === "weather")popovers.toggle(id,weatherAnchor || contextAnchor)
+        else if(id === "performance")popovers.toggle(id,performanceAnchor || contextAnchor)
+        else if(id === "clipboard")popovers.toggle(id,clipboardAnchor || contextAnchor)
+        else if(id === "screenshot") {popovers.close();ScreenshotService.show(monitorKey)}
         else if(id === "customize") {contextAnchor.x=width-100;popovers.toggle(id,contextAnchor)}
     }
 
@@ -61,8 +86,9 @@ PanelWindow {
     // Top stays under true fullscreen. Overlay would cover fullscreen clients.
     // keyboardFocus None keeps the bar from taking text input.
     WlrLayershell.namespace: "swiftshell-bar"
-    WlrLayershell.layer: WlrLayer.Top
+    WlrLayershell.layer: window.peekOpen ? WlrLayer.Overlay : WlrLayer.Top
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+    BarPeekController {id:peekController;barWindow:window;requested:SettingsStore.fullscreenBarPeek;popupOpen:popovers.visible}
 
     readonly property bool reserveSpace: SettingsStore.reserveSpace
     readonly property string hyprlandMonitorName: HyprlandModel.hyprlandNameForScreen(modelData)
@@ -174,6 +200,7 @@ PanelWindow {
 
     Item {
         id:moduleCanvas
+        readonly property int barTextRenderType:window.barTextRenderType
         width:window.width/window.contentScale
         height:window.height/window.contentScale
         scale:window.contentScale
@@ -181,15 +208,15 @@ PanelWindow {
         ModuleStrip {
             id:leftModules
             barWindow:window;modules:window.modulesOn("left")
-            x:window.vertical ? 0 : Theme.marginH
-            y:window.vertical ? Theme.marginH : 0
+            x:window.snapModule(window.vertical ? 0 : Theme.marginH)
+            y:window.snapModule(window.vertical ? Theme.marginH : 0)
             onWidthChanged:if(popovers)popovers.reposition()
         }
         ModuleStrip {
             id:rightModules
             barWindow:window;modules:window.modulesOn("right")
-            x:window.vertical ? 0 : moduleCanvas.width-Theme.marginH-width
-            y:window.vertical ? Math.max(leftModules.y+leftModules.height+Theme.moduleSpacing,moduleCanvas.height-Theme.marginH-height) : 0
+            x:window.snapModule(window.vertical ? 0 : moduleCanvas.width-Theme.marginH-width)
+            y:window.snapModule(window.vertical ? Math.max(leftModules.y+leftModules.height+Theme.moduleSpacing,moduleCanvas.height-Theme.marginH-height) : 0)
             onXChanged:if(popovers)popovers.reposition()
         }
         ModuleStrip {
@@ -198,8 +225,8 @@ PanelWindow {
             readonly property real freeLeft:leftModules.x+leftModules.width+Theme.moduleSpacing
             readonly property real freeRight:rightModules.x-Theme.moduleSpacing
             titleWidth:window.vertical ? window.railWidth-16 : Math.min(480,Math.max(0,freeRight-freeLeft-fixedWidth))
-            x:window.vertical ? 0 : Math.max(freeLeft,Math.min((moduleCanvas.width-width)/2,freeRight-width))
-            y:window.vertical ? Math.max(leftModules.y+leftModules.height+Theme.moduleSpacing,Math.min((moduleCanvas.height-height)/2,rightModules.y-height-Theme.moduleSpacing)) : 0
+            x:window.snapModule(window.vertical ? 0 : Math.max(freeLeft,Math.min((moduleCanvas.width-width)/2,freeRight-width)))
+            y:window.snapModule(window.vertical ? Math.max(leftModules.y+leftModules.height+Theme.moduleSpacing,Math.min((moduleCanvas.height-height)/2,rightModules.y-height-Theme.moduleSpacing)) : 0)
             onXChanged:if(popovers)popovers.reposition()
         }
     }
@@ -207,8 +234,9 @@ PanelWindow {
     MouseArea {
         z:-.5
         anchors.fill:parent
-        acceptedButtons:Qt.RightButton
+        acceptedButtons:Qt.LeftButton | Qt.RightButton
         onClicked:function(mouse) {
+            if(mouse.button!==Qt.RightButton){window.dismissPopouts();return}
             LauncherModel.closeLauncher()
             contextAnchor.x=mouse.x
             popovers.toggle("customize",contextAnchor)
@@ -229,6 +257,10 @@ PanelWindow {
         if (id === "network")return networkComponent
         if (id === "power")return powerComponent
         if (id === "notifications")return notificationComponent
+        if (id === "screenshot")return screenshotComponent
+        if (id === "clipboard")return clipboardComponent
+        if (id === "weather")return weatherComponent
+        if (id === "performance")return performanceComponent
         if (id === "media")
             return mediaComponent
         if (id === "tray")
@@ -290,9 +322,6 @@ PanelWindow {
                 }
             }
 
-            Controls.ToolTip.visible:containsMouse
-            Controls.ToolTip.text:"Search"
-            Controls.ToolTip.delay:600
             Row {
                 id:searchContents
                 anchors.centerIn:parent
@@ -489,7 +518,57 @@ PanelWindow {
         id:contextPanel
         BarContextMenu {
             outputName:window.monitorKey
-            onCustomizeRequested:{popovers.close();SettingsStore.setSettingsCategory("bar");SettingsModel.show()}
+            onCustomizeRequested:{popovers.close();SettingsStore.setSettingsCategory("bar");SettingsModel.show(window.monitorKey)}
+        }
+    }
+
+    Component {
+        id:screenshotComponent
+        WidgetIndicator {
+            id:screenshotIndicator
+            kind:"screenshot";label:"Screenshot"
+            textPrimary:window.foregroundFor("screenshot",false)
+            textHover:window.foregroundFor("screenshot",false)
+            Component.onCompleted:window.screenshotAnchor=screenshotIndicator
+            Component.onDestruction:if(window.screenshotAnchor===screenshotIndicator)window.screenshotAnchor=null
+            onActivated:{LauncherModel.closeLauncher();popovers.close();ScreenshotService.show(window.monitorKey)}
+        }
+    }
+    Component {
+        id:clipboardComponent
+        WidgetIndicator {
+            id:clipboardIndicator
+            kind:"clipboard";label:"Clipboard history"
+            textPrimary:window.foregroundFor("clipboard",false)
+            textHover:window.foregroundFor("clipboard",false)
+            Component.onCompleted:window.clipboardAnchor=clipboardIndicator
+            Component.onDestruction:if(window.clipboardAnchor===clipboardIndicator)window.clipboardAnchor=null
+            onActivated:{LauncherModel.closeLauncher();popovers.toggle("clipboard",clipboardIndicator)}
+        }
+    }
+    Component {
+        id:performanceComponent
+        PerformanceModule {
+            id:performanceIndicator
+            textPrimary:window.foregroundFor("performance",false)
+            textMuted:window.foregroundFor("performance",true)
+            textHover:window.foregroundFor("performance",false)
+            Component.onCompleted:window.performanceAnchor=performanceIndicator
+            Component.onDestruction:if(window.performanceAnchor===performanceIndicator)window.performanceAnchor=null
+            onActivated:{LauncherModel.closeLauncher();popovers.toggle("performance",performanceIndicator)}
+        }
+    }
+
+    Component {
+        id:weatherComponent
+        WeatherModule {
+            id:weatherIndicator
+            textPrimary:window.foregroundFor("weather",false)
+            textMuted:window.foregroundFor("weather",true)
+            textHover:window.foregroundFor("weather",false)
+            Component.onCompleted:window.weatherAnchor=weatherIndicator
+            Component.onDestruction:if(window.weatherAnchor===weatherIndicator)window.weatherAnchor=null
+            onActivated:{LauncherModel.closeLauncher();popovers.toggle("weather",weatherIndicator)}
         }
     }
 

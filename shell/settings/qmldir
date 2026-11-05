@@ -16,3 +16,11 @@ DefaultAppsPage 1.0 DefaultAppsPage.qml
 WorkspaceOrderList 1.0 WorkspaceOrderList.qml
 
 SpotlightPage 1.0 SpotlightPage.qml
+
+BarModuleOrderList 1.0 BarModuleOrderList.qml
+
+SettingsPreview 1.0 SettingsPreview.qml
+
+ColorPicker 1.0 ColorPicker.qml
+
+WeatherPage 1.0 WeatherPage.qml

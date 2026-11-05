@@ -27,3 +27,14 @@ const windowsLogic=require('../shell/logic/windows.js');
 assert.equal(windowsLogic.focusCommand('0xabc','lua'),'eval hl.dispatch(hl.dsp.focus({window="address:0xabc"}))');
 assert.equal(windowsLogic.focusCommand('abc','legacy'),'focuswindow address:0xabc');
 assert.equal(windowsLogic.focusCommand('0xabc; unsafe()','lua'),'');
+
+const clipboard=require('../shell/logic/clipboard.js');
+let simultaneous=[];
+simultaneous=tools.remember(simultaneous,'First simultaneous fixture',5000);
+simultaneous=tools.remember(simultaneous,'Second simultaneous fixture',5000);
+assert.notEqual(simultaneous[0].id,simultaneous[1].id);
+assert.equal(clipboard.filter(simultaneous,'FIRST',5001).length,1);
+assert.equal(clipboard.filter(simultaneous,'',1205001).length,0);
+assert.equal(clipboard.preview('<b>Literal</b>\nSecond'),' <b>Literal</b> Second'.trim());
+assert.equal(clipboard.meta('one\ntwo'),'7 characters · 2 lines');
+console.log('PASS clipboard filter, literal previews and distinct simultaneous-entry identity');

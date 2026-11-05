@@ -1,0 +1,23 @@
+const assert=require('node:assert/strict');
+const media=require('../shell/logic/media.js');
+function player(id,playing){return {dbusName:id,identity:id,isPlaying:playing,uniqueId:1,canTogglePlaying:true,canGoNext:true,canGoPrevious:true,canSeek:true,positionSupported:true,lengthSupported:true,length:240,position:30}}
+const first=player('first',false),second=player('second',true);
+assert.equal(media.selectPlayer({values:[first,second]},''),second);
+assert.equal(media.selectPlayer([first,second],'first'),first);
+assert.equal(media.selectPlayer([second],'gone'),second);
+assert.equal(media.sourceChoices([first,second])[0].value,'');
+assert.equal(media.seekPosition(first,.75),180);
+assert.equal(media.seekPosition(first,-1),0);
+assert.equal(media.seekPosition(first,2),240);
+assert.equal(media.seekPosition(first,NaN),null);
+for(const missing of ['canSeek','positionSupported','lengthSupported'])assert.equal(media.seekPosition({...first,[missing]:false},.5),null);
+assert.equal(media.duration({...first,length:Infinity}),0);
+assert.equal(media.duration({...first,length:-2}),0);
+assert.equal(media.position({...first,position:250}),240);
+assert.equal(media.position({...first,position:-5}),0);
+assert.equal(media.timeLabel(0),'0:00');assert.equal(media.timeLabel(65),'1:05');assert.equal(media.timeLabel(3665),'1:01:05');assert.equal(media.timeLabel(NaN),'—');
+assert.equal(media.artSource({trackArtUrl:'https://example.invalid/provided.png'}),'https://example.invalid/provided.png');
+assert.equal(media.artSource({trackArtUrl:'javascript:unsafe()'}),'');
+assert.equal(media.artSource({trackArtUrl:'file:///provided.png'}),'file:///provided.png');
+assert.notEqual(media.trackKey(first),media.trackKey({...first,uniqueId:2}));
+console.log('PASS active/manual player selection, seconds-based guarded seek, duration and supplied-art fallback');

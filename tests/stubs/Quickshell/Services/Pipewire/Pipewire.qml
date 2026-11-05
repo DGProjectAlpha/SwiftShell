@@ -11,6 +11,9 @@ QtObject {
         property var values: []
     }
     property QtObject defaultAudioSink: QtObject {
+        property bool ready:true
+        property bool isSink:true
+        property bool isStream:false
         property string id: "stub-sink"
         property string description: "Stub Output"
         property QtObject audio: QtObject {

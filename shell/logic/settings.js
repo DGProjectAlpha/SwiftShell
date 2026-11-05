@@ -56,7 +56,7 @@ function workspaceIdsValid(ids) {
     return true;
 }
 
-var BAR_MODULES = ["workspaces", "title", "search", "clock", "control", "media", "tray", "battery", "network", "power", "notifications"];
+var BAR_MODULES = ["workspaces", "title", "search", "clock", "control", "media", "tray", "battery", "network", "power", "notifications", "screenshot", "clipboard", "performance", "weather"];
 
 function normalizeModuleOrder(order) {
     const source = asList(order);
@@ -184,9 +184,10 @@ var DEFAULTS = {
         workspaceDispatch: "auto",
         placement: "focused",
         height: 28,
-        moduleOrder: ["workspaces", "title", "search", "clock", "control", "media", "tray", "battery", "network", "power", "notifications"],
+        moduleOrder: ["workspaces", "title", "search", "clock", "control", "media", "tray", "battery", "network", "power", "notifications", "screenshot", "clipboard", "performance", "weather"],
         hiddenModules: [],
         searchLabel: false,
+        fullscreenPeek:false,
         moduleSidesJson: "{}",
         hiddenOutputsJson: "{}",
         layoutOutputsJson: "{}",
@@ -198,6 +199,8 @@ var DEFAULTS = {
     appearance: {
         mode: "dark",
         tint: "neutral",
+        accentColor:"",
+        opaqueWindows:true,
         panelOpacity: 0.92,
         panelBlur: 1,
         radius: 10,
@@ -240,7 +243,9 @@ var DEFAULTS = {
         width: 1000,
         height: 700,
         category: "appearance",
+        sectionsJson:"{}",
     },
+    weather:{enabled:false,locationMode:"manual",query:"",locationJson:"{}",units:"metric",refreshMinutes:15},
     shortcutsJson: "{}",
     notifications: {
         ownership: "off",
@@ -330,6 +335,72 @@ function pickNumber(source, key, min, max, fallback, errors, label) {
         return source[key];
     errors.push(label);
     return fallback;
+}
+
+function mergeSettingsMapField(key,base,desired,current) {
+    const fields=["workspaceOutputsJson","moduleSidesJson","hiddenOutputsJson","layoutOutputsJson","surfaceOutputsJson","outputsJson","sectionsJson","shortcutsJson","policiesJson","extensionsJson"];
+    if(fields.indexOf(key)<0 || typeof base!=="string" || typeof desired!=="string" || typeof current!=="string")return null;
+    try {
+        const values=[JSON.parse(base),JSON.parse(desired),JSON.parse(current)];
+        if(!values.every(isPlainObject))return null;
+        return JSON.stringify(mergeSettingsChanges(values[0],values[1],values[2]));
+    } catch(error) {return null;}
+}
+
+function mergeSettingsChanges(base,desired,current) {
+    if(!isPlainObject(base) || !isPlainObject(desired) || !isPlainObject(current))return JSON.parse(JSON.stringify(desired));
+    const out=JSON.parse(JSON.stringify(current));
+    const keys=Object.keys(base).concat(Object.keys(desired).filter(function(key){return !Object.prototype.hasOwnProperty.call(base,key)}));
+    for(const key of keys) {
+        if(["__proto__","constructor","prototype"].indexOf(key)>=0)continue;
+        const before=Object.prototype.hasOwnProperty.call(base,key),after=Object.prototype.hasOwnProperty.call(desired,key);
+        if(before && after && JSON.stringify(base[key])===JSON.stringify(desired[key]))continue;
+        if(!after)delete out[key];
+        else if(isPlainObject(base[key]) && isPlainObject(desired[key]))out[key]=mergeSettingsChanges(base[key],desired[key],isPlainObject(out[key]) ? out[key] : {});
+        else {
+            const merged=mergeSettingsMapField(key,base[key],desired[key],out[key]);
+            out[key]=merged===null ? JSON.parse(JSON.stringify(desired[key])) : merged;
+        }
+    }
+    return out;
+}
+
+function sectionStatesValue(raw,errors) {
+    if(raw===undefined)return "{}";
+    try {
+        if(typeof raw!=="string" || raw.length>32768)throw new Error();
+        const source=JSON.parse(raw),out={};
+        if(!isPlainObject(source) || Object.keys(source).length>200)throw new Error();
+        for(const key of Object.keys(source)) {
+            if(!/^[a-zA-Z][a-zA-Z0-9_.-]{0,79}$/.test(key) || ["constructor","prototype","__proto__"].indexOf(key)>=0 || typeof source[key]!=="boolean")throw new Error();
+            out[key]=source[key];
+        }
+        return JSON.stringify(out);
+    } catch(error) {errors.push("settingsWindow.sectionsJson");return "{}";}
+}
+
+function weatherValue(value,errors) {
+    const input=isPlainObject(value) ? value : {};
+    if(value!==undefined && !isPlainObject(value))errors.push("weather");
+    let query="",locationJson="{}";
+    if(input.query!==undefined) {
+        if(typeof input.query==="string" && input.query.length<=256 && !/[\x00-\x1f\x7f]/.test(input.query))query=input.query.trim();
+        else errors.push("weather.query");
+    }
+    if(input.locationJson!==undefined) {
+        try {
+            if(typeof input.locationJson!=="string" || input.locationJson.length>4096)throw new Error();
+            const l=JSON.parse(input.locationJson);
+            if(!isPlainObject(l))throw new Error();
+            if(Object.keys(l).length) {
+                if(typeof l.name!=="string" || !l.name.trim() || l.name.length>180 || /[\x00-\x1f\x7f]/.test(l.name) || typeof l.latitude!=="number" || !Number.isFinite(l.latitude) || Math.abs(l.latitude)>90 || typeof l.longitude!=="number" || !Number.isFinite(l.longitude) || Math.abs(l.longitude)>180)throw new Error();
+                const item={name:l.name,latitude:l.latitude,longitude:l.longitude};
+                if(l.timezone!==undefined){if(typeof l.timezone!=="string" || !/^[A-Za-z0-9_+./-]{0,80}$/.test(l.timezone))throw new Error();item.timezone=l.timezone;}
+                locationJson=JSON.stringify(item);
+            }
+        } catch(error) {errors.push("weather.locationJson");}
+    }
+    return {enabled:pickBoolean(input,"enabled",false,errors,"weather.enabled"),locationMode:pickEnum(input,"locationMode",["manual","automatic"],"manual",errors,"weather.locationMode"),query:query,locationJson:locationJson,units:pickEnum(input,"units",["metric","imperial"],"metric",errors,"weather.units"),refreshMinutes:pickInt(input,"refreshMinutes",10,120,15,errors,"weather.refreshMinutes")};
 }
 
 function validateSettings(input) {
@@ -427,6 +498,7 @@ function validateSettings(input) {
     );
     const barPlacement = pickEnum(bar, "placement", ["focused", "primary", "all"], DEFAULTS.bar.placement, errors, "bar.placement");
     const barHeight = pickInt(bar, "height", 22, 52, DEFAULTS.bar.height, errors, "bar.height");
+    const fullscreenPeek=pickBoolean(bar,"fullscreenPeek",false,errors,"bar.fullscreenPeek");
     const searchLabel=pickBoolean(bar,"searchLabel",DEFAULTS.bar.searchLabel,errors,"bar.searchLabel");
     const moduleSidesJson=moduleSidesValue(bar.moduleSidesJson,errors);
     const hiddenOutputsJson=hiddenOutputsValue(bar.hiddenOutputsJson,errors);
@@ -463,6 +535,8 @@ function validateSettings(input) {
         errors.push("appearance");
 
     const appearanceMode = pickEnum(appearance, "mode", ["dark", "light"], DEFAULTS.appearance.mode, errors, "appearance.mode");
+    const accentColor=hexColor(appearance.accentColor,errors,"appearance.accentColor");
+    const opaqueWindows=pickBoolean(appearance,"opaqueWindows",true,errors,"appearance.opaqueWindows");
     const appearanceTint = pickEnum(appearance, "tint", ["neutral", "wallpaper"], DEFAULTS.appearance.tint, errors, "appearance.tint");
     const panelOpacity = pickNumber(appearance, "panelOpacity", 0.72, 0.96, DEFAULTS.appearance.panelOpacity, errors, "appearance.panelOpacity");
     const panelBlur = pickNumber(appearance, "panelBlur", 0, 1, DEFAULTS.appearance.panelBlur, errors, "appearance.panelBlur");
@@ -494,7 +568,9 @@ function validateSettings(input) {
         errors.push("settingsWindow");
     const settingsWindowWidth = pickInt(windowSource, "width", 640, 1600, DEFAULTS.settingsWindow.width, errors, "settingsWindow.width");
     const settingsWindowHeight = pickInt(windowSource, "height", 440, 1200, DEFAULTS.settingsWindow.height, errors, "settingsWindow.height");
-    const settingsWindowCategory = pickEnum(windowSource, "category", ["appearance", "bar", "spotlight", "workspaces", "wallpaper", "displays", "shortcuts", "defaultApps", "audio", "network", "bluetooth", "power", "notifications"], DEFAULTS.settingsWindow.category, errors, "settingsWindow.category");
+    const settingsSectionsJson=sectionStatesValue(windowSource.sectionsJson,errors);
+    const settingsWindowCategory = pickEnum(windowSource, "category", ["appearance", "bar", "spotlight", "workspaces", "wallpaper", "displays", "shortcuts", "defaultApps", "audio", "network", "bluetooth", "power", "notifications", "weather"], DEFAULTS.settingsWindow.category, errors, "settingsWindow.category");
+    const weather=weatherValue(source.weather,errors);
     const noteSource = isPlainObject(source.notifications) ? source.notifications : {};
     if (source.notifications !== undefined && !isPlainObject(source.notifications))
         errors.push("notifications");
@@ -568,6 +644,7 @@ function validateSettings(input) {
                 moduleOrder: moduleOrder,
                 hiddenModules: hiddenModules,
                 searchLabel: searchLabel,
+                fullscreenPeek:fullscreenPeek,
                 moduleSidesJson: moduleSidesJson,
                 hiddenOutputsJson: hiddenOutputsJson,
                 layoutOutputsJson: layoutOutputsJson,
@@ -578,6 +655,7 @@ function validateSettings(input) {
             },
             appearance: {
                 mode: appearanceMode,
+                accentColor:accentColor,opaqueWindows:opaqueWindows,
                 tint: appearanceTint,
                 panelOpacity: panelOpacity,
                 panelBlur: panelBlur,
@@ -621,7 +699,9 @@ function validateSettings(input) {
                 width: settingsWindowWidth,
                 height: settingsWindowHeight,
                 category: settingsWindowCategory,
+                sectionsJson:settingsSectionsJson,
             },
+            weather:weather,
             shortcutsJson: shortcutsJson,
             notifications: {
                 ownership: notificationOwnership,
@@ -869,6 +949,7 @@ function extensionsText(source, errors) {
         launcher: true,
         wallpaper: true,
         settingsWindow: true,
+        weather:true,
         shortcutsJson: true,
         notifications: true,
         extensionsJson: true,
@@ -887,11 +968,12 @@ function extensionsText(source, errors) {
 
     const domainKeys = {
         clock: { use24Hour: true, showSeconds:true, showDate:true, dateFormat:true, showWeekNumbers: true, weekStart: true },
-        bar: { targetMonitor: true, reserveSpace: true, showFocusedTitle: true, workspaceIds: true, workspaceOutputsJson: true, workspaceDispatch: true, placement: true, height: true, moduleOrder: true, hiddenModules: true, searchLabel:true, moduleSidesJson:true, hiddenOutputsJson:true, layoutOutputsJson:true, surfaceMode:true, surfaceColor:true, surfaceOpacity:true, surfaceOutputsJson:true },
-        appearance: { mode: true, tint: true, panelOpacity: true, panelBlur: true, radius: true, shadowOpacity: true, shadowSoftness: true, motionScale: true, reducedMotion: true, panelPadding: true, panelSpacing: true, fontSize: true, fontWeight: true, iconScale: true, topGradient: true, contrast: true, automaticText: true, automaticGradient: true, manualText: true, manualMuted: true, manualPanel: true, manualGradient: true },
+        bar: { fullscreenPeek:true, targetMonitor: true, reserveSpace: true, showFocusedTitle: true, workspaceIds: true, workspaceOutputsJson: true, workspaceDispatch: true, placement: true, height: true, moduleOrder: true, hiddenModules: true, searchLabel:true, moduleSidesJson:true, hiddenOutputsJson:true, layoutOutputsJson:true, surfaceMode:true, surfaceColor:true, surfaceOpacity:true, surfaceOutputsJson:true },
+        appearance: { accentColor:true,opaqueWindows:true, mode: true, tint: true, panelOpacity: true, panelBlur: true, radius: true, shadowOpacity: true, shadowSoftness: true, motionScale: true, reducedMotion: true, panelPadding: true, panelSpacing: true, fontSize: true, fontWeight: true, iconScale: true, topGradient: true, contrast: true, automaticText: true, automaticGradient: true, manualText: true, manualMuted: true, manualPanel: true, manualGradient: true },
         launcher: { pinnedIds: true,defaultMode:true,clipboardHistory:true,searchWindows:true },
         wallpaper: { enabled: true, fit: true, path: true, outputsJson: true, slideshow: true, intervalMinutes: true, order: true, transitionMs: true, slidesJson: true },
-        settingsWindow: { width: true, height: true, category: true },
+        weather:{enabled:true,locationMode:true,query:true,locationJson:true,units:true,refreshMinutes:true},
+        settingsWindow: { width: true, height: true, category: true, sectionsJson:true },
         notifications: { ownership: true, dnd: true, policiesJson: true, bannerDuration:true,historyLimit:true,screenTarget:true,quietUntil:true,quietHoursEnabled:true,quietStart:true,quietEnd:true,quietDays:true,previewMode:true,soundEnabled:true,soundVolume:true },
     };
     const nested = {};
@@ -1134,6 +1216,7 @@ var swiftshellSettings = {
     serializeSettings: serializeSettings,
     migrationDecision: migrationDecision,
     migrationFromText: migrationFromText,
+    mergeSettingsChanges:mergeSettingsChanges,
     migrationPlan: migrationPlan,
     commitMigration: commitMigration,
     restoreBackup: restoreBackup,

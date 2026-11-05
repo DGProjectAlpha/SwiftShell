@@ -181,7 +181,10 @@ Open overview button and an Alt+Tab switch; turning the switch off restores the
 original window-cycle binding. Custom/unknown bindings are preserved.
 
 Settings → Top bar lets each display use Top, Bottom, Left or Right placement,
-additional content scaling, widget visibility, grouping and order. Side bars use
+additional content scaling, widget visibility, grouping and order. Drag a handle
+in Widget order to move an item; Escape cancels, and the list scrolls at its edges
+while dragging. Alt J/K on a focused handle also reorders. Hover hints no longer
+cover bar controls. Side bars use
 vertical groups. Desktop monitor modes/scales are unchanged; bar scale is extra
 control sizing. Select the same display to change its background. Use the all-screen
 layout option to remove a display override.
@@ -190,15 +193,32 @@ layout option to remove a display override.
 
 Search an open window's title or app name, or type `windows`, then select it to
 focus that window. Settings results open the matching control. Type `screenshot`
-to capture a region or the focused display to the clipboard. Paste the image into
-an app to save/share; Escape cancels region selection.
+to capture an area or the focused display, or click the camera in the bar. Review
+the image, then choose Copy PNG or Save as… for a local PNG file. Area selection
+supports Escape to cancel; optional 3/5-second delays let you prepare the screen.
+Capturing never overwrites the clipboard until you choose Copy PNG.
 
 Clipboard history is off by default. Enable it in Settings → Spotlight Search to
 remember text copied from then on. Type `clip` or `clip some text` to browse/search
 it, then Enter to copy an item. History stays in memory, expires after 20 minutes,
 and keeps at most 30 items. Turning it off or Clear history removes its entries.
+The Clipboard bar widget opens searchable history with copy, individual removal
+and Clear. Keep open gives it an independent movable/resizable floating window;
+closing that window leaves recording unchanged. Window geometry is remembered,
+but clipboard contents are never saved to disk.
 Sensitive-format hints are respected, but text without a hint can include secrets;
 leave history off when that is unsuitable. Open-window search can also be disabled.
+
+The Performance bar widget shows CPU/GPU/memory percentages. Click it for recent
+graphs, CPU/GPU temperatures, RAM usage and graphics memory. Missing sensors show
+Not reported. Sampling is shared across monitors and stops when no bar or panel
+uses it. Screenshot, Clipboard and Performance can each be hidden/reordered per
+display in Settings → Top bar.
+
+Terminal-based apps such as Cachy-Update open in the terminal selected in
+Settings → Default Apps, with an installed supported terminal as fallback when
+none is selected. Unsupported terminal launchers produce an error instead of
+silently running an interactive program without a terminal.
 
 Network & Devices now reports operations, recoverable errors and authentication
 retry state. Password entry is masked with an optional Show control. Cancel targets
@@ -227,3 +247,44 @@ not your system volume. DND, quiet hours, silent hints and rapid replacement upd
 do not cause repeated sounds. Missing multimedia support or an audio output has a
 clear unavailable state. Preview banner shows an actual temporary banner when
 SwiftShell owns notifications, without adding history or sounding an alert.
+
+### Weather
+
+Open **Settings → Weather**, enable weather and search for a city, postal code or
+address. Choose a result to show current conditions, hourly weather, seven daily
+forecasts and air quality. Expand a day for its hourly outlook. Choose Celsius or
+Fahrenheit and the update interval in Settings. **Top bar → Widgets → Weather**
+controls its position and visibility independently on each display.
+
+Weather starts off. Search sends the entered place to the named map provider;
+**Use approximate location** performs an explicit IP-based lookup. Nothing looks
+up your location automatically. Cached forecasts stay available offline and show
+their age. Weather is an estimate rather than an emergency-alert service.
+
+### Settings sections and appearance
+
+Click a section heading to collapse or expand it. Settings remembers that choice;
+a search temporarily opens matching sections. Dragging a slider highlights its
+thumb and track and stays within the control. One drag is one Appearance Undo
+step. **Appearance → Colors → Accent color** sets the shared control accent.
+**Application windows → Keep windows opaque** prevents inactive videos and apps
+from fading into the wallpaper when the desktop appearance integration is enabled.
+
+Settings opens on the display where its button was clicked. Reopening keeps its
+saved size and centers it on that display. Resize at the visible window edge or
+corner. **Top bar → Peek in fullscreen** optionally reveals the bar when the
+pointer pauses at its display edge; it starts off.
+
+### Desktop shortcuts
+
+**Settings → Shortcuts** shows your desktop's effective shortcuts. Choose **Change**
+where available, press a new combination and apply it. Capture temporarily inhibits
+global shortcuts so recording a key does not launch its action. The original action
+stays the same, changes are saved to their original configuration, and **Undo change**
+restores the preceding edit. Generated or ambiguous shortcuts stay visible but
+cannot yet be edited individually. Existing 60% keyboard combinations are retained.
+
+Selecting a terminal in **Default apps** also updates a safely recognized desktop
+terminal shortcut. On the reference desktop, Super+Enter now follows Konsole.
+**Undo** in the terminal row restores the preceding choice. Configurations which
+cannot be safely linked explicitly show that the choice is used only by SwiftShell.

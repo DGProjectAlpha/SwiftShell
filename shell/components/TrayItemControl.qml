@@ -1,6 +1,5 @@
 import QtQuick
 import Quickshell
-import QtQuick.Controls.Basic as Controls
 import "../logic/tray.js" as Tray
 import "../themes"
 
@@ -14,12 +13,10 @@ MouseArea {
     readonly property string itemIcon:entry && typeof entry.icon==="string" ? entry.icon : ""
     readonly property bool menuAvailable:entry && entry.hasMenu===true
     readonly property bool needsAttention:entry && entry.status===2
-    readonly property string tooltip:itemTitle + (menuAvailable ? "\nRight-click for menu" : entry && entry.onlyMenu ? "\nMenu is not ready" : "")
-    readonly property bool menuOpen:nativeMenu.visible
-    QsMenuAnchor {
-        id:nativeMenu
-        menu:control.entry && control.entry.hasMenu && control.entry.menu !== undefined ? control.entry.menu : null
-    }
+    readonly property bool menuOpen:themedMenu.opened
+    readonly property var menuWindow:themedMenu.nativeWindow
+    function menuDiagnostics(){return themedMenu.diagnostics()}
+    TrayMenu {id:themedMenu;hostWindow:control.hostWindow;anchorItem:control}
     signal invoked(string action)
     implicitWidth:showLabel ? Math.max(160,label.implicitWidth+Theme.barIcon+24) : Theme.barIcon
     implicitHeight:showLabel ? Theme.controlHeight : Theme.barHeight
@@ -35,10 +32,8 @@ MouseArea {
         if(!entry || !menuAvailable || !hostWindow || !hostWindow.contentItem)return false
         const point=mapToItem(hostWindow.contentItem,width/2,height)
         try {
-            if(nativeMenu.menu) {
-                nativeMenu.anchor.window=hostWindow
-                nativeMenu.anchor.rect=Qt.rect(Math.round(point.x),Math.round(point.y),1,1)
-                nativeMenu.open()
+            if(entry.menu !== undefined && entry.menu) {
+                if(!themedMenu.open(entry.menu,itemTitle))return false
             } else entry.display(hostWindow,Math.round(point.x),Math.round(point.y))
             invoked("menu")
             return true
@@ -53,6 +48,8 @@ MouseArea {
             return true
         } catch(error) {return false}
     }
+    onMenuAvailableChanged:if(!menuAvailable)themedMenu.close()
+    onEntryChanged:themedMenu.close()
     onClicked:function(mouse){activate(mouse.button)}
     onWheel:function(wheel) {
         if(!entry)return
@@ -64,13 +61,6 @@ MouseArea {
     Keys.onPressed:function(event) {
         if(event.key===Qt.Key_Menu || (event.key===Qt.Key_F10 && (event.modifiers&Qt.ShiftModifier)))event.accepted=showMenu()
         else if(event.key===Qt.Key_Return || event.key===Qt.Key_Enter || event.key===Qt.Key_Space)event.accepted=activate(Qt.LeftButton)
-    }
-    Controls.ToolTip {
-        visible:control.containsMouse
-        delay:600
-        text:control.tooltip
-        contentItem:Text {text:control.tooltip;textFormat:Text.PlainText;color:Theme.settingsText;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall}
-        background:Rectangle {radius:Math.min(8,Theme.radius);color:Theme.settingsPopupSurface}
     }
     Rectangle {
         anchors.fill:parent;anchors.margins:showLabel ? 1 : 0

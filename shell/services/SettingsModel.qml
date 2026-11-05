@@ -2,6 +2,7 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
+import Quickshell.Hyprland
 import "../logic/capabilities.js" as Capabilities
 
 Singleton {
@@ -13,23 +14,25 @@ Singleton {
     property int focusTicket: 0
     property string reason: ""
     property string pendingControl:""
-    function requestControl(id,category) {pendingControl=id;SettingsStore.setSettingsCategory(category);show()}
+    property string launchOutput:""
+    function requestControl(id,category,output) {pendingControl=id;SettingsStore.setSettingsCategory(category);show(output)}
 
     signal windowActionRequested(string action)
     signal appearanceEditRequested(string key, real value)
 
-    function show() {
+    function show(output) {
+        launchOutput=typeof output === "string" ? output : (Hyprland.focusedMonitor ? Hyprland.focusedMonitor.name : "")
         const step = Capabilities.reduceSettingsWindow(
             { open: root.open, instances: root.open ? 1 : 0, focused: root.open, reason: root.reason },
             "launch"
         )
         root.reason = step.reason
         if (root.open) {
-            WindowService.request("activate")
+            WindowService.request("activate",root.launchOutput)
             root.focusTicket += 1
             return
         }
-        WindowService.request("prepare")
+        WindowService.request("prepare",root.launchOutput)
     }
 
     Connections {

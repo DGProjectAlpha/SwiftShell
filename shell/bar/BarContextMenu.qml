@@ -17,7 +17,7 @@ Item {
         const result=[]
         for(let i=0;i<toggles.count;i++) {
             const item=toggles.itemAt(i),position=item.mapToItem(null,0,0)
-            result.push({module:item.modelData,x:position.x,y:position.y,width:item.width,height:item.height})
+            result.push({module:item.modelData,x:position.x,y:position.y,width:item.width,height:item.height,checked:item.checked})
         }
         const customize=customizeButton.mapToItem(null,0,0)
         result.push({module:"customize",x:customize.x,y:customize.y,width:customizeButton.width,height:customizeButton.height})
@@ -34,6 +34,7 @@ Item {
             model:Bar.BAR_MODULES
             delegate:SettingsToggle {
                 required property string modelData
+                objectName:"barContextVisibility-"+modelData
                 width:column.width;height:Theme.controlHeight
                 label:Bar.moduleName(modelData)
                 checked:SettingsStore.hiddenForOutput(menu.outputName).indexOf(modelData)<0
@@ -44,7 +45,7 @@ Item {
         }
         FlatButton {
             visible:Object.prototype.hasOwnProperty.call(JSON.parse(SettingsStore.hiddenOutputsJson),menu.outputName)
-            label:"Use all-screen visibility"
+            label:"Use default visibility"
             onActivated:SettingsStore.inheritHidden(menu.outputName)
         }
         FlatButton {id:customizeButton;label:"Customize bar…";onActivated:menu.customizeRequested()}

@@ -870,6 +870,9 @@ def main():
     for path in qml_files:
         component_roots[path.stem] = qml_root_type(path.read_text(encoding="utf-8"))
 
+    if "BarModuleOrderList 1.0 BarModuleOrderList.qml" not in (SHELL / "settings" / "qmldir").read_text():
+        errors.append("BarModuleOrderList must be registered for native Quickshell settings imports")
+
     load_test = ROOT / "tests" / "qml" / "tst_shell_load.qml"
     if load_test.is_file():
         load_text = load_test.read_text(encoding="utf-8")
@@ -883,6 +886,8 @@ def main():
 
     for path in qml_files:
         text = path.read_text(encoding="utf-8")
+        if (path.parent == SHELL / "bar" or path.name == "TrayItemControl.qml") and "ToolTip" in text:
+            errors.append(str(path.relative_to(ROOT)) + " must not create bar hover hints")
         for token in FORBIDDEN:
             if token in text and not (token == "hyprctl" and path.name == "HyprlandModel.qml"):
                 errors.append(str(path.relative_to(ROOT)) + " contains " + token)
@@ -925,7 +930,7 @@ def main():
         if path.name == "SurfaceService.qml":
             if text.count("Process {") != 1 or '"/helpers/windowctl.py","capabilities"' not in text or 'event.name === "configreloaded"' not in text:
                 errors.append("Surface capability probe must be a fixed read-only query on startup/config reload")
-        if "Process {" in text and path.name not in ("HyprlandModel.qml", "DisplayService.qml", "WindowService.qml", "SurfaceService.qml", "OverviewService.qml", "DesktopAppearance.qml", "ColorAnalysis.qml", "ClockService.qml", "DesktopTools.qml", "DefaultAppsService.qml", "ShortcutsService.qml", "LauncherModel.qml", "NetworkService.qml", "PowerProfiles.qml", "SettingsStore.qml"):
+        if "Process {" in text and path.name not in ("HyprlandModel.qml", "DisplayService.qml", "WindowService.qml", "SurfaceService.qml", "OverviewService.qml", "DesktopAppearance.qml", "ColorAnalysis.qml", "ClockService.qml", "DesktopTools.qml", "DefaultAppsService.qml", "ShortcutsService.qml", "LauncherModel.qml", "NetworkService.qml", "PowerProfiles.qml", "SettingsStore.qml", "SystemPerformance.qml", "ScreenshotService.qml", "ClipboardModel.qml", "WeatherService.qml", "BarPeekController.qml"):
             errors.append(str(path.relative_to(ROOT)) + " polls or spawns a process")
         if "Timer {" in text:
             slideshow = path.name == "SlideshowClock.qml" and "Math.max(60000" in text
@@ -937,9 +942,13 @@ def main():
             window_debounce = path.name == "SettingsWindow.qml" and "repeat:false" in text
             playback = path.name == "MediaSection.qml" and "root.controls.playing" in text and "!Theme.reducedMotion" in text
             clock_ui = path.name == "CalendarPanel.qml" and "SystemClock" in text and "Timer {" not in text.replace("ClockTimer {", "ClockCountdown {")
+            tray_loading = path.name == "TrayMenuWindow.qml" and "interval:250" in text and "content.rowCount===0" in text and "repeat:true" not in text
             recording_timeout = path.name == "ShortcutsPage.qml" and "interval:15000" in text and "ShortcutInhibitor" in text
-            owned_service = path.name in ("ClockService.qml", "DesktopTools.qml", "OverviewService.qml", "DesktopAppearance.qml", "ShortcutsService.qml", "SettingsStore.qml", "NetworkService.qml", "PowerProfiles.qml", "BluetoothSection.qml")
-            if not slideshow and not banner and not notification_deadline and not snapshot and not audit and not display_confirmation and not window_debounce and not clock_ui and not owned_service and not recording_timeout and not playback:
+            drag_scroll = path.name == "BarModuleOrderList.qml" and "running:handle.drag.active && list.scrollViewport!==null" in text
+            weather_refresh = path.name == "WeatherService.qml" and "running:root.weatherEnabled && root.configured" in text and "Math.max(10,SettingsStore.weatherRefreshMinutes)" in text
+            fullscreen_peek = path.name == "BarPeekController.qml" and "running:root.requested && root.fullscreen" in text
+            owned_service = path.name in ("ClockService.qml", "DesktopTools.qml", "OverviewService.qml", "DesktopAppearance.qml", "ShortcutsService.qml", "SettingsStore.qml", "NetworkService.qml", "PowerProfiles.qml", "BluetoothSection.qml", "ScreenshotService.qml", "ClipboardWindow.qml")
+            if not slideshow and not banner and not notification_deadline and not snapshot and not audit and not display_confirmation and not window_debounce and not clock_ui and not owned_service and not recording_timeout and not playback and not drag_scroll and not weather_refresh and not fullscreen_peek and not tray_loading:
                 errors.append(str(path.relative_to(ROOT)) + " polls or spawns a process")
         errors.extend(nesting_errors(text, str(path.relative_to(ROOT)), component_roots))
         errors.extend(readonly_implicit_errors(text, str(path.relative_to(ROOT)), component_roots))
@@ -1021,7 +1030,7 @@ def main():
         "theme singleton": "singleton Theme 1.0 Theme.qml" in (SHELL / "themes" / "qmldir").read_text(encoding="utf-8"),
         "popup surface stays transparent": "surfaceFormat.opaque: false" in (SHELL / "popovers" / "PopoverHost.qml").read_text(encoding="utf-8") and "Theme.transparent" in (SHELL / "popovers" / "PopoverHost.qml").read_text(encoding="utf-8"),
         "calendar today control": 'label: "Today"' in (SHELL / "popovers" / "ClockCalendar.qml").read_text(encoding="utf-8"),
-        "audio binding": "PwObjectTracker" in (SHELL / "popovers" / "AudioSection.qml").read_text(encoding="utf-8"),
+        "audio binding": "PwObjectTracker" in (SHELL / "services" / "AudioService.qml").read_text(encoding="utf-8") and "AudioService" in (SHELL / "popovers" / "AudioSection.qml").read_text(encoding="utf-8"),
         "wallpaper sampling is not claimed": "Wallpaper tint is not sampled yet." in (SHELL / "logic" / "palette.js").read_text(encoding="utf-8"),
         "focus grab dismissal": "HyprlandFocusGrab" in (SHELL / "popovers" / "PopoverHost.qml").read_text(encoding="utf-8"),
         "settings window is a floating toplevel": qml_root_type((SHELL / "settings" / "SettingsWindow.qml").read_text(encoding="utf-8")) == "FloatingWindow",

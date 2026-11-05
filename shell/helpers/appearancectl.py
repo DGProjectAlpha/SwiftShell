@@ -8,15 +8,20 @@ import os
 from pathlib import Path
 from displayctl import atomic, ipc
 
-OPTIONS = {'rounding': 'decoration:rounding', 'size': 'decoration:blur:size', 'passes': 'decoration:blur:passes', 'border': 'general:border_size'}
+OPTIONS = {'rounding': 'decoration:rounding', 'size': 'decoration:blur:size', 'passes': 'decoration:blur:passes', 'border': 'general:border_size',
+           'activeOpacity': 'decoration:active_opacity', 'inactiveOpacity': 'decoration:inactive_opacity'}
+OPACITY_KEYS = {'activeOpacity', 'inactiveOpacity'}
 
 def observed():
-    return {name: int(json.loads(ipc('j/getoption ' + option))['int']) for name, option in OPTIONS.items()}
+    return {name: float(json.loads(ipc('j/getoption ' + option))['float']) if name in OPACITY_KEYS else int(json.loads(ipc('j/getoption ' + option))['int']) for name, option in OPTIONS.items()}
 
 def code(values):
     decoration = []
     if 'rounding' in values:
         decoration.append('rounding=' + str(int(values['rounding'])))
+    for name, option in [('activeOpacity', 'active_opacity'), ('inactiveOpacity', 'inactive_opacity')]:
+        if name in values:
+            decoration.append(option + '=' + format(values[name], '.6g'))
     blur = [key + '=' + str(int(values[key])) for key in ('size', 'passes') if key in values]
     if blur:
         decoration.append('blur={' + ','.join(blur) + '}')
@@ -26,17 +31,24 @@ def code(values):
     return 'hl.config({'+','.join(groups)+'})'
 
 def configure(values):
-    if values and ipc('eval ' + code(values)).strip() != 'ok':
+    before = observed()
+    changed = {key: value for key, value in values.items() if abs(before[key] - value) > .000001}
+    if changed and ipc('eval ' + code(changed)).strip() != 'ok':
         raise ValueError('Desktop appearance was not accepted.')
     actual = observed()
-    if any(actual.get(key) != value for key, value in values.items()):
+    if any(abs(actual[key] - value) > .000001 for key, value in values.items()):
         raise ValueError('Desktop appearance did not match the requested values.')
     return actual
 
 def validated(payload):
-    if not isinstance(payload, dict) or not payload or set(payload) - {'radius', 'strength', 'border'}:
+    if not isinstance(payload, dict) or not payload or set(payload) - {'radius', 'strength', 'border', 'opaqueWindows'}:
         raise ValueError('Choose a corner radius or blur strength.')
     values = {}
+    if 'opaqueWindows' in payload:
+        if type(payload['opaqueWindows']) is not bool:
+            raise ValueError('Choose whether application windows stay opaque.')
+        if payload['opaqueWindows']:
+            values.update(activeOpacity=1.0, inactiveOpacity=1.0)
     if 'border' in payload:
         if type(payload['border']) is not int or not 0<=payload['border']<=8:
             raise ValueError('Window border width must be between 0 and 8.')
@@ -58,6 +70,10 @@ def checked_values(value, original=False):
         raise ValueError('Desktop appearance recovery data is invalid and was left unchanged.')
     limits={'rounding':(0,100 if original else 24),'size':(1,100 if original else 12),'passes':(1,10 if original else 4),'border':(0,100 if original else 8)}
     for key,number in value.items():
+        if key in OPACITY_KEYS:
+            if isinstance(number, bool) or not isinstance(number, (int, float)) or not math.isfinite(number) or not 0 <= number <= 1:
+                raise ValueError('Desktop appearance recovery data is invalid and was left unchanged.')
+            continue
         low,high=limits[key]
         if type(number) is not int or not low<=number<=high:
             raise ValueError('Desktop appearance recovery data is invalid and was left unchanged.')
@@ -66,20 +82,22 @@ def checked_values(value, original=False):
 
 def recovery(path, actual, signature):
     if not path.exists():
-        return {'version':2,'session':signature,'original':actual,'managed':{},'pending':{}}
+        return {'version':3,'session':signature,'original':actual,'managed':{},'pending':{}}
     try:
         saved=json.loads(path.read_text())
-        if not isinstance(saved,dict) or saved.get('version',1) not in (1,2) or not isinstance(saved.get('session'),str):
+        if not isinstance(saved,dict) or saved.get('version',1) not in (1,2,3) or not isinstance(saved.get('session'),str):
             raise ValueError()
         checked_values(saved.get('original'),True)
-        if saved.get('version',1)==1 and set(saved['original'])==set(OPTIONS)-{'border'}:
-            saved['original']['border']=actual['border']
+        if saved.get('version',1)<3:
+            for key in OPACITY_KEYS | {'border'}:
+                if key not in saved['original']:
+                    saved['original'][key]=actual[key]
         if set(saved['original'])!=set(OPTIONS):raise ValueError()
         checked_values(saved.get('managed'))
         checked_values(saved.get('pending',{}))
     except (OSError,ValueError,TypeError):
         raise ValueError('Desktop appearance recovery data is invalid and was left unchanged.') from None
-    saved['version']=2
+    saved['version']=3
     saved.setdefault('pending',{})
     if saved['session']!=signature:
         saved.update(session=signature,original=actual)
@@ -103,8 +121,12 @@ def run(action, payload=None):
             saved['original']=dict(actual)
         original=saved['original']
         owned=dict(saved['managed'],**saved['pending'])
+        released=set()
         if action == 'apply':
             wanted = dict(owned,**validated(payload))
+            if payload.get('opaqueWindows') is False:
+                released=OPACITY_KEYS & set(owned)
+                wanted.update({key: original[key] for key in released})
         elif action in ('resume','reload'):
             wanted = owned
         elif action == 'restore':
@@ -124,6 +146,8 @@ def run(action, payload=None):
             atomic(path,saved)
             raise
         saved['managed']={} if action=='restore' else dict(prior_managed,**wanted)
+        for key in released:
+            saved['managed'].pop(key,None)
         saved['pending']={}
         atomic(path, saved)
         return {'ok': True, 'observed': actual, 'managed': saved['managed'], 'available': True}

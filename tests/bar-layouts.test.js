@@ -20,6 +20,18 @@ assert.equal(Settings.validateSettings({bar:{moduleOrder:['clock']}}).settings.b
 assert.equal(JSON.parse(Settings.serializeSettings(checked.settings)).bar.layoutOutputsJson,checked.settings.bar.layoutOutputsJson);
 console.log('PASS per-output edge/scale/order/group inheritance, validation, additive migration and persistence');
 
+const legacy=Settings.validateSettings({bar:{moduleOrder:['clock','workspaces','title'],hiddenModules:['title'],hiddenOutputsJson:'{"DP-1":["clock"]}',layoutOutputsJson:json}}).settings.bar;
+assert.deepEqual(legacy.moduleOrder.slice(0,3),['clock','workspaces','title']);
+for(const id of ['screenshot','clipboard','performance']) {
+ assert.equal(legacy.moduleOrder.includes(id),true);
+ assert.equal(Bar.layoutForOutput(legacy.layoutOutputsJson,'DP-1',legacy.moduleOrder,'{}').order.includes(id),true);
+ assert.equal(Bar.hiddenForOutput(legacy.hiddenModules,legacy.hiddenOutputsJson,'DP-1').includes(id),false);
+ assert.notEqual(Bar.moduleName(id),id);
+}
+assert.deepEqual(Bar.hiddenForOutput(legacy.hiddenModules,legacy.hiddenOutputsJson,'DP-1'),['clock']);
+assert.deepEqual(Bar.hiddenForOutput(legacy.hiddenModules,legacy.hiddenOutputsJson,'HDMI-A-1'),['title']);
+console.log('PASS desktop tools migrate into per-display module lists without changing existing order or visibility');
+
 const Png=require('../shell/logic/png.js'),Wallpaper=require('../shell/logic/wallpaper.js');
 const pixels=[];
 for(let y=0;y<100;y++)for(let x=0;x<100;x++)pixels.push(...(x<10 ? [255,0,0] : x>=90 ? [0,0,255] : y>=90 ? [0,0,0] : [255,255,255]));
@@ -27,3 +39,12 @@ for(const [edge,rgb] of [['top',[255,255,255]],['bottom',[0,0,0]],['left',[255,0
  const bands=Png.visibleBands({ok:true,width:100,height:100,bpp:3,pixels},100,100,'cover',10,Wallpaper.cropRect,edge);
  assert.deepEqual(bands.center,{r:rgb[0],g:rgb[1],b:rgb[2]});
 }
+
+const originalOrder=Bar.normalizeModuleOrder(['clock','search','screenshot']);
+const movedOrder=Bar.moveModuleTo(originalOrder,'clock',2);
+assert.deepEqual(movedOrder.slice(0,3),['search','screenshot','clock']);
+assert.deepEqual(originalOrder.slice(0,3),['clock','search','screenshot']);
+assert.equal(new Set(movedOrder).size,Bar.BAR_MODULES.length);
+for(const destination of [-1,100,1.5,NaN])assert.deepEqual(Bar.moveModuleTo(originalOrder,'clock',destination),originalOrder);
+assert.deepEqual(Bar.moveModuleTo(originalOrder,'missing',1),originalOrder);
+console.log('PASS direct module drop insertion preserves membership and rejects invalid destinations');

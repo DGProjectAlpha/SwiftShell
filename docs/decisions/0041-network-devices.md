@@ -75,3 +75,48 @@ SwiftShell connection database needs restoration because none is created.
 API contracts: [nmcli manual](https://networkmanager.pages.freedesktop.org/NetworkManager/NetworkManager/nmcli.html),
 [Quickshell BluetoothAdapter](https://quickshell.org/docs/v0.3.1/types/Quickshell.Bluetooth/BluetoothAdapter/),
 [Quickshell BluetoothDevice](https://quickshell.org/docs/v0.3.2/types/Quickshell.Bluetooth/BluetoothDevice/).
+
+## Wi-Fi interaction and radio recovery follow-up — 2026-11-02
+
+The owner reported an error after enabling Wi-Fi, an apparently absent password
+prompt, and a switch that appeared not to turn Wi-Fi off. Investigation found
+three independent causes:
+
+- An AP-list query could fail during radio/supplicant transitions, invalidating an
+  otherwise successful radio write. Off could also query APs from a stale cached
+  device state. AP reads now occur only while the observed radio is on; transient
+  AP/address failures preserve the successful radio/device snapshot. Explicit
+  radio changes wait for observed readback, including a useful hardware-blocked
+  error, rather than treating command acceptance as completion.
+- The password form was below the entire AP list, and the disconnect confirmation
+  was at the top of the scrolling page. Both could open outside the visible
+  viewport. They are now centered, focused Basic-style item popups inside the
+  Settings window with the shared theme. Escape/outside dismissal clears the
+  credential draft and returns focus; no additional native window is created.
+- Background snapshot reads disabled or raced user actions. A deliberate action
+  now queues behind a read-only refresh, while actual mutations remain serialized.
+  Radio requests coalesce to the latest intent, are always confirmed even when a
+  stale cached flag already matches, and discard queued Wi-Fi connection secrets
+  when turning off. Queued Ethernet work is retained. Queued connection requests
+  can be cancelled before submission. AP controls use keyed roles so a signal
+  strength refresh retains the button under the pointer.
+
+The Wi-Fi device row now says Find networks rather than attempting an unspecified
+connection. Radio errors retain a secret-free retry context, and the compact
+network panel follows the requested/observed radio transition consistently.
+
+Validation: 23 Python helper tests and 19 QML interaction/state tests passed.
+The native `tests/live/network-auth.py --live` audit used a synthetic 40-AP list
+and fake helper only. Real pointer input opened a focused, visible password popup
+from a scrolled list; Escape cleared it. A real pointer confirmation toggled only
+the fixture's radio state. Native helpers guard the exact audit client, restore
+focus/cursor afterward, and never capture actual SSIDs or credentials.
+
+The new helper was also exercised against the actual hardware: Wi-Fi was initially
+enabled but disconnected, and Ethernet was connected. OFF and ON both returned
+verified radio state without losing Ethernet. The original ON state was restored
+and checked. No real Wi-Fi connection/password, saved profile, pairing, Noctalia,
+Hyprland Lua, system service or package was changed. Physical authentication to
+an access point remains unperformed. Source backups were retained under
+`/tmp/swiftshell-network-fix-backup-20261103T001528Z` before editing; a normal Git
+revert of the follow-up commit restores the previous implementation.

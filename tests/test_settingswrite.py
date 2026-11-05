@@ -4,6 +4,41 @@ from unittest.mock import patch
 sys.path.insert(0,str(Path(__file__).parents[1]/'shell/helpers'))
 import settingswrite
 class AtomicPreferencesTests(unittest.TestCase):
+    def test_stale_writer_preserves_unrelated_external_updates(self):
+        with tempfile.TemporaryDirectory() as temp,patch.dict(os.environ,{'XDG_CONFIG_HOME':temp}):
+            base={'version':3,'appearance':{'radius':8,'mode':'dark'},'bar':{'hiddenModules':[]}}
+            settingswrite.save(base)
+            external=json.loads(json.dumps(base));external['bar']['hiddenModules']=['clock'];external['futureSetting']={'keep':True}
+            settingswrite.save(external)
+            local=json.loads(json.dumps(base));local['appearance']['radius']=12
+            result=settingswrite.save(local,base)
+            saved=json.loads((Path(temp)/'swiftshell/settings.json').read_text())
+            self.assertEqual(saved['appearance']['radius'],12)
+            self.assertEqual(saved['bar']['hiddenModules'],['clock'])
+            self.assertEqual(saved['futureSetting'],{'keep':True})
+            self.assertEqual(result['document'],saved)
+    def test_independent_encoded_monitor_and_section_maps_merge(self):
+        base={'bar':{'hiddenOutputsJson':json.dumps({'DP-1':[],'HDMI-A-1':[]})},'settingsWindow':{'sectionsJson':'{}'}}
+        local=json.loads(json.dumps(base));current=json.loads(json.dumps(base))
+        local['bar']['hiddenOutputsJson']=json.dumps({'DP-1':['tray'],'HDMI-A-1':[]})
+        current['bar']['hiddenOutputsJson']=json.dumps({'DP-1':[],'HDMI-A-1':['clock']})
+        local['settingsWindow']['sectionsJson']='{"appearance.surface":false}'
+        current['settingsWindow']['sectionsJson']='{"bar.layout":false}'
+        result=settingswrite.merge_changes(base,local,current)
+        self.assertEqual(json.loads(result['bar']['hiddenOutputsJson']),{'DP-1':['tray'],'HDMI-A-1':['clock']})
+        self.assertEqual(json.loads(result['settingsWindow']['sectionsJson']),{'appearance.surface':False,'bar.layout':False})
+    def test_coordinates_are_replaced_together_not_merged_between_places(self):
+        base={'locationJson':'{"latitude":1,"longitude":2}'}
+        desired={'locationJson':'{"latitude":3,"longitude":2}'}
+        current={'locationJson':'{"latitude":1,"longitude":4}'}
+        self.assertEqual(settingswrite.merge_changes(base,desired,current),desired)
+    def test_newer_changed_leaf_wins_without_replacing_its_siblings(self):
+        base={'appearance':{'mode':'dark','radius':8},'list':[1,2]}
+        local={'appearance':{'mode':'dark','radius':10},'list':[2,1]}
+        current={'appearance':{'mode':'light','radius':11},'list':[1,2]}
+        result=settingswrite.merge_changes(base,local,current)
+        self.assertEqual(result,{'appearance':{'mode':'light','radius':10},'list':[2,1]})
+        self.assertEqual(current['appearance']['radius'],11)
     def test_same_document_after_external_edit_is_written_not_cached(self):
         with tempfile.TemporaryDirectory() as temp,patch.dict(os.environ,{'XDG_CONFIG_HOME':temp}):
             document={'version':3,'clock':{'use24Hour':False}}

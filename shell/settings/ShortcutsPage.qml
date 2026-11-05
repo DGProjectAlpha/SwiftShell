@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls.Basic as Controls
+import QtQuick.Controls as ControlTypes
 import Quickshell.Wayland
 import "../components"
 import "../services"
@@ -7,13 +8,14 @@ import "../themes"
 Item {
     id:page
     property string query:""
-    property string highlightId:"shortcuts"
+    property string highlightId:"desktopShortcuts"
     property string filter:""
-    property string section:"managed"
     property string recordingId:""
     property var draftModifiers:[]
     property string draftKey:""
     property string recordError:""
+    property string recordingLabel:""
+    property var returnFocus:null
     signal revealRequested(real y,real itemHeight)
     implicitWidth:560
     implicitHeight:column.implicitHeight
@@ -21,8 +23,16 @@ Item {
     function recordingStatus() {return {active:inhibitor.active,id:recordingId,modifiers:draftModifiers,key:draftKey}}
     function focusHighlight() {search.forceActiveFocus()}
     function moveHighlight(delta) {revealRequested(0,height)}
-    function startRecording(id) {recordingId=id;draftKey="";draftModifiers=[];recordError="";capture.forceActiveFocus()}
-    function finishRecording() {recordingId="";recordError="";search.forceActiveFocus()}
+    function startRecording(id,label) {
+        returnFocus=page.Window.window ? page.Window.window.activeFocusItem : null
+        recordingId=id;recordingLabel=label || "Shortcut";draftKey="";draftModifiers=[];recordError=""
+        recorder.open()
+    }
+    function finishRecording() {
+        recordingId="";recordError="";recorder.close()
+        const target=returnFocus;returnFocus=null
+        if(target && target.visible && target.enabled)target.forceActiveFocus();else search.forceActiveFocus()
+    }
     function modifiersOf(event) {
         let mods=[]
         if(event.modifiers & Qt.ShiftModifier)mods.push("shift")
@@ -51,7 +61,7 @@ Item {
         id:inhibitor
         window:SettingsModel.nativeWindow
         enabled:page.recordingId!==""
-        onCancelled: {page.recordError="Shortcut capture was cancelled by the desktop.";page.recordingId=""}
+        onCancelled: {page.recordError="Shortcut capture was cancelled by the desktop.";page.recordingId="";recorder.close()}
     }
     Timer {interval:15000;running:page.recordingId!=="";onTriggered:page.finishRecording()}
     Connections {target:ShortcutsService;function onCompleted(action,success){if(action==="apply" && success)page.finishRecording()}}
@@ -60,14 +70,15 @@ Item {
         width:page.width
         spacing:Theme.settingsSpacing
         Text {text:"Keyboard shortcuts";color:Theme.settingsText;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSize+4;font.weight:Font.Medium}
-        Text {width:parent.width;wrapMode:Text.WordWrap;text:"See every active desktop shortcut and create shortcuts for SwiftShell, apps, windows and workspaces.";color:Theme.settingsMuted;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall}
+
+        Text {width:parent.width;wrapMode:Text.WordWrap;text:"Search your desktop shortcuts and change their key combinations. Changes are saved to your desktop configuration.";color:Theme.settingsMuted;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall}
+
         Row {
             spacing:6
-            FlatButton {label:"Your shortcuts";emphasized:page.section==="managed";onActivated:page.section="managed"}
-            FlatButton {label:"All desktop shortcuts";emphasized:page.section==="effective";onActivated:page.section="effective"}
             FlatButton {label:"Refresh";enabled:!ShortcutsService.busy;onActivated:ShortcutsService.refresh()}
             FlatButton {label:"Undo change";enabled:!ShortcutsService.busy && ShortcutsService.canUndo;onActivated:ShortcutsService.undo()}
         }
+
         Controls.TextField {
             id:search
             width:parent.width;height:Theme.controlHeight+8
@@ -79,71 +90,81 @@ Item {
             background:Rectangle {radius:Theme.controlRadius;color:Theme.settingsHover}
             leftPadding:10;rightPadding:10
         }
+
         Text {width:parent.width;visible:text!=="";wrapMode:Text.WordWrap;text:ShortcutsService.error || page.recordError || ShortcutsService.warnings.join("\n");color:Theme.settingsText;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall}
-        Rectangle {
-            width:parent.width;height:recordColumn.implicitHeight+20
-            visible:page.recordingId!==""
-            radius:Theme.controlRadius;color:Theme.settingsSelected
-            Column {
-                id:recordColumn;x:10;y:10;width:parent.width-20;spacing:8
-                Text {width:parent.width;wrapMode:Text.WordWrap;text:!inhibitor.active ? "Waiting for safe keyboard capture…" : page.draftKey ? page.textOf({modifiers:page.draftModifiers,key:page.draftKey}) : "Press a shortcut. Escape cancels.";color:Theme.settingsText;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSize+2}
-                Row {
-                    spacing:6
-                    FlatButton {label:ShortcutsService.busy ? "Applying…" : "Apply shortcut";enabled:inhibitor.active && page.draftKey!=="" && !ShortcutsService.busy;onActivated:ShortcutsService.apply(page.recordingId,page.draftModifiers,page.draftKey)}
-                    FlatButton {label:"Cancel";onActivated:page.finishRecording()}
+
+        SettingsSection {
+            sectionId:"shortcuts.desktop"
+            searchKeywords:ShortcutsService.effective.map(function(action){return action.label+" "+action.chord}).join(" ")
+            title:"Desktop shortcuts"
+            description:"All effective keyboard shortcuts from your desktop."
+            searchQuery:page.filter || page.query
+            controlIds:["desktopShortcuts"]
+            width:parent.width
+            defaultExpanded:true
+            Text {
+                width:parent.width;wrapMode:Text.WordWrap
+                text:ShortcutsService.sourceEditable+" shortcuts can be changed here. Generated shortcuts remain visible with an explanation."
+                color:Theme.settingsMuted;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall
+            }
+            Repeater {
+                model:ShortcutsService.effective.filter(function(a){return page.matches(a.label+" "+a.chord+" "+a.scope)})
+                delegate:Column {
+                    required property var modelData
+                    width:column.width;spacing:3
+                    SettingsRow {
+                        width:parent.width;label:modelData.label
+                        Row {
+                            spacing:8
+                            Text {width:160;text:modelData.chord;elide:Text.ElideRight;color:Theme.settingsText;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall;verticalAlignment:Text.AlignVCenter;height:Theme.controlHeight}
+                            FlatButton {label:"Change";visible:modelData.editable===true;enabled:!ShortcutsService.busy && page.recordingId==="";Accessible.name:"Change "+modelData.label;onActivated:page.startRecording(modelData.sourceId,modelData.label)}
+                        }
+                    }
+                    Text {width:parent.width;wrapMode:Text.WordWrap;text:modelData.editable ? "Desktop · "+modelData.scope+(modelData.flags ? " · "+modelData.flags : "") : "This shortcut is generated by your desktop configuration and cannot be changed individually yet.";color:Theme.settingsMuted;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall}
+                    Item {width:1;height:6}
                 }
             }
         }
-        Item {
-            id:capture
-            width:1;height:1
-            Keys.onPressed:function(event) {
-                if(page.recordingId==="")return
-                event.accepted=true
-                if(event.key===Qt.Key_Escape){page.finishRecording();return}
-                if(!inhibitor.active)return
-                const name=page.keyName(event)
-                if(!name)return
-                page.draftModifiers=page.modifiersOf(event);page.draftKey=name
-                page.recordError=page.draftModifiers.length===0 ? "Include Super, Ctrl or Alt to keep ordinary typing available." : ""
-            }
-        }
-        Text {
-            visible:page.section==="managed"
-            width:parent.width;wrapMode:Text.WordWrap
-            text:"Changes apply immediately and return when SwiftShell starts. Existing desktop shortcuts are never replaced."
-            color:Theme.settingsMuted;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall
-        }
-        Repeater {
-            model:page.section==="managed" ? ShortcutsService.actions.filter(function(a){return page.matches(a.label+" "+a.category+" "+page.textOf(a.binding))}) : []
-            delegate:SettingsRow {
-                required property var modelData
-                width:column.width
-                label:modelData.label
-                Row {
-                    spacing:6
-                    Text {width:160;anchors.verticalCenter:parent.verticalCenter;text:page.textOf(modelData.binding);elide:Text.ElideRight;color:modelData.binding && !modelData.active ? Theme.settingsMuted : Theme.settingsText;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall}
-                    FlatButton {label:modelData.binding ? "Change" : "Record";enabled:page.recordingId==="" && !ShortcutsService.busy;onActivated:page.startRecording(modelData.id)}
-                    FlatButton {label:"Remove";enabled:modelData.binding!==null && modelData.binding!==undefined && page.recordingId==="" && !ShortcutsService.busy;onActivated:ShortcutsService.remove(modelData.id)}
+    }
+    Controls.Popup {
+        id:recorder
+        objectName:"desktopShortcutRecorder"
+        parent:ControlTypes.Overlay.overlay
+        Component.onCompleted:if(recorder["popupType"]!==undefined)recorder["popupType"]=Controls.Popup.Item
+        x:parent ? Math.round((parent.width-width)/2) : 0
+        y:parent ? Math.round((parent.height-height)/2) : 0
+        width:Math.min(430,parent ? parent.width-32 : 430)
+        padding:18;modal:true;dim:false;focus:true
+        closePolicy:Controls.Popup.CloseOnEscape
+        onOpened:capture.forceActiveFocus()
+        onClosed:if(page.recordingId!=="")page.finishRecording()
+        background:Rectangle {radius:Theme.radius;color:Theme.settingsPopupSurface}
+        contentItem:Column {
+            spacing:12
+            Text {width:parent.width;text:"Change shortcut";color:Theme.settingsText;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSize+3;font.weight:Font.Medium}
+            Text {width:parent.width;text:page.recordingLabel;textFormat:Text.PlainText;wrapMode:Text.WordWrap;color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSize}
+            Item {
+                id:capture
+                width:parent.width;height:50
+                focus:true
+                Text {anchors.fill:parent;verticalAlignment:Text.AlignVCenter;wrapMode:Text.WordWrap;text:!inhibitor.active ? "Waiting for safe keyboard capture…" : page.draftKey ? page.textOf({modifiers:page.draftModifiers,key:page.draftKey}) : "Press a shortcut. Escape cancels.";color:Theme.settingsText;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSize+3}
+                Keys.onPressed:function(event) {
+                    if(page.recordingId==="")return
+                    event.accepted=true
+                    if(event.key===Qt.Key_Escape){page.finishRecording();return}
+                    if(!inhibitor.active)return
+                    const name=page.keyName(event)
+                    if(!name)return
+                    page.draftModifiers=page.modifiersOf(event);page.draftKey=name
+                    page.recordError=page.draftModifiers.length===0 ? "Include Super, Ctrl or Alt to keep ordinary typing available." : ""
                 }
             }
-        }
-        Text {
-            width:parent.width;visible:page.section==="effective";wrapMode:Text.WordWrap
-            text:"Your existing desktop shortcuts are read-only here. Use Managed to record shortcuts for SwiftShell, applications and window actions."
-            color:Theme.settingsMuted;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall
-        }
-        Repeater {
-            model:page.section==="effective" ? ShortcutsService.effective.filter(function(a){return page.matches(a.label+" "+a.chord+" "+a.scope)}) : []
-            delegate:Column {
-                required property var modelData
-                width:column.width;spacing:3
-                SettingsRow {
-                    width:parent.width;label:modelData.label
-                    Text {width:200;text:modelData.chord;elide:Text.ElideRight;color:Theme.settingsText;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall;verticalAlignment:Text.AlignVCenter;height:Theme.controlHeight}
-                }
-                Text {text:modelData.owner+" · "+modelData.scope+(modelData.flags ? " · "+modelData.flags : "");color:Theme.settingsMuted;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall}
-                Item {width:1;height:6}
+            Text {width:parent.width;wrapMode:Text.WordWrap;visible:text!=="";text:ShortcutsService.error || page.recordError;color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall}
+            Text {width:parent.width;wrapMode:Text.WordWrap;text:"The original action stays the same. Undo is available after applying.";color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall}
+            Row {
+                spacing:8
+                FlatButton {label:"Cancel";onActivated:page.finishRecording()}
+                FlatButton {objectName:"applyDesktopShortcut";label:ShortcutsService.busy ? "Applying…" : "Apply shortcut";emphasized:true;enabled:inhibitor.active && page.draftKey!=="" && page.recordError==="" && !ShortcutsService.busy;onActivated:ShortcutsService.apply(page.recordingId,page.draftModifiers,page.draftKey)}
             }
         }
     }

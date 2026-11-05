@@ -1,7 +1,9 @@
 function remember(history,text,now) {
     if(typeof text!=="string" || !text.trim() || text.length>4096 || text.indexOf("\0")>=0)return history;
     const kept=history.filter(function(item){return item.text!==text && now-item.time<1200000});
-    return [{text:text,time:now,id:String(now)}].concat(kept).slice(0,30);
+    let id=String(now),suffix=0;
+    while(kept.some(function(item){return item.id===id}))id=String(now)+"-"+(++suffix);
+    return [{text:text,time:now,id:id}].concat(kept).slice(0,30);
 }
 function results(history,query,now) {
     if(!/^clip(?:board)?(?:\s|$)/i.test(query))return [];

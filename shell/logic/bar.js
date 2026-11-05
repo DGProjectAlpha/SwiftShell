@@ -1,4 +1,40 @@
-var BAR_MODULES = ["workspaces", "title", "search", "clock", "control", "media", "tray", "battery", "network", "power", "notifications"];
+var BAR_MODULES = ["workspaces", "title", "search", "clock", "control", "media", "tray", "battery", "network", "power", "notifications", "screenshot", "clipboard", "performance", "weather"];
+
+function textRenderMode(devicePixelRatio, contentScale, curveAvailable) {
+    return devicePixelRatio === 1 && contentScale === 1 && curveAvailable === true ? "curve" : "distance-field";
+}
+
+function snapModulePosition(position, devicePixelRatio, contentScale) {
+    // Fractional-DPI and user-scaled bars retain their existing rendering/layout.
+    return typeof position === "number" && Number.isFinite(position) && devicePixelRatio === 1 && contentScale === 1 ? Math.round(position) : position;
+}
+
+function fullscreenOutputs(toplevels, monitors) {
+    const clients=asModuleList(toplevels),screens=asModuleList(monitors),out=[];
+    function key(workspace) {return workspace ? String(workspace.address || workspace.id || workspace.name || "") : "";}
+    for(let i=0;i<screens.length;i++) {
+        const screen=screens[i],active=screen.specialWorkspace && screen.specialWorkspace.name ? screen.specialWorkspace : screen.activeWorkspace;
+        if(!screen.name || !key(active))continue;
+        for(let j=0;j<clients.length;j++) {
+            const client=clients[j].lastIpcObject || clients[j];
+            // Hyprland 0.57: 1 is maximized, 2 is actual fullscreen.
+            if(client.fullscreen!==2 || client.mapped===false || client.hidden===true)continue;
+            if((client.monitor===screen.id || client.monitor===screen.name) && key(client.workspace)===key(active)) {out.push(screen.name);break;}
+        }
+    }
+    return out;
+}
+
+function peekPointer(point, screen, edge, barWidth, barHeight) {
+    const result={atEdge:false,insideBar:false};
+    if(!point || !screen || !Number.isFinite(point.x) || !Number.isFinite(point.y))return result;
+    const x=point.x-screen.x,y=point.y-screen.y;
+    if(x<0 || y<0 || x>=screen.width || y>=screen.height)return result;
+    const distance=edge==="bottom" ? screen.height-y : edge==="left" ? x : edge==="right" ? screen.width-x : y;
+    result.atEdge=distance<=2;
+    result.insideBar=distance<=(edge==="left" || edge==="right" ? barWidth : barHeight)+4;
+    return result;
+}
 
 function clamp01(unit) {
     if (typeof unit !== "number" || !Number.isFinite(unit))
@@ -111,6 +147,14 @@ function moveModule(order, id, delta) {
     return next;
 }
 
+function moveModuleTo(order, id, destination) {
+    const next=normalizeModuleOrder(order),index=next.indexOf(id);
+    if(index<0 || !Number.isInteger(destination) || destination<0 || destination>=next.length || index===destination)return next;
+    next.splice(index,1);
+    next.splice(destination,0,id);
+    return next;
+}
+
 function toggleHidden(hidden, id) {
     const next = normalizeHiddenModules(hidden);
     if (BAR_MODULES.indexOf(id) === -1)
@@ -172,7 +216,7 @@ function modulesForSide(order,hidden,sidesJson,side) {
     return visibleModules(order,hidden).filter(function(id){return moduleSide(id,sidesJson,order)===side;});
 }
 function moduleName(id) {
-    return ({workspaces:"Workspaces",title:"Focused title",search:"Search",clock:"Clock",control:"Audio",media:"Media",tray:"Tray",battery:"Battery",network:"Network & Devices",power:"Power",notifications:"Notifications"})[id] || id;
+    return ({workspaces:"Workspaces",title:"Focused title",search:"Search",clock:"Clock",control:"Audio",media:"Media",tray:"Tray",battery:"Battery",network:"Network & Devices",power:"Power",notifications:"Notifications",screenshot:"Screenshot",clipboard:"Clipboard",performance:"Performance",weather:"Weather"})[id] || id;
 }
 
 function layoutForOutput(json, output, order, sides) {
@@ -188,6 +232,10 @@ function layoutForOutput(json, output, order, sides) {
 var swiftshellBar = {
     layoutForOutput: layoutForOutput,
     surfaceForOutput: surfaceForOutput,
+    textRenderMode:textRenderMode,
+    snapModulePosition:snapModulePosition,
+    fullscreenOutputs:fullscreenOutputs,
+    peekPointer:peekPointer,
     hiddenForOutput:hiddenForOutput,
     moduleSide:moduleSide,
     modulesForSide:modulesForSide,
@@ -202,6 +250,7 @@ var swiftshellBar = {
     hiddenModulesValid: hiddenModulesValid,
     visibleModules: visibleModules,
     moveModule: moveModule,
+    moveModuleTo: moveModuleTo,
     toggleHidden: toggleHidden,
     exclusionUpdate: exclusionUpdate,
     layerForBar: layerForBar,

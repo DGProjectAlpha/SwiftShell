@@ -7,6 +7,7 @@ import "../themes"
 import "../components"
 import "../services"
 import "../notifications"
+import "../clipboard"
 
 PanelWindow {
     id: popup
@@ -77,7 +78,7 @@ PanelWindow {
             popup.reposition()
             readyToShow=true
             focusGrab.active=popup.popupState.grab === true
-            Qt.callLater(function() {if(popup.visible && popup.popupState.interactive){if(popup.popupState.panelId==="notifications" && bodyLoader.item && bodyLoader.item.focusReply && bodyLoader.item.focusReply())return;keyScope.forceActiveFocus()}})
+            Qt.callLater(function() {if(popup.visible && popup.popupState.interactive){if(popup.popupState.panelId==="notifications" && bodyLoader.item && bodyLoader.item.focusReply && bodyLoader.item.focusReply())return;if(popup.popupState.panelId==="clipboard" && bodyLoader.item && bodyLoader.item.focusSearch){bodyLoader.item.focusSearch();return}keyScope.forceActiveFocus()}})
         })
     }
 
@@ -271,7 +272,7 @@ PanelWindow {
             Loader {
                 id:bodyLoader
                 onLoaded:if(popup.popupState.panelId==="calendar" && item.showTab)item.showTab(popup.requestedClockTab)
-                sourceComponent: popup.popupState.panelId === "notifications" ? notificationPanel : popup.popupState.panelId === "control"
+                sourceComponent: popup.popupState.panelId === "weather" ? weatherPanel : popup.popupState.panelId === "performance" ? performancePanel : popup.popupState.panelId === "clipboard" ? clipboardPanel : popup.popupState.panelId === "notifications" ? notificationPanel : popup.popupState.panelId === "control"
                     ? controlPanel
                     : popup.popupState.panelId === "network" ? networkPanel : popup.popupState.panelId === "power" ? powerPanel : popup.popupState.panelId === "calendar" ? calendarPanel : popup.popupState.panelId === "customize" ? popup.customPanel : null
             }
@@ -283,11 +284,14 @@ PanelWindow {
         CalendarPanel {}
     }
 
-    Component {id:notificationPanel;NotificationDrawer {reading:popup.visible;onSettingsRequested:{popup.close();SettingsStore.setSettingsCategory("notifications");SettingsModel.show()}}}
-    Component {id:networkPanel;NetworkPanel {onSettingsRequested:{popup.close();SettingsStore.setSettingsCategory("network");SettingsModel.show()}}}
-    Component {id:powerPanel;PowerPanel {onSettingsRequested:{popup.close();SettingsStore.setSettingsCategory("power");SettingsModel.show()}}}
+    Component {id:notificationPanel;NotificationDrawer {reading:popup.visible;onSettingsRequested:{popup.close();SettingsStore.setSettingsCategory("notifications");SettingsModel.show(popup.barWindow.monitorKey)}}}
+    Component {id:weatherPanel;WeatherPanel {onSettingsRequested:{popup.close();SettingsStore.setSettingsCategory("weather");SettingsModel.show(popup.barWindow.monitorKey)}}}
+    Component {id:performancePanel;PerformancePanel {}}
+    Component {id:clipboardPanel;ClipboardPanel {onDetached:popup.close();onDismissed:popup.close()}}
+    Component {id:networkPanel;NetworkPanel {onSettingsRequested:{popup.close();SettingsStore.setSettingsCategory("network");SettingsModel.show(popup.barWindow.monitorKey)}}}
+    Component {id:powerPanel;PowerPanel {onSettingsRequested:{popup.close();SettingsStore.setSettingsCategory("power");SettingsModel.show(popup.barWindow.monitorKey)}}}
     Component {
         id: controlPanel
-        AudioPanel {onSettingsRequested:{popup.close();SettingsStore.setSettingsCategory("audio");SettingsModel.show()}}
+        AudioPanel {onSettingsRequested:{popup.close();SettingsStore.setSettingsCategory("audio");SettingsModel.show(popup.barWindow.monitorKey)}}
     }
 }

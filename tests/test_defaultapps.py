@@ -85,4 +85,22 @@ class DefaultApplications(unittest.TestCase):
             for target in ['javascript:alert(1)','file:///etc/passwd','https://bad\nurl']:
                 with self.assertRaises(ValueError):d.launch('browser',target)
 
+    def test_terminal_choice_links_the_original_desktop_command(self):
+        import hyprsource
+        change=dict(supported=True,changed=True,transaction='a'*32,previousCommand='kitty')
+        with patch.object(hyprsource,'sync_terminal',return_value=change) as sync:
+            d.choose('terminal','terminal.desktop')
+            sync.assert_called_once_with('true')
+        selected=d.preferences()['roles']['terminal']
+        self.assertEqual(selected['desktopTerminal'],{'originalCommand':'kitty','assignedCommand':'true'})
+    def test_terminal_parser_drops_desktop_field_codes_and_quotes_arguments(self):
+        self.assertEqual(d.terminal_command({'exec':'konsole --workdir "a b" %U'}),"konsole --workdir 'a b'")
+        with self.assertRaises(ValueError):d.terminal_command({'exec':'konsole %unsupported'})
+    def test_terminal_preference_write_failure_rolls_back_the_source_transaction(self):
+        import hyprsource
+        change=dict(supported=True,changed=True,transaction='b'*32,previousCommand='kitty')
+        with patch.object(hyprsource,'sync_terminal',return_value=change),patch.object(d,'backup'),patch.object(d,'atomic',side_effect=OSError('Synthetic disk failure')),patch.object(d,'rollback_terminal') as rollback:
+            with self.assertRaises(OSError):d.choose('terminal','terminal.desktop')
+            rollback.assert_called_once_with(change)
+
 if __name__=='__main__':unittest.main()

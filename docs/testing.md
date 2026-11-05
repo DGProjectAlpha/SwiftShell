@@ -1015,3 +1015,304 @@ does not restart SwiftShell or modify desktop configuration. Backups of the
 affected files are in `/tmp/swiftshell-ci-repair-backup`; revert the repair
 commit to restore the previous workflow/test. GitHub validation is recorded in
 the repair PR; offscreen CI does not verify compositor behavior.
+
+## Desktop quick tools and terminal applications — 2026-11-02
+
+The complete `scripts/check.sh` passes on local Qt 6.12: static coverage includes
+108 QML documents and all 22 QML suites pass. Added Python tests cover terminal
+argument wrapping, selected-terminal failures, telemetry deltas/missing sensors,
+private screenshot cache/PNG export and clipboard window scoping/geometry. JS
+regressions cover additive per-monitor module migration, stable clipboard IDs and
+acceptance of the two new IDs by the actual popup reducer. The native bar test
+caught that last integration defect, which isolated panel tests did not cover.
+
+Native checks on Quickshell 0.3.2 / Hyprland 0.57 Lua / RTX 4070:
+
+- `tests/live/terminal-launch.py --live`: a real Terminal=true desktop entry
+  reached a terminal PTY with literal spaced/metacharacter arguments. Cachy-Update's
+  installed entry uses Terminal=true and Exec=arch-update; the updater itself was
+  not executed, and no packages or system settings were changed.
+- `performance-native.py --live`: real CPU delta/RAM and NVIDIA usage/VRAM/temps,
+  stable bar label identities and owned panel rendering on both output scales.
+  RAM temperature is not exposed by this workstation and is not fabricated.
+- `clipboard-history.py --live`: synthetic text copy through a private offscreen
+  clipboard; real floating placement/focus/blur attachment/Escape/close on both
+  displays. No desktop clipboard content was read or changed.
+- `screenshot-review.py --live`: grim captured only opaque owned checkerboard
+  pixels, preview rendered, a private clipboard sink decoded the PNG, and the real
+  native Save As dialog's accepted handler exported a valid PNG on both displays.
+  This invokes the dialog handler, not a physical pointer click on its Save button.
+- After scoped activation, `desktop-quick-tools.py --live` passed actual camera,
+  clipboard and performance bar clicks, Escape, pinned clipboard window opening/
+  closing, non-overlapping bar bounds, screenshot search and real telemetry on
+  DP-1 (scale 1) and HDMI-A-1 (scale 1.25). No screenshot capture or clipboard
+  mutation occurred in this production-session test.
+
+Owned screenshots of the screenshot review and performance surfaces were visually
+inspected under `/tmp/swiftshell-screenshot-*-review.png` and
+`/tmp/swiftshell-performance-*.png`. Final logs had no QML loading/type/binding
+errors. Existing Qt Wayland text-input diagnostics and the absent legacy launcher
+request-file warning remain visible. No Noctalia, user-authored Lua, display mode,
+autostart or unrelated service was changed. Source watching was paused during
+development and restored after activation.
+
+Clipboard history stays opt-in, text-only, session-only and bounded to 30 items/
+20 minutes. Keep open persists the floating surface until closed, not the copied
+text across a shell restart. Screenshot review caches the current PNG privately
+in the runtime directory until replaced/discarded or the login session ends.
+Interactive physical slurp selection, real desktop clipboard paste into another
+app, physical Save As selection, sustained gaming load and every third-party
+terminal remain owner acceptance checks. SwiftShell preferences before activation
+are backed up under own state `backups/20261102T234104Z-desktop-tools`; tracked
+source and `/tmp/swiftshell-desktop-tools-backup` preserve the prior implementation.
+Revert these feature commits for source recovery; hiding a new bar widget or
+disabling history does not modify compositor/session configuration.
+
+## Bar hover and drag ordering — 2026-11-02
+
+Removed hover ToolTips from bar widgets, clock, Search and tray controls; accessible
+names/descriptions and activation/context actions remain. The source regression
+rejects new hover hints in bar components. All existing 22 QML suites and actual
+both-output desktop quick-action clicks/Escape passed after this removal.
+
+Top bar Settings now uses drag handles/drop markers instead of ordering arrows.
+Drag changes remain local until release, Escape cancels even after later pointer
+motion, edge auto-scroll runs only during a drag, and Alt J/K preserves keyboard
+access. A single insertion updates the selected output's existing order, preserving
+its edge, scale, grouping and visibility. Handles/delegates retain their identity.
+
+`scripts/check.sh` passes: 109 QML documents and all 23 QML suites, including seven
+new drag cases for commit-once, cancellation, scrolling, keyboard/visibility/group
+independence and full-page per-monitor isolation. The native Quickshell test caught
+a missing qmldir registration that plain Qt's implicit lookup had accepted; the
+registration and a static regression now cover it.
+
+`tests/live/bar-module-drag.py --live` passed a real pointer drag inside the running
+Settings window, atomic on-disk order readback, unchanged other-output overrides
+and unchanged Settings geometry. It restored the exact preceding default-profile
+override, category, window visibility, cursor and focus. The full pre-test SwiftShell
+preferences remain backed up privately in `/tmp/swiftshell-bar-order-settings-backup.json`.
+No compositor configuration, monitor mode, Noctalia or service was changed. Runtime
+loading/type/binding errors were absent after the corrected build activation; known
+Qt text-input/legacy request-file diagnostics remain. Revert the two bar-polish
+commits for recovery. Physical long-distance drag scrolling and touch input remain
+owner acceptance checks; drag scrolling is covered by QML input tests.
+
+## Real area selection and display-scoped visibility correction — 2026-11-02
+
+The actual slurp selector reproduced the user-reported invisible/stuck capture:
+its process inherited an open input pipe and waited for input before mapping any
+selection layer. Bounded read-only child tools now receive DEVNULL stdin. A real
+subprocess regression keeps its parent pipe open to catch this. Screenshot tools
+also cancel unfinished work when reopened, wait for cancellation before accepting
+a new capture, treat Escape as normal cancellation, and explain the area gesture.
+
+`tests/live/screenshot-review.py --live --interactive` now uses the installed slurp
+instead of a geometry stub. Both monitors passed real selector mapping, actual
+64×64 area drags over an opaque owned checkerboard, image preview, private PNG
+clipboard decoding, native Save As handler export, Escape cancellation and close
+cleanup with no remaining selector or busy state. No unrelated screen pixels or
+actual clipboard data were used. This supersedes the earlier unperformed real
+area-selection limitation; physical user selection and paste remain acceptance
+checks. The generated screenshots remain owned fixture images.
+
+Show/Hide had been editing inherited defaults while both connectors had explicit
+visibility overrides. Settings now chooses the focused connector once, preserves
+that choice when focus moves, and clearly labels the default-for-inheriting-displays
+option. `bar-visibility.py --live` passed actual display-dropdown/Show-Hide and
+right-click-checkbox interactions in both directions on both monitors, disk
+readback and preservation/restoration of other-display overrides. The adapted
+`bar-module-drag.py --live` also passed selected-connector ordering/persistence
+and scoped restoration. Source backups are under `/tmp/swiftshell-screenshot-selector-backup`
+and `/tmp/swiftshell-bar-visibility-*.bak`; committed source is the recovery path.
+
+## Settings interaction, persistence and weather integration — 2026-11-05
+
+The Settings rebuild uses shared collapsible sections, searchable controls, a live
+appearance sample, consistent Undo/Reset and visible-frame resize bands. Native
+`tests/live/settings-ux.py --live` passed on HDMI-A-1 and DP-1: requested-output
+first map, centering, resizing at the painted corner, collapse/search restoration,
+slider drag without page scroll, one Undo step per gesture and saved size on
+reopen. Captures contain only the owned QML surface. Bluetooth appears near the
+top of Network & Devices. Shared controls use the optional appearance accent.
+
+`tests/live/settings-cold-start.py --live` passed a write followed by two fresh
+Quickshell processes with temporary preferences: accent, opaque-window preference,
+fullscreen peek, collapsed sections, weather units/query and per-output hidden
+widgets survived. This is process-restart evidence, **not an actual machine reboot**.
+`scripts/test-settings-save-native.sh` passed duplicate/rapid writes and backed-up
+v2 migration; `tests/live/settings-external.py --live` passed external readback and
+malformed/future-file protection. Atomic writes now merge locally changed leaves
+against the locked latest disk document. Canonical comparisons prevent an endless
+Saving state caused solely by property order. Unreadable settings stay protected.
+
+Weather is a sidebar category, local Settings search result and selectable bar
+widget with an output-anchored frosted forecast. It starts disabled. Location
+search and approximate-IP lookup require explicit user actions; installation does
+not request location. Public API evidence uses Berlin and a temporary cache;
+user-location/IP lookup was not performed. See decision 0046 for transport,
+caching, units, forecast and air-quality test evidence.
+
+`tests/live/bar-stability.py --live` passed 15 appearance/workspace changes with
+stable module identities and a single preferences load; the only extra module
+creation was the deliberate Battery hide/show. This does not prove every reported
+intermittent frame flicker is gone. Real game fullscreen flicker was not reproduced
+by owned dual-output fixtures, so no VRR/direct-scanout or display modes were changed.
+
+Recovery: revert the corresponding feature commits and restart only this checkout
+with `scripts/stop.sh` followed by `scripts/launch.sh`. Temporary source backups
+include `/tmp/swiftshell-nov5-resume-backup.tgz`. Disabling the optional opacity
+integration restores only its owned runtime keys; no user Lua, startup or Noctalia
+files are changed by the Settings/weather slices.
+
+## Source-backed shortcuts and selected terminal — 2026-11-05
+
+Decision 0048 records the actual Hyprland 0.57 Lua API and recovery design.
+`tests/live/source-shortcuts.py --live` passed source span editing, preservation of
+the original callback, exact Undo and independent helper-death recovery. The native
+recorder test `source-shortcuts-ui.py --live` additionally passed real shortcut
+inhibition/recording, source apply and Undo without changing unrelated bindings.
+Source/default-app/legacy-helper unit suites passed 16/13/12 tests respectively.
+The real selected Konsole default now updates the existing desktop terminal action;
+only its literal variable and one callback changed, with the other 93 bindings and
+other source files verified unchanged. The original automatic-reload setting and
+file permissions were preserved. No full Hyprland reload or app launch occurred.
+Super+Enter and actual login/reboot remain owner acceptance checks.
+
+Final review also caught the disabled-weather zero-width latch and asynchronous
+settings-reader completion during a save. Real ModuleStrip regression covers
+weather off/on/off/on with one retained instance; five QML persistence cases cover
+late reads/errors preserving drafts and the in-flight writer. A source-handler
+regression covers deferred Settings load failure and stale callback guards. These
+prevent a missing component from recursively changing its own Loader binding.
+
+## Final activation and integration evidence — 2026-11-05
+
+The checkout was restarted by selecting its exact SwiftShell instance ID; unrelated
+Quickshell/Noctalia processes were not targeted. `scripts/check.sh` exited 0 with
+127 production QML documents, 29 QML suites and 218 passing QML cases, plus the
+logic/Python/installer suites. No QML warning lines occurred. The subsequent pure
+scroll-target change passed its logic regressions and the real pointer tests below.
+CI now explicitly installs Lua 5.4 for source validation tests; no package was
+installed on the owner's workstation.
+
+After activation, `settings-pages.py --live` loaded all 13 sidebar categories,
+including Weather. `bar-visibility.py --live` passed both-output native display
+selection, Show/Hide, right-click synchronization and disk readback; it initially
+caught oversized-section search navigation hiding the selector. The corrected
+scroll target reveals the beginning of tall sections. `bar-module-drag.py --live`
+passed real drag/drop, atomic order readback, other-output preservation and stable
+Settings geometry. Both tests restored preceding preferences and focus. Current
+runtime logs contain no QML type/loading/reference/binding-loop errors.
+
+A disabled weather widget initially left a trailing 12 px Grid gap. The ten-case
+Weather QML suite now covers both module orders with a neighboring control; Grid
+columns count participating widgets. Native `bar-stability.py --live` still passed
+15 appearance/workspace updates without recreating unaffected modules. Actual bar
+layout returned to its preceding width on both outputs.
+
+Final readback: DP-1 2560×1440 at 164.834 Hz, scale 1; HDMI-A-1 1920×1080 at 60 Hz,
+scale 1.25; original positions and transforms retained. The checksum of binds.lua,
+monitors.lua and decorations.lua is unchanged. Only the authorized TERMINAL literal
+changed in variables.lua. All 94 effective bindings remain present and automatic
+config reload is enabled as before. Active/inactive compositor opacity reads 1/1
+for the already opted-in desktop appearance integration. The new weather/location
+and fullscreen-peek preferences remain opt-in. Source watching is restored.
+
+Owner acceptance: play the fullscreen game while crossing displays; verify
+Super+Enter opens Konsole; compare DP-1 text clarity; try real media scrubbing and
+preferred audio devices; inspect dark/light tray popups; configure a weather city;
+and check settings after the next normal login/reboot. The actual game flicker was
+not reproduced by owned fixtures and no VRR/scanout workaround was applied.
+
+## Actual RuneScape fullscreen investigation — 2026-11-05
+
+The owner explicitly authorized launching Steam/RuneScape, joining the selected
+world, display-crossing input, scoped capture and termination afterward. Steam was
+opened on HDMI-A-1 workspace 4. The installed RuneScape app launched into DP-1's
+named gaming workspace in actual fullscreen. The existing linked login and selected
+world were used; no gameplay keys/buttons, graphics settings or purchases were used.
+
+Three passes sent 52 display-boundary crossings with a single persistent
+motion-only Wayland pointer per pass. This exercised normal pointer-driven focus
+between the actual game and Steam rather than relying only on compositor cursor
+warps. The first 20 crossings had no active recording. A 16-second XWayland-window
+recording covered another 16 crossings, followed by a separate 16-second composited
+DP-1 capture with 16 crossings. Recordings/account pixels remain private local
+artifacts and are not included in the repository or uploaded as bug attachments.
+
+Observed evidence:
+
+- Hyprland 0.57.0, exact source commit
+  `0aa6745f705f2c4b0a5004eb019ef76e5bbdb426`; NVIDIA RTX 4070 driver 615.78.08;
+  XWayland 24.1.14. The launched Windows RuneScape client used XWayland.
+- `render:direct_scanout=2`, `misc:vrr=3`,
+  `cursor:no_hardware_cursors=2`, `cursor:no_break_fs_vrr=2`, and
+  `opengl:nvidia_anti_flicker=true`. These values were observed, not changed.
+- DP-1's `directScanoutTo` was `"0"` in all 458 samples. The 120 samples in the
+  non-recorded pass already reported the software-cursor (`SW`) scanout blocker.
+  During compositor capture some samples additionally reported `RECORD`.
+- DP-1 VRR stayed enabled while focus repeatedly switched between the game and
+  Steam. HDMI-A-1 VRR stayed disabled. This does not measure instantaneous panel
+  refresh intervals or exclude low-framerate-compensation/brightness effects.
+- The app recording contained 480 frames at 30 fps. The composited output capture
+  contained 320 frames at 20 fps. Neither contained a black frame or a large global
+  brightness flash. Their mean luma ranges were approximately 65.06–66.26 and
+  65.77–65.97 respectively on the decoded 8-bit scale. These sampled digital
+  buffers cannot prove that a brief physical monitor/VRR flicker did not occur.
+- Current compositor logging is disabled. Empty rolling-log keyword counts are
+  consequently not evidence that modesetting or driver problems never occurred.
+
+The exact-version upstream source clarifies the bypass hypothesis:
+
+- [CMonitor::isDSBlocked](https://github.com/hyprwm/Hyprland/blob/0aa6745f705f2c4b0a5004eb019ef76e5bbdb426/src/output/Monitor.cpp#L1899)
+  includes software-cursor and recording blockers.
+- [CMonitor::shouldUseSoftwareCursors](https://github.com/hyprwm/Hyprland/blob/0aa6745f705f2c4b0a5004eb019ef76e5bbdb426/src/output/Monitor.cpp#L2196)
+  selects software cursors in auto mode on NVIDIA when any monitor has active VRR.
+- [VRR policy](https://github.com/hyprwm/Hyprland/blob/0aa6745f705f2c4b0a5004eb019ef76e5bbdb426/src/config/shared/monitor/MonitorRuleManager.cpp#L197)
+  uses the output's fullscreen workspace/content state; changing the focused
+  monitor alone does not require disabling that fullscreen output's VRR.
+- [Hyprland's FAQ](https://wiki.hypr.land/faq/)
+  documents refresh-rate-dependent panel brightness flicker. VRR staying enabled
+  does not imply that the frame intervals or brightness remain constant.
+- Hyprland 0.57 also introduced relevant auto-HDR behavior; the local option is on
+  and DP-1 advertises HDR capability. An
+  [upstream report](https://github.com/hyprwm/Hyprland/discussions/16756)
+  describes fullscreen mode blinks, but concerns different hardware and does not
+  establish that this machine has the same fault.
+
+Conclusion: compositor bypass is technically possible, but was not active in
+this observed RuneScape session. VRR/frame-pacing or another output/driver issue
+remains a hypothesis, not a diagnosis. No shell fix, permanent VRR change,
+monitor-mode change, cursor-policy change, driver update or HDR change was applied.
+A useful next controlled test requires physical observation: temporarily disable
+VRR only for the affected game, compare foreground/background game frame limits,
+and restore the original behavior. Test forced composition and auto-HDR separately
+if needed; do not change all of them at once or rewrite monitor configuration.
+
+Both launched RuneScape processes were terminated using exact PID/name identity
+checks. Prior workspaces, active window and cursor were restored. Steam was left
+open on workspace 4. Readback confirmed unchanged observed compositor options and
+monitor modes, positions, transforms and scales. The issue remains unconfirmed;
+these tests do not establish a resolution of the owner's reported flicker.
+
+## Weather Settings keyboard/search polish — 2026-11-05
+
+Weather Settings now uses the shared Settings search index and exact control IDs.
+Search for Fahrenheit, refresh or postal location reveals and focuses the relevant
+control instead of always jumping to the location input. Enable weather is indexed,
+and keyboard selection stays within Weather's matching controls. The location
+field is reachable with Tab and uses the shared accent focus outline. Enter and
+the Search button now use identical minimum-length/busy validation, preventing
+invalid or duplicate helper requests from keyboard submission.
+
+The Weather QML suite passes 13 cases, including exact search focus, bounded
+keyboard navigation and Enter/button validation. `scripts/check.sh` exits 0 with
+29 QML suites / 221 passing QML cases and no QML warnings. The isolated native
+`tests/live/settings-weather-navigation.py --live` passed on HDMI-A-1 and DP-1:
+Fahrenheit, refresh, postal and enable-weather search all focused their exact
+controls. Private preferences retained weather disabled and no location/network
+request was made. No user compositor configuration or display settings changed.
+Source backup: `/tmp/swiftshell-weather-navigation-backup`; revert this feature
+commit for recovery. Real location-provider behavior was not retested because
+this slice changes navigation and submission validation only.

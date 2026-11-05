@@ -22,18 +22,29 @@ fi
 "$NODE" "$ROOT/tests/overview.test.js"
 "$NODE" "$ROOT/tests/spotlight-providers.test.js"
 "$NODE" "$ROOT/tests/desktop-tools.test.js"
+"$NODE" "$ROOT/tests/media.test.js"
+"$NODE" "$ROOT/tests/weather.test.js"
+"$NODE" "$ROOT/tests/menu.test.js"
 python3 "$ROOT/tests/test_desktoptools.py"
+python3 "$ROOT/tests/test_terminallaunch.py"
+python3 "$ROOT/tests/test_performancectl.py"
+python3 "$ROOT/tests/test_screenshotctl.py"
+python3 "$ROOT/tests/test_clipboardwindow.py"
 python3 "$ROOT/tests/test_networkctl.py"
 python3 "$ROOT/tests/test_powerprofiles.py"
+python3 "$ROOT/tests/test_cursorwatch.py"
+python3 "$ROOT/tests/test_weatherctl.py"
 python3 "$ROOT/tests/test_settingswrite.py"
 python3 "$ROOT/tests/test_appearancectl.py"
 python3 "$ROOT/tests/test_wallpaper_sample.py"
 python3 "$ROOT/tests/test_defaultapps.py"
 python3 "$ROOT/tests/test_shortcutsctl.py"
+python3 "$ROOT/tests/test_hyprsource.py"
 python3 "$ROOT/tests/test_overviewctl.py"
 python3 "$ROOT/tests/test_displays.py"
 python3 "$ROOT/tests/test_windowctl.py"
 "$NODE" "$ROOT/tests/settings_files.test.js"
+"$NODE" "$ROOT/tests/settings-loader.test.js"
 sh "$ROOT/tests/install_flow.sh"
 
 QMLTESTRUNNER=""
@@ -83,12 +94,22 @@ QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/t
 QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_overview.qml" -platform offscreen
 QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_spotlight.qml" -platform offscreen
 QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_desktop_tools.qml" -platform offscreen
+QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_performance.qml" -platform offscreen
+QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_clipboard.qml" -platform offscreen
+QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_screenshots.qml" -platform offscreen
 QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_workspace_drag.qml" -platform offscreen
+QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_bar_module_drag.qml" -platform offscreen
 QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_settings_responsive.qml" -platform offscreen
+QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_settings_ux.qml" -platform offscreen
+QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_settings_persistence.qml" -platform offscreen
 QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_appearance_queue.qml" -platform offscreen
 QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_network_devices.qml" -platform offscreen
 QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_power_profiles.qml" -platform offscreen
+QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_media.qml" -platform offscreen
+QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_weather.qml" -platform offscreen
+QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_audio.qml" -platform offscreen
 QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_tray.qml" -platform offscreen
+QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_tray_menu.qml" -platform offscreen
 
 DIALOGS_AVAILABLE=0
 FOLDER_MODEL_AVAILABLE=0

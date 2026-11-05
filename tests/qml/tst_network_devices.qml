@@ -13,6 +13,7 @@ TestCase {
     property var original:({})
     property var cancellation:null
     function init() {
+        Services.NetworkService.queuedRequest=null;Services.NetworkService.radioTarget=null;Services.NetworkService.refreshPending=false
         original={devices:Services.NetworkService.devices,profiles:Services.NetworkService.profiles,networks:Services.NetworkService.networks,wifiEnabled:Services.NetworkService.wifiEnabled,wifiHardware:Services.NetworkService.wifiHardware}
         const component=Qt.createComponent("../../shell/settings/NetworkPage.qml")
         compare(component.status,Component.Ready,component.errorString())
@@ -33,6 +34,8 @@ TestCase {
         if(page)page.destroy()
         page=null;worker.running=false;cancellation.running=false;Services.NetworkService.payload={}
         Services.NetworkService.cancelRequested=false;Services.NetworkService.lastFailure={};Services.NetworkService.requestContext={};Services.NetworkService.notice=""
+        Services.NetworkService.queuedRequest=null;Services.NetworkService.radioTarget=null;Services.NetworkService.refreshPending=false
+        wait(0)
         Services.NetworkService.devices=original.devices;Services.NetworkService.networks=original.networks
         Services.NetworkService.profiles=original.profiles;Services.NetworkService.wifiEnabled=original.wifiEnabled;Services.NetworkService.wifiHardware=original.wifiHardware
         Services.NetworkService.error=""
@@ -60,21 +63,117 @@ TestCase {
         worker.started()
         compare(Object.keys(Services.NetworkService.payload).length,0)
     }
-    function test_enter_during_refresh_preserves_password_until_request_is_accepted() {
+    function test_submit_during_refresh_queues_once_and_clears_after_acceptance() {
+        Services.NetworkService.wifiEnabled=true;Services.NetworkService.wifiHardware=true
         const target={id:"AA:BB:CC:DD:EE:FF",name:"Owned fixture",security:"WPA2",device:"wlan-test"}
         page.join(target)
         const input=findChild(page,"wifiPassword")
         input.text="synthetic-password"
-        worker.running=true
-        compare(page.submitPassword(),false)
-        compare(input.text,"synthetic-password")
-        compare(page.joining,target)
-        compare(Object.keys(Services.NetworkService.payload).length,0)
-        worker.running=false
+        Services.NetworkService.action="snapshot";worker.running=true
         compare(page.submitPassword(),true)
-        compare(input.text,"")
-        compare(page.joining,null)
+        compare(input.text,"");compare(page.joining,null)
+        compare(Services.NetworkService.queuedRequest.action,"wifi-connect")
+        verify(Services.NetworkService.canCancel)
+        const reply=findChild(Services.NetworkService,"networkReply")
+        reply.text=JSON.stringify({ok:true,available:true,devices:[],networks:[],profiles:[],wifiEnabled:true,wifiHardware:true})
+        worker.running=false;worker.exited(0,0)
+        tryCompare(Services.NetworkService,"action","wifi-connect")
         compare(Services.NetworkService.payload.secret,"synthetic-password")
+        compare(Services.NetworkService.queuedRequest,null)
+    }
+    function test_busy_mutation_preserves_password_until_it_can_be_accepted() {
+        const target={id:"AA:BB:CC:DD:EE:FF",name:"Owned fixture",security:"WPA2",device:"wlan-test"}
+        page.join(target)
+        const input=findChild(page,"wifiPassword")
+        input.text="synthetic-password"
+        Services.NetworkService.action="device-connect";worker.running=true
+        compare(page.submitPassword(),false)
+        compare(input.text,"synthetic-password");compare(page.joining,target)
+    }
+    function test_security_prompt_is_visible_above_a_long_scrolling_ap_list() {
+        Services.NetworkService.wifiEnabled=true;Services.NetworkService.wifiHardware=true
+        const networks=[]
+        for(let index=0;index<40;index++)networks.push({id:"AP"+index,name:"Owned fixture "+index,security:"WPA2",device:"wlan-test",signal:80,active:false,supported:true})
+        Services.NetworkService.networks=networks
+        page.join(networks[0]);tryCompare(page,"authOpen",true)
+        const dialog=findChild(page,"networkPasswordDialog")
+        verify(dialog.parent!==null)
+        verify(dialog.y>=0 && dialog.y+dialog.height<=dialog.parent.height)
+        verify(dialog.x>=0 && dialog.x+dialog.width<=dialog.parent.width)
+        const input=findChild(page,"wifiPassword")
+        tryCompare(input,"activeFocus",true)
+        keyClick(Qt.Key_Escape);tryCompare(page,"authOpen",false)
+        compare(page.joining,null)
+    }
+    function test_radio_off_confirmation_is_visible_and_request_runs_after_snapshot() {
+        Services.NetworkService.wifiEnabled=true;Services.NetworkService.wifiHardware=true
+        Services.NetworkService.devices=[{id:"wlan-test",kind:"wifi",state:"disconnected",connected:false,available:true,connection:"",addresses:[]}]
+        const toggle=findChild(page,"networkWifiToggle")
+        waitForRendering(page)
+        // Simulate a scrolled page while keeping the actual toggle visible.
+        // Its position differs across Qt versions, font metrics and sections.
+        page.y+=100-toggle.mapToItem(test,0,0).y
+        waitForRendering(page)
+        verify(toggle.mapToItem(test,0,0).y>=0)
+        mouseClick(toggle,20,toggle.height/2)
+        tryCompare(page,"confirmationOpen",true)
+        const dialog=findChild(page,"networkDisconnectDialog")
+        verify(dialog.y>=0 && dialog.y+dialog.height<=dialog.parent.height)
+        Services.NetworkService.action="snapshot";worker.running=true
+        mouseClick(findChild(page,"networkDisconnectConfirm"))
+        tryCompare(page,"confirmationOpen",false)
+        compare(Services.NetworkService.radioTarget,false)
+        compare(Services.NetworkService.requestedWifiEnabled,false)
+        const reply=findChild(Services.NetworkService,"networkReply")
+        reply.text=JSON.stringify({ok:true,available:true,devices:[],networks:[],profiles:[],wifiEnabled:true,wifiHardware:true})
+        worker.running=false;worker.exited(0,0)
+        tryCompare(Services.NetworkService,"action","wifi-radio")
+        compare(Services.NetworkService.payload.enabled,false)
+    }
+    function test_radio_off_discards_queued_wifi_secret_but_not_ethernet_work() {
+        Services.NetworkService.wifiEnabled=true
+        Services.NetworkService.action="snapshot";worker.running=true
+        verify(Services.NetworkService.perform("wifi-connect",{device:"wlan-test",id:"AP",secret:"synthetic-password"}))
+        verify(Services.NetworkService.setWifiEnabled(false))
+        compare(Services.NetworkService.queuedRequest,null)
+        verify(JSON.stringify(Services.NetworkService.payload).indexOf("synthetic-password")<0)
+        Services.NetworkService.radioTarget=null
+        verify(Services.NetworkService.perform("device-connect",{device:"eth-test"}))
+        verify(Services.NetworkService.setWifiEnabled(false))
+        compare(Services.NetworkService.queuedRequest.values.device,"eth-test")
+    }
+    function test_explicit_radio_off_is_confirmed_even_when_cached_state_is_off() {
+        Services.NetworkService.wifiEnabled=false
+        Services.NetworkService.error="An earlier radio readback failed"
+        Services.NetworkService.action="snapshot";worker.running=true
+        Services.NetworkService.setWifiEnabled(false)
+        const reply=findChild(Services.NetworkService,"networkReply")
+        reply.text=JSON.stringify({ok:false,message:"Transient readback failure"})
+        worker.running=false;worker.exited(0,0)
+        tryCompare(Services.NetworkService,"action","wifi-radio")
+        compare(Services.NetworkService.payload.enabled,false)
+    }
+    function test_access_point_controls_survive_signal_strength_refreshes() {
+        Services.NetworkService.wifiEnabled=true;Services.NetworkService.wifiHardware=true
+        const target={id:"AA:BB:CC:DD:EE:FF",name:"Owned fixture",security:"WPA2",device:"wlan-test",signal:80,active:false,supported:true}
+        Services.NetworkService.networks=[target]
+        const rows=findChild(page,"networkAccessPointRows")
+        compare(rows.count,1)
+        const original=rows.itemAt(0)
+        for(let index=0;index<20;index++)Services.NetworkService.networks=[Object.assign({},target,{signal:80+index%3})]
+        compare(rows.itemAt(0),original)
+        compare(rows.itemAt(0).modelData.signal,81)
+    }
+    function test_radio_queue_keeps_the_latest_intent() {
+        Services.NetworkService.wifiEnabled=false
+        Services.NetworkService.action="snapshot";worker.running=true
+        Services.NetworkService.setWifiEnabled(true);Services.NetworkService.setWifiEnabled(false);Services.NetworkService.setWifiEnabled(true)
+        compare(Services.NetworkService.radioTarget,true)
+        const reply=findChild(Services.NetworkService,"networkReply")
+        reply.text=JSON.stringify({ok:true,available:true,devices:[],networks:[],profiles:[],wifiEnabled:false,wifiHardware:true})
+        worker.running=false;worker.exited(0,0)
+        tryCompare(Services.NetworkService,"action","wifi-radio")
+        compare(Services.NetworkService.payload.enabled,true)
     }
     function test_password_enter_is_validated_before_starting_a_connection() {
         const target={id:"AA:BB:CC:DD:EE:FF",name:"Owned fixture",security:"WPA2",device:"wlan-test"}

@@ -44,13 +44,13 @@ MouseArea {
         color: control.emphasized ? Theme.settingsSelected : (control.containsMouse ? Theme.settingsHover : Theme.transparent)
         radius: Theme.controlRadius
         border.width: control.activeFocus ? 1 : 0
-        border.color: Theme.settingsText
+        border.color: Theme.controlAccent
     }
 
     Rectangle {
         visible:control.navigation && control.emphasized
         anchors.left:parent.left;anchors.verticalCenter:parent.verticalCenter
-        width:2;height:16;radius:1;color:Theme.settingsText
+        width:2;height:16;radius:1;color:Theme.controlAccent
     }
 
     Text {

@@ -1,0 +1,15 @@
+const assert=require('node:assert/strict');
+const weather=require('../shell/logic/weather.js');
+assert.equal(weather.temperature(0),'0°');assert.equal(weather.temperature(null),'—');assert.equal(weather.temperature(-2.8,'°C'),'-3°C');
+assert.equal(weather.validLocation({name:'Berlin',latitude:52.52,longitude:13.405}),true);
+assert.equal(weather.validLocation({name:'Invalid',latitude:NaN,longitude:0}),false);
+assert.equal(weather.validLocation({name:'Invalid',latitude:0,longitude:181}),false);
+assert.equal(weather.icon(99),'storm');assert.equal(weather.condition(71),'Snow');assert.equal(weather.icon(null),'unknown');
+assert.equal(weather.aqi(0),'Good');assert.equal(weather.aqi(101),'Unhealthy for sensitive groups');assert.equal(weather.aqi(null),'Unavailable');
+assert.equal(weather.percent(0),'0%');assert.equal(weather.percent(120),'100%');assert.equal(weather.percent(null),'—');
+assert.equal(weather.chartMaximum([{precipitation:0}], 'precipitation'),.1);
+assert.equal(weather.chartMaximum([{precipitation:2.7}], 'precipitation'),2.7);
+assert.equal(weather.chartMaximum([], 'probability'),100);
+assert.equal(weather.windDirection(-90),'W');assert.equal(weather.windDirection(360),'N');
+assert.equal(weather.ageLabel(1000,121000),'Updated 2 min ago');assert.equal(weather.ageLabel(1000,1000),'Updated just now');
+console.log('PASS weather null/zero/units, location validation, condition icons, precipitation scales, AQI and offline age');

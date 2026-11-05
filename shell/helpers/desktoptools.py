@@ -17,7 +17,7 @@ def capabilities():
     return {'ok':True,'clipboard':bool(shutil.which('wl-paste')),'screenshot':bool(shutil.which('grim') and shutil.which('wl-copy')),'region':bool(shutil.which('grim') and shutil.which('slurp') and shutil.which('wl-copy'))}
 
 def bounded_output(argv,limit,timeout=5):
-    with subprocess.Popen(argv,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL) as process:
+    with subprocess.Popen(argv,stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL) as process:
         _active.add(process)
         # A stalled compositor must not leave a reader waiting forever.
         import threading

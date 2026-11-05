@@ -3,6 +3,7 @@ import "../logic/settingsNav.js" as Nav
 import "../themes"
 Item {
     id:page
+    property bool showHeading:true
     property string query:""
     property string highlightId:"bluetoothDevices"
     signal revealRequested(real y,real itemHeight)
@@ -16,6 +17,7 @@ Item {
         id:loader
         width:page.width
         source:"../popovers/BluetoothSection.qml"
+        onLoaded:item.showHeading=page.showHeading
         visible:status===Loader.Ready
     }
     Text {

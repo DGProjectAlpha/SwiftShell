@@ -15,12 +15,16 @@ Singleton {
     property string error: ""
     property var geometry: ({})
     property string action: ""
+    property string targetOutput: ""
+    property int targetTicket:0
+    property int activeTargetTicket:0
     property int lastBlurEnabled: -1
     property var queue: []
     readonly property bool busy: bridge.running
     signal completed(string action, bool success)
     function isBlur(action) { return action==="blur-on" || action==="blur-off" }
-    function request(next) {
+    function request(next, output) {
+        if(typeof output === "string") {targetOutput=output;targetTicket++}
         const blur=isBlur(next),wanted=next==="blur-on" ? 1 : 0
         if (bridge.running) {
             if(blur) {
@@ -32,7 +36,10 @@ Singleton {
         }
         if(blur && lastBlurEnabled===wanted)return
         action=next
-        bridge.command=["python3",Quickshell.shellDir+"/helpers/windowctl.py",next]
+        activeTargetTicket=targetTicket
+        const args=["python3",Quickshell.shellDir+"/helpers/windowctl.py",next]
+        if(targetOutput && ["prepare","mapped","activate"].indexOf(next)>=0)args.push("--output",targetOutput)
+        bridge.command=args
         bridge.running=true
     }
     Connections {
@@ -55,6 +62,7 @@ Singleton {
                 const result=JSON.parse(reply.text)
                 if (code!==0 || !result.ok) throw new Error(result.message || "Window action failed.")
                 if (root.action==="prepare") { root.available=true;root.reasonUnavailable="";root.blurAvailable=result.blurAvailable; root.blurReason=result.blurReason }
+                if(result.output && root.activeTargetTicket===root.targetTicket)root.targetOutput=result.output
                 const geometry=result.geometry || {}
                 if(JSON.stringify(geometry)!==JSON.stringify(root.geometry))root.geometry=geometry
                 if(result.window) root.maximized=result.window.fullscreen === 1

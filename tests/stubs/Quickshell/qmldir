@@ -19,3 +19,6 @@ Anchor 1.0 Anchor.qml
 SurfaceFormat 1.0 SurfaceFormat.qml
 
 QsMenuAnchor 1.0 QsMenuAnchor.qml
+
+QsMenuOpener 1.0 QsMenuOpener.qml
+singleton QsMenuButtonType 1.0 QsMenuButtonType.qml

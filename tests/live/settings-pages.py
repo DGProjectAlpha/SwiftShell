@@ -16,7 +16,7 @@ def wait(predicate):
     raise AssertionError('Settings page did not become ready')
 original=state()
 try:
-    for category in ['appearance','bar','spotlight','wallpaper','displays','workspaces','shortcuts','defaultApps','audio','network','power','notifications']:
+    for category in ['appearance','bar','spotlight','wallpaper','displays','workspaces','shortcuts','defaultApps','audio','network','power','notifications','weather']:
         subprocess.run(command+['settings',category],check=True)
         wait(lambda:state()['category']==category and state()['window'] and state()['window']['pageStatus']==1 and not state()['windowBusy'])
         assert not state()['windowError'],state()['windowError']

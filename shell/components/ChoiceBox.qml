@@ -33,7 +33,7 @@ Controls.ComboBox {
         radius: Theme.controlRadius
         color: control.down ? Qt.rgba(.5,.5,.5,.18) : Qt.rgba(.5,.5,.5,control.hovered ? .12 : .07)
         border.width: control.activeFocus ? 1 : 0
-        border.color: Theme.settingsMuted
+        border.color: Theme.controlAccent
     }
     contentItem: Text {
         leftPadding: 10
@@ -58,7 +58,7 @@ Controls.ComboBox {
         font: control.font
         highlighted: control.highlightedIndex === index
         contentItem: Text { textFormat:Text.PlainText; text: modelData.label; color: Theme.settingsText; font: control.font; elide: Text.ElideRight; verticalAlignment: Text.AlignVCenter }
-        background: Rectangle { radius: Theme.controlRadius; color: delegateControl.highlighted ? Qt.rgba(.5,.5,.5,.2) : "transparent" }
+        background: Rectangle { radius: Theme.controlRadius; color: delegateControl.highlighted ? Theme.settingsSelected : "transparent" }
     }
     popup: Controls.Popup {
         y: control.height + 4

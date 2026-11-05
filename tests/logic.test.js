@@ -294,7 +294,7 @@ test("version 1 settings migrate and unknown keys stay in the extension bag", fu
     const sized = settings.validateSettings({
         settingsWindow: { width: 10, height: 5000, category: "widgets" },
     }).settings.settingsWindow;
-    assert.deepEqual(sized, { width: 640, height: 1200, category: "appearance" });
+    assert.deepEqual(sized, { width: 640, height: 1200, category: "appearance", sectionsJson:"{}" });
     assert.equal(settings.opacityFromUnit(0), 0.72);
     assert.equal(settings.opacityFromUnit(1), 0.96);
     assert.equal(settings.unitFromOpacity(0.92), (0.92 - 0.72) / 0.24);
@@ -342,10 +342,10 @@ test("settings window lifecycle and unprobed blur capabilities remain honest", f
 test("settings search, density, and undo stay on real appearance fields", function () {
     assert.equal(settingsNav.navigationLayout(719), "stacked");
     assert.equal(settingsNav.navigationLayout(720), "columns");
-    assert.equal(settingsNav.categories().length, 12);
+    assert.equal(settingsNav.categories().length, 13);
     assert.equal(settingsNav.categories()[0].id, "appearance");
     assert.equal(settingsNav.categories()[1].id, "bar");
-    assert.deepEqual(settingsNav.categories().slice(2).map(c => c.id), ["spotlight", "wallpaper", "displays", "workspaces", "shortcuts", "defaultApps", "audio", "network", "power", "notifications"]);
+    assert.deepEqual(settingsNav.categories().slice(2).map(c => c.id), ["spotlight", "wallpaper", "displays", "workspaces", "shortcuts", "defaultApps", "audio", "network", "power", "notifications", "weather"]);
     assert.equal(settingsNav.categoryFor(settingsNav.firstControlId("cover")), "wallpaper");
     assert.equal(settingsNav.filterControls("").length, settingsNav.CONTROLS.length);
     assert.equal(settingsNav.filterControls("not-a-setting").length, 0);
@@ -366,6 +366,8 @@ test("settings search, density, and undo stay on real appearance fields", functi
     assert.equal(settingsNav.scrollTarget(100, 80, 40, 20), 40);
     assert.equal(settingsNav.scrollTarget(0, 80, 90, 20), 30);
     assert.equal(settingsNav.scrollTarget(10, 80, 20, 20), 10);
+    assert.equal(settingsNav.scrollTarget(0, 400, 700, 900), 700);
+    assert.equal(settingsNav.scrollTarget(900, 400, 700, 900), 700);
     let history = settings.initialHistory(settings.DEFAULTS.appearance);
     history = settings.reduceAppearanceHistory(history, {
         type: "edit",
@@ -1313,7 +1315,7 @@ test("bar exclusion can turn reservation on again and popup focus clears before 
     assert.equal(bar.barMetrics(80, 1).height, 52);
     assert.equal(bar.heightFromUnit(bar.unitFromHeight(28)), 28);
     assert.equal(bar.exclusionUpdate(true, tall.height, 28).zone, 52);
-    assert.deepEqual(bar.visibleModules(bar.BAR_MODULES, ["clock"]), ["workspaces", "title", "search", "control", "media", "tray", "battery", "network", "power", "notifications"]);
+    assert.deepEqual(bar.visibleModules(bar.BAR_MODULES, ["clock"]), ["workspaces", "title", "search", "control", "media", "tray", "battery", "network", "power", "notifications", "screenshot", "clipboard", "performance", "weather"]);
     const moved = bar.moveModule(bar.BAR_MODULES, "clock", -1);
     assert.equal(moved[2], "clock");
     assert.equal(moved[3], "search");
@@ -2012,6 +2014,85 @@ test("notifications stay off until ownership is confirmed", function () {
     const recorded = notifications.actionRecords([{ text: "Open", identifier: "open" }]);
     assert.equal(recorded[0].text, "Open");
     assert.equal(recorded[0].identifier, "open");
+});
+
+// Every newly exposed bar action must be accepted by the real popup reducer.
+test("desktop quick tool panels open, switch, and release focus", function () {
+    for (const id of ["clipboard", "performance", "weather"]) {
+        let state=popover.reducePopup(popover.popupModel(),{type:"toggle",id:id},{instantOpen:true,instantClose:true});
+        assert.equal(state.panelId,id);
+        assert.equal(state.visible,true);
+        assert.equal(state.interactive,true);
+        state=popover.reducePopup(state,{type:"close"},{instantClose:true});
+        assert.equal(state.visible,false);
+        assert.equal(state.grab,false);
+    }
+});
+
+test("low DPI bar rendering keeps fractional and unavailable-curve fallbacks", function () {
+    assert.equal(bar.textRenderMode(1, 1, true), "curve");
+    assert.equal(bar.textRenderMode(1, 1, false), "distance-field");
+    assert.equal(bar.textRenderMode(1.25, 1, true), "distance-field");
+    assert.equal(bar.textRenderMode(1, .9, true), "distance-field");
+    assert.equal(bar.textRenderMode(undefined, 1, true), "distance-field");
+    assert.equal(bar.snapModulePosition(10.375, 1, 1), 10);
+    assert.equal(bar.snapModulePosition(-10.375, 1, 1), -10);
+    assert.equal(bar.snapModulePosition(10.375, 1.25, 1), 10.375);
+    assert.equal(bar.snapModulePosition(10.375, 1, 1.25), 10.375);
+    assert.equal(bar.snapModulePosition(10.375, undefined, 1), 10.375);
+});
+
+test("fullscreen bar peek is output-local and ignores maximized or inactive workspaces", function () {
+    const monitors=[{id:1,name:"DP-1",activeWorkspace:{address:"gaming"},focused:true},{id:0,name:"HDMI-A-1",activeWorkspace:{address:"5"},focused:false}];
+    const clients=[{lastIpcObject:{fullscreen:2,monitor:1,workspace:{address:"gaming"},mapped:true}},
+        {lastIpcObject:{fullscreen:1,monitor:0,workspace:{address:"5"},mapped:true}},
+        {lastIpcObject:{fullscreen:2,monitor:0,workspace:{address:"4"},mapped:true}}];
+    assert.deepEqual(bar.fullscreenOutputs(clients,monitors),["DP-1"]);
+    monitors[0].focused=false;monitors[1].focused=true;
+    assert.deepEqual(bar.fullscreenOutputs(clients,monitors),["DP-1"]);
+    clients[1].lastIpcObject.fullscreen=2;
+    assert.deepEqual(bar.fullscreenOutputs(clients,monitors),["DP-1","HDMI-A-1"]);
+    clients[1].lastIpcObject.hidden=true;
+    assert.deepEqual(bar.fullscreenOutputs(clients,monitors),["DP-1"]);
+    assert.deepEqual(bar.fullscreenOutputs([],monitors),[]);
+});
+
+test("fullscreen peek edge detection uses logical mixed-scale screen rectangles", function () {
+    const hdmi={x:2560,y:720,width:1536,height:864};
+    assert.deepEqual(bar.peekPointer({x:2700,y:721},hdmi,"top",1536,28),{atEdge:true,insideBar:true});
+    assert.deepEqual(bar.peekPointer({x:2559,y:721},hdmi,"top",1536,28),{atEdge:false,insideBar:false});
+    assert.deepEqual(bar.peekPointer({x:2700,y:760},hdmi,"top",1536,28),{atEdge:false,insideBar:false});
+    assert.deepEqual(bar.peekPointer({x:4095,y:900},hdmi,"right",168,864),{atEdge:true,insideBar:true});
+    assert.deepEqual(bar.peekPointer({x:2561,y:900},hdmi,"left",168,864),{atEdge:true,insideBar:true});
+    assert.deepEqual(bar.peekPointer({x:2700,y:1583},hdmi,"bottom",1536,28),{atEdge:true,insideBar:true});
+    assert.deepEqual(bar.peekPointer(null,hdmi,"top",1536,28),{atEdge:false,insideBar:false});
+});
+
+test("weather is discoverable and popovers share its exclusive lifecycle", function () {
+    assert.equal(settingsNav.categoryFor("weatherLocation"), "weather");
+    assert.equal(settingsNav.categoryFor("automaticText"), "appearance");
+    assert.equal(settingsNav.categoryFor("manualText"), "appearance");
+    for (const id of ["accentColor", "opaqueWindows", "fullscreenBarPeek"])
+        assert.ok(settingsNav.CONTROLS.some(item => item.id === id));
+    assert.equal(bar.moduleName("weather"), "Weather");
+    const opened = popover.reducePopup(popover.popupModel(), {type:"toggle",id:"weather"}, {instantOpen:true});
+    assert.equal(opened.panelId, "weather");
+    assert.equal(opened.visible, true);
+    const switched = popover.reducePopup(opened, {type:"toggle",id:"control"}, {instantOpen:true});
+    assert.equal(switched.panelId, "control");
+});
+
+test("concurrent output and section map edits keep independent changes", function () {
+    const base={bar:{hiddenOutputsJson:JSON.stringify({"DP-1":[],"HDMI-A-1":[]})},settingsWindow:{sectionsJson:"{}"}};
+    const local=JSON.parse(JSON.stringify(base)),current=JSON.parse(JSON.stringify(base));
+    local.bar.hiddenOutputsJson=JSON.stringify({"DP-1":["tray"],"HDMI-A-1":[]});
+    current.bar.hiddenOutputsJson=JSON.stringify({"DP-1":[],"HDMI-A-1":["clock"]});
+    local.settingsWindow.sectionsJson=JSON.stringify({"appearance.surface":false});
+    current.settingsWindow.sectionsJson=JSON.stringify({"bar.layout":false});
+    const merged=settings.mergeSettingsChanges(base,local,current);
+    assert.deepEqual(JSON.parse(merged.bar.hiddenOutputsJson),{"DP-1":["tray"],"HDMI-A-1":["clock"]});
+    assert.deepEqual(JSON.parse(merged.settingsWindow.sectionsJson),{"appearance.surface":false,"bar.layout":false});
+    assert.deepEqual(settings.mergeSettingsChanges({locationJson:'{"latitude":1,"longitude":2}'},{locationJson:'{"latitude":3,"longitude":2}'},{locationJson:'{"latitude":1,"longitude":4}'}),{locationJson:'{"latitude":3,"longitude":2}'});
 });
 
 if (failed > 0) {

@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""Effective Hyprland shortcut viewer and scoped SwiftShell-owned bindings.
+"""Effective shortcuts and source-backed edits of existing desktop bindings.
 
-Opaque Lua callbacks cannot be reconstructed from j/binds. Never remove or
-replace those bindings. Only handles created by this helper can be removed.
-Managed choices persist in SwiftShell state and are reapplied by its service.
+Source edits preserve verified Hyprland 0.57 callback references and modify only
+the original chord span. Legacy scoped bindings remain readable for compatibility.
 """
 import argparse
 import ctypes
@@ -197,6 +196,9 @@ def backup(saved):
 
 
 def apply(action, modifiers, key):
+    if action.startswith("source:"):
+        import hyprsource
+        hyprsource.apply(action,modifiers,key);return
     if action not in CATALOG: raise ValueError('Choose a shortcut action.')
     chord = normalize(modifiers, key)
     saved = settings()
@@ -251,6 +253,11 @@ def sync():
 
 
 def restore_previous():
+    import hyprsource
+    source_latest=hyprsource.state_root()/'latest.json'
+    legacy=state_path().with_name('shortcuts-previous.json')
+    if source_can_undo() and (not legacy.exists() or source_latest.stat().st_mtime>=legacy.stat().st_mtime):
+        hyprsource.undo();return
     previous = read(state_path().with_name('shortcuts-previous.json'), None)
     if not isinstance(previous, dict) or previous.get('version') != 1 or not isinstance(previous.get('bindings'), dict):
         raise ValueError('No previous shortcut change is available.')
@@ -273,10 +280,24 @@ def restore_previous():
         raise
 
 
+def source_can_undo():
+    try:
+        import hyprsource
+        latest=json.loads((hyprsource.state_root()/'latest.json').read_text())
+        transaction=latest.get('transaction','')
+        if not re.fullmatch(r'[a-f0-9]{32}',transaction):return False
+        return hyprsource.read_journal(hyprsource.state_root()/(transaction+'.json')).get('status')=='committed'
+    except (OSError,ValueError,KeyError,TypeError):return False
+
+
 def snapshot(errors=None):
     saved = settings()
     observed = live()
     effective = []
+    try:
+        import hyprsource
+        sources=hyprsource.linked(observed)
+    except (OSError,ValueError,UnicodeError):sources={}
     for index, bind in enumerate(observed):
         key = bind.get('key') or ('code:' + str(bind.get('keycode'))) if bind.get('key') or bind.get('keycode') else 'Any key'
         mods = [name.upper() for name, value in MODS.items() if int(bind.get('modmask', 0)) & value]
@@ -284,13 +305,18 @@ def snapshot(errors=None):
         description = bind.get('description') or bind.get('dispatcher') or 'Desktop shortcut'
         managed = next((action for action, value in saved['bindings'].items() if action in CATALOG
             and description == owner_description(action) and mask(value) == int(bind.get('modmask', 0)) and value['key'].casefold() == str(bind.get('key', '')).casefold()), '')
-        effective.append({'id': str(index), 'label': description, 'chord': ' + '.join(mods + [key]),
+        source=sources.get(index)
+        effective.append({'id': source['id'] if source else str(index), 'label': description, 'chord': ' + '.join(mods + [key]),
+                          'sourceId':source['id'] if source else '', 'editable':source is not None,
+                          'binding':{'modifiers':[m for m in MODS if int(bind.get('modmask',0)) & MODS[m]],'key':key},
+                          'sourceLabel':(Path(source['relative']).name+' · '+str(source['line'])) if source else '',
+                          'readOnlyReason':'' if source else 'Generated, shared or unsupported source form. This binding is shown without changing it.',
                           'owner': 'SwiftShell' if managed else 'Hyprland', 'managedId': managed,
                           'scope': bind.get('submap') or 'Desktop', 'flags': ' · '.join(flags)})
     catalog = [{'id': action, 'label': label, 'category': category, 'binding': saved['bindings'].get(action),
                 'active': any(row['managedId'] == action for row in effective)} for action, label, category in ACTIONS]
     return {'ok': True, 'available': True, 'effective': effective, 'actions': catalog, 'warnings': errors or [],
-            'canUndo': state_path().with_name('shortcuts-previous.json').is_file()}
+            'canUndo': source_can_undo() or state_path().with_name('shortcuts-previous.json').is_file(), 'sourceEditable':len(sources)}
 
 
 def invoke(action):
