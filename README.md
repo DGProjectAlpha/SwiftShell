@@ -2,6 +2,8 @@
 
 > **Status:** Local CachyOS validation now covers actionable notifications and a bar drawer with quiet hours, preview privacy, inline replies, images and optional sounds, live workspace previews with a reversible Alt+Tab handoff, independent bar edges/scales/content per display, Clock notifications/activity, native device workflows, and Spotlight window/settings/screenshot tools. Clipboard history is optional and session-only. This remains an alpha; dated evidence and unperformed checks are in `docs/testing.md`.
 >
+> **Local refinement (2026-11-05):** Collapsible Settings sections, visible-edge resize, per-output launch placement, source-backed desktop shortcut editing, selected-terminal synchronization, shared audio/media controls, themed tray menus and optional weather are now locally exercised. Process-restart persistence is verified; actual reboot and game fullscreen flicker remain acceptance checks.
+>
 > **Purpose:** A clean, understated, keyboard-first, fully integrated desktop shell built with **Quickshell + Qt 6/QML** for **Hyprland on Arch-based systems**. The reference workstation is CachyOS; the installer is not limited to that one machine.
 >
 > **Non-negotiable:** Do not damage, overwrite, disable, or silently reconfigure the user's working **Noctalia** installation or existing **Lua-based Hyprland** setup.
