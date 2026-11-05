@@ -1,4 +1,5 @@
 import QtQuick
+import "../logic/settingsFocus.js" as Focus
 import "../components"
 import "../logic/bar.js" as Bar
 import "../logic/settingsNav.js" as Nav
@@ -81,17 +82,10 @@ Item {
     function focusHighlight() {
         if(page.highlightId==="barEdgeScale"){edgeChoice.forceActiveFocus();return}
         var item = itemFor(page.highlightId)
-        if (item && item.forceActiveFocus)
-            item.forceActiveFocus()
+        Focus.revealAncestors(item);Qt.callLater(function(){Focus.focusFirst(item)})
     }
 
-    function itemFor(id) {
-        for (var index = 0; index < column.children.length; index++) {
-            if (column.children[index].controlId === id)
-                return column.children[index]
-        }
-        return null
-    }
+    function itemFor(id) {return Focus.findControl(column,id)}
 
     function moduleName(id) { return Bar.moduleName(id) }
 
@@ -109,8 +103,7 @@ Item {
     onQueryChanged: page.highlightId = Nav.firstControlId(page.query)
     onHighlightIdChanged: {
         var item = itemFor(page.highlightId)
-        if (item)
-            revealRequested(item.y, item.height)
+        if (item) {Focus.revealAncestors(item);Qt.callLater(function(){const point=item.mapToItem(page,0,0);page.revealRequested(point.y,item.height)})}
     }
 
     Loader {
@@ -156,12 +149,13 @@ Item {
             font.pixelSize: Theme.settingsFontSize
         }
 
-        Column {
+        SettingsSection {
+            sectionId:"bar.background";title:"Background";searchQuery:page.query;controlIds:["barSurface"]
+
             property string controlId: "barSurface"
             visible: page.shows("barSurface")
             width: parent.width
             spacing: Theme.settingsSpacing
-            SectionHeader { text: "Background" }
             SettingsRow {
                 width:parent.width
                 label:"Apply to"
@@ -239,11 +233,12 @@ Item {
             }
         }
 
-        Column {
+        SettingsSection {
+            sectionId:"bar.position";title:"Position & scale";searchQuery:page.query;controlIds:["barEdgeScale"]
+
             property string controlId:"barEdgeScale"
             width:parent.width;spacing:Theme.settingsSpacing
             visible:page.shows("barEdgeScale")
-            SectionHeader {text:"Position & scale"}
             SettingsRow {
                 width:parent.width;label:"Display"
                 ChoiceBox {
@@ -273,151 +268,172 @@ Item {
             FlatButton {visible:page.layoutOutput!=="";label:"Use all-screen layout";onActivated:SettingsStore.inheritOutputLayout(page.layoutOutput)}
         }
 
-        SettingsRow {
-            controlId: "barHeight"
-            visible: page.shows("barHeight")
-            marked: page.marked("barHeight")
-            width: parent.width
-            label: "Bar height"
-
-            Row {
-                spacing: Theme.settingsSpacing
-
-                Text {
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: SettingsStore.barHeight + " px"
-                    color: Theme.settingsMuted
-                    font.family: Theme.settingsFontFamily
-                    font.pixelSize: Theme.settingsFontSizeSmall
-                }
-
-                CompactSlider {
-                    valueName: "Bar height"
-                    value: Bar.unitFromHeight(SettingsStore.barHeight)
-                    onMoved: function (next) { SettingsStore.setBarHeight(Bar.heightFromUnit(next)) }
-                }
-            }
-        }
-
-        SettingsToggle {
-            controlId: "reserveSpace"
-            visible: page.shows("reserveSpace")
-            marked: page.marked("reserveSpace")
-            label: "Reserve space"
-            checked: SettingsStore.reserveSpace
-            onToggled: function (next) { SettingsStore.setReserveSpace(next) }
-        }
-
-        SettingsRow {
-            controlId: "barPlacement"
-            visible: page.shows("barPlacement")
-            marked: page.marked("barPlacement")
-            width: parent.width
-            label: "Screens"
-
-            Row {
-                spacing: Theme.settingsSpacing
-
-                FlatButton {
-                    label: "Focused"
-                    emphasized: SettingsStore.barPlacement === "focused"
-                    onActivated: SettingsStore.setBarPlacement("focused")
-                }
-
-                FlatButton {
-                    label: "Primary"
-                    emphasized: SettingsStore.barPlacement === "primary"
-                    onActivated: SettingsStore.setBarPlacement("primary")
-                }
-
-                FlatButton {
-                    label: "All"
-                    emphasized: SettingsStore.barPlacement === "all"
-                    onActivated: SettingsStore.setBarPlacement("all")
-                }
-            }
-        }
-
-        Column {
-            property string controlId: "targetMonitor"
-            visible: page.shows("targetMonitor")
-            width: parent.width
-            spacing: Theme.settingsSpacing
-            Text {
-                text: "Use one monitor"
-                color: Theme.settingsMuted
-                font.pixelSize: Theme.settingsFontSizeSmall
-            }
-            Repeater {
-                model: HyprlandModel.monitorChoices
-                delegate: FlatButton {
-                    required property var modelData
-                    width: Math.min(implicitWidth, page.width)
-                    label: modelData.label
-                    emphasized: SettingsStore.targetMonitor === modelData.name
-                    onActivated: SettingsStore.setTargetMonitor(modelData.name)
-                }
-            }
-            Text {
-                visible: SettingsStore.targetMonitor !== ""
+        SettingsSection {
+            sectionId:"bar.behavior"
+            title:"Size & behavior"
+            description:""
+            searchQuery:page.query
+            controlIds:["barHeight", "reserveSpace", "barPlacement", "targetMonitor", "showTitle", "fullscreenBarPeek"]
+            width:parent.width
+            SettingsRow {
+                controlId: "barHeight"
+                visible: page.shows("barHeight")
+                marked: page.marked("barHeight")
                 width: parent.width
-                wrapMode: Text.WordWrap
-                text: "Selected: " + SettingsStore.targetMonitor + ". Disconnected outputs fall back to the focused screen. Focused, Primary, or All clears this selection."
-                color: Theme.settingsMuted
-                font.pixelSize: Theme.settingsFontSizeSmall
-            }
-        }
+                label: "Bar height"
 
-        SettingsToggle {
-            controlId: "showTitle"
-            visible: page.shows("showTitle")
-            marked: page.marked("showTitle")
-            label: "Focused title"
-            checked: SettingsStore.showFocusedTitle
-            onToggled: function (next) { SettingsStore.setShowFocusedTitle(next) }
-        }
+                Row {
+                    spacing: Theme.settingsSpacing
 
-        SettingsToggle {
-            controlId: "clock24"
-            visible: page.shows("clock24")
-            marked: page.marked("clock24")
-            label: "24-hour clock"
-            checked: SettingsStore.use24Hour
-            onToggled: function (next) { SettingsStore.setUse24Hour(next) }
-        }
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: SettingsStore.barHeight + " px"
+                        color: Theme.settingsMuted
+                        font.family: Theme.settingsFontFamily
+                        font.pixelSize: Theme.settingsFontSizeSmall
+                    }
 
-        SettingsToggle {
-            controlId:"searchLabel"
-            visible:page.shows("searchLabel")
-            label:"Show Search label"
-            checked:SettingsStore.searchLabel
-            onToggled:function(value){SettingsStore.setSearchLabel(value)}
-        }
-        Column {
-            property string controlId:"clockDisplay"
-            width:parent.width;spacing:Theme.settingsSpacing
-            visible:page.shows("clockDisplay")
-            SectionHeader {text:"Clock"}
-            SettingsToggle {
-                label:"Show seconds";checked:SettingsStore.clockSeconds
-                onToggled:function(value){SettingsStore.setClockOptions(value,SettingsStore.clockDate,SettingsStore.clockDateFormat)}
+                    CompactSlider {
+                        valueName: "Bar height"
+                        value: Bar.unitFromHeight(SettingsStore.barHeight)
+                        onMoved: function (next) { SettingsStore.setBarHeight(Bar.heightFromUnit(next)) }
+                    }
+                }
             }
             SettingsToggle {
-                label:"Show date";checked:SettingsStore.clockDate
-                onToggled:function(value){SettingsStore.setClockOptions(SettingsStore.clockSeconds,value,SettingsStore.clockDateFormat)}
+                controlId: "reserveSpace"
+                visible: page.shows("reserveSpace")
+                marked: page.marked("reserveSpace")
+                label: "Reserve space"
+                checked: SettingsStore.reserveSpace
+                onToggled: function (next) { SettingsStore.setReserveSpace(next) }
             }
             SettingsRow {
-                width:parent.width;label:"Date style"
-                ChoiceBox {
-                    enabled:SettingsStore.clockDate
-                    choices:[{label:"Day and month",value:"short"},{label:"Weekday and date",value:"weekday"},{label:"Year–month–day",value:"iso"}]
-                    selectedValue:SettingsStore.clockDateFormat
-                    onChosen:function(value){SettingsStore.setClockOptions(SettingsStore.clockSeconds,SettingsStore.clockDate,value)}
+                controlId: "barPlacement"
+                visible: page.shows("barPlacement")
+                marked: page.marked("barPlacement")
+                width: parent.width
+                label: "Screens"
+
+                Row {
+                    spacing: Theme.settingsSpacing
+
+                    FlatButton {
+                        label: "Focused"
+                        emphasized: SettingsStore.barPlacement === "focused"
+                        onActivated: SettingsStore.setBarPlacement("focused")
+                    }
+
+                    FlatButton {
+                        label: "Primary"
+                        emphasized: SettingsStore.barPlacement === "primary"
+                        onActivated: SettingsStore.setBarPlacement("primary")
+                    }
+
+                    FlatButton {
+                        label: "All"
+                        emphasized: SettingsStore.barPlacement === "all"
+                        onActivated: SettingsStore.setBarPlacement("all")
+                    }
+                }
+            }
+            Column {
+                property string controlId: "targetMonitor"
+                visible: page.shows("targetMonitor")
+                width: parent.width
+                spacing: Theme.settingsSpacing
+                Text {
+                    text: "Use one monitor"
+                    color: Theme.settingsMuted
+                    font.pixelSize: Theme.settingsFontSizeSmall
+                }
+                Repeater {
+                    model: HyprlandModel.monitorChoices
+                    delegate: FlatButton {
+                        required property var modelData
+                        width: Math.min(implicitWidth, page.width)
+                        label: modelData.label
+                        emphasized: SettingsStore.targetMonitor === modelData.name
+                        onActivated: SettingsStore.setTargetMonitor(modelData.name)
+                    }
+                }
+                Text {
+                    visible: SettingsStore.targetMonitor !== ""
+                    width: parent.width
+                    wrapMode: Text.WordWrap
+                    text: "Selected: " + SettingsStore.targetMonitor + ". Disconnected outputs fall back to the focused screen. Focused, Primary, or All clears this selection."
+                    color: Theme.settingsMuted
+                    font.pixelSize: Theme.settingsFontSizeSmall
+                }
+            }
+            SettingsToggle {
+                controlId: "showTitle"
+                visible: page.shows("showTitle")
+                marked: page.marked("showTitle")
+                label: "Focused title"
+                checked: SettingsStore.showFocusedTitle
+                onToggled: function (next) { SettingsStore.setShowFocusedTitle(next) }
+            }
+            SettingsToggle {
+                width:parent.width
+                controlId:"fullscreenBarPeek"
+                label:"Reveal bar in fullscreen"
+                checked:SettingsStore.fullscreenBarPeek
+                onToggled:function(next){SettingsStore.setFullscreenBarPeek(next)}
+            }
+            Text {width:parent.width;wrapMode:Text.WordWrap;text:"Move to the display edge to reveal the bar over a fullscreen app.";color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall}
+        }
+
+        SettingsSection {
+            sectionId:"bar.clock"
+            title:"Clock & search"
+            description:""
+            searchQuery:page.query
+            controlIds:["clock24", "searchLabel", "clockDisplay"]
+            width:parent.width
+            SettingsToggle {
+                controlId: "clock24"
+                visible: page.shows("clock24")
+                marked: page.marked("clock24")
+                label: "24-hour clock"
+                checked: SettingsStore.use24Hour
+                onToggled: function (next) { SettingsStore.setUse24Hour(next) }
+            }
+            SettingsToggle {
+                controlId:"searchLabel"
+                visible:page.shows("searchLabel")
+                label:"Show Search label"
+                checked:SettingsStore.searchLabel
+                onToggled:function(value){SettingsStore.setSearchLabel(value)}
+            }
+            Column {
+                property string controlId:"clockDisplay"
+                width:parent.width;spacing:Theme.settingsSpacing
+                visible:page.shows("clockDisplay")
+                SectionHeader {text:"Clock"}
+                SettingsToggle {
+                    label:"Show seconds";checked:SettingsStore.clockSeconds
+                    onToggled:function(value){SettingsStore.setClockOptions(value,SettingsStore.clockDate,SettingsStore.clockDateFormat)}
+                }
+                SettingsToggle {
+                    label:"Show date";checked:SettingsStore.clockDate
+                    onToggled:function(value){SettingsStore.setClockOptions(SettingsStore.clockSeconds,value,SettingsStore.clockDateFormat)}
+                }
+                SettingsRow {
+                    width:parent.width;label:"Date style"
+                    ChoiceBox {
+                        enabled:SettingsStore.clockDate
+                        choices:[{label:"Day and month",value:"short"},{label:"Weekday and date",value:"weekday"},{label:"Year–month–day",value:"iso"}]
+                        selectedValue:SettingsStore.clockDateFormat
+                        onChosen:function(value){SettingsStore.setClockOptions(SettingsStore.clockSeconds,SettingsStore.clockDate,value)}
+                    }
                 }
             }
         }
 
-        Column {
+        SettingsSection {
+            sectionId:"bar.widgets";title:"Widgets";searchQuery:page.query;controlIds:["moduleOrder"]
+
             id: modules
             property string controlId: "moduleOrder"
             visible: page.shows("moduleOrder")

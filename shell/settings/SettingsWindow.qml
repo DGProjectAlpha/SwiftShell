@@ -1,5 +1,7 @@
 import QtQuick
 import QtQuick.Controls.Basic as Controls
+import QtQuick.Controls as ControlTypes
+import "../logic/settingsFocus.js" as Focus
 import Quickshell
 import "."
 import "../components"
@@ -13,6 +15,8 @@ FloatingWindow {
     title: "SwiftShell Settings"
     visible: SettingsModel.open
     color: "transparent"
+    // The shadow is visual only; resize targets follow the painted window.
+    mask: Region { item:content }
     minimumSize: Qt.size(640,440)
     property int initialWidth: 1000
     property int initialHeight: 700
@@ -24,12 +28,15 @@ FloatingWindow {
     property int resizeRequests: 0
     property bool lastResizeAccepted: false
     readonly property int shadowInset: WindowService.maximized ? 0 : Theme.surfaceShadowInset
+    property var gestureBaseline:null
     property var history: Settings.initialHistory(window.currentAppearance())
     readonly property bool canUndo: history && history.past && history.past.length > 0
 
     function currentAppearance() {
         return {
             mode: SettingsStore.appearanceMode,
+            accentColor:SettingsStore.accentColor,
+            opaqueWindows:SettingsStore.opaqueWindows,
             tint: SettingsStore.appearanceTint,
             panelOpacity: SettingsStore.panelOpacity,
             panelBlur: SettingsStore.panelBlur,
@@ -59,25 +66,59 @@ FloatingWindow {
         SettingsStore.setAppearance(history.present)
     }
 
+    function beginAppearanceGesture() {
+        if(gestureBaseline===null)gestureBaseline=Settings.initialHistory(window.currentAppearance()).present
+    }
+    function endAppearanceGesture() {
+        if(gestureBaseline===null)return
+        const current=Settings.initialHistory(window.currentAppearance()).present
+        if(JSON.stringify(current)!==JSON.stringify(gestureBaseline)) {
+            const past=history.past.slice();past.push(gestureBaseline)
+            if(past.length>20)past.shift()
+            history={past:past,present:current}
+        }
+        gestureBaseline=null
+    }
     function commit(patch) {
-        var present = Settings.initialHistory(history.present).present
-        var keys = Object.keys(patch)
-        for (var index = 0; index < keys.length; index++)
-            present[keys[index]] = patch[keys[index]]
-        window.applyHistory(Settings.reduceAppearanceHistory(history, { type: "edit", present: present }))
+        const baseline=Settings.initialHistory(window.currentAppearance()).present
+        const present=Settings.initialHistory(baseline).present
+        Object.keys(patch).forEach(function(key){present[key]=patch[key]})
+        if(gestureBaseline!==null) {
+            const next=Settings.initialHistory(present).present
+            history={past:history.past,present:next}
+            SettingsStore.setAppearance(next)
+        } else window.applyHistory(Settings.reduceAppearanceHistory({past:history.past,present:baseline},{type:"edit",present:present}))
     }
-
     function undo() {
-        window.applyHistory(Settings.reduceAppearanceHistory(history, { type: "undo" }))
+        window.endAppearanceGesture()
+        window.applyHistory(Settings.reduceAppearanceHistory(history,{type:"undo"}))
     }
-
-    function resetAppearance() {
-        window.applyHistory(Settings.reduceAppearanceHistory(history, { type: "reset" }))
+    function resetAppearance() {resetConfirm.open()}
+    function confirmResetAppearance() {
+        window.endAppearanceGesture()
+        window.applyHistory(Settings.reduceAppearanceHistory({past:history.past,present:Settings.initialHistory(window.currentAppearance()).present},{type:"reset"}))
+        resetConfirm.close()
     }
 
     readonly property bool searchHasFocus: search.activeFocus
     readonly property int pageStatus: pageLoader.status
     function activePage() { return pageLoader.item }
+    function capturePreview(path) {content.grabToImage(function(image){image.saveToFile(path)})}
+    function frameGeometry() {return {x:content.x,y:content.y,width:content.width,height:content.height,resizeInset:0,resizeBand:7,ready:placementReady}}
+    function uiGeometry() {
+        function box(item){const point=item.mapToItem(content.parent,0,0);return {x:point.x,y:point.y,width:item.width,height:item.height}}
+        const sections=[],sliders=[]
+        function visit(item) {
+            if(!item || !item.visible)return
+            if(typeof item.sectionId === "string")sections.push({id:item.sectionId,expanded:item.expanded,effectiveExpanded:item.effectiveExpanded,box:box(item)})
+            if(typeof item.setFromX === "function" && typeof item.valueName === "string")sliders.push({name:item.valueName,value:item.value,adjusting:item.adjusting,box:box(item)})
+            const children=item.children || []
+            for(let i=0;i<children.length;i++)visit(children[i])
+        }
+        visit(pageLoader.item)
+        return {sections:sections,sliders:sliders,scroll:{box:box(scroller),position:scroller.contentY},pageWidth:pageLoader.width,search:box(searchFrame)}
+    }
+
     function rememberSize() {
         if (!WindowService.maximized) SettingsStore.setSettingsWindowSize(Math.round(width),Math.round(height))
     }
@@ -104,14 +145,14 @@ FloatingWindow {
         } else if (action === "restore") WindowService.request("activate")
     }
     function componentForCategory() {
-        const pages={appearance:appearanceComponent,bar:barComponent,spotlight:spotlightComponent,wallpaper:wallpaperComponent,
+        const pages={appearance:appearanceComponent,bar:barComponent,spotlight:spotlightComponent,weather:weatherComponent,wallpaper:wallpaperComponent,
             displays:displaysComponent,workspaces:workspacesComponent,shortcuts:shortcutsComponent,defaultApps:defaultAppsComponent,
             audio:audioComponent,network:networkComponent,bluetooth:networkComponent,
             power:powerComponent,notifications:notificationsComponent}
         return pages[SettingsStore.settingsWindowCategory] || appearanceComponent
     }
     function iconFor(id) {
-        return ({appearance:"◐",bar:"≡",spotlight:"⌕",wallpaper:"▧",displays:"▣",workspaces:"▦",shortcuts:"⌘",defaultApps:"▧",
+        return ({appearance:"◐",bar:"≡",spotlight:"⌕",weather:"☁",wallpaper:"▧",displays:"▣",workspaces:"▦",shortcuts:"⌘",defaultApps:"▧",
             audio:"♫",network:"⌁",bluetooth:"ᛒ",power:"⏻",notifications:"□"})[id] || "·"
     }
     Component.onCompleted: {
@@ -131,7 +172,9 @@ FloatingWindow {
         search.text=""
         page.highlightId=SettingsModel.pendingControl
         SettingsModel.pendingControl=""
-        if(page.focusHighlight)page.focusHighlight()
+        const item=Focus.findControl(page,page.highlightId)
+        Focus.revealAncestors(item)
+        if(page.focusHighlight)Qt.callLater(page.focusHighlight)
     }
     onPageStatusChanged:Qt.callLater(revealPendingControl)
     Component.onDestruction: { WindowService.active=false;SettingsModel.nativeWindow=null;WindowService.request("cleanup") }
@@ -149,25 +192,26 @@ FloatingWindow {
         target: SettingsModel
         function onAppearanceEditRequested(key,value) { const patch={};patch[key]=value;window.commit(patch) }
         function onWindowActionRequested(action) { window.performAction(action) }
-        function onFocusTicketChanged() { WindowService.request("activate");search.forceActiveFocus();Qt.callLater(window.revealPendingControl) }
+        function onFocusTicketChanged() { search.forceActiveFocus();Qt.callLater(window.revealPendingControl) }
         function onPendingControlChanged(){Qt.callLater(window.revealPendingControl)}
     }
     Loader {
         anchors.fill: content
         source: "SettingsShadow.qml"
         active: !WindowService.maximized
-        visible: Theme.shadowOpacity > 0
+        visible: Theme.shadowOpacity > 0 && window.placementReady
         onStatusChanged: {
             if(status === Loader.Ready) SettingsModel.shadowAvailable=true
             else if(status === Loader.Error) SettingsModel.shadowAvailable=false
         }
     }
     Loader {
-        active: WindowService.blurAvailable && SettingsStore.panelBlur > 0
+        active: window.placementReady && WindowService.blurAvailable && SettingsStore.panelBlur > 0
         sourceComponent: Component { BlurAdapter { targetWindow:window;surface:content } }
     }
     Rectangle {
         id: content
+        opacity:window.placementReady ? 1 : 0
         anchors.fill: parent
         anchors.margins: window.shadowInset
         radius: WindowService.maximized ? 0 : Theme.radius
@@ -179,7 +223,7 @@ FloatingWindow {
             event.accepted=true
         }
         Keys.onPressed: function(event) {
-            if (!(event.modifiers & Qt.AltModifier)) return
+            if (!(event.modifiers & Qt.AltModifier) || SettingsStore.settingsWindowCategory!=="appearance") return
             if (event.key === Qt.Key_U) window.undo()
             else if (event.key === Qt.Key_R) window.resetAppearance()
             else return
@@ -251,7 +295,7 @@ FloatingWindow {
             anchors.rightMargin:14
             Rectangle {
                 id:searchFrame
-                x:20;y:4;width:Math.max(120,parent.width-40-(SettingsStore.settingsWindowCategory==="appearance" && body.width>600 ? 150 : 0));height:34
+                x:20;y:4;width:Math.max(120,parent.width-40);height:34
                 radius:6;color:Theme.settingsHover
                 Text {
                     anchors.left:parent.left;anchors.leftMargin:12;anchors.verticalCenter:parent.verticalCenter
@@ -280,15 +324,17 @@ FloatingWindow {
                 }
             }
             Row {
-                anchors.right:parent.right;anchors.top:parent.top
-                visible:SettingsStore.settingsWindowCategory==="appearance" && body.width>600
-                spacing:4
-                FlatButton { label:"Undo";enabled:window.canUndo;onActivated:window.undo() }
-                FlatButton { label:"Reset";onActivated:window.resetAppearance() }
+                id:appearanceActions
+                x:20;y:searchFrame.y+searchFrame.height+8
+                visible:SettingsStore.settingsWindowCategory==="appearance"
+                spacing:6
+                FlatButton {label:"Undo appearance";enabled:window.canUndo;onActivated:window.undo()}
+                FlatButton {label:"Reset appearance…";onActivated:window.resetAppearance()}
             }
             Flickable {
                 id:scroller
-                anchors.left:parent.left;anchors.right:parent.right;anchors.top:searchFrame.bottom;anchors.topMargin:22
+                objectName:"settingsScroller"
+                anchors.left:parent.left;anchors.right:parent.right;anchors.top:appearanceActions.visible ? appearanceActions.bottom : searchFrame.bottom;anchors.topMargin:14
                 anchors.bottom:transaction.visible ? transaction.top : (windowNotice.visible ? windowNotice.top : parent.bottom);anchors.bottomMargin:16
                 clip:true;boundsBehavior:Flickable.StopAtBounds
                 contentWidth:width
@@ -331,22 +377,39 @@ FloatingWindow {
             }
         }
     }
+    Controls.Popup {
+        id:resetConfirm
+        parent:ControlTypes.Overlay.overlay
+        x:parent ? Math.round((parent.width-width)/2) : 0
+        y:parent ? Math.round((parent.height-height)/2) : 0
+        width:Math.min(420,parent ? parent.width-32 : 420)
+        padding:18;modal:true;dim:false;focus:true
+        closePolicy:Controls.Popup.CloseOnEscape | Controls.Popup.CloseOnPressOutside
+        background:Rectangle {radius:Theme.radius;color:Theme.settingsPopupSurface}
+        contentItem:Column {
+            spacing:12
+            Text {width:parent.width;text:"Reset appearance?";color:Theme.settingsText;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSize+3;font.weight:Font.Medium}
+            Text {width:parent.width;text:"Restore SwiftShell’s default colors, surfaces, text and motion. Your wallpaper and display layout stay as they are.";wrapMode:Text.WordWrap;color:Theme.settingsMuted;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall}
+            Row {spacing:8;FlatButton {label:"Cancel";onActivated:resetConfirm.close()} FlatButton {label:"Reset appearance";emphasized:true;onActivated:window.confirmResetAppearance()}}
+        }
+    }
     // Native Wayland resize gestures, including all four corners.
     Repeater {
         model:[Qt.LeftEdge,Qt.RightEdge,Qt.TopEdge,Qt.BottomEdge,Qt.LeftEdge|Qt.TopEdge,Qt.RightEdge|Qt.TopEdge,Qt.LeftEdge|Qt.BottomEdge,Qt.RightEdge|Qt.BottomEdge]
         delegate:MouseArea {
             required property int modelData
             readonly property bool corner:(modelData&(Qt.LeftEdge|Qt.RightEdge)) && (modelData&(Qt.TopEdge|Qt.BottomEdge))
-            width:corner ? 18 : ((modelData&(Qt.LeftEdge|Qt.RightEdge)) ? 8 : window.width-36)
-            height:corner ? 18 : ((modelData&(Qt.TopEdge|Qt.BottomEdge)) ? 8 : window.height-36)
-            x:(modelData&Qt.RightEdge) ? window.width-width : ((modelData&Qt.LeftEdge) ? 0 : 18)
-            y:(modelData&Qt.BottomEdge) ? window.height-height : ((modelData&Qt.TopEdge) ? 0 : 18)
+            width:corner ? 16 : ((modelData&(Qt.LeftEdge|Qt.RightEdge)) ? 7 : content.width-32)
+            height:corner ? 16 : ((modelData&(Qt.TopEdge|Qt.BottomEdge)) ? 7 : content.height-32)
+            x:content.x+((modelData&Qt.RightEdge) ? content.width-width : ((modelData&Qt.LeftEdge) ? 0 : 16))
+            y:content.y+((modelData&Qt.BottomEdge) ? content.height-height : ((modelData&Qt.TopEdge) ? 0 : 16))
             enabled:!WindowService.maximized
             cursorShape:corner ? (((modelData&Qt.LeftEdge)&&(modelData&Qt.TopEdge)) || ((modelData&Qt.RightEdge)&&(modelData&Qt.BottomEdge)) ? Qt.SizeFDiagCursor : Qt.SizeBDiagCursor) : ((modelData&(Qt.LeftEdge|Qt.RightEdge)) ? Qt.SizeHorCursor : Qt.SizeVerCursor)
             onPressed:window.beginResize(modelData)
         }
     }
-    Component { id:appearanceComponent;AppearancePage {query:search.text;onEdited:function(patch){window.commit(patch)}} }
+    Component { id:appearanceComponent;AppearancePage {query:search.text;onEdited:function(patch){window.commit(patch)};onEditStarted:window.beginAppearanceGesture();onEditFinished:window.endAppearanceGesture()} }
+    Component {id:weatherComponent;WeatherPage {query:search.text}}
     Component { id:spotlightComponent;SpotlightPage {query:search.text} }
     Component { id:barComponent;BarPage {query:search.text} }
     Component { id:wallpaperComponent;WallpaperPage {query:search.text;onEdited:function(patch){window.commit(patch)}} }

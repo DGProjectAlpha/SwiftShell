@@ -31,6 +31,7 @@ Item {
             font.pixelSize:Theme.settingsFontSize+4
             font.weight:Font.Medium
         }
+
         Text {
             width:parent.width
             text:"Your apps, settings and quick answers, one shortcut away."
@@ -39,11 +40,13 @@ Item {
             font.family:Theme.settingsFontFamily
             font.pixelSize:Theme.settingsFontSizeSmall
         }
-        Column {
+
+        SettingsSection {
+            sectionId:"spotlight.opening";title:"Opening view";searchQuery:page.query;controlIds:["spotlightDefaultMode"]
+
             width:parent.width
             visible:page.shows("spotlightDefaultMode")
             spacing:Theme.settingsSpacing
-            SectionHeader { text:"Opening view" }
             SettingsRow {
                 id:startRow
                 width:parent.width
@@ -86,6 +89,7 @@ Item {
                 onActivated:LauncherModel.openLauncher()
             }
         }
+
         Text {
             width:parent.width
             visible:!page.shows("spotlightDefaultMode") && !page.shows("spotlightProviders") && !page.shows("spotlightScreenshots")
@@ -94,10 +98,12 @@ Item {
             font.family:Theme.settingsFontFamily
             font.pixelSize:Theme.settingsFontSize
         }
-        Column {
+
+        SettingsSection {
+            sectionId:"spotlight.providers";title:"Search providers";searchQuery:page.query;controlIds:["spotlightProviders"]
+
             id:providersGroup
             width:parent.width;spacing:Theme.settingsSpacing;visible:page.shows("spotlightProviders")
-        SectionHeader {text:"Search providers"}
         SettingsToggle {
             id:providerToggle
             label:"Find open windows";checked:SettingsStore.searchWindows
@@ -115,10 +121,12 @@ Item {
         }
         FlatButton {label:"Clear clipboard history";enabled:DesktopTools.history.length>0;onActivated:DesktopTools.clearHistory()}
         }
-        Column {
+
+        SettingsSection {
+            sectionId:"spotlight.screenshots";title:"Screenshots";searchQuery:page.query;controlIds:["spotlightScreenshots"]
+
             id:screenshotGroup
             width:parent.width;spacing:Theme.settingsSpacing;visible:page.shows("spotlightScreenshots")
-        SectionHeader {text:"Screenshots"}
         Text {
             width:parent.width;wrapMode:Text.WordWrap
             text:DesktopTools.regionAvailable ? "Type ‘screenshot’ in Spotlight to select an area or capture this display. Review the capture, then copy it or save a PNG. The Screenshot bar widget opens the same tools. Escape cancels an area selection." : "Screenshot tools are not available. Install the optional screenshot integration to enable capture."

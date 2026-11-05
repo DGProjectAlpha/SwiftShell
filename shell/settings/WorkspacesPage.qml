@@ -35,6 +35,7 @@ Item {
             font.pixelSize: Theme.settingsFontSize + 4
             font.weight: Font.Medium
         }
+
         Text {
             width: parent.width
             wrapMode: Text.WordWrap
@@ -43,10 +44,12 @@ Item {
             font.family: Theme.settingsFontFamily
             font.pixelSize: Theme.settingsFontSizeSmall
         }
-        Column {
+
+        SettingsSection {
+            sectionId:"workspaces.overview";title:"Overview";searchQuery:page.query;controlIds:["workspaceOverview"]
+
             width:parent.width;spacing:Theme.settingsSpacing
             id:overviewGroup
-            SectionHeader {text:"Overview"}
             SettingsToggle {
                 label:"Alt + Tab opens workspace overview"
                 checked:OverviewService.shortcutEnabled
@@ -60,6 +63,7 @@ Item {
                 color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall
             }
         }
+
         ChoiceBox {
             width:Math.min(parent.width,440)
             choices:HyprlandModel.monitorChoices.map(function(m){return {value:m.name,label:m.label}})
@@ -67,11 +71,13 @@ Item {
             Accessible.name:"Workspace screen"
             onChosen:function(value){page.selectedOutput=value}
         }
+
         FlatButton {
             id: refreshButton
             label: "Refresh"
             onActivated: HyprlandModel.requestSnapshot()
         }
+
         Text {
             width: parent.width
             wrapMode: Text.WordWrap
@@ -80,12 +86,14 @@ Item {
             color: Theme.settingsText
             font.pixelSize: Theme.settingsFontSizeSmall
         }
+
         Text {
             visible: HyprlandModel.monitorChoices.length === 0
             text: "No screens are connected."
             color: Theme.settingsMuted
             font.pixelSize: Theme.settingsFontSizeSmall
         }
+
         Text {
             width: parent.width
             wrapMode: Text.WordWrap
@@ -94,9 +102,15 @@ Item {
             color: Theme.settingsMuted
             font.pixelSize: Theme.settingsFontSizeSmall
         }
+
         Repeater {
             model: page.shows("workspaceOutputs") ? HyprlandModel.monitorChoices.filter(function(m){return m.name===page.currentOutput}) : []
-            delegate: Column {
+            delegate: SettingsSection {
+                sectionId:"workspaces."+modelData.name.replace(/[^A-Za-z0-9_.-]/g,"_")
+                title:"Workspace indicators"
+                description:modelData.label
+                searchQuery:page.query
+                controlIds:["workspaceOutputs"]
                 id: output
                 required property var modelData
                 width: column.width
@@ -126,15 +140,6 @@ Item {
                 }
                 function discovered() {
                     return HyprlandModel.liveWorkspaces.filter(function(w){return w.monitorName===modelData.name})
-                }
-                Text {
-                    width: parent.width
-                    text: output.modelData.label + " · " + output.modelData.scale + "×"
-                    wrapMode: Text.WordWrap
-                    color: Theme.settingsText
-                    font.family: Theme.settingsFontFamily
-                    font.pixelSize: Theme.settingsFontSize
-                    font.weight: Font.Medium
                 }
                 Flow {
                     width: parent.width

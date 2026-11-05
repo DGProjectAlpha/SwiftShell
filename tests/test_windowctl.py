@@ -47,8 +47,27 @@ class WindowIntegration(unittest.TestCase):
         with patch.object(w,'own_window',return_value=None),patch.object(w,'ipc',return_value='ok') as ipc:
             w.run('cleanup',11)
             self.assertIn('__swiftshell_settings_owner==11',ipc.call_args.args[0])
+    def test_explicit_output_wins_over_previous_location_and_focus(self):
+        outputs=[dict(name='DP-1',x=112,y=-88,width=2560,height=1440,scale=1,focused=True),dict(name='HDMI-A-1',x=2672,y=488,width=1920,height=1080,scale=1.25,focused=False,reserved=[0,30,0,0])]
+        selected=w.launch_output(outputs,'HDMI-A-1')
+        placed=w.centered_geometry({'x':112,'y':-88,'monitor':'DP-1','width':1000,'height':700},selected)
+        self.assertEqual(placed,{'x':2940,'y':585,'width':1000,'height':700,'monitor':'HDMI-A-1'})
+        self.assertEqual(w.launch_output(outputs,'removed')['name'],'DP-1')
+    def test_small_rotated_output_clamps_size_and_honors_reservations(self):
+        selected=dict(name='portrait',x=-1080,y=0,width=1920,height=1080,scale=1,transform=1,reserved=[0,28,0,0])
+        placed=w.centered_geometry({'width':1800,'height':1800},selected)
+        self.assertEqual((placed['width'],placed['height']),(1080,1800))
+        self.assertEqual((placed['x'],placed['y']),(-1080,74))
+    def test_mapped_centers_requested_output_without_restoring_saved_coordinates(self):
+        outputs=[dict(name='HDMI-A-1',x=2672,y=488,width=1920,height=1080,scale=1.25,reserved=[0,30,0,0])]
+        w.atomic(Path(self.folder.name)/'swiftshell/settings-window.json',{'x':-800,'y':-800,'monitor':'missing','width':1000,'height':700})
+        with patch.object(w,'own_window',return_value=OWN),patch.object(w,'ipc',return_value=json.dumps(outputs)),patch.object(w,'dispatch') as dispatch:
+            w.run('mapped',11,'HDMI-A-1')
+            self.assertTrue(any('x=2940,y=585' in call.args[0] for call in dispatch.call_args_list))
+            self.assertTrue(all('-800' not in call.args[0] for call in dispatch.call_args_list))
+
     def test_minimize_preserves_geometry_and_uses_private_workspace(self):
-        with patch.object(w,'own_window',return_value=OWN),patch.object(w,'snapshot',return_value=[{'name':'DP-1','x':0,'width':2560,'scale':1}]),patch.object(w,'dispatch') as dispatch:
+        with patch.object(w,'own_window',return_value=OWN),patch.object(w,'snapshot',return_value=[{'name':'DP-1','x':0,'y':0,'width':2560,'height':1440,'scale':1}]),patch.object(w,'dispatch') as dispatch:
             w.run('minimize',11)
             self.assertIn('special:swiftshell-settings-hidden',dispatch.call_args.args[0])
             self.assertIn('follow=false',dispatch.call_args.args[0])

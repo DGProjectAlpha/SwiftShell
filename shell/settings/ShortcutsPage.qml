@@ -60,14 +60,15 @@ Item {
         width:page.width
         spacing:Theme.settingsSpacing
         Text {text:"Keyboard shortcuts";color:Theme.settingsText;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSize+4;font.weight:Font.Medium}
+
         Text {width:parent.width;wrapMode:Text.WordWrap;text:"See every active desktop shortcut and create shortcuts for SwiftShell, apps, windows and workspaces.";color:Theme.settingsMuted;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall}
+
         Row {
             spacing:6
-            FlatButton {label:"Your shortcuts";emphasized:page.section==="managed";onActivated:page.section="managed"}
-            FlatButton {label:"All desktop shortcuts";emphasized:page.section==="effective";onActivated:page.section="effective"}
             FlatButton {label:"Refresh";enabled:!ShortcutsService.busy;onActivated:ShortcutsService.refresh()}
             FlatButton {label:"Undo change";enabled:!ShortcutsService.busy && ShortcutsService.canUndo;onActivated:ShortcutsService.undo()}
         }
+
         Controls.TextField {
             id:search
             width:parent.width;height:Theme.controlHeight+8
@@ -79,21 +80,9 @@ Item {
             background:Rectangle {radius:Theme.controlRadius;color:Theme.settingsHover}
             leftPadding:10;rightPadding:10
         }
+
         Text {width:parent.width;visible:text!=="";wrapMode:Text.WordWrap;text:ShortcutsService.error || page.recordError || ShortcutsService.warnings.join("\n");color:Theme.settingsText;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall}
-        Rectangle {
-            width:parent.width;height:recordColumn.implicitHeight+20
-            visible:page.recordingId!==""
-            radius:Theme.controlRadius;color:Theme.settingsSelected
-            Column {
-                id:recordColumn;x:10;y:10;width:parent.width-20;spacing:8
-                Text {width:parent.width;wrapMode:Text.WordWrap;text:!inhibitor.active ? "Waiting for safe keyboard capture…" : page.draftKey ? page.textOf({modifiers:page.draftModifiers,key:page.draftKey}) : "Press a shortcut. Escape cancels.";color:Theme.settingsText;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSize+2}
-                Row {
-                    spacing:6
-                    FlatButton {label:ShortcutsService.busy ? "Applying…" : "Apply shortcut";enabled:inhibitor.active && page.draftKey!=="" && !ShortcutsService.busy;onActivated:ShortcutsService.apply(page.recordingId,page.draftModifiers,page.draftKey)}
-                    FlatButton {label:"Cancel";onActivated:page.finishRecording()}
-                }
-            }
-        }
+
         Item {
             id:capture
             width:1;height:1
@@ -108,42 +97,77 @@ Item {
                 page.recordError=page.draftModifiers.length===0 ? "Include Super, Ctrl or Alt to keep ordinary typing available." : ""
             }
         }
-        Text {
-            visible:page.section==="managed"
-            width:parent.width;wrapMode:Text.WordWrap
-            text:"Changes apply immediately and return when SwiftShell starts. Existing desktop shortcuts are never replaced."
-            color:Theme.settingsMuted;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall
-        }
-        Repeater {
-            model:page.section==="managed" ? ShortcutsService.actions.filter(function(a){return page.matches(a.label+" "+a.category+" "+page.textOf(a.binding))}) : []
-            delegate:SettingsRow {
-                required property var modelData
-                width:column.width
-                label:modelData.label
-                Row {
-                    spacing:6
-                    Text {width:160;anchors.verticalCenter:parent.verticalCenter;text:page.textOf(modelData.binding);elide:Text.ElideRight;color:modelData.binding && !modelData.active ? Theme.settingsMuted : Theme.settingsText;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall}
-                    FlatButton {label:modelData.binding ? "Change" : "Record";enabled:page.recordingId==="" && !ShortcutsService.busy;onActivated:page.startRecording(modelData.id)}
-                    FlatButton {label:"Remove";enabled:modelData.binding!==null && modelData.binding!==undefined && page.recordingId==="" && !ShortcutsService.busy;onActivated:ShortcutsService.remove(modelData.id)}
+
+        SettingsSection {
+            sectionId:"shortcuts.managed"
+            searchKeywords:ShortcutsService.actions.map(function(action){return action.label+" "+page.textOf(action.binding)}).join(" ")
+            title:"Managed shortcuts"
+            description:"Record, change or remove shortcuts for SwiftShell and window actions."
+            searchQuery:page.filter || page.query
+            controlIds:[]
+            width:parent.width
+            Rectangle {
+                width:parent.width;height:recordColumn.implicitHeight+20
+                visible:page.recordingId!==""
+                radius:Theme.controlRadius;color:Theme.settingsSelected
+                Column {
+                    id:recordColumn;x:10;y:10;width:parent.width-20;spacing:8
+                    Text {width:parent.width;wrapMode:Text.WordWrap;text:!inhibitor.active ? "Waiting for safe keyboard capture…" : page.draftKey ? page.textOf({modifiers:page.draftModifiers,key:page.draftKey}) : "Press a shortcut. Escape cancels.";color:Theme.settingsText;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSize+2}
+                    Row {
+                        spacing:6
+                        FlatButton {label:ShortcutsService.busy ? "Applying…" : "Apply shortcut";enabled:inhibitor.active && page.draftKey!=="" && !ShortcutsService.busy;onActivated:ShortcutsService.apply(page.recordingId,page.draftModifiers,page.draftKey)}
+                        FlatButton {label:"Cancel";onActivated:page.finishRecording()}
+                    }
+                }
+            }
+            Text {
+                visible:true
+                width:parent.width;wrapMode:Text.WordWrap
+                text:"Changes apply immediately and return when SwiftShell starts. Existing desktop shortcuts are never replaced."
+                color:Theme.settingsMuted;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall
+            }
+            Repeater {
+                model:ShortcutsService.actions.filter(function(a){return page.matches(a.label+" "+a.category+" "+page.textOf(a.binding))})
+                delegate:SettingsRow {
+                    required property var modelData
+                    width:column.width
+                    label:modelData.label
+                    Row {
+                        spacing:6
+                        Text {width:160;anchors.verticalCenter:parent.verticalCenter;text:page.textOf(modelData.binding);elide:Text.ElideRight;color:modelData.binding && !modelData.active ? Theme.settingsMuted : Theme.settingsText;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall}
+                        FlatButton {label:modelData.binding ? "Change" : "Record";enabled:page.recordingId==="" && !ShortcutsService.busy;onActivated:page.startRecording(modelData.id)}
+                        FlatButton {label:"Remove";enabled:modelData.binding!==null && modelData.binding!==undefined && page.recordingId==="" && !ShortcutsService.busy;onActivated:ShortcutsService.remove(modelData.id)}
+                    }
                 }
             }
         }
-        Text {
-            width:parent.width;visible:page.section==="effective";wrapMode:Text.WordWrap
-            text:"Your existing desktop shortcuts are read-only here. Use Managed to record shortcuts for SwiftShell, applications and window actions."
-            color:Theme.settingsMuted;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall
-        }
-        Repeater {
-            model:page.section==="effective" ? ShortcutsService.effective.filter(function(a){return page.matches(a.label+" "+a.chord+" "+a.scope)}) : []
-            delegate:Column {
-                required property var modelData
-                width:column.width;spacing:3
-                SettingsRow {
-                    width:parent.width;label:modelData.label
-                    Text {width:200;text:modelData.chord;elide:Text.ElideRight;color:Theme.settingsText;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall;verticalAlignment:Text.AlignVCenter;height:Theme.controlHeight}
+
+        SettingsSection {
+            sectionId:"shortcuts.desktop"
+            searchKeywords:ShortcutsService.effective.map(function(action){return action.label+" "+action.chord}).join(" ")
+            title:"Desktop shortcuts"
+            description:"All effective keyboard shortcuts from your desktop."
+            searchQuery:page.filter || page.query
+            controlIds:[]
+            width:parent.width
+            defaultExpanded:false
+            Text {
+                width:parent.width;visible:true;wrapMode:Text.WordWrap
+                text:"Your existing desktop shortcuts are read-only here. Use Managed to record shortcuts for SwiftShell, applications and window actions."
+                color:Theme.settingsMuted;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall
+            }
+            Repeater {
+                model:ShortcutsService.effective.filter(function(a){return page.matches(a.label+" "+a.chord+" "+a.scope)})
+                delegate:Column {
+                    required property var modelData
+                    width:column.width;spacing:3
+                    SettingsRow {
+                        width:parent.width;label:modelData.label
+                        Text {width:200;text:modelData.chord;elide:Text.ElideRight;color:Theme.settingsText;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall;verticalAlignment:Text.AlignVCenter;height:Theme.controlHeight}
+                    }
+                    Text {text:modelData.owner+" · "+modelData.scope+(modelData.flags ? " · "+modelData.flags : "");color:Theme.settingsMuted;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall}
+                    Item {width:1;height:6}
                 }
-                Text {text:modelData.owner+" · "+modelData.scope+(modelData.flags ? " · "+modelData.flags : "");color:Theme.settingsMuted;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall}
-                Item {width:1;height:6}
             }
         }
     }

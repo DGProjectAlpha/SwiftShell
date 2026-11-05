@@ -7,6 +7,7 @@ Column {
     id:root
     spacing:Theme.settingsSpacing
     width:parent ? parent.width : Theme.controlWidth
+    property bool showHeading:true
     property string notice:""
     property string selectedAdapter:""
     property var discoveryOwner:null
@@ -119,7 +120,7 @@ Column {
         id:actionLimit;interval:20000
         onTriggered:{const cancelling=root.pending && root.pending.cancelRequested;root.finishPending(cancelling ? "Cancellation could not be confirmed. Check the accessory's current status before trying again." : "The device did not finish. Keep it nearby, check pairing mode and respond to any system confirmation prompt.",true)}
     }
-    SectionHeader {width:parent.width;text:"Bluetooth"}
+    SectionHeader {width:parent.width;text:"Bluetooth";visible:root.showHeading}
     ChoiceBox {
         visible:root.adapters.length>1
         width:Math.min(360,parent.width)

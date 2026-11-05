@@ -68,46 +68,53 @@ Item {
             font.pixelSize: Theme.settingsFontSizeSmall
         }
 
-        ServiceStatus {
-            name: "Owner"
-            detail: page.ownershipDetail()
-        }
-
-        FlatButton {
-            visible: page.shows("notificationOwner")
-            label: SettingsStore.notificationOwnership === "on" ? "Disable notifications" : (page.arm === "own" ? "Confirm switch" : "Enable notifications")
-            emphasized: page.arm === "own"
-            onActivated: {
-                if (SettingsStore.notificationOwnership === "on") {
+        SettingsSection {
+            sectionId:"notifications.owner"
+            title:"Notification handling"
+            description:""
+            searchQuery:page.query
+            controlIds:["notificationOwner", "notificationDnd"]
+            width:parent.width
+            ServiceStatus {
+                name: "Owner"
+                detail: page.ownershipDetail()
+            }
+            FlatButton {
+                visible: page.shows("notificationOwner")
+                label: SettingsStore.notificationOwnership === "on" ? "Disable notifications" : (page.arm === "own" ? "Confirm switch" : "Enable notifications")
+                emphasized: page.arm === "own"
+                onActivated: {
+                    if (SettingsStore.notificationOwnership === "on") {
+                        page.arm = ""
+                        SettingsStore.setNotificationOwnership("off")
+                        NotificationsModel.configure("off", SettingsStore.notificationDnd, SettingsStore.notificationPoliciesJson)
+                        return
+                    }
+                    if (page.arm !== "own") {
+                        page.arm = "own"
+                        return
+                    }
                     page.arm = ""
-                    SettingsStore.setNotificationOwnership("off")
-                    NotificationsModel.configure("off", SettingsStore.notificationDnd, SettingsStore.notificationPoliciesJson)
-                    return
+                    SettingsStore.setNotificationOwnership("on")
+                    NotificationsModel.configure("on", SettingsStore.notificationDnd, SettingsStore.notificationPoliciesJson)
                 }
-                if (page.arm !== "own") {
-                    page.arm = "own"
-                    return
+            }
+            SettingsToggle {
+                visible: page.shows("notificationDnd")
+                label: "Do not disturb"
+                checked: SettingsStore.notificationDnd
+                onToggled: function (next) {
+                    SettingsStore.setNotificationDnd(next)
+                    NotificationsModel.configure(SettingsStore.notificationOwnership, next, SettingsStore.notificationPoliciesJson)
                 }
-                page.arm = ""
-                SettingsStore.setNotificationOwnership("on")
-                NotificationsModel.configure("on", SettingsStore.notificationDnd, SettingsStore.notificationPoliciesJson)
             }
         }
 
-        SettingsToggle {
-            visible: page.shows("notificationDnd")
-            label: "Do not disturb"
-            checked: SettingsStore.notificationDnd
-            onToggled: function (next) {
-                SettingsStore.setNotificationDnd(next)
-                NotificationsModel.configure(SettingsStore.notificationOwnership, next, SettingsStore.notificationPoliciesJson)
-            }
-        }
+        SettingsSection {
+            sectionId:"notifications.delivery";title:"Delivery";searchQuery:page.query;controlIds:["notificationDelivery"]
 
-        Column {
             id:deliveryGroup
             width:parent.width;spacing:Theme.settingsSpacing;visible:page.shows("notificationDelivery")
-        SectionHeader { text:"Delivery" }
         Text {width:parent.width;text:"Banner duration";color:Theme.settingsText;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSize}
         ChoiceBox {
             width:Math.min(320,parent.width)
@@ -139,10 +146,12 @@ Item {
             color:Theme.settingsMuted;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall
         }
         }
-        Column {
+
+        SettingsSection {
+            sectionId:"notifications.quiet";title:"Quiet hours";searchQuery:page.query;controlIds:["notificationQuietHours"]
+
             id:quietGroup
             width:parent.width;spacing:Theme.settingsSpacing;visible:page.shows("notificationQuietHours")
-            SectionHeader {text:"Quiet hours"}
             SettingsToggle {
                 id:quietHoursToggle;objectName:"notificationQuietHours"
                 label:"Schedule quiet hours";checked:SettingsStore.notificationQuietHoursEnabled
@@ -177,10 +186,12 @@ Item {
                 color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall
             }
         }
-        Column {
+
+        SettingsSection {
+            sectionId:"notifications.privacy";title:"Privacy";searchQuery:page.query;controlIds:["notificationPrivacy"]
+
             id:privacyGroup
             width:parent.width;spacing:Theme.settingsSpacing;visible:page.shows("notificationPrivacy")
-            SectionHeader {text:"Privacy"}
             SettingsRow {
                 width:parent.width;label:"Banner previews"
                 ChoiceBox {
@@ -192,10 +203,12 @@ Item {
             }
             Text {width:parent.width;wrapMode:Text.WordWrap;text:"App name only hides message text, images and reply actions in banners. Open the notification drawer to read and respond.";color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall}
         }
-        Column {
+
+        SettingsSection {
+            sectionId:"notifications.sound";title:"Sound";searchQuery:page.query;controlIds:["notificationSound"]
+
             id:soundGroup
             width:parent.width;spacing:Theme.settingsSpacing;visible:page.shows("notificationSound")
-            SectionHeader {text:"Sound"}
             SettingsToggle {
                 id:soundToggle;objectName:"notificationSound"
                 label:"Play notification sounds";checked:SettingsStore.notificationSoundEnabled;enabled:NotificationsModel.soundAvailable || SettingsStore.notificationSoundEnabled
@@ -212,189 +225,197 @@ Item {
             FlatButton {objectName:"notificationSoundPreview";label:"Preview sound";enabled:SettingsStore.notificationSoundEnabled && NotificationsModel.soundReady;onActivated:NotificationsModel.playSound()}
             Text {width:parent.width;wrapMode:Text.WordWrap;text:NotificationsModel.soundReason || "Quiet hours, Do Not Disturb and an app’s silent hint keep sounds off. Rapid updates are kept quiet.";color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall}
         }
-        Flow {
-            width:parent.width;spacing:4
-            FlatButton {label:"Pause 30 min";onActivated:NotificationsModel.pause(30)}
-            FlatButton {label:"Pause 1 hour";onActivated:NotificationsModel.pause(60)}
-            FlatButton {visible:SettingsStore.notificationQuietUntil>0;label:"Resume notifications";onActivated:NotificationsModel.pause(0)}
-        }
 
-        Text {
-            width: parent.width
-            wrapMode: Text.WordWrap
-            text: SettingsStore.notificationDnd ? "Critical banners still show. Other banners wait in history." : "Banners follow the notifications this shell has accepted."
-            color: Theme.settingsMuted
-            font.family: Theme.settingsFontFamily
-            font.pixelSize: Theme.settingsFontSizeSmall
-        }
-
-        FlatButton {
-            visible: page.shows("notificationPreview")
-            label: SettingsStore.notificationOwnership === "on" ? "Preview banner" : "Show preview"
-            onActivated: {if(SettingsStore.notificationOwnership === "on")NotificationsModel.preview();else page.previewOpen=true}
-        }
-
-        Rectangle {
-            visible: page.previewOpen
-            width: parent.width
-            height: previewColumn.implicitHeight + Theme.panelPadding * 2
-            radius: Theme.radius
-            color: Theme.panelColor
-
-            Column {
-                id: previewColumn
-                width: parent.width - Theme.panelPadding * 2
-                x: Theme.panelPadding
-                y: Theme.panelPadding
-                spacing: 4
-
-                Text {
-                    width: parent.width
-                    text: "Preview"
-                    color: Theme.settingsMuted
-                    font.family: Theme.settingsFontFamily
-                    font.pixelSize: Theme.settingsFontSizeSmall
-                }
-
-                Text {
-                    width: parent.width
-                    wrapMode: Text.WordWrap
-                    text: "This is a preview of a SwiftShell notification."
-                    color: Theme.settingsText
-                    font.family: Theme.settingsFontFamily
-                    font.pixelSize: Theme.settingsFontSize
-                    textFormat: Text.PlainText
-                }
-
-                FlatButton {
-                    label: "Dismiss preview"
-                    onActivated: page.previewOpen = false
-                }
+        SettingsSection {
+            sectionId:"notifications.pause"
+            title:"Pause & preview"
+            description:""
+            searchQuery:page.query
+            controlIds:["notificationDnd", "notificationPreview"]
+            width:parent.width
+            Flow {
+                width:parent.width;spacing:4
+                FlatButton {label:"Pause 30 min";onActivated:NotificationsModel.pause(30)}
+                FlatButton {label:"Pause 1 hour";onActivated:NotificationsModel.pause(60)}
+                FlatButton {visible:SettingsStore.notificationQuietUntil>0;label:"Resume notifications";onActivated:NotificationsModel.pause(0)}
             }
-        }
-
-        Text {
-            width: parent.width
-            wrapMode: Text.WordWrap
-            text: "Preview does not change your notification settings."
-            color: Theme.settingsMuted
-            font.family: Theme.settingsFontFamily
-            font.pixelSize: Theme.settingsFontSizeSmall
-        }
-
-        Text {
-            width: parent.width
-            wrapMode: Text.WordWrap
-            text: "History and reply drafts stay in memory. They are never written to logs or saved to disk."
-            color: Theme.settingsMuted
-            font.family: Theme.settingsFontFamily
-            font.pixelSize: Theme.settingsFontSizeSmall
-        }
-
-        Text {
-            width: parent.width
-            text: "Per application"
-            color: Theme.settingsText
-            font.family: Theme.settingsFontFamily
-            font.pixelSize: Theme.settingsFontSize
-        }
-
-        ChoiceBox {
-            width:Math.min(360,parent.width)
-            choices:[{label:"Choose an application",value:""},{label:"Clock timers & stopwatch",value:"swiftshell.clock"},{label:"SwiftShell",value:"swiftshell"}].concat(LauncherModel.applications.map(function(app){return {label:app.name,value:app.id}}))
-            selectedValue:page.policyApplication
-            onChosen:function(value){page.policyApplication=value}
-            Accessible.name:"Notification application"
-        }
-
-        Row {
-            spacing: Theme.settingsSpacing
-
-            FlatButton {
-                label: "Show"
-                emphasized:page.policyApplication !== "" && Notifications.policyFor(Notifications.parsePolicies(SettingsStore.notificationPoliciesJson),page.policyApplication) === "show"
-                enabled:page.policyApplication !== ""
-                onActivated: SettingsStore.setNotificationPolicy(page.policyApplication, "show")
-            }
-
-            FlatButton {
-                label: "Quiet"
-                emphasized:page.policyApplication !== "" && Notifications.policyFor(Notifications.parsePolicies(SettingsStore.notificationPoliciesJson),page.policyApplication) === "quiet"
-                enabled:page.policyApplication !== ""
-                onActivated: SettingsStore.setNotificationPolicy(page.policyApplication, "quiet")
-            }
-
-            FlatButton {
-                label: "Hide"
-                emphasized:page.policyApplication !== "" && Notifications.policyFor(Notifications.parsePolicies(SettingsStore.notificationPoliciesJson),page.policyApplication) === "hide"
-                enabled:page.policyApplication !== ""
-                onActivated: SettingsStore.setNotificationPolicy(page.policyApplication, "hide")
-            }
-
-            FlatButton {
-                label: "Clear rule"
-                enabled:page.policyApplication !== ""
-                onActivated: SettingsStore.setNotificationPolicy(page.policyApplication, "")
-            }
-        }
-
-        Repeater {
-            model: Notifications.policyRows(SettingsStore.notificationPoliciesJson)
-
-            delegate: Text {
-                required property var modelData
-                width: column.width
-                text: modelData.id + " " + modelData.value
-                color: Theme.settingsText
+            Text {
+                width: parent.width
+                wrapMode: Text.WordWrap
+                text: SettingsStore.notificationDnd ? "Critical banners still show. Other banners wait in history." : "Banners follow the notifications this shell has accepted."
+                color: Theme.settingsMuted
                 font.family: Theme.settingsFontFamily
                 font.pixelSize: Theme.settingsFontSizeSmall
-                elide: Text.ElideRight
             }
-        }
+            FlatButton {
+                visible: page.shows("notificationPreview")
+                label: SettingsStore.notificationOwnership === "on" ? "Preview banner" : "Show preview"
+                onActivated: {if(SettingsStore.notificationOwnership === "on")NotificationsModel.preview();else page.previewOpen=true}
+            }
+            Rectangle {
+                visible: page.previewOpen
+                width: parent.width
+                height: previewColumn.implicitHeight + Theme.panelPadding * 2
+                radius: Theme.radius
+                color: Theme.panelColor
 
-        Text {
-            width:parent.width;wrapMode:Text.WordWrap
-            text:"Show sends banners and keeps history. Quiet keeps history without ordinary banners. Hide discards notifications from the selected app."
-            color:Theme.settingsMuted;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall
-        }
+                Column {
+                    id: previewColumn
+                    width: parent.width - Theme.panelPadding * 2
+                    x: Theme.panelPadding
+                    y: Theme.panelPadding
+                    spacing: 4
 
-        Repeater {
-            model: Notifications.groupHistory(NotificationsModel.center.history)
-
-            delegate: Column {
-                required property var modelData
-                width: column.width
-                spacing: 2
-
-                Text {
-                    width: parent.width
-                    text: modelData.app
-                    color: Theme.settingsText
-                    font.family: Theme.settingsFontFamily
-                    font.pixelSize: Theme.settingsFontSize
-                    elide: Text.ElideRight
-                }
-
-                Repeater {
-                    model: modelData.items
-
-                    delegate: Text {
-                        required property var modelData
-                        width: column.width
-                        text: modelData.summary
+                    Text {
+                        width: parent.width
+                        text: "Preview"
                         color: Theme.settingsMuted
                         font.family: Theme.settingsFontFamily
                         font.pixelSize: Theme.settingsFontSizeSmall
-                        elide: Text.ElideRight
+                    }
+
+                    Text {
+                        width: parent.width
+                        wrapMode: Text.WordWrap
+                        text: "This is a preview of a SwiftShell notification."
+                        color: Theme.settingsText
+                        font.family: Theme.settingsFontFamily
+                        font.pixelSize: Theme.settingsFontSize
+                        textFormat: Text.PlainText
+                    }
+
+                    FlatButton {
+                        label: "Dismiss preview"
+                        onActivated: page.previewOpen = false
                     }
                 }
             }
+            Text {
+                width: parent.width
+                wrapMode: Text.WordWrap
+                text: "Preview does not change your notification settings."
+                color: Theme.settingsMuted
+                font.family: Theme.settingsFontFamily
+                font.pixelSize: Theme.settingsFontSizeSmall
+            }
+            Text {
+                width: parent.width
+                wrapMode: Text.WordWrap
+                text: "History and reply drafts stay in memory. They are never written to logs or saved to disk."
+                color: Theme.settingsMuted
+                font.family: Theme.settingsFontFamily
+                font.pixelSize: Theme.settingsFontSizeSmall
+            }
         }
 
-        FlatButton {
-            visible: NotificationsModel.center.history.length > 0
-            label: "Clear history"
-            onActivated: NotificationsModel.clearHistory()
+        SettingsSection {
+            sectionId:"notifications.applications"
+            title:"Per application"
+            description:""
+            searchQuery:page.query
+            controlIds:["notificationRules"]
+            width:parent.width
+            ChoiceBox {
+                width:Math.min(360,parent.width)
+                choices:[{label:"Choose an application",value:""},{label:"Clock timers & stopwatch",value:"swiftshell.clock"},{label:"SwiftShell",value:"swiftshell"}].concat(LauncherModel.applications.map(function(app){return {label:app.name,value:app.id}}))
+                selectedValue:page.policyApplication
+                onChosen:function(value){page.policyApplication=value}
+                Accessible.name:"Notification application"
+            }
+            Row {
+                spacing: Theme.settingsSpacing
+
+                FlatButton {
+                    label: "Show"
+                    emphasized:page.policyApplication !== "" && Notifications.policyFor(Notifications.parsePolicies(SettingsStore.notificationPoliciesJson),page.policyApplication) === "show"
+                    enabled:page.policyApplication !== ""
+                    onActivated: SettingsStore.setNotificationPolicy(page.policyApplication, "show")
+                }
+
+                FlatButton {
+                    label: "Quiet"
+                    emphasized:page.policyApplication !== "" && Notifications.policyFor(Notifications.parsePolicies(SettingsStore.notificationPoliciesJson),page.policyApplication) === "quiet"
+                    enabled:page.policyApplication !== ""
+                    onActivated: SettingsStore.setNotificationPolicy(page.policyApplication, "quiet")
+                }
+
+                FlatButton {
+                    label: "Hide"
+                    emphasized:page.policyApplication !== "" && Notifications.policyFor(Notifications.parsePolicies(SettingsStore.notificationPoliciesJson),page.policyApplication) === "hide"
+                    enabled:page.policyApplication !== ""
+                    onActivated: SettingsStore.setNotificationPolicy(page.policyApplication, "hide")
+                }
+
+                FlatButton {
+                    label: "Clear rule"
+                    enabled:page.policyApplication !== ""
+                    onActivated: SettingsStore.setNotificationPolicy(page.policyApplication, "")
+                }
+            }
+            Repeater {
+                model: Notifications.policyRows(SettingsStore.notificationPoliciesJson)
+
+                delegate: Text {
+                    required property var modelData
+                    width: column.width
+                    text: modelData.id + " " + modelData.value
+                    color: Theme.settingsText
+                    font.family: Theme.settingsFontFamily
+                    font.pixelSize: Theme.settingsFontSizeSmall
+                    elide: Text.ElideRight
+                }
+            }
+            Text {
+                width:parent.width;wrapMode:Text.WordWrap
+                text:"Show sends banners and keeps history. Quiet keeps history without ordinary banners. Hide discards notifications from the selected app."
+                color:Theme.settingsMuted;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall
+            }
+        }
+
+        SettingsSection {
+            sectionId:"notifications.history"
+            title:"Recent notifications"
+            description:""
+            searchQuery:page.query
+            controlIds:["notificationHistory"]
+            width:parent.width
+            Repeater {
+                model: Notifications.groupHistory(NotificationsModel.center.history)
+
+                delegate: Column {
+                    required property var modelData
+                    width: column.width
+                    spacing: 2
+
+                    Text {
+                        width: parent.width
+                        text: modelData.app
+                        color: Theme.settingsText
+                        font.family: Theme.settingsFontFamily
+                        font.pixelSize: Theme.settingsFontSize
+                        elide: Text.ElideRight
+                    }
+
+                    Repeater {
+                        model: modelData.items
+
+                        delegate: Text {
+                            required property var modelData
+                            width: column.width
+                            text: modelData.summary
+                            color: Theme.settingsMuted
+                            font.family: Theme.settingsFontFamily
+                            font.pixelSize: Theme.settingsFontSizeSmall
+                            elide: Text.ElideRight
+                        }
+                    }
+                }
+            }
+            FlatButton {
+                visible: NotificationsModel.center.history.length > 0
+                label: "Clear history"
+                onActivated: NotificationsModel.clearHistory()
+            }
         }
     }
 }

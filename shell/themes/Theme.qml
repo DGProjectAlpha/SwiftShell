@@ -69,7 +69,11 @@ Singleton {
     readonly property color settingsMuted: SettingsStore.manualMuted !== "" ? SettingsStore.manualMuted : Qt.rgba(floaterPalette.muted.r/255,floaterPalette.muted.g/255,floaterPalette.muted.b/255,1)
     readonly property color settingsPopupSurface: Qt.rgba(surface.panel.r/255,surface.panel.g/255,surface.panel.b/255,.98)
     readonly property color settingsHover: lightSurface ? Qt.rgba(0,0,0,.05) : Qt.rgba(1,1,1,.07)
-    readonly property color settingsSelected: lightSurface ? Qt.rgba(0,0,0,.09) : Qt.rgba(1,1,1,.11)
+    readonly property color accentColor: SettingsStore.accentColor || settingsText
+    readonly property color controlAccent: accentColor
+    readonly property color accentForeground: Contrast.chooseForeground({r:Math.round(accentColor.r*255),g:Math.round(accentColor.g*255),b:Math.round(accentColor.b*255)},"").foreground === "dark" ? "#161616" : "#f3f3f3"
+    readonly property color accentFill: Qt.rgba(accentColor.r,accentColor.g,accentColor.b,lightSurface ? .11 : .17)
+    readonly property color settingsSelected: SettingsStore.accentColor ? accentFill : (lightSurface ? Qt.rgba(0,0,0,.09) : Qt.rgba(1,1,1,.11))
     readonly property int settingsSpacing: Math.max(6, Math.round(SettingsStore.panelSpacing * .75))
     readonly property color settingsSurface: floaterSurface
 

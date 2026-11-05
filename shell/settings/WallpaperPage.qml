@@ -1,4 +1,5 @@
 import QtQuick
+import "../logic/settingsFocus.js" as Focus
 import Quickshell
 import "../components"
 import "../logic/settingsNav.js" as Nav
@@ -41,7 +42,7 @@ Item {
     }
 
     function focusHighlight() {
-        pathField.forceActiveFocus()
+        const item=itemFor(page.highlightId) || pathField;Focus.revealAncestors(item);Qt.callLater(function(){Focus.focusFirst(item)})
     }
 
     function addSlide(text) {
@@ -79,19 +80,12 @@ Item {
         return packagedSource
     }
 
-    function itemFor(id) {
-        for (var index = 0; index < column.children.length; index++) {
-            if (column.children[index].controlId === id)
-                return column.children[index]
-        }
-        return null
-    }
+    function itemFor(id) {return Focus.findControl(column,id)}
 
     onQueryChanged: page.highlightId = Nav.firstControlId(page.query)
     onHighlightIdChanged: {
         var item = itemFor(page.highlightId)
-        if (item)
-            revealRequested(item.y, item.height)
+        if (item) {Focus.revealAncestors(item);Qt.callLater(function(){const point=item.mapToItem(page,0,0);page.revealRequested(point.y,item.height)})}
     }
 
     onPreviewChoiceChanged: previewFailed = false
@@ -204,432 +198,401 @@ Item {
             elide: Text.ElideRight
         }
 
-        SettingsToggle {
-            controlId: "wallpaperEnabled"
-            visible: page.shows("wallpaperEnabled")
-            marked: page.marked("wallpaperEnabled")
-            label: "Draw wallpaper"
-            checked: SettingsStore.wallpaperEnabled
-            onToggled: function (next) { SettingsStore.setWallpaperEnabled(next) }
-        }
-
-        SettingsRow {
-            controlId: "wallpaperFit"
-            visible: page.shows("wallpaperFit")
-            marked: page.marked("wallpaperFit")
-            width: parent.width
-            label: "Fit"
-
-            Row {
-                spacing: Theme.settingsSpacing
-
-                FlatButton {
-                    label: "Cover"
-                    emphasized: SettingsStore.wallpaperFit !== "contain"
-                    onActivated: SettingsStore.setWallpaperFit("cover")
-                }
-
-                FlatButton {
-                    label: "Contain"
-                    emphasized: SettingsStore.wallpaperFit === "contain"
-                    onActivated: SettingsStore.setWallpaperFit("contain")
-                }
+        SettingsSection {
+            sectionId:"wallpaper.image"
+            title:"Image"
+            description:""
+            searchQuery:page.query
+            controlIds:["wallpaperEnabled", "wallpaperFit", "wallpaperPath"]
+            width:parent.width
+            SettingsToggle {
+                controlId: "wallpaperEnabled"
+                visible: page.shows("wallpaperEnabled")
+                marked: page.marked("wallpaperEnabled")
+                label: "Draw wallpaper"
+                checked: SettingsStore.wallpaperEnabled
+                onToggled: function (next) { SettingsStore.setWallpaperEnabled(next) }
             }
-        }
+            SettingsRow {
+                controlId: "wallpaperFit"
+                visible: page.shows("wallpaperFit")
+                marked: page.marked("wallpaperFit")
+                width: parent.width
+                label: "Fit"
 
-        Text {
-            width: parent.width
-            wrapMode: Text.WordWrap
-            visible: page.shows("wallpaperFit")
-            text: SettingsStore.wallpaperFit === "contain" ? "Contain keeps the whole picture and fills the extra with black." : "Cover fills the output and crops the extra."
-            color: Theme.settingsMuted
-            font.family: Theme.settingsFontFamily
-            font.pixelSize: Theme.settingsFontSizeSmall
-        }
+                Row {
+                    spacing: Theme.settingsSpacing
 
-        SettingsRow {
-            controlId: "wallpaperPath"
-            visible: page.shows("wallpaperPath")
-            marked: page.marked("wallpaperPath")
-            width: parent.width
-            label: "Image"
-
-            Flow {
-                objectName:"wallpaperImageChoices"
-                width:page.width
-                spacing: Theme.settingsSpacing
-
-                TextInput {
-                    id: pathField
-                    width: 220
-                    height: Theme.controlHeight
-                    text: SettingsStore.wallpaperPath
-                    color: Theme.settingsText
-                    font.family: Theme.settingsFontFamily
-                    font.pixelSize: Theme.settingsFontSizeSmall
-                    selectByMouse: true
-                    activeFocusOnTab: true
-                    clip: true
-                    Accessible.name: "Wallpaper path"
-                    onEditingFinished: {
-                        var choice = Wallpaper.resolveSource(text)
-                        page.pathNote = choice.reason
-                        SettingsStore.setWallpaperPath(text)
+                    FlatButton {
+                        label: "Cover"
+                        emphasized: SettingsStore.wallpaperFit !== "contain"
+                        onActivated: SettingsStore.setWallpaperFit("cover")
                     }
 
-                    Connections {
-                        target: SettingsStore
-                        function onWallpaperPathChanged() {
-                            if (!pathField.activeFocus)
-                                pathField.text = SettingsStore.wallpaperPath
-                        }
-                    }
-                }
-
-                FlatButton {
-                    label: "Choose image"
-                    onActivated: {
-                        page.pickerOutput=""
-                        if(dialogLoader.item) dialogLoader.item.outputName=""
-                        page.dialogReason = ""
-                        if (dialogLoader.status === Loader.Ready && dialogLoader.item)
-                            dialogLoader.item.open()
-                        else
-                            dialogLoader.active = true
-                    }
-                }
-
-                FlatButton {
-                    label: "Packaged"
-                    onActivated: {
-                        page.pathNote = ""
-                        pathField.text = ""
-                        SettingsStore.setWallpaperPath("")
+                    FlatButton {
+                        label: "Contain"
+                        emphasized: SettingsStore.wallpaperFit === "contain"
+                        onActivated: SettingsStore.setWallpaperFit("contain")
                     }
                 }
             }
-        }
-
-        Text {
-            width: parent.width
-            wrapMode: Text.WordWrap
-            visible: page.dialogReason !== ""
-            text: page.dialogReason
-            color: Theme.settingsText
-            font.family: Theme.settingsFontFamily
-            font.pixelSize: Theme.settingsFontSizeSmall
-        }
-
-        Text {
-            width: parent.width
-            wrapMode: Text.WordWrap
-            visible: page.pathNote !== ""
-            text: page.pathNote
-            color: Theme.settingsText
-            font.family: Theme.settingsFontFamily
-            font.pixelSize: Theme.settingsFontSizeSmall
-        }
-
-        Text {
-            width: parent.width
-            wrapMode: Text.WordWrap
-            visible: page.previewFailed
-            text: "That image could not be decoded. The packaged image is used instead."
-            color: Theme.settingsText
-            font.family: Theme.settingsFontFamily
-            font.pixelSize: Theme.settingsFontSizeSmall
-        }
-
-        SettingsRow {
-            controlId: "wallpaperOutput"
-            visible: page.shows("wallpaperOutput")
-            marked: page.marked("wallpaperOutput")
-            width: parent.width
-            label: "Per output"
-
             Text {
-                width: 220
+                width: parent.width
                 wrapMode: Text.WordWrap
-                text: "A path here replaces the shared image on that output. Clear it to use the shared image."
+                visible: page.shows("wallpaperFit")
+                text: SettingsStore.wallpaperFit === "contain" ? "Contain keeps the whole picture and fills the extra with black." : "Cover fills the output and crops the extra."
                 color: Theme.settingsMuted
                 font.family: Theme.settingsFontFamily
                 font.pixelSize: Theme.settingsFontSizeSmall
             }
-        }
+            SettingsRow {
+                controlId: "wallpaperPath"
+                visible: page.shows("wallpaperPath")
+                marked: page.marked("wallpaperPath")
+                width: parent.width
+                label: "Image"
 
-        Text {
-            width: parent.width
-            wrapMode: Text.WordWrap
-            visible: page.shows("wallpaperOutput") && (!Quickshell.screens || Quickshell.screens.length === 0)
-            text: "No outputs are connected."
-            color: Theme.settingsMuted
-            font.family: Theme.settingsFontFamily
-            font.pixelSize: Theme.settingsFontSizeSmall
-        }
+                Flow {
+                    objectName:"wallpaperImageChoices"
+                    width:page.width
+                    spacing: Theme.settingsSpacing
 
-        Repeater {
-            model: Quickshell.screens
-            visible: page.shows("wallpaperOutput")
+                    TextInput {
+                        id: pathField
+                        width: 220
+                        height: Theme.controlHeight
+                        text: SettingsStore.wallpaperPath
+                        color: Theme.settingsText
+                        font.family: Theme.settingsFontFamily
+                        font.pixelSize: Theme.settingsFontSizeSmall
+                        selectByMouse: true
+                        activeFocusOnTab: true
+                        clip: true
+                        Accessible.name: "Wallpaper path"
+                        onEditingFinished: {
+                            var choice = Wallpaper.resolveSource(text)
+                            page.pathNote = choice.reason
+                            SettingsStore.setWallpaperPath(text)
+                        }
 
-            delegate: Column {
-                required property var modelData
-                width: column.width
-                spacing: Theme.settingsSpacing
-
-                Image {
-                    width: 160
-                    height: 90
-                    asynchronous: true
-                    fillMode: SettingsStore.wallpaperFit === "contain" ? Image.PreserveAspectFit : Image.PreserveAspectCrop
-                    sourceSize.width: 320
-                    source: page.sourceUrl(Wallpaper.sourceForOutput(modelData.name, SettingsStore.wallpaperPath, SettingsStore.wallpaperOutputsJson))
-                }
-
-                SettingsRow {
-                    width: parent.width
-                    label: modelData.name ? modelData.name : "Output"
-
-                    Row {
-                        spacing:6
-                        FlatButton {
-                            label:"Choose image"
-                            onActivated: {
-                                page.pickerOutput=modelData.name
-                                if(dialogLoader.item) {dialogLoader.item.outputName=modelData.name;dialogLoader.item.open()}
-                                else dialogLoader.active=true
+                        Connections {
+                            target: SettingsStore
+                            function onWallpaperPathChanged() {
+                                if (!pathField.activeFocus)
+                                    pathField.text = SettingsStore.wallpaperPath
                             }
                         }
-                        FlatButton {label:"Use shared";enabled:page.outputPath(modelData.name)!=="";onActivated:SettingsStore.setOutputWallpaper(modelData.name,"")}
+                    }
+
+                    FlatButton {
+                        label: "Choose image"
+                        onActivated: {
+                            page.pickerOutput=""
+                            if(dialogLoader.item) dialogLoader.item.outputName=""
+                            page.dialogReason = ""
+                            if (dialogLoader.status === Loader.Ready && dialogLoader.item)
+                                dialogLoader.item.open()
+                            else
+                                dialogLoader.active = true
+                        }
+                    }
+
+                    FlatButton {
+                        label: "Packaged"
+                        onActivated: {
+                            page.pathNote = ""
+                            pathField.text = ""
+                            SettingsStore.setWallpaperPath("")
+                        }
                     }
                 }
             }
-        }
-
-        SettingsToggle {
-            controlId: "slideshow"
-            visible: page.shows("slideshow")
-            marked: page.marked("slideshow")
-            label: "Slideshow"
-            checked: SettingsStore.slideshow
-            onToggled: function (next) { SettingsStore.setSlideshow(next) }
-        }
-
-        Text {
-            width: parent.width
-            wrapMode: Text.WordWrap
-            visible: page.shows("slideshow")
-            text: "Choose a folder or add images. Shuffle avoids showing the same image twice in a row."
-            color: Theme.settingsMuted
-            font.family: Theme.settingsFontFamily
-            font.pixelSize: Theme.settingsFontSizeSmall
-        }
-
-        Row {
-            visible: page.shows("slideshow")
-            spacing: Theme.settingsSpacing
-
-            FlatButton {
-                label: "Choose folder"
-                onActivated: {
-                    page.folderReason = ""
-                    if (folderDialog.status === Loader.Ready && folderDialog.item)
-                        folderDialog.item.open()
-                    else
-                        folderDialog.active = true
-                }
-            }
-
             Text {
-                width: 360
-                elide: Text.ElideMiddle
-                text: page.selectedFolder === "" ? "No folder selected" : page.selectedFolder
-                color: Theme.settingsMuted
+                width: parent.width
+                wrapMode: Text.WordWrap
+                visible: page.dialogReason !== ""
+                text: page.dialogReason
+                color: Theme.settingsText
+                font.family: Theme.settingsFontFamily
+                font.pixelSize: Theme.settingsFontSizeSmall
+            }
+            Text {
+                width: parent.width
+                wrapMode: Text.WordWrap
+                visible: page.pathNote !== ""
+                text: page.pathNote
+                color: Theme.settingsText
+                font.family: Theme.settingsFontFamily
+                font.pixelSize: Theme.settingsFontSizeSmall
+            }
+            Text {
+                width: parent.width
+                wrapMode: Text.WordWrap
+                visible: page.previewFailed
+                text: "That image could not be decoded. The packaged image is used instead."
+                color: Theme.settingsText
                 font.family: Theme.settingsFontFamily
                 font.pixelSize: Theme.settingsFontSizeSmall
             }
         }
 
-        Text {
-            visible: page.folderReason !== ""
-            width: parent.width
-            wrapMode: Text.WordWrap
-            text: page.folderReason
-            color: Theme.settingsText
-            font.family: Theme.settingsFontFamily
-            font.pixelSize: Theme.settingsFontSizeSmall
-        }
+        SettingsSection {
+            sectionId:"wallpaper.outputs"
+            title:"Displays"
+            description:""
+            searchQuery:page.query
+            controlIds:["wallpaperOutput"]
+            width:parent.width
+            SettingsRow {
+                controlId: "wallpaperOutput"
+                visible: page.shows("wallpaperOutput")
+                marked: page.marked("wallpaperOutput")
+                width: parent.width
+                label: "Per output"
 
-        SettingsRow {
-            visible: page.shows("slideshow")
-            width: parent.width
-            label: "Every"
-
-            ChoiceBox {
-                choices:[1,5,10,15,30,60,120].map(function(value){return {label:value<60 ? value+" minutes" : value/60+" hours",value:value}})
-                customLabel:SettingsStore.intervalMinutes+" minutes"
-                selectedValue:SettingsStore.intervalMinutes
-                onChosen:function(value){SettingsStore.setIntervalMinutes(value)}
-                Accessible.name:"Slideshow interval"
-            }
-        }
-
-        SettingsRow {
-            visible: page.shows("slideshow")
-            width: parent.width
-            label: "Order"
-
-            Row {
-                spacing: Theme.settingsSpacing
-
-                FlatButton {
-                    label: "In order"
-                    emphasized: SettingsStore.slideshowOrder !== "shuffle"
-                    onActivated: SettingsStore.setSlideshowOrder("sequential")
-                }
-
-                FlatButton {
-                    label: "Shuffle"
-                    emphasized: SettingsStore.slideshowOrder === "shuffle"
-                    onActivated: SettingsStore.setSlideshowOrder("shuffle")
-                }
-            }
-        }
-
-        SettingsRow {
-            visible: page.shows("slideshow")
-            width: parent.width
-            label: "Fade"
-
-            ChoiceBox {
-                choices:[0,150,300,500,1000].map(function(value){return {label:value===0 ? "None" : value+" ms",value:value}})
-                customLabel:SettingsStore.transitionMs+" ms"
-                selectedValue:SettingsStore.transitionMs
-                onChosen:function(value){SettingsStore.setTransitionMs(value)}
-                Accessible.name:"Wallpaper transition"
-            }
-        }
-
-        SettingsRow {
-            visible: page.shows("slideshow")
-            width: parent.width
-            label: "Add image"
-
-            Row {
-                spacing: Theme.settingsSpacing
-
-                TextInput {
-                    id: slideField
+                Text {
                     width: 220
-                    height: Theme.controlHeight
-                    color: Theme.settingsText
+                    wrapMode: Text.WordWrap
+                    text: "A path here replaces the shared image on that output. Clear it to use the shared image."
+                    color: Theme.settingsMuted
                     font.family: Theme.settingsFontFamily
                     font.pixelSize: Theme.settingsFontSizeSmall
-                    selectByMouse: true
-                    activeFocusOnTab: true
-                    Accessible.name: "Slideshow image"
-                    onEditingFinished: page.addSlide(text)
                 }
+            }
+            Text {
+                width: parent.width
+                wrapMode: Text.WordWrap
+                visible: page.shows("wallpaperOutput") && (!Quickshell.screens || Quickshell.screens.length === 0)
+                text: "No outputs are connected."
+                color: Theme.settingsMuted
+                font.family: Theme.settingsFontFamily
+                font.pixelSize: Theme.settingsFontSizeSmall
+            }
+            Repeater {
+                model: Quickshell.screens
+                visible: page.shows("wallpaperOutput")
 
-                FlatButton {
-                    label: "Add"
-                    onActivated: page.addSlide(slideField.text)
+                delegate: Column {
+                    required property var modelData
+                    width: column.width
+                    spacing: Theme.settingsSpacing
+
+                    Image {
+                        width: 160
+                        height: 90
+                        asynchronous: true
+                        fillMode: SettingsStore.wallpaperFit === "contain" ? Image.PreserveAspectFit : Image.PreserveAspectCrop
+                        sourceSize.width: 320
+                        source: page.sourceUrl(Wallpaper.sourceForOutput(modelData.name, SettingsStore.wallpaperPath, SettingsStore.wallpaperOutputsJson))
+                    }
+
+                    SettingsRow {
+                        width: parent.width
+                        label: modelData.name ? modelData.name : "Output"
+
+                        Row {
+                            spacing:6
+                            FlatButton {
+                                label:"Choose image"
+                                onActivated: {
+                                    page.pickerOutput=modelData.name
+                                    if(dialogLoader.item) {dialogLoader.item.outputName=modelData.name;dialogLoader.item.open()}
+                                    else dialogLoader.active=true
+                                }
+                            }
+                            FlatButton {label:"Use shared";enabled:page.outputPath(modelData.name)!=="";onActivated:SettingsStore.setOutputWallpaper(modelData.name,"")}
+                        }
+                    }
                 }
             }
         }
 
-        Text {
-            width: parent.width
-            wrapMode: Text.WordWrap
-            visible: page.shows("slideshow")
-            text: WallpaperModel.slideError !== "" ? WallpaperModel.slideError : (WallpaperModel.slideCount + " images, " + WallpaperModel.unreadable + " skipped")
-            color: Theme.settingsMuted
-            font.family: Theme.settingsFontFamily
-            font.pixelSize: Theme.settingsFontSizeSmall
-        }
-
-        Repeater {
-            model: Slideshow.parseList(SettingsStore.slidesJson)
-            visible: page.shows("slideshow")
-
-            delegate: SettingsRow {
-                required property string modelData
-                width: column.width
-                label: modelData
-
-                FlatButton {
-                    label: "Remove"
-                    onActivated: SettingsStore.removeSlide(modelData)
-                }
+        SettingsSection {
+            sectionId:"wallpaper.slideshow"
+            title:"Slideshow"
+            description:""
+            searchQuery:page.query
+            controlIds:["slideshow"]
+            width:parent.width
+            SettingsToggle {
+                controlId: "slideshow"
+                visible: page.shows("slideshow")
+                marked: page.marked("slideshow")
+                label: "Slideshow"
+                checked: SettingsStore.slideshow
+                onToggled: function (next) { SettingsStore.setSlideshow(next) }
             }
-        }
-
-        SettingsToggle {
-            controlId: "automaticText"
-            visible: page.shows("automaticText")
-            marked: page.marked("automaticText")
-            label: "Automatic text"
-            checked: SettingsStore.automaticText
-            onToggled: function (next) { page.edited({ automaticText: next }) }
-        }
-
-        SettingsToggle {
-            visible: page.shows("automaticText")
-            label: "Automatic fade"
-            checked: SettingsStore.automaticGradient
-            onToggled: function (next) { page.edited({ automaticGradient: next }) }
-        }
-
-        Text {
-            width: parent.width
-            wrapMode: Text.WordWrap
-            visible: page.shows("automaticText")
-            text: Theme.contrastReason !== "" ? Theme.contrastReason : "Adjust bar text for your wallpaper. Manual colors are remembered when automatic mode is off."
-            color: Theme.settingsMuted
-            font.family: Theme.settingsFontFamily
-            font.pixelSize: Theme.settingsFontSizeSmall
-        }
-
-        Text {
-            width: parent.width
-            wrapMode: Text.WordWrap
-            visible: page.shows("manualText") && Theme.contrastWarning !== ""
-            text: Theme.contrastWarning
-            color: Theme.settingsText
-            font.family: Theme.settingsFontFamily
-            font.pixelSize: Theme.settingsFontSizeSmall
-        }
-
-        SettingsRow {
-            controlId: "manualText"
-            visible: page.shows("manualText")
-            marked: page.marked("manualText")
-            width: parent.width
-            label: "Text"
-
+            Text {
+                width: parent.width
+                wrapMode: Text.WordWrap
+                visible: page.shows("slideshow")
+                text: "Choose a folder or add images. Shuffle avoids showing the same image twice in a row."
+                color: Theme.settingsMuted
+                font.family: Theme.settingsFontFamily
+                font.pixelSize: Theme.settingsFontSizeSmall
+            }
             Row {
-                spacing:8
+                visible: page.shows("slideshow")
+                spacing: Theme.settingsSpacing
+
                 FlatButton {
-                    label:SettingsStore.manualText || "Choose color"
-                    onActivated:page.pickColor("manualText",SettingsStore.manualText)
-                    Accessible.name:"Choose text color"
+                    label: "Choose folder"
+                    onActivated: {
+                        page.folderReason = ""
+                        if (folderDialog.status === Loader.Ready && folderDialog.item)
+                            folderDialog.item.open()
+                        else
+                            folderDialog.active = true
+                    }
                 }
-                FlatButton { label:"Reset";enabled:SettingsStore.manualText !== "";onActivated:page.edited({manualText:""}) }
+
+                Text {
+                    width: 360
+                    elide: Text.ElideMiddle
+                    text: page.selectedFolder === "" ? "No folder selected" : page.selectedFolder
+                    color: Theme.settingsMuted
+                    font.family: Theme.settingsFontFamily
+                    font.pixelSize: Theme.settingsFontSizeSmall
+                }
+            }
+            Text {
+                visible: page.folderReason !== ""
+                width: parent.width
+                wrapMode: Text.WordWrap
+                text: page.folderReason
+                color: Theme.settingsText
+                font.family: Theme.settingsFontFamily
+                font.pixelSize: Theme.settingsFontSizeSmall
+            }
+            SettingsRow {
+                visible: page.shows("slideshow")
+                width: parent.width
+                label: "Every"
+
+                ChoiceBox {
+                    choices:[1,5,10,15,30,60,120].map(function(value){return {label:value<60 ? value+" minutes" : value/60+" hours",value:value}})
+                    customLabel:SettingsStore.intervalMinutes+" minutes"
+                    selectedValue:SettingsStore.intervalMinutes
+                    onChosen:function(value){SettingsStore.setIntervalMinutes(value)}
+                    Accessible.name:"Slideshow interval"
+                }
+            }
+            SettingsRow {
+                visible: page.shows("slideshow")
+                width: parent.width
+                label: "Order"
+
+                Row {
+                    spacing: Theme.settingsSpacing
+
+                    FlatButton {
+                        label: "In order"
+                        emphasized: SettingsStore.slideshowOrder !== "shuffle"
+                        onActivated: SettingsStore.setSlideshowOrder("sequential")
+                    }
+
+                    FlatButton {
+                        label: "Shuffle"
+                        emphasized: SettingsStore.slideshowOrder === "shuffle"
+                        onActivated: SettingsStore.setSlideshowOrder("shuffle")
+                    }
+                }
+            }
+            SettingsRow {
+                visible: page.shows("slideshow")
+                width: parent.width
+                label: "Fade"
+
+                ChoiceBox {
+                    choices:[0,150,300,500,1000].map(function(value){return {label:value===0 ? "None" : value+" ms",value:value}})
+                    customLabel:SettingsStore.transitionMs+" ms"
+                    selectedValue:SettingsStore.transitionMs
+                    onChosen:function(value){SettingsStore.setTransitionMs(value)}
+                    Accessible.name:"Wallpaper transition"
+                }
+            }
+            SettingsRow {
+                visible: page.shows("slideshow")
+                width: parent.width
+                label: "Add image"
+
+                Row {
+                    spacing: Theme.settingsSpacing
+
+                    TextInput {
+                        id: slideField
+                        width: 220
+                        height: Theme.controlHeight
+                        color: Theme.settingsText
+                        font.family: Theme.settingsFontFamily
+                        font.pixelSize: Theme.settingsFontSizeSmall
+                        selectByMouse: true
+                        activeFocusOnTab: true
+                        Accessible.name: "Slideshow image"
+                        onEditingFinished: page.addSlide(text)
+                    }
+
+                    FlatButton {
+                        label: "Add"
+                        onActivated: page.addSlide(slideField.text)
+                    }
+                }
+            }
+            Text {
+                width: parent.width
+                wrapMode: Text.WordWrap
+                visible: page.shows("slideshow")
+                text: WallpaperModel.slideError !== "" ? WallpaperModel.slideError : (WallpaperModel.slideCount + " images, " + WallpaperModel.unreadable + " skipped")
+                color: Theme.settingsMuted
+                font.family: Theme.settingsFontFamily
+                font.pixelSize: Theme.settingsFontSizeSmall
+            }
+            Repeater {
+                model: Slideshow.parseList(SettingsStore.slidesJson)
+                visible: page.shows("slideshow")
+
+                delegate: SettingsRow {
+                    required property string modelData
+                    width: column.width
+                    label: modelData
+
+                    FlatButton {
+                        label: "Remove"
+                        onActivated: SettingsStore.removeSlide(modelData)
+                    }
+                }
             }
         }
 
-        SettingsRow {
-            visible: page.shows("manualText")
-            width: parent.width
-            label: "Panel"
-
-            Row {
-                spacing:8
-                FlatButton {
-                    label:SettingsStore.manualPanel || "Choose color"
-                    onActivated:page.pickColor("manualPanel",SettingsStore.manualPanel)
-                    Accessible.name:"Choose panel color"
-                }
-                FlatButton { label:"Reset";enabled:SettingsStore.manualPanel !== "";onActivated:page.edited({manualPanel:""}) }
+        SettingsSection {
+            sectionId:"wallpaper.readability"
+            title:"Wallpaper readability"
+            description:""
+            searchQuery:page.query
+            controlIds:["automaticText"]
+            width:parent.width
+            SettingsToggle {
+                controlId: "automaticText"
+                visible: page.shows("automaticText")
+                marked: page.marked("automaticText")
+                label: "Automatic text"
+                checked: SettingsStore.automaticText
+                onToggled: function (next) { page.edited({ automaticText: next }) }
+            }
+            SettingsToggle {
+                visible: page.shows("automaticText")
+                label: "Automatic fade"
+                checked: SettingsStore.automaticGradient
+                onToggled: function (next) { page.edited({ automaticGradient: next }) }
+            }
+            Text {
+                width: parent.width
+                wrapMode: Text.WordWrap
+                visible: page.shows("automaticText")
+                text: Theme.contrastReason !== "" ? Theme.contrastReason : "Adjust bar text for your wallpaper. Manual colors are remembered when automatic mode is off."
+                color: Theme.settingsMuted
+                font.family: Theme.settingsFontFamily
+                font.pixelSize: Theme.settingsFontSizeSmall
             }
         }
     }

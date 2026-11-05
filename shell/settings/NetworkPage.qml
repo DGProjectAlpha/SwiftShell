@@ -21,7 +21,8 @@ Item {
     implicitHeight:column.implicitHeight
     height:implicitHeight
     function shows(id) {return query.trim()==="" || /network|wifi|wi-fi|ethernet|bluetooth|device|connection/i.test(query)}
-    function focusHighlight() {refreshButton.forceActiveFocus()}
+    function focusHighlight() {if(highlightId==="bluetoothDevices"){bluetoothGroup.reveal();Qt.callLater(function(){bluetoothPage.focusHighlight()})}else {connectionsGroup.reveal();refreshButton.forceActiveFocus()}}
+    onHighlightIdChanged:if(highlightId==="bluetoothDevices"){bluetoothGroup.reveal();Qt.callLater(function(){page.revealRequested(bluetoothGroup.y,bluetoothGroup.height)})}
     function moveHighlight(delta) {revealRequested(0,height)}
     function requestDisconnect(device) {confirmation={action:"device-disconnect",device:device.id,label:"Disconnect "+(device.connection || device.id)+"?"}}
     function cancelDraft() {password.text="";joining=null;showPassword=false;credentialError="";passwordDialog.close()}
@@ -77,13 +78,17 @@ Item {
         width:page.width
         spacing:Theme.settingsSpacing
         Text {text:"Network & Devices";color:Theme.settingsText;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSize+4;font.weight:Font.Medium}
+
         Text {width:parent.width;wrapMode:Text.WordWrap;text:"Manage your internet connections, wireless networks and Bluetooth devices.";color:Theme.settingsMuted;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall}
+
         Row {
             spacing:8
             FlatButton {id:refreshButton;label:NetworkService.busy ? "Updating…" : "Refresh";enabled:!NetworkService.busy;onActivated:NetworkService.refresh()}
             Text {anchors.verticalCenter:parent.verticalCenter;text:NetworkService.available ? (NetworkService.connectivity==="full" ? "Internet connected" : "Network connections") : "";color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall}
         }
+
         Text {width:parent.width;wrapMode:Text.WordWrap;visible:text!=="";text:NetworkService.error || (!NetworkService.available ? NetworkService.reason : "");color:Theme.settingsMuted;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall}
+
         Row {
             width:parent.width;spacing:8
             visible:NetworkService.progressText!=="" || NetworkService.error!==""
@@ -91,73 +96,107 @@ Item {
             FlatButton {id:cancelOperation;objectName:"networkCancelOperation";visible:NetworkService.canCancel;label:"Cancel connection";onActivated:NetworkService.cancel()}
             FlatButton {id:retryOperation;objectName:"networkRetryOperation";visible:!NetworkService.busy && ["wifi-connect","device-connect","profile-connect","scan","device-disconnect","wifi-radio"].indexOf(NetworkService.lastFailure.action)>=0;label:"Try again";onActivated:page.retryConnection()}
         }
-        SectionHeader {width:parent.width;text:"Connections"}
-        Repeater {
-            model:NetworkService.devices
-            delegate:Column {
-                required property var modelData
-                width:column.width;spacing:4
-                SettingsRow {
-                    width:parent.width
-                    label:(modelData.kind==="wifi" ? "Wi-Fi" : "Ethernet")+" · "+modelData.id
+
+        SettingsSection {
+            id:connectionsGroup
+            sectionId:"network.connectionsGroup"
+            title:"Connections"
+            searchQuery:page.query
+            controlIds:["networkStatus"]
+            width:parent.width
+            Repeater {
+                model:NetworkService.devices
+                delegate:Column {
+                    required property var modelData
+                    width:column.width;spacing:4
+                    SettingsRow {
+                        width:parent.width
+                        label:(modelData.kind==="wifi" ? "Wi-Fi" : "Ethernet")+" · "+modelData.id
+                        Row {
+                            spacing:6
+                            Text {height:Theme.controlHeight;verticalAlignment:Text.AlignVCenter;text:modelData.state.replace(/\b\w/g,function(c){return c.toUpperCase()});color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall}
+                            FlatButton {label:modelData.connected ? "Disconnect" : modelData.kind==="wifi" ? "Find networks" : "Connect";enabled:NetworkService.available && !NetworkService.operationBusy && modelData.available;onActivated:modelData.connected ? page.requestDisconnect(modelData) : NetworkService.perform(modelData.kind==="wifi" ? "scan" : "device-connect",{device:modelData.id})}
+                        }
+                    }
+                    Text {width:parent.width;wrapMode:Text.WordWrap;textFormat:Text.PlainText;text:modelData.connection+(modelData.addresses.length ? " · "+modelData.addresses.join(", ") : "");visible:text!=="";color:Theme.settingsMuted;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall}
+                }
+            }
+            Text {visible:NetworkService.available && !NetworkService.devices.length;text:"No network adapters are available.";color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall}
+        }
+
+        SettingsSection {
+            id:bluetoothGroup
+            sectionId:"network.bluetoothGroup"
+            title:"Bluetooth"
+            searchQuery:page.query
+            controlIds:["bluetoothDevices"]
+            width:parent.width
+            BluetoothPage {id:bluetoothPage;showHeading:false;width:parent.width;query:page.query}
+        }
+
+        SettingsSection {
+            id:wifiGroup
+            sectionId:"network.wifiGroup"
+            title:"Wi-Fi"
+            searchQuery:page.query
+            controlIds:["networkStatus"]
+            width:parent.width
+            SettingsToggle {
+                width:parent.width
+                label:"Wi-Fi"
+                objectName:"networkWifiToggle"
+                checked:NetworkService.requestedWifiEnabled
+                enabled:NetworkService.available && NetworkService.devices.some(function(device){return device.kind==="wifi"}) && (NetworkService.wifiHardware || NetworkService.requestedWifiEnabled)
+                onToggled:function(value){if(value)NetworkService.perform("wifi-radio",{enabled:true});else page.confirmation={action:"wifi-radio",label:"Turn off Wi-Fi?"}}
+            }
+            Text {width:parent.width;wrapMode:Text.WordWrap;visible:!NetworkService.wifiEnabled || !NetworkService.wifiHardware;text:!NetworkService.wifiHardware ? "Wi-Fi is blocked by your hardware or no wireless adapter is available." : "Turn on Wi-Fi to find nearby networks.";color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall}
+            FlatButton {
+                objectName:"networkFindNetworks"
+                label:"Find networks"
+                visible:NetworkService.wifiEnabled
+                enabled:NetworkService.available && !NetworkService.operationBusy && NetworkService.devices.some(function(device){return device.kind==="wifi" && device.available})
+                onActivated:{const adapter=NetworkService.devices.find(function(device){return device.kind==="wifi" && device.available});if(adapter)NetworkService.perform("scan",{device:adapter.id})}
+            }
+            Text {width:parent.width;visible:NetworkService.wifiEnabled && !NetworkService.networks.length;text:NetworkService.busy ? "Looking for networks…" : NetworkService.wifiScanMessage || "No nearby networks found. Refresh or move closer to your access point.";wrapMode:Text.WordWrap;color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall}
+            KeyedModel {
+                id:accessPoints
+                entries:NetworkService.wifiEnabled ? NetworkService.networks.map(function(network){return Object.assign({},network,{key:network.device+"|"+network.id})}) : []
+            }
+            Repeater {
+                id:accessPointRows
+                objectName:"networkAccessPointRows"
+                model:accessPoints
+                delegate:SettingsRow {
+                    required property var entry
+                    readonly property var modelData:entry
+                    width:column.width;label:modelData.name
                     Row {
                         spacing:6
-                        Text {height:Theme.controlHeight;verticalAlignment:Text.AlignVCenter;text:modelData.state.replace(/\b\w/g,function(c){return c.toUpperCase()});color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall}
-                        FlatButton {label:modelData.connected ? "Disconnect" : modelData.kind==="wifi" ? "Find networks" : "Connect";enabled:NetworkService.available && !NetworkService.operationBusy && modelData.available;onActivated:modelData.connected ? page.requestDisconnect(modelData) : NetworkService.perform(modelData.kind==="wifi" ? "scan" : "device-connect",{device:modelData.id})}
+                        Text {height:Theme.controlHeight;verticalAlignment:Text.AlignVCenter;text:modelData.signal+"% · "+(modelData.security || "Open");color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall}
+                        FlatButton {objectName:"networkAccessPointConnect";label:modelData.active ? "Connected" : "Connect";enabled:NetworkService.available && !modelData.active && modelData.supported && !NetworkService.operationBusy;onActivated:page.join(modelData)}
                     }
                 }
-                Text {width:parent.width;wrapMode:Text.WordWrap;textFormat:Text.PlainText;text:modelData.connection+(modelData.addresses.length ? " · "+modelData.addresses.join(", ") : "");visible:text!=="";color:Theme.settingsMuted;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall}
             }
         }
-        Text {visible:NetworkService.available && !NetworkService.devices.length;text:"No network adapters are available.";color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall}
-        SectionHeader {width:parent.width;text:"Wi-Fi"}
-        SettingsToggle {
+
+        SettingsSection {
+            id:savedGroup
+            sectionId:"network.savedGroup"
+            title:"Saved connections"
+            searchQuery:page.query
+            controlIds:["networkStatus"]
+            defaultExpanded:false
             width:parent.width
-            label:"Wi-Fi"
-            objectName:"networkWifiToggle"
-            checked:NetworkService.requestedWifiEnabled
-            enabled:NetworkService.available && NetworkService.devices.some(function(device){return device.kind==="wifi"}) && (NetworkService.wifiHardware || NetworkService.requestedWifiEnabled)
-            onToggled:function(value){if(value)NetworkService.perform("wifi-radio",{enabled:true});else page.confirmation={action:"wifi-radio",label:"Turn off Wi-Fi?"}}
-        }
-        Text {width:parent.width;wrapMode:Text.WordWrap;visible:!NetworkService.wifiEnabled || !NetworkService.wifiHardware;text:!NetworkService.wifiHardware ? "Wi-Fi is blocked by your hardware or no wireless adapter is available." : "Turn on Wi-Fi to find nearby networks.";color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall}
-        FlatButton {
-            objectName:"networkFindNetworks"
-            label:"Find networks"
-            visible:NetworkService.wifiEnabled
-            enabled:NetworkService.available && !NetworkService.operationBusy && NetworkService.devices.some(function(device){return device.kind==="wifi" && device.available})
-            onActivated:{const adapter=NetworkService.devices.find(function(device){return device.kind==="wifi" && device.available});if(adapter)NetworkService.perform("scan",{device:adapter.id})}
-        }
-        Text {width:parent.width;visible:NetworkService.wifiEnabled && !NetworkService.networks.length;text:NetworkService.busy ? "Looking for networks…" : NetworkService.wifiScanMessage || "No nearby networks found. Refresh or move closer to your access point.";wrapMode:Text.WordWrap;color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall}
-        KeyedModel {
-            id:accessPoints
-            entries:NetworkService.wifiEnabled ? NetworkService.networks.map(function(network){return Object.assign({},network,{key:network.device+"|"+network.id})}) : []
-        }
-        Repeater {
-            id:accessPointRows
-            objectName:"networkAccessPointRows"
-            model:accessPoints
-            delegate:SettingsRow {
-                required property var entry
-                readonly property var modelData:entry
-                width:column.width;label:modelData.name
-                Row {
-                    spacing:6
-                    Text {height:Theme.controlHeight;verticalAlignment:Text.AlignVCenter;text:modelData.signal+"% · "+(modelData.security || "Open");color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall}
-                    FlatButton {objectName:"networkAccessPointConnect";label:modelData.active ? "Connected" : "Connect";enabled:NetworkService.available && !modelData.active && modelData.supported && !NetworkService.operationBusy;onActivated:page.join(modelData)}
+            Repeater {
+                model:NetworkService.profiles
+                delegate:SettingsRow {
+                    required property var modelData
+                    width:column.width;label:modelData.name
+                    FlatButton {label:modelData.device ? "Connected" : "Connect";enabled:NetworkService.available && !modelData.device && !NetworkService.operationBusy;onActivated:NetworkService.perform("profile-connect",{id:modelData.id})}
                 }
             }
+            Text {width:parent.width;wrapMode:Text.WordWrap;visible:true;text:"Enterprise Wi-Fi uses an existing saved connection profile. New connections support open and personal WPA networks.";color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall}
         }
-        FlatButton {label:page.showSaved ? "Hide saved connections" : "Saved connections";onActivated:page.showSaved=!page.showSaved}
-        Repeater {
-            model:page.showSaved ? NetworkService.profiles : []
-            delegate:SettingsRow {
-                required property var modelData
-                width:column.width;label:modelData.name
-                FlatButton {label:modelData.device ? "Connected" : "Connect";enabled:NetworkService.available && !modelData.device && !NetworkService.operationBusy;onActivated:NetworkService.perform("profile-connect",{id:modelData.id})}
-            }
-        }
-        Text {width:parent.width;wrapMode:Text.WordWrap;visible:page.showSaved;text:"Enterprise Wi-Fi uses an existing saved connection profile. New connections support open and personal WPA networks.";color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall}
-        BluetoothPage {width:parent.width;query:page.query}
     }
     Controls.Popup {
         id:passwordDialog

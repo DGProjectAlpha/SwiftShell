@@ -372,7 +372,7 @@ Singleton {
         }
         if (row.kind === "setting-result") {
             root.closeLauncher();
-            SettingsModel.requestControl(row.controlId || "",row.category);
+            SettingsModel.requestControl(row.controlId || "",row.category,root.screen ? HyprlandModel.hyprlandNameForScreen(root.screen) : "");
             return;
         }
         if (row.kind === "calculation") {
