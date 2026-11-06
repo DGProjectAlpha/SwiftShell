@@ -3,6 +3,7 @@ import Quickshell
 import "../components"
 import "../logic/launcher.js" as Launcher
 import "../themes"
+import "../services"
 
 Column {
     id: root
@@ -11,7 +12,7 @@ Column {
     width: parent ? parent.width : Theme.controlWidth
     property string heading:"Session"
     property string confirmId: ""
-    property string notice: ""
+    Component.onCompleted:SessionActions.refresh()
 
     SectionHeader {
         width: parent.width
@@ -21,7 +22,7 @@ Column {
     Text {
         width: parent.width
         wrapMode: Text.WordWrap
-        text: "Choose an action, then confirm."
+        text: "Lock immediately, or choose another action and confirm."
         color: Theme.settingsMuted
         font.family: Theme.settingsFontFamily
         font.pixelSize: Theme.settingsFontSizeSmall
@@ -32,34 +33,34 @@ Column {
 
         delegate: FlatButton {
             required property var modelData
+            objectName:"session-action-"+modelData.id
+            enabled:!SessionActions.busy && SessionActions.available(modelData.id)
+            Accessible.description:SessionActions.reason(modelData.id)
             label: root.confirmId === modelData.id ? "Confirm " + modelData.label : modelData.label
             emphasized: root.confirmId === modelData.id
             onActivated: {
-                var step = Launcher.powerInvocation(root.confirmId, modelData.id)
-                root.confirmId = step.confirmId
-                if (!step.run) {
-                    if (step.error !== "")
-                        root.notice = step.error
-                    return
-                }
-                try {
-                    Quickshell.execDetached({ command: step.argv })
-                    root.notice = modelData.label + " was requested."
-                    console.info("SwiftShell: power action", modelData.id)
-                } catch (error) {
-                    root.confirmId = ""
-                    root.notice = "Could not run the power action"
-                    console.warn("SwiftShell: power action failed", modelData.id)
-                }
+                const step=Launcher.powerInvocation(root.confirmId,modelData.id)
+                root.confirmId=step.confirmId
+                if(step.run)SessionActions.perform(step.action)
             }
         }
     }
 
     Text {
-        visible: root.notice !== ""
+        width:parent.width
+        visible:SessionActions.ready && !SessionActions.available("lock")
+        text:SessionActions.reason("lock")
+        wrapMode:Text.WordWrap;color:Theme.settingsMuted
+        font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall
+    }
+    FlatButton {visible:SessionActions.error!=="";label:"Retry session check";enabled:!SessionActions.busy && !SessionActions.refreshing;onActivated:SessionActions.refresh()}
+    Text {
+        visible:text!==""
         width: parent.width
         wrapMode: Text.WordWrap
-        text: root.notice
+        objectName:"sessionActionStatus"
+        textFormat:Text.PlainText
+        text:SessionActions.error || SessionActions.notice
         color: Theme.settingsText
         font.family: Theme.settingsFontFamily
         font.pixelSize: Theme.settingsFontSizeSmall

@@ -27,6 +27,7 @@ Rectangle {
         {kind:"settings",id:"settings",name:"Settings",icon:"preferences-system"},
         {kind:"power",id:"lock",name:"Lock",icon:"system-lock-screen"},
         {kind:"power",id:"suspend",name:"Suspend",icon:"system-suspend"},
+        {kind:"power",id:"logout",name:"Log out",icon:"system-log-out"},
         {kind:"power",id:"reboot",name:"Restart",icon:"system-reboot"},
         {kind:"power",id:"poweroff",name:"Shut down",icon:"system-shutdown"}
     ]
@@ -321,6 +322,7 @@ Rectangle {
         spacing:5
         Text {
             width:parent.width;visible:LauncherModel.notice!=="" || LauncherModel.confirmId!==""
+            textFormat:Text.PlainText
             text:LauncherModel.confirmId!=="" ? "Select again to confirm · Escape to cancel" : LauncherModel.notice
             color:Theme.settingsText;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall;horizontalAlignment:Text.AlignHCenter;elide:Text.ElideRight
         }
@@ -335,10 +337,11 @@ Rectangle {
                     required property int index
                     required property var modelData
                     objectName:"spotlight-action-"+modelData.id
-                    width:Math.min(82,(card.width-64)/5);height:62;hoverEnabled:true
-                    enabled:!LauncherModel.actionBusy;opacity:enabled ? 1 : .5
+                    width:Math.min(82,(card.width-36-(card.quickActions.length-1)*actionStrip.spacing)/card.quickActions.length);height:62;hoverEnabled:true
+                    enabled:!LauncherModel.actionBusy && (modelData.kind!=="power" || SessionActions.available(modelData.id));opacity:enabled ? 1 : .5
                     cursorShape:enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
                     Accessible.role:Accessible.Button;Accessible.name:modelData.name
+                    Accessible.description:modelData.kind==="power" ? SessionActions.reason(modelData.id) : ""
                     readonly property bool current:LauncherModel.selected===card.providerRows.length+card.appRows.length+index
                     onClicked:{LauncherModel.selected=card.providerRows.length+card.appRows.length+index;LauncherModel.activate(modelData);}
                     Rectangle {anchors.fill:parent;radius:Theme.controlRadius;color:action.current || LauncherModel.confirmId===action.modelData.id ? Theme.settingsSelected : action.containsMouse ? Theme.settingsHover : "transparent";}
@@ -353,6 +356,7 @@ Rectangle {
                             if(id==="settings") {c.arc(13,13,7,0,Math.PI*2);c.moveTo(16,13);c.arc(13,13,3,0,Math.PI*2);for(let i=0;i<8;i++){const a=i*Math.PI/4;c.moveTo(13+9*Math.cos(a),13+9*Math.sin(a));c.lineTo(13+11*Math.cos(a),13+11*Math.sin(a));}}
                             else if(id==="lock") {c.rect(5,11,16,12);c.moveTo(8,11);c.lineTo(8,7);c.arc(13,7,5,Math.PI,0);c.lineTo(18,11);c.moveTo(13,16);c.lineTo(13,19);}
                             else if(id==="suspend") {c.arc(13,13,9,-Math.PI/2,Math.PI/2);c.bezierCurveTo(3,20,3,6,13,4);}
+                            else if(id==="logout") {c.moveTo(11,4);c.lineTo(4,4);c.lineTo(4,22);c.lineTo(11,22);c.moveTo(10,13);c.lineTo(23,13);c.moveTo(18,8);c.lineTo(23,13);c.lineTo(18,18);}
                             else if(id==="reboot") {c.arc(13,13,9,-Math.PI*.65,Math.PI*.9);c.moveTo(10,3);c.lineTo(15,5);c.lineTo(10,8);}
                             else {c.arc(13,14,9,-Math.PI*.35,Math.PI*1.35);c.moveTo(13,2);c.lineTo(13,13);}
                             c.stroke();

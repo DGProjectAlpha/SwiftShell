@@ -288,3 +288,17 @@ Selecting a terminal in **Default apps** also updates a safely recognized deskto
 terminal shortcut. On the reference desktop, Super+Enter now follows Konsole.
 **Undo** in the terminal row restores the preceding choice. Configurations which
 cannot be safely linked explicitly show that the choice is used only by SwiftShell.
+
+### Lock, sleep and switching desktops
+
+Use the bar's Power panel or Spotlight's bottom actions. **Lock** opens the secure
+lock screen immediately. **Suspend**, **Log out**, **Restart** and **Shut down** ask
+for a second confirmation. Log out ends this Hyprland session and returns control
+to the login manager, where you can select another desktop.
+
+Lock and lock-before-suspend require `hyprlock`. If it is missing, install the
+package through your package manager; the controls explain why they are unavailable.
+An existing Hyprlock configuration is respected, otherwise SwiftShell supplies a
+neutral fallback. Hyprlock handles your unlock password directly. Suspend waits
+for a secure lock before asking the system to sleep and respects applications'
+sleep inhibitors. Refused or failed actions show an error in the panel or Spotlight.

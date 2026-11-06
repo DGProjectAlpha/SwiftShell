@@ -1420,20 +1420,23 @@ test("launcher ranking is stable and ignores the query as a command", function (
 
     const armed = launcher.powerStep("", "poweroff");
     assert.equal(armed.run, false);
-    assert.equal(armed.argv, null);
+    assert.equal(armed.action, "");
     const confirmed = launcher.powerStep("poweroff", "poweroff");
     assert.equal(confirmed.run, true);
-    assert.deepEqual(confirmed.argv, ["systemctl", "--no-ask-password", "poweroff"]);
+    assert.equal(confirmed.action, "poweroff");
     assert.equal(launcher.powerStep("", "custom").run, false);
     assert.equal(launcher.moveSelection(0, 4, -1), 3);
     assert.equal(launcher.moveSelection(3, 4, 1), 0);
     const armedPower = launcher.powerInvocation("", "reboot");
     assert.equal(armedPower.run, false);
-    assert.equal(armedPower.argv, null);
+    assert.equal(armedPower.action, "");
     const confirmedPower = launcher.powerInvocation("reboot", "reboot");
     assert.equal(confirmedPower.run, true);
-    assert.deepEqual(confirmedPower.argv, ["systemctl", "--no-ask-password", "reboot"]);
-    assert.equal(JSON.stringify(confirmedPower.argv).indexOf("dolphin"), -1);
+    assert.equal(confirmedPower.action, "reboot");
+    assert.equal(Object.hasOwn(confirmedPower, "argv"), false);
+    assert.equal(launcher.powerInvocation("", "lock").run, true);
+    assert.equal(launcher.powerInvocation("", "logout").run, false);
+    assert.equal(launcher.powerInvocation("logout", "logout").action, "logout");
     const switchedPower = launcher.powerInvocation("reboot", "poweroff");
     assert.equal(switchedPower.run, false);
     assert.equal(switchedPower.confirmId, "poweroff");

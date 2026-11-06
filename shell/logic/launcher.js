@@ -4,10 +4,11 @@ var GRID_CAP = 12;
 var RESULT_CAP = 24;
 
 var POWER = [
-    { id: "lock", label: "Lock", argv: ["loginctl", "lock-session"] },
-    { id: "suspend", label: "Suspend", argv: ["systemctl", "--no-ask-password", "suspend"] },
-    { id: "reboot", label: "Restart", argv: ["systemctl", "--no-ask-password", "reboot"] },
-    { id: "poweroff", label: "Shut down", argv: ["systemctl", "--no-ask-password", "poweroff"] },
+    { id: "lock", label: "Lock" },
+    { id: "suspend", label: "Suspend" },
+    { id: "logout", label: "Log out" },
+    { id: "reboot", label: "Restart" },
+    { id: "poweroff", label: "Shut down" },
 ];
 
 function asText(value) {
@@ -415,21 +416,14 @@ function moveSelection(index, count, delta) {
     return next;
 }
 
-function powerArgv(id) {
-    for (let i = 0; i < POWER.length; i++) {
-        if (POWER[i].id === id)
-            return POWER[i].argv.slice();
-    }
-    return null;
+function powerAction(id) {
+    return POWER.find(function(action){return action.id===id}) || null;
 }
 
 function powerStep(confirmId, id) {
-    const argv = powerArgv(id);
-    if (!argv)
-        return { confirmId: "", run: false, argv: null };
-    if (confirmId === id)
-        return { confirmId: "", run: true, argv: argv };
-    return { confirmId: id, run: false, argv: null };
+    if(!powerAction(id))return {confirmId:"",run:false,action:""};
+    if(id==="lock" || confirmId===id)return {confirmId:"",run:true,action:id};
+    return {confirmId:id,run:false,action:""};
 }
 
 function pushRecent(ids, id) {
@@ -559,15 +553,8 @@ function iconSource(icon, lookup) {
 }
 
 function powerInvocation(confirmId, id) {
-    const step = powerStep(confirmId, id);
-    if (!step.run)
-        return { run: false, confirmId: step.confirmId, argv: null, error: "" };
-    const argv = step.argv ? step.argv.slice() : null;
-    const lock = argv && argv.length === 2 && argv[0] === "loginctl" && argv[1] === "lock-session";
-    const session = argv && argv.length === 3 && argv[0] === "systemctl" && argv[1] === "--no-ask-password" && ["suspend","reboot","poweroff"].indexOf(argv[2]) >= 0;
-    if (!lock && !session)
-        return { run: false, confirmId: "", argv: null, error: "Power action is not available" };
-    return { run: true, confirmId: "", argv: argv, error: "" };
+    const step=powerStep(confirmId,id);
+    return {run:step.run,confirmId:step.confirmId,action:step.action,error:powerAction(id) ? "" : "Session action is not available"};
 }
 
 var SPOTLIGHT_MAX_WIDTH = 480;
@@ -700,7 +687,7 @@ var swiftshellLauncher = {
     rank: rank,
     viewRows: viewRows,
     moveSelection: moveSelection,
-    powerArgv: powerArgv,
+    powerAction: powerAction,
     powerStep: powerStep,
     pushRecent: pushRecent,
     monogram: monogram,

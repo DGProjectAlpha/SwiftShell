@@ -1316,3 +1316,41 @@ request was made. No user compositor configuration or display settings changed.
 Source backup: `/tmp/swiftshell-weather-navigation-backup`; revert this feature
 commit for recovery. Real location-provider behavior was not retested because
 this slice changes navigation and submission validation only.
+
+## Scoped session-action repair — 2026-11-05
+
+Lock previously emitted a logind request without a real locker; no locker was
+installed/listening on the reference session. Logout was missing. Detached bar
+commands hid subsequent failures, and Spotlight used a separate action path.
+Decision 0049 documents the shared SessionActions/service helper and recovery.
+
+The owner authorized installing the signed hyprlock 0.9.7-2.1 package; its resolved
+transaction contained only that package and no dependency upgrade. User-authored
+locker configuration takes precedence over the new bundled neutral fallback.
+Credentials were not added to code, settings or files. No Hyprland Lua, monitor
+mode, Noctalia, autostart or existing service configuration was edited.
+
+`scripts/check.sh` passed: 128 production QML documents, 30 QML suites and 231 QML
+cases, with no QML warning lines. `tests/test_sessionctl.py` passed 19 cases covering
+lock acknowledgement/failure/timeout, suspend ordering and authorization, inhibitor
+errors, current-compositor-only logout, known working reboot/poweroff routes,
+validated session resolution, user-config precedence and dry-run safety.
+`tests/live/session-actions.py --live` passed actual native QML/Process transport,
+logout confirmation, one-click lock and shared Spotlight/bar refusal messages. The
+private test helper deliberately cannot perform a real system action.
+
+Production helper snapshot and `lock/suspend/logout --dry-run` succeeded on this
+machine: active graphical session detected, locker present and CanSuspend=yes.
+The zero-argument Lua exit dispatcher was checked against the installed Hyprland
+0.57 source without executing it. Session-action availability/errors are included
+in the existing read-only shell diagnostics. The dependency checker warns when
+hyprlock is missing. Spotlight's action strip also passes a narrow-width bounds
+regression with the added Log out button.
+
+Actual lock/unlock, suspend/resume and logout were intentionally not triggered.
+Acceptance: Lock should open the password screen immediately; Suspend → Confirm
+Suspend should lock, then sleep; Log out → Confirm Log out should end this Hyprland
+session and return to the greeter. If refused, the error should remain readable in
+Power or Spotlight. No inhibitor override or forced session/user termination is used.
+Source backup is `/tmp/swiftshell-session-actions-backup`; revert the feature commit
+and restart only SwiftShell for code recovery. The installed locker can remain.
