@@ -1526,3 +1526,30 @@ Activated through a scoped SwiftShell restart. Production SessionActions snapsho
 reports all five actions available, ready=true, no error; settings persistence is
 ready. Runtime logs have no TypeError, ReferenceError, binding loop or load failure.
 Development file watching restored. No live session-ending or sleep action ran.
+
+## Non-locking Hyprlock authentication probe — 2026-11-06
+
+The owner requested restoring Hyprlock, contingent on safely testing the password
+failure. `scripts/test-hyprlock-auth.py` opens a local password dialog and calls the
+actual current user's `hyprlock` PAM service with pam_start/pam_authenticate/pam_end,
+matching Hyprlock's authentication API. It never launches a locker or opens a PAM
+session. One attempt per invocation prevents automatic retry loops; ordinary PAM
+failed-attempt policy still applies. Password input stays local/in memory; stdout
+contains only service, authenticated boolean and PAM code, never prompt contents
+or password. It does not accept credentials via command arguments or environment.
+
+Read-only checks: current faillock tally empty, login shell listed in /etc/shells,
+installed Hyprlock 0.9.7 PAM profile includes login/system-local-login/system-login/
+system-auth. Both actual SwiftShell and the test process have NoNewPrivs=0 and
+Seccomp=0; unix_chkpwd retains packaged privileged permissions. No PAM files or
+account policies were modified. These checks do not prove password acceptance.
+
+The native test window was launched and moved/focused on HDMI-A-1 so it would not
+be obscured by the DP-1 game. At this checkpoint it is awaiting the owner's local
+password entry; no authentication result has been reported and no lock was taken.
+Hyprlock restoration was prepared and passed scripts/check.sh (231 QML cases),
+19 backend tests and native isolated session-action routing, but was then held
+outside the active tree pending real PAM success. Prepared patch/config:
+/tmp/swiftshell-hyprlock-prepared.patch and /tmp/swiftshell-hyprlock-prepared.conf.
+The current committed session controls remain unchanged. Do not claim the original
+password rejection is diagnosed or that restored Hyprlock is activated yet.
