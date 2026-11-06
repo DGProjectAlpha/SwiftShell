@@ -12,6 +12,7 @@ TestCase {
 
     // Every shell QML document. The static check requires this list to match the tree.
     readonly property var shellFiles: [
+        "shell/services/SessionActions.qml",
         "shell/settings/WeatherPage.qml",
         "shell/services/WeatherService.qml",
         "shell/services/BarPeekController.qml",
@@ -273,7 +274,7 @@ TestCase {
             || message.indexOf("TrayMenuWindow.qml:") !== -1
             || message.indexOf("LauncherWindow.qml:19") !== -1
             || message.indexOf("NotificationHost.qml:24") !== -1
-            || message.indexOf("WallpaperSurface.qml:25") !== -1
+            || message.indexOf("WallpaperSurface.qml:36") !== -1
     }
 
     function test_top_level_files_resolve_project_types() {

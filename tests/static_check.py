@@ -930,7 +930,7 @@ def main():
         if path.name == "SurfaceService.qml":
             if text.count("Process {") != 1 or '"/helpers/windowctl.py","capabilities"' not in text or 'event.name === "configreloaded"' not in text:
                 errors.append("Surface capability probe must be a fixed read-only query on startup/config reload")
-        if "Process {" in text and path.name not in ("HyprlandModel.qml", "DisplayService.qml", "WindowService.qml", "SurfaceService.qml", "OverviewService.qml", "DesktopAppearance.qml", "ColorAnalysis.qml", "ClockService.qml", "DesktopTools.qml", "DefaultAppsService.qml", "ShortcutsService.qml", "LauncherModel.qml", "NetworkService.qml", "PowerProfiles.qml", "SettingsStore.qml", "SystemPerformance.qml", "ScreenshotService.qml", "ClipboardModel.qml", "WeatherService.qml", "BarPeekController.qml"):
+        if "Process {" in text and path.name not in ("HyprlandModel.qml", "DisplayService.qml", "WindowService.qml", "SurfaceService.qml", "OverviewService.qml", "DesktopAppearance.qml", "ColorAnalysis.qml", "ClockService.qml", "DesktopTools.qml", "DefaultAppsService.qml", "ShortcutsService.qml", "LauncherModel.qml", "NetworkService.qml", "PowerProfiles.qml", "SettingsStore.qml", "SystemPerformance.qml", "ScreenshotService.qml", "ClipboardModel.qml", "WeatherService.qml", "BarPeekController.qml", "SessionActions.qml"):
             errors.append(str(path.relative_to(ROOT)) + " polls or spawns a process")
         if "Timer {" in text:
             slideshow = path.name == "SlideshowClock.qml" and "Math.max(60000" in text

@@ -16,6 +16,17 @@ PanelWindow {
     readonly property url packagedSource: Qt.resolvedUrl("../assets/wallpapers/swiftshell-default-crimson.png")
     readonly property int limitEdge: Wallpaper.MAX_EDGE
 
+    // Hyprland 0.57 skips a layer's initial fade-in when it maps under
+    // fullscreen. Background layers then keep alpha=0 even after switching
+    // workspaces. Admit each surface once, after discovery and outside
+    // fullscreen; keep it mapped thereafter to avoid churn during gaming.
+    property bool admitted: false
+    readonly property bool canMap: !HyprlandModel.connected
+        || (HyprlandModel.monitorSnapshot.some(function(m) { return m.name === surface.outputName })
+            && HyprlandModel.fullscreenOutputs.indexOf(outputName) < 0)
+    visible: admitted
+    onCanMapChanged: { if (canMap) admitted = true }
+
     screen: modelData
     color: "black"
     focusable: false
@@ -59,6 +70,15 @@ PanelWindow {
 
     function imageForSlot(slot) {
         return slot === 0 ? slotA : slotB
+    }
+
+    // Report state without exposing the user's image filenames.
+    function diagnostics() {
+        return {output: outputName, screen: screen ? screen.name : "",
+                visible: visible, waitingForDesktop: !admitted,
+                override: ownImage, fallback: displayPath === "", failed: failed,
+                ready: imageForSlot(frontSlot).status === Image.Ready,
+                sourceMatches: imageForSlot(frontSlot).source.toString() === displaySource.toString()}
     }
 
     function pathForSlot(slot) {
@@ -169,6 +189,7 @@ PanelWindow {
     }
 
     Component.onCompleted: {
+        if (canMap) admitted = true
         syncShown()
         syncAnalysis()
     }
@@ -176,8 +197,11 @@ PanelWindow {
     onWidthChanged: syncAnalysis()
     onHeightChanged: syncAnalysis()
     onDisplayPathChanged: {
-        syncShown()
-        syncAnalysis()
+        // displaySource is another binding derived from displayPath. Its value
+        // can still be the previous URL in this signal handler (also on startup).
+        // Coalesce updates after the dependent bindings have settled.
+        Qt.callLater(syncShown)
+        Qt.callLater(syncAnalysis)
     }
     onShownPathChanged: failed = false
 

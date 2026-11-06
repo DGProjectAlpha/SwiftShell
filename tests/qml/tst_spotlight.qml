@@ -162,12 +162,24 @@ TestCase {
             verify(findChild(page,"spotlightOpenButton")!==null);
         } finally { page.destroy(); }
     }
-    function test_action_strip_and_confirmation_never_executes_first_click() {
-        for(const id of ["settings","lock","suspend","reboot","poweroff"])verify(findChild(card,"spotlight-action-"+id)!==null);
+    function test_action_strip_and_destructive_confirmation_never_executes_first_click() {
+        for(const id of ["settings","lock","suspend","logout","reboot","poweroff"])verify(findChild(card,"spotlight-action-"+id)!==null);
         Services.LauncherModel.runPower("reboot");
         compare(Services.LauncherModel.confirmId,"reboot");
         compare(Services.LauncherModel.actionBusy,false);
         Services.LauncherModel.confirmId="";
+    }
+    function test_all_session_actions_fit_the_narrow_launcher() {
+        card.width=400
+        waitForRendering(card)
+        let right=0
+        for(const id of ["settings","lock","suspend","logout","reboot","poweroff"]) {
+            const action=findChild(card,"spotlight-action-"+id),position=action.mapToItem(card,0,0)
+            verify(position.x>=0)
+            verify(position.x>=right)
+            verify(position.x+action.width<=card.width)
+            right=position.x+action.width
+        }
     }
     function test_provider_labels_render_literal_text() {
         card.providerRows=[{kind:"fixture",id:"literal",name:"<b>Literal query</b>",detail:"<i>Literal detail</i>"}]

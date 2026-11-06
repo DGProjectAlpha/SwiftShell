@@ -29,7 +29,7 @@ Singleton {
     property int indexedCount: -1
     property string notice: ""
     property string gridMode: "all"
-    readonly property bool actionBusy: powerProcess.running || terminalLaunch.running
+    readonly property bool actionBusy: SessionActions.busy || terminalLaunch.running
     property var terminalPayload:({})
     property string terminalLaunchId:""
 
@@ -204,6 +204,7 @@ Singleton {
         root.screen = resolved.screen;
         root.indexApplications();
         root.resetGridMode();
+        SessionActions.refresh();
         root.query = "";
         root.selected = 0;
         root.confirmId = "";
@@ -313,19 +314,12 @@ Singleton {
     }
 
     function runPower(id) {
-        if (powerProcess.running) return;
-        const step = Launcher.powerInvocation(root.confirmId, id);
-        root.confirmId = step.confirmId;
-        if (!step.run) {
-            if (step.error !== "") {
-                root.notice = step.error;
-                console.warn("SwiftShell: power action refused", id);
-            }
-            return;
-        }
-        powerProcess.command = step.argv;
-        root.notice = "Requesting session action…";
-        powerProcess.running = true;
+        if(root.actionBusy)return
+        const step=Launcher.powerInvocation(root.confirmId,id)
+        root.confirmId=step.confirmId
+        if(!step.run){if(step.error)root.notice=step.error;return}
+        if(SessionActions.perform(step.action))root.notice="Requesting session action…"
+        else root.notice=SessionActions.error
     }
 
     function moveFavorite(source,target) {
@@ -408,12 +402,13 @@ Singleton {
         }
     }
 
-    Process {
-        id: powerProcess
-        onExited: function(exitCode, exitStatus) {
-            root.confirmId = "";
-            if (exitCode === 0) root.closeLauncher();
-            else root.notice = "The session action was refused or is unavailable.";
+    Connections {
+        target:SessionActions
+        function onCompleted(action,success) {
+            if(action==="snapshot")return
+            root.confirmId=""
+            if(success)root.closeLauncher()
+            else root.notice=SessionActions.error || "The session action was refused."
         }
     }
 

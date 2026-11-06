@@ -36,3 +36,5 @@ singleton AudioService 1.0 AudioService.qml
 BarPeekController 1.0 BarPeekController.qml
 
 singleton WeatherService 1.0 WeatherService.qml
+
+singleton SessionActions 1.0 SessionActions.qml

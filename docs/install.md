@@ -10,6 +10,8 @@ Automatic package installation is implemented for Arch-based systems that have `
 
 The Quickshell APIs used by the bar were written against the 0.2 and 0.3 documentation. The current checker requires Quickshell 0.3.2 and Hyprland 0.57 for the locally verified native Settings and Lua display APIs. Settings shadows use Qt 6.9 or later. Python 3 and wayland-utils provide the scoped helpers and read-only blur capability probe. Source-backed shortcut editing additionally needs the Lua compiler (`luac`, provided by `lua` on Arch/CachyOS or `lua5.4` on Ubuntu). If validation is unavailable, edits are rejected before configuration changes.
 
+Secure Lock and lock-before-Suspend additionally require `hyprlock`. SwiftShell reports it when missing; it does not silently install a locker or overwrite existing locker settings. On Arch/CachyOS install it with `sudo pacman -S --needed hyprlock`.
+
 Qt 6 Quick and Quick Layouts are required. `QtQuick.Dialogs` and `Qt.labs.folderlistmodel` provide native wallpaper image/folder selection and slideshow enumeration; on Arch/CachyOS both are shipped by `qt6-declarative`. If either QML module is absent, SwiftShell keeps the explicitly tested individual path-entry fallback and `swiftshell doctor` reports the missing module.
 
 ## Install from GitHub

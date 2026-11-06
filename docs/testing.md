@@ -1316,3 +1316,115 @@ request was made. No user compositor configuration or display settings changed.
 Source backup: `/tmp/swiftshell-weather-navigation-backup`; revert this feature
 commit for recovery. Real location-provider behavior was not retested because
 this slice changes navigation and submission validation only.
+
+## Scoped session-action repair — 2026-11-05
+
+Lock previously emitted a logind request without a real locker; no locker was
+installed/listening on the reference session. Logout was missing. Detached bar
+commands hid subsequent failures, and Spotlight used a separate action path.
+Decision 0049 documents the shared SessionActions/service helper and recovery.
+
+The owner authorized installing the signed hyprlock 0.9.7-2.1 package; its resolved
+transaction contained only that package and no dependency upgrade. User-authored
+locker configuration takes precedence over the new bundled neutral fallback.
+Credentials were not added to code, settings or files. No Hyprland Lua, monitor
+mode, Noctalia, autostart or existing service configuration was edited.
+
+`scripts/check.sh` passed: 128 production QML documents, 30 QML suites and 231 QML
+cases, with no QML warning lines. `tests/test_sessionctl.py` passed 19 cases covering
+lock acknowledgement/failure/timeout, suspend ordering and authorization, inhibitor
+errors, current-compositor-only logout, known working reboot/poweroff routes,
+validated session resolution, user-config precedence and dry-run safety.
+`tests/live/session-actions.py --live` passed actual native QML/Process transport,
+logout confirmation, one-click lock and shared Spotlight/bar refusal messages. The
+private test helper deliberately cannot perform a real system action.
+
+Production helper snapshot and `lock/suspend/logout --dry-run` succeeded on this
+machine: active graphical session detected, locker present and CanSuspend=yes.
+The zero-argument Lua exit dispatcher was checked against the installed Hyprland
+0.57 source without executing it. Session-action availability/errors are included
+in the existing read-only shell diagnostics. The dependency checker warns when
+hyprlock is missing. Spotlight's action strip also passes a narrow-width bounds
+regression with the added Log out button.
+
+Actual lock/unlock, suspend/resume and logout were intentionally not triggered.
+Acceptance: Lock should open the password screen immediately; Suspend → Confirm
+Suspend should lock, then sleep; Log out → Confirm Log out should end this Hyprland
+session and return to the greeter. If refused, the error should remain readable in
+Power or Spotlight. No inhibitor override or forced session/user termination is used.
+Source backup is `/tmp/swiftshell-session-actions-backup`; revert the feature commit
+and restart only SwiftShell for code recovery. The installed locker can remain.
+
+## Per-output wallpaper binding repair — 2026-11-05
+
+A real SwiftShell cold start reproduced DP-1's saved file override with a ready
+image whose source did **not** match the resolved configured URL; HDMI-A-1's
+shared packaged image matched. Both background surfaces were attached to the
+correct connectors. `onDisplayPathChanged` read `displaySource` before that
+dependent QML binding updated, leaving the previous texture visible. Deferring
+and coalescing the slot update with `Qt.callLater` resolves that binding race.
+Read-only diagnostics now expose output/screen, override/fallback, decode readiness,
+failure and URL equality without exposing image paths.
+
+`scripts/check.sh` passed (128 production QML documents; 30 QML suites, 231 cases,
+zero failures). `python tests/live/wallpaper-outputs.py --live` passed two native
+Wayland cold starts on both connected monitors, distinct shared/per-output PNGs,
+replacement and removal of an override. The same test against the old renderer
+failed at initial source matching. This opt-in regression briefly creates owned
+background surfaces; it uses isolated configuration/state/cache and removes its
+surfaces on exit. It never changes user preferences, windows, modes or Lua files.
+
+Recovery: revert this change and restart only SwiftShell. Source/preferences were
+backed up under `/tmp/swiftshell-wallpaper-backup` before editing. No preference
+migration is needed. Fullscreen games legitimately obscure wallpaper layers;
+the regression checks each surface's actual screen and image state independently.
+Actual reboot remains untested; two process cold starts are verified.
+
+After activating the repair by a scoped SwiftShell restart, actual user-state
+readback showed DP-1 override=true, fallback=false, ready=true,
+sourceMatches=true; HDMI-A-1 shared packaged source ready=true,
+sourceMatches=true. Wallpaper preferences remained identical to the backup.
+Runtime logs contained no TypeError, ReferenceError, binding loop or wallpaper
+surface diagnostics. Development source watching was restored.
+
+## Wallpaper hidden after fullscreen startup — 2026-11-05
+
+Follow-up visual inspection found a second defect independent of the image URL
+binding race: DP-1 showed Hyprland's blue droplet wallpaper, even though its correct
+red/black image had decoded. After switching from the existing fullscreen game to
+empty workspace 1, `hyprctl -j layers` still reported SwiftShell's background at
+alpha=0. The previous source/readiness checks therefore did not establish visual
+success.
+
+The installed Hyprland revision `0aa6745f705f2c4b0a5004eb019ef76e5bbdb426`
+initializes a layer's fade alpha to zero and skips `animateIn()` in `onMap()` when
+its output already contains fullscreen; background layers do not subsequently
+receive the top-layer fullscreen restoration. Verified against
+[LayerSurface.cpp](https://github.com/hyprwm/Hyprland/blob/0aa6745f705f2c4b0a5004eb019ef76e5bbdb426/src/desktop/view/LayerSurface.cpp).
+SwiftShell now waits for monitor discovery and a non-fullscreen desktop before
+first mapping each wallpaper surface. Once admitted, the surface stays mapped;
+ordinary workspace/game transitions do not recreate it. No compositor rule,
+user-authored configuration or display mode is changed.
+
+`python tests/live/wallpaper-outputs.py --live --fullscreen-output DP-1
+--desktop-workspace 1` passes two native cold starts while the existing game is
+fullscreen. It requires an existing empty desktop workspace on the same output,
+checks initial deferred mapping, switches briefly to that workspace, checks the
+owned native layer reaches compositor alpha=1, and restores original workspace
+and focus in cleanup. Image replacement/shared fallback regressions remain active.
+The fixture cannot prove its pixels are topmost over an already running wallpaper
+owner; an attempted pixel assertion was removed because background stacking made
+that assumption false.
+
+Separately, production SwiftShell was restarted while RuneScape was fullscreen.
+The DP-1 background correctly waited unmapped, then mapped at alpha=1 on workspace
+1. A real DP-1 screenshot was inspected and visibly showed the intended red/black
+woman-with-rifle wallpaper. Gaming and HDMI focus were restored. This verifies the
+actual visible image, not only decoded-source equality. Backup:
+`/tmp/swiftshell-wallpaper-fullscreen-backup`. Recovery: revert this slice and
+restart only SwiftShell. Reboot remains untested.
+
+Final validation: `scripts/check.sh` passed all static/logic/helper checks and
+30 QML suites / 231 cases. Native fullscreen-startup regression passed again after
+cleanup hardening. Production runtime had zero TypeError, ReferenceError, binding
+loop and configuration-load failures; source watching was restored.

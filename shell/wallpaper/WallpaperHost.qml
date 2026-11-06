@@ -5,6 +5,10 @@ import "../services"
 Scope {
     id: root
 
+    function diagnostics() {
+        return wallpapers.instances.map(function(surface) { return surface.diagnostics() })
+    }
+
     function refreshOutputs() {
         var names = []
         var screens = Quickshell.screens || []
@@ -24,6 +28,7 @@ Scope {
     }
 
     Variants {
+        id: wallpapers
         model: Quickshell.screens
         WallpaperSurface {}
     }
