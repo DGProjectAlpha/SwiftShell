@@ -197,6 +197,11 @@ to capture an area or the focused display, or click the camera in the bar. Revie
 the image, then choose Copy PNG or Save as… for a local PNG file. Area selection
 supports Escape to cancel; optional 3/5-second delays let you prepare the screen.
 Capturing never overwrites the clipboard until you choose Copy PNG.
+The Capture utility stays open when you click elsewhere or open Spotlight. Close
+it with Close, or Escape while Capture has keyboard focus. To capture Spotlight
+or another panel, set a 3/5-second delay, start Capture, then open the target panel.
+Only Capture itself hides during acquisition and returns afterward; target panels
+are left visible.
 
 Clipboard history is off by default. Enable it in Settings → Spotlight Search to
 remember text copied from then on. Type `clip` or `clip some text` to browse/search

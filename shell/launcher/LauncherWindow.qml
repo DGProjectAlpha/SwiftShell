@@ -21,6 +21,7 @@ PanelWindow {
     WlrLayershell.keyboardFocus: visible ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
     readonly property bool searchHasFocus: card.searchHasFocus
+    property var companionWindows: []
     readonly property bool surfaceBlurApplied: backdrop.applied
     readonly property var frame: Launcher.gridFrame(screen ? screen.width : 0,screen ? screen.height : 0)
     property bool dismissing: false
@@ -55,7 +56,7 @@ PanelWindow {
         function onInputRequested(){window.focusField();}
     }
     Component.onDestruction: releaseInput()
-    HyprlandFocusGrab {id:focusGrab;windows:[window];onCleared:window.dismiss();}
+    HyprlandFocusGrab {id:focusGrab;windows:[window].concat(window.companionWindows);onCleared:window.dismiss();}
     MouseArea {anchors.fill:parent;onClicked:window.dismiss();}
     Loader {
         id:shadowLoader

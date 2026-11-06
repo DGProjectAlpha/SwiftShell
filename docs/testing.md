@@ -1458,3 +1458,33 @@ The regression now tolerates intended remap gaps and verifies actual compositor
 visibility rather than requiring the same native surface. `scripts/check.sh`
 passed all checks, including 30 QML suites / 231 cases. No real game input or
 Noctalia changes were made.
+
+## Persistent Capture alongside Spotlight — 2026-11-05
+
+Capture previously used an exclusive keyboard grab, closed on focus-grab loss and
+closed on outside clicks. Starting acquisition also globally dismissed Spotlight,
+overview and bar panels, making screenshots of those surfaces impossible.
+ScreenshotWindow now accepts input only within its card, uses on-demand keyboard
+focus and remains open until explicit Close/Escape. Spotlight's focus grab accepts
+the visible Capture window as a companion, so operating Capture does not dismiss
+the target. Acquisition hides only Capture itself and returns it afterward; the
+global target-panel dismissal connection was removed.
+
+`scripts/check.sh` passed all checks, 30 QML suites / 231 cases. Extended
+`python tests/live/screenshot-review.py --live` passed on HDMI-A-1 and DP-1:
+Capture survives opening/closing real Spotlight with keyboard focus, capture leaves
+Spotlight open, preview loads, private PNG clipboard transport works and native
+Save As exports a real PNG. These tests use owned opaque checkerboard surfaces,
+isolated preferences and a private clipboard sink; desktop clipboard is unchanged.
+A root-wiring static regression prevents acquisition from closing target panels.
+
+The tested change was activated with a scoped SwiftShell restart. Production logs
+showed no TypeError, ReferenceError, binding loop, configuration-load or Capture
+surface errors. Source watching was restored. User preferences, compositor config,
+Noctalia, modes and autostart were unchanged. Physical user acceptance: open Capture,
+set a delay, start it, open Spotlight and verify Spotlight appears in the resulting
+image. The native regression checks Spotlight lifetime and owned-region acquisition,
+not a manual user's region selection of Spotlight pixels.
+
+Recovery: revert this feature commit and restart only SwiftShell. Source backup:
+`/tmp/swiftshell-capture-persistence-backup`.

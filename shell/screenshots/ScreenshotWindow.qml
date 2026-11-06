@@ -17,19 +17,15 @@ PanelWindow {
     implicitHeight:screen ? screen.height : 1
     WlrLayershell.namespace:"swiftshell-screenshot"
     WlrLayershell.layer:WlrLayer.Overlay
-    WlrLayershell.keyboardFocus:visible && !window.saving ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus:visible && !window.saving ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+    // Capture is a persistent utility, not a dismiss-on-focus-loss popover.
+    // Only the card accepts input; the surrounding desktop stays interactive.
+    mask:Region {item:surface}
     property bool saving:false
     readonly property bool surfaceBlurApplied:backdrop.applied
     function diagnostics(){return {visible:visible,blurApplied:backdrop.applied,hasImage:ScreenshotService.hasImage,busy:ScreenshotService.busy,saving:saving,frame:{x:surface.x,y:surface.y,width:surface.width,height:surface.height}}}
-    onVisibleChanged: {
-        if(visible)Qt.callLater(function(){if(window.visible){grab.active=true;surface.forceActiveFocus()}})
-        else grab.active=false
-    }
     onClosed:ScreenshotService.close()
-    Component.onDestruction:grab.active=false
-    HyprlandFocusGrab {id:grab;windows:[window];onCleared:if(!window.saving)ScreenshotService.close()}
     BackdropEffect {id:backdrop;targetWindow:window;surface:surface.blurSurface;cornerRadius:Theme.radius;enabled:window.visible && SettingsStore.panelBlur>0}
-    MouseArea {anchors.fill:parent;onClicked:ScreenshotService.close()}
     PopoverSurface {
         id:surface
         x:Math.round((window.width-width)/2)
@@ -44,7 +40,7 @@ PanelWindow {
             active:false
             source:"ScreenshotSaveDialog.qml"
             onLoaded: {
-                window.saving=true;grab.active=false
+                window.saving=true
                 item.open()
             }
             onStatusChanged:if(status===Loader.Error){window.saving=false;ScreenshotService.saveDialogUnavailable()}
@@ -52,10 +48,10 @@ PanelWindow {
     }
     Connections {
         target:ScreenshotService
-        function onSaveRequested(){if(dialogLoader.item){window.saving=true;grab.active=false;dialogLoader.item.open()}else dialogLoader.active=true}
+        function onSaveRequested(){if(dialogLoader.item){window.saving=true;dialogLoader.item.open()}else dialogLoader.active=true}
     }
     Connections {
         target:dialogLoader.item
-        function onVisibleChanged(){if(dialogLoader.item && !dialogLoader.item.visible){window.saving=false;if(window.visible)grab.active=true}}
+        function onVisibleChanged(){if(dialogLoader.item && !dialogLoader.item.visible)window.saving=false}
     }
 }

@@ -111,9 +111,8 @@ ShellRoot {
         }
     }
 
-    Connections {target:DesktopTools;function onCaptureRequested(){LauncherModel.closeLauncher();OverviewService.closeOverview();barHost.closePanels()}}
     BarHost { id: barHost }
-    LauncherWindow { id: launcherWindow }
+    LauncherWindow { id: launcherWindow; companionWindows:screenshotWindow.visible ? [screenshotWindow] : [] }
     OverviewWindow {id:overviewWindow}
     ScreenshotWindow {id:screenshotWindow}
     ClipboardWindow {id:clipboardWindow}
