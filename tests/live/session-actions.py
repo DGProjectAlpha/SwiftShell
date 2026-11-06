@@ -84,6 +84,8 @@ ShellRoot {
                 wait(lambda:not state()['busy'] and 'refused logout' in state()['error'])
                 assert state()['status']==state()['error']
                 assert call('activate','lock')=='true'
+                assert state()['confirm']=='lock'
+                assert call('activate','lock')=='true'
                 wait(lambda:not state()['busy'] and 'refused lock' in state()['error'])
                 assert operations().count('lock')==1
                 for _ in range(2):assert call('activate','suspend')=='true'
@@ -101,7 +103,7 @@ ShellRoot {
                     except subprocess.TimeoutExpired:process.kill();process.wait()
         text=(folder/'runtime.log').read_text()
         assert not any(error in text for error in ['TypeError','ReferenceError','Binding loop','Failed to load configuration']),text
-        print('PASS native session UI: logout confirmation, one-click lock, suspend refusal, shared Spotlight/bar errors; no real system action',flush=True)
+        print('PASS native session UI: logout confirmation, confirmed return-to-login, suspend refusal, shared Spotlight/bar errors; no real system action',flush=True)
 
 
 if __name__=='__main__':main()

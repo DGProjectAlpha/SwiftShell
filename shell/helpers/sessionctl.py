@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Scoped session actions with a real lock barrier and visible backend failures.
+"""Return to the system login screen; scoped sleep and session actions.
 
-No credentials are accepted here. Hyprlock owns its PAM conversation. No service,
-compositor configuration or monitor setting is changed by this adapter.
+Lock intentionally signs out, as requested by the owner. Suspend signs out
+behind a logind sleep-delay inhibitor, so waking returns to the boot greeter.
+No credentials, service configuration or compositor files are changed.
 """
 import argparse
 import json
@@ -12,6 +13,7 @@ import re
 import shutil
 import subprocess
 import time
+import sys
 from displayctl import ipc
 
 ACTIONS=('lock','suspend','logout','reboot','poweroff')
@@ -77,25 +79,46 @@ class Runtime:
         try:return bool(json.loads(ipc('j/version')).get('version'))
         except (OSError,ValueError,RuntimeError):return False
 
-    def locked(self):
-        try:return json.loads(ipc('j/locked')).get('locked') is True
-        except (OSError,ValueError,RuntimeError):raise ActionError('The compositor could not confirm a secure screen lock.') from None
+    def greeter(self):
+        try:
+            seats=json.loads(self.run(['busctl','--system','--json=short','get-property',
+                'org.freedesktop.DisplayManager','/org/freedesktop/DisplayManager',
+                'org.freedesktop.DisplayManager','Seats']))['data']
+            return bool(seats)
+        except (ActionError,ValueError,KeyError,TypeError):return False
 
-    def locker(self):
-        executable=shutil.which('hyprlock')
-        if not executable:return None
-        config=Path(os.environ.get('XDG_CONFIG_HOME',str(Path.home()/'.config')))/'hypr/hyprlock.conf'
-        if not config.is_file():config=Path(__file__).resolve().parents[1]/'config/hyprlock.conf'
-        if not config.is_file():return None
-        return [executable,'--quiet','--grace','0','--immediate-render','--config',str(config)]
+    def suspend_to_greeter(self):
+        if not shutil.which('systemd-inhibit'):
+            raise ActionError('Sleep coordination is unavailable. Return to login, then use the login screen to sleep.')
+        self.run(['systemd-inhibit','--what=sleep','--mode=delay','--who=SwiftShell',
+                  '--why=Return to the login screen before sleeping',
+                  sys.executable,str(Path(__file__).resolve()),'suspend-greeter'],timeout=65)
 
-    def spawn_locker(self,command):
-        return subprocess.Popen(command,stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,start_new_session=True)
+    def start_suspend(self):
+        return subprocess.Popen(['busctl','--system','--allow-interactive-authorization=yes','call',
+            DEST,MANAGER,IFACE,'Suspend','b','true'],stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+
+    def preparing_for_sleep(self):
+        raw=self.run(['busctl','--system','--json=short','get-property',DEST,MANAGER,IFACE,'PreparingForSleep'])
+        return json.loads(raw).get('data') is True
 
     def clock(self):return time.monotonic()
     def wait(self):time.sleep(.08)
     def exit_compositor(self):
         if ipc('eval hl.dispatch(hl.dsp.exit())').strip()!='ok':raise ActionError('The compositor refused to end this session.')
+
+    def finish_session_for_sleep(self,identifier):
+        # Keep the inhibitor until the compositor is gone, not just until its
+        # exit request is acknowledged. Fallback is scoped to our validated ID.
+        try:self.exit_compositor()
+        except (ActionError,OSError,RuntimeError):
+            self.run(['loginctl','terminate-session',identifier]);return
+        deadline=self.clock()+2
+        while self.hyprland():
+            if self.clock()>=deadline:
+                self.run(['loginctl','terminate-session',identifier]);return
+            self.wait()
 
 
 def capability(runtime,method):
@@ -111,26 +134,43 @@ def snapshot(runtime=None):
     try:session=runtime.session();session_error=''
     except ActionError as error:session=None;session_error=str(error)
     hypr=runtime.hyprland()
-    locker=runtime.locker() if hypr else None
-    lock_reason='' if session and locker else session_error or ('Install hyprlock to enable secure locking.' if hypr else 'Secure locking is not available for this compositor.')
-    actions={'lock':{'available':not lock_reason,'reason':lock_reason},'logout':{'available':bool(session and hypr),'reason':'' if session and hypr else session_error or 'Logout is not available for this compositor.'}}
+    greeter=runtime.greeter()
+    reason='' if session and hypr and greeter else session_error or 'The system login screen is unavailable.'
+    actions={key:{'available':not reason,'reason':reason} for key in ('lock','logout')}
     for action,method in [('suspend','CanSuspend'),('reboot','CanReboot'),('poweroff','CanPowerOff')]:actions[action]=capability(runtime,method)
-    if actions['suspend']['available'] and lock_reason:actions['suspend']={'available':False,'reason':'Locking must be available before suspending. '+lock_reason}
+    if actions['suspend']['available'] and reason:actions['suspend']={'available':False,'reason':reason}
     return {'ok':True,'actions':actions}
 
 
-def lock(runtime):
-    if runtime.locked():return
-    command=runtime.locker()
-    if not command:raise ActionError('Install hyprlock to enable secure locking.')
-    try:process=runtime.spawn_locker(command)
-    except OSError:raise ActionError('The screen locker could not be started.') from None
-    deadline=runtime.clock()+10
-    while runtime.clock()<deadline:
-        if runtime.locked():return
-        if process.poll() is not None:raise ActionError('The screen locker exited before locking. Check your lock-screen configuration.')
-        runtime.wait()
-    raise ActionError('The screen locker did not confirm a secure lock. The session action was cancelled.')
+def suspend_greeter(runtime=None):
+    """Executed under systemd-inhibit's delay FD; never sleeps before acceptance.
+
+    Request Suspend while the graphical session/authorization agent still exists.
+    Only after logind acknowledges PreparingForSleep do we end this compositor.
+    The inhibitor delays physical sleep until this command/session exits. No new
+    service, elevated helper or persistent sleep hook is installed.
+    """
+    runtime=runtime or Runtime()
+    owned=runtime.session()
+    if not runtime.hyprland() or not runtime.greeter():
+        raise ActionError('The current desktop cannot return to the login screen.')
+    process=runtime.start_suspend()
+    deadline=runtime.clock()+45
+    try:
+        while not runtime.preparing_for_sleep():
+            if process.poll() is not None:
+                raise ActionError('Sleep was refused or authorization was cancelled. Your desktop is still open.')
+            if runtime.clock()>=deadline:
+                raise ActionError('Sleep was not accepted. Your desktop is still open.')
+            runtime.wait()
+        runtime.finish_session_for_sleep(owned['Id'])
+    finally:
+        # Releasing the delay inhibitor completes an accepted sleep request.
+        # Before acceptance, stop a pending authorization request on error.
+        if process.poll() is None:
+            process.terminate()
+            try:process.wait(timeout=2)
+            except subprocess.TimeoutExpired:process.kill();process.wait()
 
 
 def perform(action,runtime=None,dry_run=False):
@@ -143,23 +183,23 @@ def perform(action,runtime=None,dry_run=False):
     # or trust a stale session id from the shell environment.
     runtime.session()
     if dry_run:
-        return {'ok':True,'dryRun':True,'action':action,'route':{'lock':'hyprlock','suspend':'locked-logind-suspend','logout':'current-hyprland-exit','reboot':'systemctl-reboot','poweroff':'systemctl-poweroff'}[action]}
-    if action in ('lock','suspend'):lock(runtime)
-    if action=='suspend':
-        if not runtime.locked():raise ActionError('The screen was unlocked before suspend. Sleep was cancelled.')
-        runtime.bus('Suspend')
-    elif action=='logout':runtime.exit_compositor()
+        return {'ok':True,'dryRun':True,'action':action,'route':{'lock':'current-hyprland-exit-to-greeter','suspend':'inhibited-signout-logind-suspend','logout':'current-hyprland-exit','reboot':'systemctl-reboot','poweroff':'systemctl-poweroff'}[action]}
+    if action=='suspend':runtime.suspend_to_greeter()
+    elif action in ('lock','logout'):runtime.exit_compositor()
     elif action in ('reboot','poweroff'):runtime.run(['systemctl','--no-ask-password',action],timeout=45)
-    return {'ok':True,'action':action,'message':{'lock':'Screen locked.','suspend':'Suspend was accepted by the system.','logout':'Ending this desktop session…','reboot':'Restart was requested.','poweroff':'Shut down was requested.'}[action]}
+    return {'ok':True,'action':action,'message':{'lock':'Signing out to the system login screen…','suspend':'Suspend was accepted by the system.','logout':'Ending this desktop session…','reboot':'Restart was requested.','poweroff':'Shut down was requested.'}[action]}
 
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action',choices=('snapshot',)+ACTIONS)
+    parser.add_argument('action',choices=('snapshot','suspend-greeter')+ACTIONS)
     parser.add_argument('--dry-run',action='store_true')
     args=parser.parse_args()
     try:
-        result=snapshot() if args.action=='snapshot' else perform(args.action,dry_run=args.dry_run)
+        if args.action=='suspend-greeter':
+            if args.dry_run:raise ActionError('Use suspend --dry-run to inspect this action.')
+            suspend_greeter();result={'ok':True}
+        else:result=snapshot() if args.action=='snapshot' else perform(args.action,dry_run=args.dry_run)
         print(json.dumps(result,separators=(',',':')))
     except (ActionError,ValueError,KeyError,TypeError,OSError) as error:
         message=str(error) if isinstance(error,ActionError) else 'Session controls are unavailable. Refresh and try again.'

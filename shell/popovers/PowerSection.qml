@@ -22,7 +22,7 @@ Column {
     Text {
         width: parent.width
         wrapMode: Text.WordWrap
-        text: "Lock immediately, or choose another action and confirm."
+        text: "Lock returns to the login screen and closes your apps. Suspend also signs out before sleeping. Save your work, then select an action twice to confirm."
         color: Theme.settingsMuted
         font.family: Theme.settingsFontFamily
         font.pixelSize: Theme.settingsFontSizeSmall

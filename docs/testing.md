@@ -1488,3 +1488,41 @@ not a manual user's region selection of Spotlight pixels.
 
 Recovery: revert this feature commit and restart only SwiftShell. Source backup:
 `/tmp/swiftshell-capture-persistence-backup`.
+
+## System login-screen semantics — 2026-11-06
+
+The owner rejected Hyprlock and explicitly requested that Lock sign out to the
+boot login screen, and Suspend sleep with that login screen on wake. Decision
+0050 supersedes 0049. Lock/Log out now exit only the validated current Hyprland
+session. Suspend uses a real logind sleep-delay inhibitor: request sleep while
+authorization is available, wait for PreparingForSleep, finish this compositor,
+then release the delay. Both actions explain that apps close and require
+confirmation. SwiftShell no longer starts Hyprlock or supplies a password screen.
+
+Read-only probes verified active Plasma Login 6.8.2 and its DisplayManager/Seat0
+interfaces, valid current graphical session, available logind capabilities, actual
+JSON boolean/seat property formats, and autologin/relogin off. `lock --dry-run` and
+`suspend --dry-run` report the new routes. A harmless `systemd-inhibit --what=sleep
+--mode=delay ... /usr/bin/true` successfully acquired/released an inhibitor without
+sleeping. No existing service, user Lua, PAM, Noctalia or display configuration was
+edited, and no package was removed or installed.
+
+`scripts/check.sh` passed: 128 QML files, 30 QML suites / 231 cases. Python session
+helper tests: 21 passing cases, including sign-out without any locker, sleep
+acceptance ordering, denial/timeout without sign-out, compositor-exit wait and
+validated-session-only termination fallback. Native `tests/live/session-actions.py
+--live` passed Power/Spotlight confirmations and shared refusal/busy/error reporting
+with an isolated helper that cannot perform any real session action.
+
+Actual logout, greeter arrival, physical sleep and resume were not triggered.
+Owner acceptance: save work; Lock → Confirm Lock should end apps and show Plasma
+Login. After logging in, save work; Suspend → Confirm Suspend should end apps and
+sleep; wake should show Plasma Login. No separate SwiftShell/Hyprlock password UI
+should appear. Failed pre-sleep authorization should leave the desktop open.
+Recovery: revert this slice and restart only SwiftShell; backup is
+`/tmp/swiftshell-greeter-actions-backup`.
+
+Activated through a scoped SwiftShell restart. Production SessionActions snapshot
+reports all five actions available, ready=true, no error; settings persistence is
+ready. Runtime logs have no TypeError, ReferenceError, binding loop or load failure.
+Development file watching restored. No live session-ending or sleep action ran.

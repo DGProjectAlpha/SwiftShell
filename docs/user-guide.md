@@ -296,14 +296,13 @@ cannot be safely linked explicitly show that the choice is used only by SwiftShe
 
 ### Lock, sleep and switching desktops
 
-Use the bar's Power panel or Spotlight's bottom actions. **Lock** opens the secure
-lock screen immediately. **Suspend**, **Log out**, **Restart** and **Shut down** ask
-for a second confirmation. Log out ends this Hyprland session and returns control
-to the login manager, where you can select another desktop.
+Use the bar's Power panel or Spotlight's bottom actions. **Lock** signs out of this
+desktop and returns to the same system login screen shown at boot. It closes your
+apps; save work first. **Log out** has the same destination. Select the action twice
+to confirm, or Escape to cancel.
 
-Lock and lock-before-suspend require `hyprlock`. If it is missing, install the
-package through your package manager; the controls explain why they are unavailable.
-An existing Hyprlock configuration is respected, otherwise SwiftShell supplies a
-neutral fallback. Hyprlock handles your unlock password directly. Suspend waits
-for a secure lock before asking the system to sleep and respects applications'
-sleep inhibitors. Refused or failed actions show an error in the panel or Spotlight.
+**Suspend** also ends this desktop session, then sleeps the PC. On wake, use the
+normal system login screen. A logind delay inhibitor coordinates accepted sleep
+with ending this session; denied sleep leaves the desktop open. SwiftShell does
+not launch Hyprlock or use a separate unlock password. Restart and Shut down retain
+their existing confirmation and system routes. Errors appear in Power or Spotlight.
