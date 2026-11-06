@@ -1354,3 +1354,35 @@ session and return to the greeter. If refused, the error should remain readable 
 Power or Spotlight. No inhibitor override or forced session/user termination is used.
 Source backup is `/tmp/swiftshell-session-actions-backup`; revert the feature commit
 and restart only SwiftShell for code recovery. The installed locker can remain.
+
+## Per-output wallpaper binding repair — 2026-11-05
+
+A real SwiftShell cold start reproduced DP-1's saved file override with a ready
+image whose source did **not** match the resolved configured URL; HDMI-A-1's
+shared packaged image matched. Both background surfaces were attached to the
+correct connectors. `onDisplayPathChanged` read `displaySource` before that
+dependent QML binding updated, leaving the previous texture visible. Deferring
+and coalescing the slot update with `Qt.callLater` resolves that binding race.
+Read-only diagnostics now expose output/screen, override/fallback, decode readiness,
+failure and URL equality without exposing image paths.
+
+`scripts/check.sh` passed (128 production QML documents; 30 QML suites, 231 cases,
+zero failures). `python tests/live/wallpaper-outputs.py --live` passed two native
+Wayland cold starts on both connected monitors, distinct shared/per-output PNGs,
+replacement and removal of an override. The same test against the old renderer
+failed at initial source matching. This opt-in regression briefly creates owned
+background surfaces; it uses isolated configuration/state/cache and removes its
+surfaces on exit. It never changes user preferences, windows, modes or Lua files.
+
+Recovery: revert this change and restart only SwiftShell. Source/preferences were
+backed up under `/tmp/swiftshell-wallpaper-backup` before editing. No preference
+migration is needed. Fullscreen games legitimately obscure wallpaper layers;
+the regression checks each surface's actual screen and image state independently.
+Actual reboot remains untested; two process cold starts are verified.
+
+After activating the repair by a scoped SwiftShell restart, actual user-state
+readback showed DP-1 override=true, fallback=false, ready=true,
+sourceMatches=true; HDMI-A-1 shared packaged source ready=true,
+sourceMatches=true. Wallpaper preferences remained identical to the backup.
+Runtime logs contained no TypeError, ReferenceError, binding loop or wallpaper
+surface diagnostics. Development source watching was restored.

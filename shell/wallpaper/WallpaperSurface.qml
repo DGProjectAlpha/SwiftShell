@@ -61,6 +61,14 @@ PanelWindow {
         return slot === 0 ? slotA : slotB
     }
 
+    // Report state without exposing the user's image filenames.
+    function diagnostics() {
+        return {output: outputName, screen: screen ? screen.name : "",
+                override: ownImage, fallback: displayPath === "", failed: failed,
+                ready: imageForSlot(frontSlot).status === Image.Ready,
+                sourceMatches: imageForSlot(frontSlot).source.toString() === displaySource.toString()}
+    }
+
     function pathForSlot(slot) {
         return slot === 0 ? surface.slotAPath : surface.slotBPath
     }
@@ -176,8 +184,11 @@ PanelWindow {
     onWidthChanged: syncAnalysis()
     onHeightChanged: syncAnalysis()
     onDisplayPathChanged: {
-        syncShown()
-        syncAnalysis()
+        // displaySource is another binding derived from displayPath. Its value
+        // can still be the previous URL in this signal handler (also on startup).
+        // Coalesce updates after the dependent bindings have settled.
+        Qt.callLater(syncShown)
+        Qt.callLater(syncAnalysis)
     }
     onShownPathChanged: failed = false
 
