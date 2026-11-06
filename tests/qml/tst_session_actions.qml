@@ -39,16 +39,14 @@ TestCase {
         compare(worker.command[worker.command.length-1],"logout")
         verify(worker.command[1].endsWith("/helpers/sessionctl.py"))
     }
-    function test_lock_signout_requires_confirmation_and_waits_for_backend() {
-        mouseClick(findChild(section,"session-action-lock"))
-        compare(section.confirmId,"lock");verify(!Services.SessionActions.busy)
+    function test_lock_is_immediate_but_success_waits_for_backend() {
         mouseClick(findChild(section,"session-action-lock"))
         compare(Services.SessionActions.operation,"lock")
         verify(Services.SessionActions.busy)
         verify(Services.SessionActions.notice.indexOf("Requesting")>=0)
-        reply.text=JSON.stringify({ok:true,message:"Signing out to the system login screen…"})
+        reply.text=JSON.stringify({ok:true,message:"Screen locked."})
         worker.running=false;worker.exited(0,0)
-        compare(Services.SessionActions.notice,"Signing out to the system login screen…")
+        compare(Services.SessionActions.notice,"Screen locked.")
     }
     function test_failed_suspend_is_visible_in_the_power_panel() {
         Services.SessionActions.perform("suspend")
@@ -81,13 +79,13 @@ TestCase {
         compare(Services.SessionActions.error,"Session controls did not respond. Refresh and try again.")
         compare(findChild(section,"sessionActionStatus").text,Services.SessionActions.error)
     }
-    function test_missing_greeter_is_disabled_with_an_explanation() {
+    function test_missing_locker_is_disabled_with_an_explanation() {
         const actions=Object.assign({},Services.SessionActions.actions)
-        actions.lock={available:false,reason:"The system login screen is unavailable."}
+        actions.lock={available:false,reason:"Install hyprlock to enable secure locking."}
         Services.SessionActions.actions=actions
         compare(findChild(section,"session-action-lock").enabled,false)
         compare(Services.SessionActions.perform("lock"),false)
-        verify(Services.SessionActions.error.indexOf("login screen")>=0)
+        verify(Services.SessionActions.error.indexOf("hyprlock")>=0)
         compare(worker.running,false)
     }
 }

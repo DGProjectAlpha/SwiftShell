@@ -422,7 +422,7 @@ function powerAction(id) {
 
 function powerStep(confirmId, id) {
     if(!powerAction(id))return {confirmId:"",run:false,action:""};
-    if(confirmId===id)return {confirmId:"",run:true,action:id};
+    if(id==="lock" || confirmId===id)return {confirmId:"",run:true,action:id};
     return {confirmId:id,run:false,action:""};
 }
 

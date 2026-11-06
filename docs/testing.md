@@ -1553,3 +1553,28 @@ outside the active tree pending real PAM success. Prepared patch/config:
 /tmp/swiftshell-hyprlock-prepared.patch and /tmp/swiftshell-hyprlock-prepared.conf.
 The current committed session controls remain unchanged. Do not claim the original
 password rejection is diagnosed or that restored Hyprlock is activated yet.
+
+## Verified PAM success and Hyprlock restoration — 2026-11-06
+
+The local non-locking password test returned exactly:
+`{"authenticated":true,"pamCode":0,"service":"hyprlock"}`.
+The owner separately confirmed the test passed. This tests the real current user's
+PAM service, not a mock password comparison. Password data was not sent through
+commands, stdout, files or environment variables. The prepared restoration was
+applied only after this result. Decision 0051 supersedes the sign-out semantics
+of 0050: Lock preserves apps behind Hyprlock, Suspend securely locks before sleep,
+and Log out returns to the boot greeter and closes apps. Power/Spotlight explain
+these differences; the dependency warning and bundled neutral fallback are back.
+
+The earlier password rejection's cause is still unproven; no PAM/account settings
+were changed to make this test pass. Actual lock-screen input, unlocking and
+physical sleep/resume are not established by a successful pam_authenticate call.
+No real lock or sleep action was triggered by the agent. Recovery information is
+in decision 0051; source backups remain in /tmp/swiftshell-hyprlock-restore-backup.
+
+Restoration validation: scripts/check.sh passed (128 QML files; 30 QML suites,
+231 cases), 19 session helper tests and the native isolated session-action fixture
+passed. Non-disruptive dry runs report hyprlock / locked-logind-suspend routes.
+Activated by restarting only SwiftShell; live actions are ready/available without
+error, persistence ready, and no TypeError/ReferenceError/binding-loop/load failures
+appear in runtime logs. Source watching restored. No actual lock or sleep was run.

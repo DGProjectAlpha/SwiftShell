@@ -1434,7 +1434,7 @@ test("launcher ranking is stable and ignores the query as a command", function (
     assert.equal(confirmedPower.run, true);
     assert.equal(confirmedPower.action, "reboot");
     assert.equal(Object.hasOwn(confirmedPower, "argv"), false);
-    assert.equal(launcher.powerInvocation("", "lock").run, false);
+    assert.equal(launcher.powerInvocation("", "lock").run, true);
     assert.equal(launcher.powerInvocation("lock", "lock").run, true);
     assert.equal(launcher.powerInvocation("", "logout").run, false);
     assert.equal(launcher.powerInvocation("logout", "logout").action, "logout");

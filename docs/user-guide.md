@@ -296,13 +296,16 @@ cannot be safely linked explicitly show that the choice is used only by SwiftShe
 
 ### Lock, sleep and switching desktops
 
-Use the bar's Power panel or Spotlight's bottom actions. **Lock** signs out of this
-desktop and returns to the same system login screen shown at boot. It closes your
-apps; save work first. **Log out** has the same destination. Select the action twice
-to confirm, or Escape to cancel.
+Use the bar's Power panel or Spotlight's bottom actions. **Lock** uses Hyprlock
+and keeps your apps running. Use your normal Linux login password to unlock.
+**Suspend** locks first, waits for the compositor to confirm the secure lock, then
+sleeps. Wake returns to the lock screen with your apps preserved. **Log out** closes
+your apps and returns to the system login screen, where you can choose a desktop.
+Suspend, Log out, Restart and Shut down require confirmation.
 
-**Suspend** also ends this desktop session, then sleeps the PC. On wake, use the
-normal system login screen. A logind delay inhibitor coordinates accepted sleep
-with ending this session; denied sleep leaves the desktop open. SwiftShell does
-not launch Hyprlock or use a separate unlock password. Restart and Shut down retain
-their existing confirmation and system routes. Errors appear in Power or Spotlight.
+To check the actual Hyprlock PAM profile without locking the desktop, run
+`python scripts/test-hyprlock-auth.py` locally in this checkout. Enter your password
+only in that local diagnostic dialog. It makes one authentication attempt and
+reports only a success flag/PAM code; no password is accepted in command arguments,
+saved or printed. A failure leaves the desktop accessible. Do not repeatedly retry
+failed authentication, since the system's normal failed-attempt policy still applies.

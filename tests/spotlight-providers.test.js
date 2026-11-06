@@ -26,7 +26,7 @@ assert.deepEqual(launcher.toggleFavorite(['app1.desktop'],'app2.desktop'),['app1
 assert.deepEqual(launcher.toggleFavorite(['app1.desktop','app2.desktop'],'app1.desktop'),['app2.desktop']);
 assert.deepEqual(launcher.toggleFavorite([],'bad id;rm'),[]);
 assert.equal(launcher.powerInvocation('reboot','reboot').action,'reboot');
-assert.equal(launcher.powerInvocation('','lock').run,false);
+assert.equal(launcher.powerInvocation('','lock').run,true);
 assert.equal(launcher.powerInvocation('lock','lock').action,'lock');
 assert.equal(launcher.powerInvocation('logout','logout').action,'logout');
 assert.equal(launcher.powerInvocation('','poweroff').run,false);
