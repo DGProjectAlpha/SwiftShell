@@ -1386,3 +1386,45 @@ sourceMatches=true; HDMI-A-1 shared packaged source ready=true,
 sourceMatches=true. Wallpaper preferences remained identical to the backup.
 Runtime logs contained no TypeError, ReferenceError, binding loop or wallpaper
 surface diagnostics. Development source watching was restored.
+
+## Wallpaper hidden after fullscreen startup — 2026-11-05
+
+Follow-up visual inspection found a second defect independent of the image URL
+binding race: DP-1 showed Hyprland's blue droplet wallpaper, even though its correct
+red/black image had decoded. After switching from the existing fullscreen game to
+empty workspace 1, `hyprctl -j layers` still reported SwiftShell's background at
+alpha=0. The previous source/readiness checks therefore did not establish visual
+success.
+
+The installed Hyprland revision `0aa6745f705f2c4b0a5004eb019ef76e5bbdb426`
+initializes a layer's fade alpha to zero and skips `animateIn()` in `onMap()` when
+its output already contains fullscreen; background layers do not subsequently
+receive the top-layer fullscreen restoration. Verified against
+[LayerSurface.cpp](https://github.com/hyprwm/Hyprland/blob/0aa6745f705f2c4b0a5004eb019ef76e5bbdb426/src/desktop/view/LayerSurface.cpp).
+SwiftShell now waits for monitor discovery and a non-fullscreen desktop before
+first mapping each wallpaper surface. Once admitted, the surface stays mapped;
+ordinary workspace/game transitions do not recreate it. No compositor rule,
+user-authored configuration or display mode is changed.
+
+`python tests/live/wallpaper-outputs.py --live --fullscreen-output DP-1
+--desktop-workspace 1` passes two native cold starts while the existing game is
+fullscreen. It requires an existing empty desktop workspace on the same output,
+checks initial deferred mapping, switches briefly to that workspace, checks the
+owned native layer reaches compositor alpha=1, and restores original workspace
+and focus in cleanup. Image replacement/shared fallback regressions remain active.
+The fixture cannot prove its pixels are topmost over an already running wallpaper
+owner; an attempted pixel assertion was removed because background stacking made
+that assumption false.
+
+Separately, production SwiftShell was restarted while RuneScape was fullscreen.
+The DP-1 background correctly waited unmapped, then mapped at alpha=1 on workspace
+1. A real DP-1 screenshot was inspected and visibly showed the intended red/black
+woman-with-rifle wallpaper. Gaming and HDMI focus were restored. This verifies the
+actual visible image, not only decoded-source equality. Backup:
+`/tmp/swiftshell-wallpaper-fullscreen-backup`. Recovery: revert this slice and
+restart only SwiftShell. Reboot remains untested.
+
+Final validation: `scripts/check.sh` passed all static/logic/helper checks and
+30 QML suites / 231 cases. Native fullscreen-startup regression passed again after
+cleanup hardening. Production runtime had zero TypeError, ReferenceError, binding
+loop and configuration-load failures; source watching was restored.

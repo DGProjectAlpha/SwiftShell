@@ -274,7 +274,7 @@ TestCase {
             || message.indexOf("TrayMenuWindow.qml:") !== -1
             || message.indexOf("LauncherWindow.qml:19") !== -1
             || message.indexOf("NotificationHost.qml:24") !== -1
-            || message.indexOf("WallpaperSurface.qml:25") !== -1
+            || message.indexOf("WallpaperSurface.qml:36") !== -1
     }
 
     function test_top_level_files_resolve_project_types() {
