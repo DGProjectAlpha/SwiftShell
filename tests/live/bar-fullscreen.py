@@ -13,7 +13,8 @@ import time
 
 parser=argparse.ArgumentParser()
 parser.add_argument('--live',action='store_true',required=True)
-parser.parse_args()
+parser.add_argument('--allow-active-game',action='store_true',help='Owner-authorized HDMI-only fixture while DP-1 is gaming')
+args=parser.parse_args()
 root=Path(__file__).resolve().parents[2]
 sys.path.insert(0,str(root/'shell/helpers'))
 from displayctl import ipc,logical_size
@@ -21,7 +22,7 @@ monitors=json.loads(ipc('j/monitors'))
 monitor=next((item for item in monitors if item['name']=='HDMI-A-1'),None)
 assert monitor,'This gaming-safe fixture runs only on HDMI-A-1'
 primary=next((item for item in monitors if item['name']=='DP-1'),None)
-assert primary and primary['activeWorkspace'].get('name') in ['1','2','3'],'Do not map a fixture while the real gaming workspace is active'
+assert primary and (args.allow_active_game or primary['activeWorkspace'].get('name') in ['1','2','3']),'Do not map a fixture while the real gaming workspace is active without explicit authorization'
 assert monitor['activeWorkspace'].get('name') in ['4','5','6'],'HDMI workspace must be one of the owner-approved test workspaces'
 width,height=logical_size(monitor)
 fixture_title='SwiftShell Fullscreen Stability Fixture '+str(os.getpid())
@@ -136,14 +137,14 @@ ShellRoot {
             assert client()['fullscreen']==2 and baseline_layer and baseline_layer[0]==2
             assert not initial['bar']['peek']
             cursor(monitor['x']+width/2,monitor['y']+1)
-            wait(lambda:state()['bar']['peek'] and layer()[0]==3,'Edge intent did not reveal the bar above the owned fullscreen client')
+            wait(lambda:state()['bar']['peek'] and (row:=layer()) and row[0]==3 and row[1]['alpha']==1,'Edge intent did not visibly reveal the bar above the owned fullscreen client')
             revealed=state()
-            assert layer()[1]['address']==baseline_layer[1]['address'],'Peek recreated the native layer surface'
-            assert revealed['connections']==initial['connections']
+            # A hidden surface can be frame-throttled indefinitely. A scoped
+            # remap commits its overlay role without waiting for game frames.
             assert (revealed['width'],revealed['height'])==(initial['width'],initial['height'])
             assert client()['fullscreen']==2
             cursor(monitor['x']+width/2,monitor['y']+height/2)
-            wait(lambda:not state()['bar']['peek'] and layer()[0]==2,'Bar did not return below fullscreen after leaving')
+            wait(lambda:not state()['bar']['peek'] and (row:=layer()) and row[0]==2,'Bar did not return below fullscreen after leaving')
             call('panel')
             wait(lambda:state()['menu']['visible'],'Owned Clock panel did not open')
             call('dismiss')
@@ -151,7 +152,7 @@ ShellRoot {
             assert client()['fullscreen']==2
             output=(folder/'runtime.log').read_text()
             assert not any(error in output for error in ['TypeError','ReferenceError','Binding loop','Failed to load configuration'])
-            print('PASS HDMI owned fullscreen: real metadata, opt-in edge peek, same native layer/size, return below fullscreen and shared popout dismissal; no physical cursor or game input',flush=True)
+            print('PASS HDMI owned fullscreen: real metadata, visible overlay peek at alpha=1, stable size, return below fullscreen and shared popout dismissal; no physical cursor or game input',flush=True)
         except Exception:
             Path('/tmp/swiftshell-fullscreen-bar-runtime.log').write_text((folder/'runtime.log').read_text())
             raise

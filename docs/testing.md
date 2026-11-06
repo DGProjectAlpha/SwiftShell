@@ -1428,3 +1428,33 @@ Final validation: `scripts/check.sh` passed all static/logic/helper checks and
 30 QML suites / 231 cases. Native fullscreen-startup regression passed again after
 cleanup hardening. Production runtime had zero TypeError, ReferenceError, binding
 loop and configuration-load failures; source watching was restored.
+
+## Fullscreen peek layer commit — 2026-11-05
+
+The saved fullscreen peek option was off. Preferences were backed up to
+`/tmp/swiftshell-before-enabling-fullscreen-peek.json`, then enabled atomically.
+A real DP-1 test exposed a second failure: peek=true while the native bar remained
+on layer 2 at alpha=0. Quickshell 0.3.2 queues layer changes until a surface commit;
+a fullscreen-hidden surface can remain frame-throttled. Versioned implementation:
+https://github.com/quickshell-mirror/quickshell/blob/v0.3.2/src/wayland/wlr_layershell/surface.cpp
+
+BarWindow now briefly unmaps/remaps only its own surface when peek changes, which
+commits the requested layer on mapping. Its QML controller remains alive. No
+permanent overlay, compositor rule, display mode or user Lua edit is involved.
+Source backup: `/tmp/swiftshell-peek-backup`. Revert this slice and restart only
+SwiftShell for recovery; disabling fullscreen peek stops edge sampling.
+
+After a scoped restart, actual DP-1 hover reached layer 3 / alpha=1. Screenshots
+visibly showed the bar over RuneScape and absent again after leaving the edge.
+Pointer/focus were restored, and the owner subsequently confirmed it works.
+Layer 2 alpha alone cannot prove hidden state; Hyprland can omit that layer above
+fullscreen even with alpha=1.
+
+`python tests/live/bar-fullscreen.py --live --allow-active-game` passed: owned
+HDMI-only fullscreen client, private cursor samples, native fullscreen metadata,
+visible overlay alpha=1, stable dimensions, return below fullscreen and Clock
+popout dismissal. The explicit flag retains the default gaming safety gate.
+The regression now tolerates intended remap gaps and verifies actual compositor
+visibility rather than requiring the same native surface. `scripts/check.sh`
+passed all checks, including 30 QML suites / 231 cases. No real game input or
+Noctalia changes were made.

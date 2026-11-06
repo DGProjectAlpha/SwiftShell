@@ -24,6 +24,14 @@ PanelWindow {
     readonly property real contentScale:outputLayout.scale
     readonly property bool outputFullscreen:HyprlandModel.fullscreenOutputs.indexOf(monitorKey)>=0
     readonly property bool peekOpen:peekController.open
+    // A hidden fullscreen surface may have no outstanding frame callbacks.
+    // Quickshell 0.3.2 queues set_layer without a wl_surface commit, so a
+    // dynamic layer binding alone can stay invisible. Remap this bar only;
+    // its initial map then commits the requested layer without taking focus.
+    onPeekOpenChanged: {
+        visible = false
+        Qt.callLater(function() { window.visible = true })
+    }
     readonly property int barTextRenderType:Bar.textRenderMode(devicePixelRatio,contentScale,typeof Text["CurveRendering"]==="number")==="curve" ? Text["CurveRendering"] : Text.QtRendering
     function snapModule(position) {return Bar.snapModulePosition(position,devicePixelRatio,contentScale)}
     function renderingDiagnostics() {
