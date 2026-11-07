@@ -1619,3 +1619,32 @@ Recovery: revert this feature commit and restart only SwiftShell. Source/test
 backup: `/tmp/swiftshell-hidden-bar-input-backup`. Owner acceptance: click game
 controls near the hidden bar, then deliberately dwell at the edge and confirm the
 revealed bar responds; moving away should return all clicks to the game.
+
+## Game-safe native testing and DP-1 audit — 2026-11-06
+
+The owner reported repeated game fullscreen loss during the preceding HDMI fixture
+runs. No exact transition trace was preserved; do not claim another monitor or
+no-initial-focus guarantees game safety. Remove the active-game bypass and refuse
+interactive tests while any existing mapped app is compositor- or client-fullscreen.
+The shared tests/live/fullscreen_guard.py is now used by bar-fullscreen,
+scanout-transition, screenshot-review and bar-inputs before creating windows,
+rules or sending input. AGENTS.md records the broader prohibition while gaming.
+
+Six new pure tests cover observed named-workspace RuneScape data, client-only
+fullscreen after demotion, other fullscreen apps/states, maximized/windowed apps,
+failed/malformed IPC and a strictly read-only probe. Live validation invoked each
+of the four guarded entry points while the game was fullscreen: all refused before
+mutation, and its address/output/workspace/internal/client fullscreen snapshot was
+unchanged. No native fixture, pointer gesture, restart or mode switch was performed
+for this task. Backup: /tmp/swiftshell-live-test-safety-backup.
+
+The read-only display report is docs/reports/dp1-display-audit-2026-11-06.md. DP-1
+matches the native EDID high-refresh mode, scale and configured 10-bit depth; VRR
+is active. HDR is supported and automatic switching enabled, but not currently
+active in the SDR game. Direct scanout is configured but blocked by SW; hardware
+cursors are not in use. These limitations were reported rather than silently
+changing HDR, cursor or user-authored Lua settings during gameplay.
+
+Final checks: scripts/check.sh passed (128 QML files, 30 QML suites / 231 cases,
+six additional live-desktop guard unit cases). Production shell source was not
+changed and required no reload. No Hyprland or monitor settings were written.

@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Real date/time context, dedicated panel and native tray menu input checks."""
 import argparse,json,os,subprocess,sys,tempfile,time
+from fullscreen_guard import require_idle_desktop
 from pathlib import Path
 parser=argparse.ArgumentParser();parser.add_argument('--live',action='store_true',required=True);parser.parse_args()
+require_idle_desktop()
 root=Path(__file__).parents[2];sys.path.insert(0,str(root/'shell/helpers'))
 from displayctl import ipc,logical_size
 command=['qs','ipc','-p',str(root/'shell'),'call','swiftshell']

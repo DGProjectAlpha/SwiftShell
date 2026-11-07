@@ -17,6 +17,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--live", action="store_true", required=True)
 parser.add_argument("--interactive", action="store_true")
 args=parser.parse_args()
+from fullscreen_guard import require_idle_desktop
+require_idle_desktop()
 ROOT = Path(__file__).parents[2]
 sys.path.insert(0, str(ROOT / "shell/helpers"))
 from displayctl import ipc

@@ -67,6 +67,8 @@ M0/M1, M2, and the M3 launcher source live in `shell/`. The reference session is
 
 ## Rules learned from the running session
 
+- While any user app/game is fullscreen (including client-requested fullscreen after compositor demotion), do not launch native foreground/fullscreen fixtures, move focus/cursor, or run interactive UI tests on another monitor. Those tests disrupted the game despite HDMI placement and no-initial-focus rules. Use read-only diagnostics and automated/offscreen checks until the owner stops gaming. Do not add or use an `--allow-active-game` bypass. Native interactive tests must run the read-only `tests/live/fullscreen_guard.py` preflight before creating windows, rules or sending input.
+
 - Read the Quickshell type page for the supported version before using a property. `DesktopEntries.applications` is an `ObjectModel`, and its scan result arrives on `applicationsChanged`.
 - Do not send `workspace N` through Hyprland's Lua dispatcher. The working form is `hl.dsp.focus({ workspace = N })` unless `bar.workspaceDispatch` is `legacy`.
 - Do not use a project QML type without the import that provides it. `tests/static_check.py` fails the tree when that import is missing.

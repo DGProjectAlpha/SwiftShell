@@ -13,9 +13,10 @@ import time
 
 parser=argparse.ArgumentParser()
 parser.add_argument('--live',action='store_true',required=True)
-parser.add_argument('--allow-active-game',action='store_true',help='Owner-authorized HDMI-only fixture while DP-1 is gaming')
 parser.add_argument('--input-check',action='store_true',help='Send clicks only to the owned HDMI fullscreen fixture/bar')
 args=parser.parse_args()
+from fullscreen_guard import require_idle_desktop
+require_idle_desktop()
 root=Path(__file__).resolve().parents[2]
 sys.path.insert(0,str(root/'shell/helpers'))
 from displayctl import ipc,logical_size
@@ -23,7 +24,7 @@ monitors=json.loads(ipc('j/monitors'))
 monitor=next((item for item in monitors if item['name']=='HDMI-A-1'),None)
 assert monitor,'This gaming-safe fixture runs only on HDMI-A-1'
 primary=next((item for item in monitors if item['name']=='DP-1'),None)
-assert primary and (args.allow_active_game or primary['activeWorkspace'].get('name') in ['1','2','3']),'Do not map a fixture while the real gaming workspace is active without explicit authorization'
+assert primary and primary['activeWorkspace'].get('name') in ['1','2','3'],'Do not map a fixture while the gaming workspace is active'
 assert monitor['activeWorkspace'].get('name') in ['4','5','6'],'HDMI workspace must be one of the owner-approved test workspaces'
 width,height=logical_size(monitor)
 fixture_title='SwiftShell Fullscreen Stability Fixture '+str(os.getpid())
