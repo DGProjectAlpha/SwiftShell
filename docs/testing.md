@@ -1578,3 +1578,44 @@ passed. Non-disruptive dry runs report hyprlock / locked-logind-suspend routes.
 Activated by restarting only SwiftShell; live actions are ready/available without
 error, persistence ready, and no TypeError/ReferenceError/binding-loop/load failures
 appear in runtime logs. Source watching restored. No actual lock or sleep was run.
+
+## Hidden fullscreen bar does not intercept input — 2026-11-06
+
+The native bar previously stayed mapped below fullscreen when peek closed.
+Compositor invisibility is not a reliable input boundary. BarWindow now binds
+native visibility to non-fullscreen or visible peek, with the existing brief
+layer-binding settle before reveal. The QML controller and optional edge watcher
+stay alive while the native window is unmapped. No invisible hit area remains;
+normal desktop mapping returns automatically when leaving fullscreen. Input state
+is exposed in path-free rendering diagnostics.
+
+`python tests/live/bar-fullscreen.py --live --allow-active-game --input-check`
+passed on the actual mixed-scale HDMI output with an owned fullscreen client:
+initially no native bar surface, real click at the bar's position delivered to the
+client; visible overlay at alpha=1, real Clock click delivered to the bar rather
+than the client; hide again removes the surface and restores client clicks;
+leaving fullscreen restores the normal interactive bar. Popout dismissal and
+stable dimensions also pass. Virtual input is restricted to the owned HDMI client
+and its bar; no game click/key was sent. Pointer and monitor focus are restored,
+and the owned process/rule are cleaned up even if a check fails.
+
+The test uses compositor-reported bar geometry and disables only its private bar's
+space reservation to avoid stacking beneath the running bar. An earlier reveal
+assertion clicked the wrong vertical position due to that stacking; this was a
+test error, not evidence of a product click-delivery defect. Pointer-movement
+safety checks refused gestures during user motion; the final click test ran after
+the owner confirmed the pointer could remain still. The private cursor helper
+still controls reveal intent without moving the real pointer to the game edge.
+
+`scripts/check.sh` passed (128 QML files, 30 QML suites / 231 cases). Production
+SwiftShell was restarted by config path. Live diagnostics: DP-1 fullscreen=true,
+peek=false, acceptsInput=false, edge watcher active; `hyprctl -j layers` contains
+no DP-1 SwiftShell bar. HDMI retains its layer-2 normal bar and acceptsInput=true.
+Runtime logs show no TypeError, ReferenceError, binding loop or load failure.
+The current compositor reports Hyprland 0.57.1. Source watching was restored.
+No preference, monitor mode, user Lua, Noctalia or existing service changes.
+
+Recovery: revert this feature commit and restart only SwiftShell. Source/test
+backup: `/tmp/swiftshell-hidden-bar-input-backup`. Owner acceptance: click game
+controls near the hidden bar, then deliberately dwell at the edge and confirm the
+revealed bar responds; moving away should return all clicks to the game.

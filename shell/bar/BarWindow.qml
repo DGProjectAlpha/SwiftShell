@@ -24,18 +24,22 @@ PanelWindow {
     readonly property real contentScale:outputLayout.scale
     readonly property bool outputFullscreen:HyprlandModel.fullscreenOutputs.indexOf(monitorKey)>=0
     readonly property bool peekOpen:peekController.open
-    // A hidden fullscreen surface may have no outstanding frame callbacks.
-    // Quickshell 0.3.2 queues set_layer without a wl_surface commit, so a
-    // dynamic layer binding alone can stay invisible. Remap this bar only;
-    // its initial map then commits the requested layer without taking focus.
+    // A compositor-hidden layer can still intercept pointer input. Keep the
+    // native bar unmapped throughout fullscreen until an intentional peek.
+    property bool remapping:false
+    visible:(!outputFullscreen || peekOpen) && !remapping
+    readonly property bool acceptsBarInput:visible && (!outputFullscreen || peekOpen)
+    // Wait for the overlay layer binding before mapping the newly shown bar.
+    // The controller stays alive and watches the edge while the window is hidden.
     onPeekOpenChanged: {
-        visible = false
-        Qt.callLater(function() { window.visible = true })
+        remapping=true
+        Qt.callLater(restoreBar)
     }
+    function restoreBar() { remapping=false }
     readonly property int barTextRenderType:Bar.textRenderMode(devicePixelRatio,contentScale,typeof Text["CurveRendering"]==="number")==="curve" ? Text["CurveRendering"] : Text.QtRendering
     function snapModule(position) {return Bar.snapModulePosition(position,devicePixelRatio,contentScale)}
     function renderingDiagnostics() {
-        return {devicePixelRatio:devicePixelRatio,screenDevicePixelRatio:screen ? screen.devicePixelRatio : 0,contentScale:contentScale,textMode:barTextRenderType===Text.QtRendering ? "distance-field" : "curve",fullscreen:outputFullscreen,peek:peekOpen,cursorWatching:peekController.watching,origins:[leftModules.renderingGeometry(),centerModules.renderingGeometry(),rightModules.renderingGeometry()]}
+        return {devicePixelRatio:devicePixelRatio,screenDevicePixelRatio:screen ? screen.devicePixelRatio : 0,contentScale:contentScale,textMode:barTextRenderType===Text.QtRendering ? "distance-field" : "curve",fullscreen:outputFullscreen,peek:peekOpen,acceptsInput:acceptsBarInput,cursorWatching:peekController.watching,origins:[leftModules.renderingGeometry(),centerModules.renderingGeometry(),rightModules.renderingGeometry()]}
     }
     readonly property real railWidth:168
     implicitHeight: vertical ? (screen ? screen.height : 1080) : Math.ceil(Theme.barHeight*contentScale)

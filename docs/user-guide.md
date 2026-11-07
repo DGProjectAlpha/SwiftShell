@@ -278,7 +278,9 @@ from fading into the wallpaper when the desktop appearance integration is enable
 Settings opens on the display where its button was clicked. Reopening keeps its
 saved size and centers it on that display. Resize at the visible window edge or
 corner. **Top bar → Peek in fullscreen** optionally reveals the bar when the
-pointer pauses at its display edge; it starts off.
+pointer pauses at its display edge; it starts off. While hidden, the bar passes
+all clicks through to the fullscreen application. Its controls become clickable
+when the peek is visible, and stop accepting clicks when it hides again.
 
 ### Desktop shortcuts
 

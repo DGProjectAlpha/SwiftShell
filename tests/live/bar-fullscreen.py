@@ -14,6 +14,7 @@ import time
 parser=argparse.ArgumentParser()
 parser.add_argument('--live',action='store_true',required=True)
 parser.add_argument('--allow-active-game',action='store_true',help='Owner-authorized HDMI-only fixture while DP-1 is gaming')
+parser.add_argument('--input-check',action='store_true',help='Send clicks only to the owned HDMI fullscreen fixture/bar')
 args=parser.parse_args()
 root=Path(__file__).resolve().parents[2]
 sys.path.insert(0,str(root/'shell/helpers'))
@@ -42,11 +43,19 @@ def fixture_rule():
 
 with fixture_rule(),tempfile.TemporaryDirectory(prefix='swiftshell-fullscreen-bar-') as directory:
     folder=Path(directory)
+    original_cursor=json.loads(ipc('j/cursorpos'))
+    original_focus=next(m['name'] for m in monitors if m.get('focused'))
+    if args.input_check:
+        protocol=root/'tests/protocols/wlr-virtual-pointer-unstable-v1.xml'
+        subprocess.run(['wayland-scanner','client-header',str(protocol),str(folder/'pointer-client.h')],check=True)
+        subprocess.run(['wayland-scanner','private-code',str(protocol),str(folder/'pointer-protocol.c')],check=True)
+        subprocess.run(['cc','-Wall','-Wextra','-Werror','-I'+str(folder),str(root/'tests/helpers/settings-pointer.c'),str(folder/'pointer-protocol.c'),'-o',str(folder/'pointer'),'-lwayland-client'],check=True)
     shutil.copytree(root/'shell',folder/'shell')
     config=folder/'config/swiftshell';config.mkdir(parents=True)
     prefs=json.loads((root/'shell/config/defaults.json').read_text())
     prefs['bar']['showFocusedTitle']=False
     prefs['bar']['fullscreenPeek']=True
+    prefs['bar']['reserveSpace']=False
     prefs['bar']['hiddenModules']=[name for name in prefs['bar']['moduleOrder'] if name not in ['clock','control']]
     (config/'settings.json').write_text(json.dumps(prefs))
     # The production cursor parser is unit-tested separately. This private helper
@@ -78,6 +87,7 @@ ShellRoot {
  property var target:Quickshell.screens.find(function(screen){return screen.name==="HDMI-A-1"})
  property int connections:0
  property int dismissals:0
+ property int appClicks:0
  FloatingWindow {
   id:fixture
   screen:root.target
@@ -85,6 +95,7 @@ ShellRoot {
   fullscreen:false;visible:false;color:"#151515";surfaceFormat.opaque:true
   Component.onCompleted:Qt.callLater(function(){fixture.visible=true})
   Rectangle {anchors.fill:parent;color:"#151515"}
+  MouseArea {anchors.fill:parent;onClicked:root.appClicks++}
  }
  BarWindow {
   id:bar
@@ -95,9 +106,10 @@ ShellRoot {
  }
  IpcHandler {
   target:"audit"
-  function state():string{return JSON.stringify({bar:bar.renderingDiagnostics(),connections:root.connections,dismissals:root.dismissals,width:bar.width,height:bar.height,menu:bar.menuDiagnostics(),ready:SettingsStore.persistenceState==="ready"})}
+  function state():string{return JSON.stringify({appClicks:root.appClicks,clockTargets:bar.clockItem ? bar.clockItem.clickTargets() : null,bar:bar.renderingDiagnostics(),connections:root.connections,dismissals:root.dismissals,width:bar.width,height:bar.height,menu:bar.menuDiagnostics(),ready:SettingsStore.persistenceState==="ready"})}
   function panel():void{bar.showPanel("clock")}
   function fullscreen():void{fixture.fullscreen=true}
+  function unfullscreen():void{fixture.fullscreen=false}
   function dismiss():void{bar.dismissPopouts()}
  }
  Timer {interval:20000;running:true;onTriggered:Qt.quit()}
@@ -121,6 +133,26 @@ ShellRoot {
         def layer():
             groups=json.loads(ipc('j/layers')).get('HDMI-A-1',{})
             return next(((int(level),item)for level,items in groups.get('levels',{}).items()for item in items if item.get('namespace')=='swiftshell-fullscreen-bar-audit'),None)
+        def click_clock_position():
+            owned=client()
+            current=next(m for m in json.loads(ipc('j/monitors')) if m['name']==monitor['name'])
+            assert owned and owned['pid']==process.pid and owned['monitor']==monitor['id'] and owned['fullscreen']==2
+            assert owned['workspace']['address']==current['activeWorkspace']['address'],'Owned fixture is no longer visible; refusing input'
+            rect=state()['clockTargets']['time']
+            native=layer()
+            origin=native[1] if native else monitor
+            x=round(origin['x']-monitor['x']+rect['x']+rect['width']/2)
+            y=round(origin['y']-monitor['y']+rect['y']+rect['height']/2)
+            # A newly mapped layer beneath a stationary pointer does not imply
+            # a fresh pointer enter. Approach it from inside our owned client.
+            assert ipc('eval hl.dispatch(hl.dsp.cursor.move({x='+str(monitor['x']+x)+',y='+str(monitor['y']+100)+'}))').strip()=='ok'
+            command=[str(folder/'pointer'),str(x),str(y),str(round(width)),str(round(height)),'0','0',monitor['name'],str(monitor['x']+x),str(monitor['y']+y)]
+            for _ in range(3):
+                result=subprocess.run(command)
+                if result.returncode==0:return
+                if result.returncode!=6:result.check_returncode()
+                time.sleep(.15)
+            result.check_returncode()
         try:
             wait(lambda:client() is not None,'Owned fullscreen client did not map')
             if client()['monitor']!=monitor['id']:
@@ -134,29 +166,53 @@ ShellRoot {
             call('fullscreen')
             wait(lambda:state()['ready'] and state()['bar']['fullscreen'],'Actual fullscreen metadata did not reach the owned bar')
             initial=state();baseline_layer=layer()
-            assert client()['fullscreen']==2 and baseline_layer and baseline_layer[0]==2
+            assert client()['fullscreen']==2 and baseline_layer is None
             assert not initial['bar']['peek']
+            assert not initial['bar']['acceptsInput']
+            if args.input_check:
+                click_clock_position()
+                wait(lambda:state()['appClicks']==1,'Hidden bar stole the fullscreen application click')
+                assert not state()['menu']['visible']
             cursor(monitor['x']+width/2,monitor['y']+1)
             wait(lambda:state()['bar']['peek'] and (row:=layer()) and row[0]==3 and row[1]['alpha']==1,'Edge intent did not visibly reveal the bar above the owned fullscreen client')
             revealed=state()
+            assert revealed['bar']['acceptsInput']
+            if args.input_check:
+                click_clock_position()
+                wait(lambda:state()['menu']['visible'],'Revealed bar did not accept its Clock click; '+json.dumps({k:v for k,v in state().items() if k in ('appClicks','clockTargets','width','height','menu')}))
+                assert state()['appClicks']==1,'Revealed bar leaked its click to the application'
+                call('dismiss')
+                wait(lambda:not state()['menu']['visible'],'Clock popup did not dismiss')
             # A hidden surface can be frame-throttled indefinitely. A scoped
             # remap commits its overlay role without waiting for game frames.
             assert (revealed['width'],revealed['height'])==(initial['width'],initial['height'])
             assert client()['fullscreen']==2
             cursor(monitor['x']+width/2,monitor['y']+height/2)
-            wait(lambda:not state()['bar']['peek'] and (row:=layer()) and row[0]==2,'Bar did not return below fullscreen after leaving')
+            wait(lambda:not state()['bar']['peek'] and layer() is None,'Hidden bar remained mapped after leaving')
+            assert not state()['bar']['acceptsInput']
+            if args.input_check:
+                click_clock_position()
+                wait(lambda:state()['appClicks']==2,'Hidden bar stole a click after closing peek')
             call('panel')
             wait(lambda:state()['menu']['visible'],'Owned Clock panel did not open')
             call('dismiss')
-            wait(lambda:not state()['menu']['visible'] and state()['dismissals']==1,'Shared blank-bar dismissal did not close the native panel')
+            wait(lambda:not state()['menu']['visible'] and state()['dismissals']==(2 if args.input_check else 1),'Shared blank-bar dismissal did not close the native panel')
             assert client()['fullscreen']==2
+            call('unfullscreen')
+            wait(lambda:not state()['bar']['fullscreen'] and state()['bar']['acceptsInput'] and layer() is not None,'Normal desktop bar did not restore after fullscreen')
             output=(folder/'runtime.log').read_text()
             assert not any(error in output for error in ['TypeError','ReferenceError','Binding loop','Failed to load configuration'])
-            print('PASS HDMI owned fullscreen: real metadata, visible overlay peek at alpha=1, stable size, return below fullscreen and shared popout dismissal; no physical cursor or game input',flush=True)
+            print('PASS HDMI owned fullscreen: real metadata, visible overlay peek at alpha=1, stable size, hidden surface absent, normal desktop restoration and shared popout dismissal; no game input',flush=True)
+            if args.input_check:print('PASS native input: hidden bar passes clicks to the owned fullscreen app; revealed Clock consumes its click; hiding restores click-through',flush=True)
         except Exception:
             Path('/tmp/swiftshell-fullscreen-bar-runtime.log').write_text((folder/'runtime.log').read_text())
             raise
         finally:
-            process.terminate()
-            try:process.wait(timeout=3)
-            except subprocess.TimeoutExpired:process.kill();process.wait()
+            try:
+                if args.input_check:
+                    ipc('eval hl.dispatch(hl.dsp.cursor.move({x='+str(original_cursor['x'])+',y='+str(original_cursor['y'])+'}))')
+                    ipc('eval hl.dispatch(hl.dsp.focus({monitor='+json.dumps(original_focus)+'}))')
+            finally:
+                process.terminate()
+                try:process.wait(timeout=3)
+                except subprocess.TimeoutExpired:process.kill();process.wait()
