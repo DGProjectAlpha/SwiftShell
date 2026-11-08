@@ -9,6 +9,14 @@ import "../logic/theme.js" as ThemeLogic
 import "../services"
 
 Singleton {
+    function barMetricsFor(item) {
+        let current=item
+        while(current) {
+            if(current.barMetrics && typeof current.barMetrics.height==="number")return current.barMetrics
+            current=current.parent
+        }
+        return barMetrics
+    }
     function barTextRendering(item) {
         let current=item
         while(current) {
@@ -17,7 +25,7 @@ Singleton {
         }
         return Text.QtRendering
     }
-    readonly property var barMetrics: BarMetrics.barMetrics(SettingsStore.barHeight, SettingsStore.iconScale)
+    readonly property var barMetrics: BarMetrics.targetBarMetrics(SettingsStore.barHeight,SettingsStore.barHeight,SettingsStore.iconScale,SettingsStore.fontSize)
     readonly property int barHeight: barMetrics.height
     readonly property int barFont: barMetrics.font
     readonly property int barIcon: barMetrics.icon

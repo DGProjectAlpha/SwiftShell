@@ -8,6 +8,8 @@ import "../themes"
 
 MouseArea {
     id: root
+    readonly property var barSizing:Theme.barMetricsFor(root)
+    function sized(value) {return Math.round(value*barSizing.sizeScale)}
 
     property bool use24Hour:SettingsStore.use24Hour
     property bool showSeconds:SettingsStore.clockSeconds
@@ -31,7 +33,7 @@ MouseArea {
     property color textHover: Theme.textHover
 
     implicitWidth: contents.implicitWidth
-    implicitHeight: root.vertical ? contents.implicitHeight : Theme.barHeight
+    implicitHeight: root.vertical ? contents.implicitHeight : root.barSizing.height
     width: implicitWidth
     height: implicitHeight
     hoverEnabled: true
@@ -58,14 +60,14 @@ MouseArea {
     Grid {
         id:contents
         columns:root.vertical ? 1 : 5
-        rowSpacing:root.vertical ? 3 : 0
+        rowSpacing:root.vertical ? root.sized(3) : 0
         anchors.centerIn:parent
         MouseArea {
             id:dateHit
             objectName:"barDateButton"
             visible:root.showDate
             width:visible ? dateLabel.implicitWidth : 0
-            height:Theme.barHeight
+            height:root.barSizing.height
             cursorShape:Qt.PointingHandCursor
             activeFocusOnTab:true
             hoverEnabled:true
@@ -79,7 +81,7 @@ MouseArea {
             }
             BarLabel {
                 id:dateLabel
-                height:Theme.barHeight
+                height:root.barSizing.height
                 verticalAlignment:Text.AlignVCenter
                 text:Qt.formatDate(clock.date,Clock.datePattern(root.dateFormat))
                 font.family:"Noto Sans Mono"
@@ -91,7 +93,7 @@ MouseArea {
             text:" · "
             font.family:"Noto Sans Mono"
             color:root.textPrimary
-            height:Theme.barHeight
+            height:root.barSizing.height
                 verticalAlignment:Text.AlignVCenter
         }
         BarLabel {
@@ -99,7 +101,7 @@ MouseArea {
             objectName:"barTimeLabel"
             text:Clock.formatTime(clock.date,root.use24Hour,root.showSeconds)
             font.family:"Noto Sans Mono"
-            height:Theme.barHeight
+            height:root.barSizing.height
                 verticalAlignment:Text.AlignVCenter
             color:root.containsMouse || root.activeFocus ? root.textHover : root.textPrimary
         }
@@ -107,15 +109,15 @@ MouseArea {
             id:activity
             objectName:"barClockActivity"
             visible:root.timerVisible || root.stopwatchVisible
-            width:visible ? activityLabel.implicitWidth + (root.vertical ? 0 : 14) : 0
-            height:Theme.barHeight
+            width:visible ? activityLabel.implicitWidth + (root.vertical ? 0 : root.sized(14)) : 0
+            height:root.barSizing.height
             cursorShape:Qt.PointingHandCursor
             hoverEnabled:true;activeFocusOnTab:true
             Accessible.role:Accessible.Button
             Accessible.name:root.activityText + ". Open clock tools"
             onClicked:root.activityActivated(root.timerVisible ? "timer" : "stopwatch")
             Keys.onPressed:function(event) {if(event.key===Qt.Key_Return || event.key===Qt.Key_Space){root.activityActivated(root.timerVisible ? "timer" : "stopwatch");event.accepted=true}}
-            Rectangle {anchors.fill:parent;anchors.margins:2;radius:4;color:root.textPrimary;opacity:activity.containsMouse || activity.activeFocus ? .12 : .05}
+            Rectangle {anchors.fill:parent;anchors.margins:root.sized(2);radius:root.sized(4);color:root.textPrimary;opacity:activity.containsMouse || activity.activeFocus ? .12 : .05}
             BarLabel {
                 id:activityLabel
                 anchors.centerIn:parent

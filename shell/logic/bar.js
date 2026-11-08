@@ -61,6 +61,23 @@ function barMetrics(height, iconScale) {
     };
 }
 
+// Resolve the saved size/legacy scale into real item dimensions. No scene graph
+// scale is required: fonts and Canvas images are rasterized at their final size.
+function targetBarMetrics(baseHeight, targetHeight, iconScale, bodyFont) {
+    const base=barMetrics(baseHeight,iconScale);
+    const height=typeof targetHeight==="number" && Number.isFinite(targetHeight) && targetHeight>0 ? targetHeight : base.height;
+    const ratio=height/base.height;
+    function sized(value) {return Math.max(1,Math.round(value*ratio));}
+    const text=typeof bodyFont==="number" && Number.isFinite(bodyFont) ? bodyFont : 13;
+    return {height:height,hit:height,sizeScale:ratio,
+        font:sized(base.font),icon:sized(base.icon),marginH:sized(base.marginH),
+        moduleSpacing:sized(base.moduleSpacing),workspaceGap:sized(base.workspaceGap),
+        bodyFont:sized(text),smallFont:sized(Math.max(11,text-1)),
+        valueFont:sized(Math.max(10,base.font-1)),temperatureFont:sized(Math.max(10,base.font-2)),
+        performanceIcon:sized(Math.max(13,base.icon-2)),weatherIcon:sized(Math.max(16,base.icon)),
+        railWidth:sized(168)};
+}
+
 function heightFromUnit(unit) {
     return Math.round(22 + clamp01(unit) * 30);
 }
@@ -274,6 +291,7 @@ var swiftshellBar = {
     moduleName:moduleName,
     BAR_MODULES: BAR_MODULES,
     barMetrics: barMetrics,
+    targetBarMetrics:targetBarMetrics,
     heightFromUnit: heightFromUnit,
     unitFromHeight: unitFromHeight,
     normalizeModuleOrder: normalizeModuleOrder,

@@ -2,6 +2,10 @@
 
 Date: 2026-11-08
 
+> Follow-up: decision 0055 removes the bar’s container transform. The current
+> 32px DP-1 bar now renders directly with native hinted text; the transformed-bar
+> limitation below describes the earlier implementation and has been resolved.
+
 The initial live audit found DP-1 at Qt window DPR 1, content scale 1 and 28px
 bar height selecting CurveRendering, while HDMI-A-1 at DPR 1.25/content scale 1
 selected QtRendering. DP-1 module origins were already integer-aligned. There
@@ -19,9 +23,11 @@ and raster dimensions and the effective raster scale. These are rendering
 dimensions, not an EDID measurement of physical panel DPI.
 
 Canvas widget/performance/weather glyphs did not explicitly enable antialiasing.
-Their paint paths and sizes are unchanged; enable painter antialiasing and smooth
-sampling. Search's rotated rectangle also explicitly antialiases. No font family,
-weight, bar preferences, user configuration or display scale is changed.
+The explicit flags and smooth sampling are defensive: Qt 6 Canvas already
+defaults to antialiasing, so missing flags were not established as the icon root
+cause. The old parent transform enlarged their painted textures; decision 0055
+removes that transform. Search's rotated rectangle also explicitly antialiases.
+No font family, weight, bar preferences or display scale was changed here.
 
 Native own-surface comparisons ran on both actual outputs after the fullscreen
 guard. Four identical sample rows compare Curve, Qt distance fields, native

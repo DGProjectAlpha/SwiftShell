@@ -39,6 +39,9 @@ ShellRoot {
                 if(audit.phase===1) {
                     if(Quickshell.env("SWIFTSHELL_AUDIT_READBACK")==="1") {
                         audit.require(audit.first.implicitHeight===42 && audit.second.implicitHeight===28,"Native per-output size restart readback")
+                        audit.require(audit.first.contentScale===1 && audit.second.contentScale===1,"Native content must stay untransformed after restart")
+                        audit.require(audit.first.barMetrics.font===18 && audit.second.barMetrics.font===12,"Native font target-size restart readback")
+                        audit.require(audit.find(audit.first.clockItem,"barTimeLabel").font.pixelSize===18 && audit.find(audit.second.clockItem,"barTimeLabel").font.pixelSize===12,"Loaded native clock did not inherit its output metrics")
                         audit.require(!audit.first.reserveSpace && audit.second.reserveSpace,"Native reservation restart readback")
                         audit.require(audit.first.outputLayout.showSeconds && !audit.second.outputLayout.showSeconds,"Clock preferences restart readback")
                         audit.require(Focus.sectionIds(settings.activePage()).every(function(id){return JSON.parse(Services.SettingsStore.settingsSectionsJson)[id]===false}),"Collapsed categories restart readback")
@@ -55,6 +58,9 @@ ShellRoot {
                     audit.phase=2;return
                 }
                 audit.require(audit.first.implicitHeight===42,"Selected native bar did not resize")
+                audit.require(audit.first.contentScale===1 && audit.second.contentScale===1,"Bar resizing must not scale a completed texture")
+                audit.require(audit.first.barMetrics.font===18 && audit.first.barMetrics.icon===24,"Native bar did not resolve final font and icon sizes")
+                audit.require(audit.find(audit.first.clockItem,"barTimeLabel").font.pixelSize===18 && audit.find(audit.second.clockItem,"barTimeLabel").font.pixelSize===12,"Native Loader/ModuleStrip lost per-output font metrics")
                 audit.require(!audit.first.reserveSpace,"Selected native reservation did not update")
                 audit.require(audit.second.implicitHeight===audit.untouched.height && audit.second.implicitWidth===audit.untouched.width && audit.second.reserveSpace===audit.untouched.reserve && audit.second.contentScale===audit.untouched.scale,"Other native bar changed")
                 audit.require(!audit.first.visible && !audit.second.visible && !settings.visible,"Audit window unexpectedly mapped")

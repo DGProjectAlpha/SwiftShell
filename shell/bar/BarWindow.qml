@@ -21,7 +21,9 @@ PanelWindow {
     readonly property var outputLayout:SettingsStore.layoutForOutput(monitorKey)
     readonly property string edge:outputLayout.edge
     readonly property bool vertical:edge === "left" || edge === "right"
-    readonly property real contentScale:outputLayout.scale*outputLayout.height/Theme.barHeight
+    readonly property var barMetrics:Bar.targetBarMetrics(SettingsStore.barHeight,outputLayout.height*outputLayout.scale,SettingsStore.iconScale,SettingsStore.fontSize)
+    // Size is expressed in item/font geometry, never a magnified module texture.
+    readonly property real contentScale:1
     readonly property bool outputFullscreen:HyprlandModel.fullscreenOutputs.indexOf(monitorKey)>=0
     readonly property bool peekOpen:peekController.open
     // A compositor-hidden layer can still intercept pointer input. Keep the
@@ -39,11 +41,11 @@ PanelWindow {
     readonly property int barTextRenderType:Bar.textRenderMode(devicePixelRatio,contentScale)==="native" ? Text.NativeRendering : Text.QtRendering
     function snapModule(position) {return Bar.snapModulePosition(position,devicePixelRatio,contentScale)}
     function renderingDiagnostics() {
-        return {devicePixelRatio:devicePixelRatio,screenDevicePixelRatio:screen ? screen.devicePixelRatio : 0,contentScale:contentScale,effectiveRasterScale:devicePixelRatio*contentScale,logicalSize:{width:screen ? screen.width : 0,height:screen ? screen.height : 0},rasterSize:{width:screen ? Math.round(screen.width*devicePixelRatio) : 0,height:screen ? Math.round(screen.height*devicePixelRatio) : 0},textMode:barTextRenderType===Text.NativeRendering ? "native-hinted" : "distance-field",fullscreen:outputFullscreen,peek:peekOpen,acceptsInput:acceptsBarInput,cursorWatching:peekController.watching,origins:[leftModules.renderingGeometry(),centerModules.renderingGeometry(),rightModules.renderingGeometry()]}
+        return {devicePixelRatio:devicePixelRatio,screenDevicePixelRatio:screen ? screen.devicePixelRatio : 0,contentScale:contentScale,targetMetrics:barMetrics,effectiveRasterScale:devicePixelRatio*contentScale,logicalSize:{width:screen ? screen.width : 0,height:screen ? screen.height : 0},rasterSize:{width:screen ? Math.round(screen.width*devicePixelRatio) : 0,height:screen ? Math.round(screen.height*devicePixelRatio) : 0},textMode:barTextRenderType===Text.NativeRendering ? "native-hinted" : "distance-field",fullscreen:outputFullscreen,peek:peekOpen,acceptsInput:acceptsBarInput,cursorWatching:peekController.watching,origins:[leftModules.renderingGeometry(),centerModules.renderingGeometry(),rightModules.renderingGeometry()]}
     }
-    readonly property real railWidth:168
-    implicitHeight: vertical ? (screen ? screen.height : 1080) : Math.ceil(Theme.barHeight*contentScale)
-    implicitWidth: vertical ? Math.ceil(railWidth*contentScale) : (screen ? screen.width : 1920)
+    readonly property real railWidth:barMetrics.railWidth
+    implicitHeight: vertical ? (screen ? screen.height : 1080) : Math.ceil(barMetrics.height)
+    implicitWidth: vertical ? railWidth : (screen ? screen.width : 1920)
     property Item controlAnchor: null
     signal dismissPopoutsRequested()
     function dismissPopouts() {popovers.close();dismissPopoutsRequested()}
@@ -212,37 +214,37 @@ PanelWindow {
 
     Item {
         id:moduleCanvas
+        objectName:"barModuleCanvas"
+        readonly property var barMetrics:window.barMetrics
         readonly property int barTextRenderType:window.barTextRenderType
-        width:window.width/window.contentScale
-        height:window.height/window.contentScale
-        scale:window.contentScale
-        transformOrigin:Item.TopLeft
+        width:window.width
+        height:window.height
         ModuleStrip {
             id:leftModules
             barWindow:window;modules:window.modulesOn("left")
-            x:window.snapModule(window.vertical ? 0 : Theme.marginH)
-            y:window.snapModule(window.vertical ? Theme.marginH : 0)
+            x:window.snapModule(window.vertical ? 0 : window.barMetrics.marginH)
+            y:window.snapModule(window.vertical ? window.barMetrics.marginH : 0)
             onWidthChanged:if(popovers)popovers.reposition()
         }
         ModuleStrip {
             id:rightModules
             barWindow:window;modules:window.modulesOn("right")
-            x:window.snapModule(window.vertical ? 0 : moduleCanvas.width-Theme.marginH-width)
-            y:window.snapModule(window.vertical ? Math.max(leftModules.y+leftModules.height+Theme.moduleSpacing,moduleCanvas.height-Theme.marginH-height) : 0)
+            x:window.snapModule(window.vertical ? 0 : moduleCanvas.width-window.barMetrics.marginH-width)
+            y:window.snapModule(window.vertical ? Math.max(leftModules.y+leftModules.height+window.barMetrics.moduleSpacing,moduleCanvas.height-window.barMetrics.marginH-height) : 0)
             onXChanged:if(popovers)popovers.reposition()
         }
         ModuleStrip {
             id:centerModules
             barWindow:window;modules:window.modulesOn("center")
-            readonly property real freeLeft:leftModules.x+leftModules.width+Theme.moduleSpacing
-            readonly property real freeRight:rightModules.x-Theme.moduleSpacing
-            titleWidth:window.vertical ? window.railWidth-16 : Math.min(480,Math.max(0,freeRight-freeLeft-fixedWidth))
+            readonly property real freeLeft:leftModules.x+leftModules.width+window.barMetrics.moduleSpacing
+            readonly property real freeRight:rightModules.x-window.barMetrics.moduleSpacing
+            titleWidth:window.vertical ? window.railWidth-16*window.barMetrics.sizeScale : Math.min(480*window.barMetrics.sizeScale,Math.max(0,freeRight-freeLeft-fixedWidth))
             x:window.snapModule(window.vertical ? 0 : Math.max(freeLeft,Math.min((moduleCanvas.width-width)/2,freeRight-width)))
-            y:window.snapModule(window.vertical ? Math.max(leftModules.y+leftModules.height+Theme.moduleSpacing,Math.min((moduleCanvas.height-height)/2,rightModules.y-height-Theme.moduleSpacing)) : 0)
+            y:window.snapModule(window.vertical ? Math.max(leftModules.y+leftModules.height+window.barMetrics.moduleSpacing,Math.min((moduleCanvas.height-height)/2,rightModules.y-height-window.barMetrics.moduleSpacing)) : 0)
             onXChanged:if(popovers)popovers.reposition()
         }
     }
-    Item { id:contextAnchor;y:0;width:1;height:Theme.barHeight }
+    Item { id:contextAnchor;y:0;width:1;height:window.barMetrics.height }
     MouseArea {
         z:-.5
         anchors.fill:parent
@@ -299,7 +301,7 @@ PanelWindow {
         id: titleComponent
 
         Item {
-            implicitHeight: Theme.barHeight
+            implicitHeight: window.barMetrics.height
 
             FocusedTitle {
                 anchors.fill: parent
@@ -314,8 +316,8 @@ PanelWindow {
 
         MouseArea {
             id: searchButton
-            implicitWidth: Math.max(Theme.barHeight,searchContents.implicitWidth)
-            implicitHeight: Theme.barHeight
+            implicitWidth: Math.max(window.barMetrics.height,searchContents.implicitWidth)
+            implicitHeight: window.barMetrics.height
             width: implicitWidth
             height: implicitHeight
             hoverEnabled: true
@@ -337,12 +339,12 @@ PanelWindow {
             Row {
                 id:searchContents
                 anchors.centerIn:parent
-                spacing:6
+                spacing:Math.round(6*window.barMetrics.sizeScale)
                 Item {
-                    width:Theme.barIcon;height:Theme.barIcon
+                    width:window.barMetrics.icon;height:window.barMetrics.icon
                     readonly property color ink:searchButton.containsMouse || searchButton.activeFocus ? window.foregroundFor("search",false) : window.foregroundFor("search",true)
-                    Rectangle {antialiasing:true;width:parent.width*.6;height:width;radius:width/2;anchors.left:parent.left;anchors.top:parent.top;color:"transparent";border.width:1.5;border.color:parent.ink}
-                    Rectangle {antialiasing:true;width:parent.width*.48;height:1.5;rotation:45;x:parent.width*.51;y:parent.height*.73;color:parent.ink}
+                    Rectangle {antialiasing:true;width:parent.width*.6;height:width;radius:width/2;anchors.left:parent.left;anchors.top:parent.top;color:"transparent";border.width:1.5*window.barMetrics.sizeScale;border.color:parent.ink}
+                    Rectangle {antialiasing:true;width:parent.width*.48;height:1.5*window.barMetrics.sizeScale;rotation:45;x:parent.width*.51;y:parent.height*.73;color:parent.ink}
                 }
                 BarLabel {
                     visible:window.outputLayout.searchLabel
@@ -384,7 +386,7 @@ PanelWindow {
 
         Item {
             implicitWidth: mediaLoader.item ? mediaLoader.item.implicitWidth : 0
-            implicitHeight: Theme.barHeight
+            implicitHeight: window.barMetrics.height
 
             Loader {
                 id: mediaLoader
@@ -417,7 +419,7 @@ PanelWindow {
 
         Item {
             implicitWidth: trayLoader.item ? trayLoader.item.implicitWidth : 0
-            implicitHeight: Theme.barHeight
+            implicitHeight: window.barMetrics.height
 
             Loader {
                 id: trayLoader
@@ -452,7 +454,7 @@ PanelWindow {
 
         Item {
             implicitWidth: batteryLoader.item ? batteryLoader.item.implicitWidth : 0
-            implicitHeight: Theme.barHeight
+            implicitHeight: window.barMetrics.height
 
             Loader {
                 id: batteryLoader
@@ -527,7 +529,7 @@ PanelWindow {
             Component.onCompleted:window.notificationAnchor=notificationIndicator
             Component.onDestruction:if(window.notificationAnchor===notificationIndicator)window.notificationAnchor=null
             onActivated:{LauncherModel.closeLauncher();popovers.toggle("notifications",notificationIndicator)}
-            Rectangle {visible:NotificationsModel.unreadCount>0;anchors.top:parent.top;anchors.right:parent.right;width:5;height:5;radius:3;color:parent.textPrimary}
+            Rectangle {visible:NotificationsModel.unreadCount>0;anchors.top:parent.top;anchors.right:parent.right;width:Math.round(5*window.barMetrics.sizeScale);height:width;radius:width/2;color:parent.textPrimary}
         }
     }
     Component {

@@ -21,6 +21,7 @@ TestCase {
             property real contentScale:1
             property bool vertical:false
             property real railWidth:168
+            property var barMetrics:Bar.targetBarMetrics(28,28,1,13)
             readonly property int barTextRenderType:Bar.textRenderMode(devicePixelRatio,contentScale)==="native" ? Text.NativeRendering : Text.QtRendering
             readonly property Item contentItem:context
             function componentFor(id){return renderModule}
@@ -176,6 +177,29 @@ TestCase {
             glyph.destroy()
         }
         widget.destroy()
+    }
+    function test_target_sizes_reach_loaded_text_canvas_and_tray_without_parent_scaling() {
+        panel=renderContextComponent.createObject(test)
+        verify(panel!==null)
+        const label=findChild(panel,"renderLabel")
+        const widget=Qt.createComponent("../../shell/bar/WidgetIndicator.qml").createObject(panel,{kind:"notifications"})
+        verify(widget!==null)
+        const glyph=findChild(widget,"barWidgetGlyph")
+        const tray=Qt.createComponent("../../shell/components/TrayItemControl.qml").createObject(panel)
+        verify(tray!==null)
+        compare(label.font.pixelSize,12);compare(glyph.width,16)
+        panel.barMetrics=Bar.targetBarMetrics(28,32,1,13)
+        compare(panel.scale,1);compare(findChild(panel,"renderStrip").scale,1)
+        compare(label.font.pixelSize,14);compare(label.renderType,Text.NativeRendering)
+        compare(widget.height,32);compare(glyph.width,18);compare(glyph.scale,1)
+        compare(tray.implicitHeight,32);compare(tray.implicitWidth,18)
+        panel.devicePixelRatio=1.25
+        compare(label.renderType,Text.QtRendering)
+        compare(label.font.pixelSize,14);compare(glyph.width,18)
+        panel.barMetrics=Bar.targetBarMetrics(28,42,1,13)
+        compare(label.font.pixelSize,18);compare(glyph.width,24)
+        compare(tray.implicitHeight,42);compare(tray.implicitWidth,24)
+        widget.destroy();tray.destroy()
     }
     function test_module_origins_snap_only_on_unscaled_one_to_one_output() {
         panel=renderContextComponent.createObject(test)

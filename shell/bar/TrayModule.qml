@@ -5,13 +5,15 @@ import "../themes"
 
 Item {
     id:root
+    readonly property var barSizing:Theme.barMetricsFor(root)
+    function sized(value) {return Math.round(value*barSizing.sizeScale)}
     property var hostWindow:null
     property var trayModel:SystemTray.items
     property color textPrimary:Theme.textPrimary
     property color textMuted:Theme.textMuted
     readonly property int itemCount:items.count
     implicitWidth:items.count ? row.implicitWidth : 0
-    implicitHeight:Theme.barHeight
+    implicitHeight:root.barSizing.height
     visible:items.count>0
     function geometry() {
         const result=[]
@@ -24,7 +26,7 @@ Item {
     Row {
         id:row
         anchors.verticalCenter:parent.verticalCenter
-        spacing:4
+        spacing:root.sized(4)
         Repeater {
             id:items
             objectName:"trayItems"

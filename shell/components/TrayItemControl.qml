@@ -5,6 +5,7 @@ import "../themes"
 
 MouseArea {
     id:control
+    readonly property var barSizing:Theme.barMetricsFor(control)
     property var entry:null
     property var hostWindow:null
     property bool showLabel:false
@@ -18,8 +19,8 @@ MouseArea {
     function menuDiagnostics(){return themedMenu.diagnostics()}
     TrayMenu {id:themedMenu;hostWindow:control.hostWindow;anchorItem:control}
     signal invoked(string action)
-    implicitWidth:showLabel ? Math.max(160,label.implicitWidth+Theme.barIcon+24) : Theme.barIcon
-    implicitHeight:showLabel ? Theme.controlHeight : Theme.barHeight
+    implicitWidth:showLabel ? Math.max(160,label.implicitWidth+Theme.barIcon+24) : barSizing.icon
+    implicitHeight:showLabel ? Theme.controlHeight : barSizing.height
     width:implicitWidth;height:implicitHeight
     acceptedButtons:Qt.LeftButton|Qt.RightButton|Qt.MiddleButton
     enabled:entry!==null && !(entry.onlyMenu===true && !menuAvailable)
@@ -73,7 +74,11 @@ MouseArea {
         id:icon
         x:control.showLabel ? 6 : (parent.width-width)/2
         anchors.verticalCenter:parent.verticalCenter
-        width:Theme.barIcon;height:Theme.barIcon
+        width:control.showLabel ? Theme.barIcon : control.barSizing.icon;height:width
+        // Qt multiplies sourceSize by the owning window DPR for scalable images
+        // and image providers. Keep this requested source size logical too.
+        sourceSize:Qt.size(width,height)
+        smooth:true
         source:control.itemIcon
         fillMode:Image.PreserveAspectFit
         cache:true
@@ -85,7 +90,8 @@ MouseArea {
         text:control.itemTitle.charAt(0)
         textFormat:Text.PlainText
         horizontalAlignment:Text.AlignHCenter;verticalAlignment:Text.AlignVCenter
-        color:control.textPrimary;font.family:Theme.fontFamily;font.pixelSize:Theme.fontSizeSmall
+        renderType:Theme.barTextRendering(control);antialiasing:true;font.hintingPreference:Font.PreferVerticalHinting
+        color:control.textPrimary;font.family:Theme.fontFamily;font.pixelSize:control.showLabel ? Theme.fontSizeSmall : control.barSizing.smallFont
     }
     Text {
         id:label
@@ -97,7 +103,7 @@ MouseArea {
     }
     Rectangle {
         visible:control.needsAttention
-        width:3;height:3;radius:1.5
+        width:control.showLabel ? 3 : 3*control.barSizing.sizeScale;height:width;radius:width/2
         anchors.right:icon.right;anchors.bottom:icon.bottom
         color:control.textPrimary
     }

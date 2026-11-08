@@ -601,3 +601,8 @@ edited setting to existing custom bars too; unrelated preferences are preserved.
 Every Settings page has **Collapse all** / **Expand all** below Search. See
 [the scope decision](docs/decisions/0052-bar-settings-scope.md) for compatibility,
 test coverage and recovery.
+
+Bars render fonts and icons at their final per-output logical size, without
+magnifying the completed contents. Qt applies each monitor’s pixel density once.
+The 32px scale-1 bar can use native hinted text while fractional outputs retain
+scalable text. See [target-size rendering](docs/decisions/0055-direct-bar-target-sizes.md).

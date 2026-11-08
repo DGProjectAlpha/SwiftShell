@@ -6,6 +6,7 @@ import "../logic/bar.js" as Bar
 Item {
     id:strip
     required property var barWindow
+    readonly property var barMetrics:barWindow.barMetrics || Theme.barMetrics
     property var modules: []
     property real titleWidth: 240
     function renderingGeometry() {
@@ -30,7 +31,7 @@ Item {
             const item=items.itemAt(i)
             if(item && item.participatesInLayout) {shown++;if(item.moduleId!=="title")total+=item.width}
         }
-        return total+Math.max(0,shown-1)*Theme.moduleSpacing
+        return total+Math.max(0,shown-1)*barMetrics.moduleSpacing
     }
     implicitWidth:strip.barWindow.vertical ? strip.barWindow.railWidth : row.implicitWidth
     implicitHeight:row.implicitHeight
@@ -38,7 +39,7 @@ Item {
     Grid {
         id:row
         columns:strip.barWindow.vertical ? 1 : Math.max(1,strip.layoutCount)
-        spacing:Theme.moduleSpacing
+        spacing:strip.barMetrics.moduleSpacing
         Repeater {
             id:items
             model:stableModules
@@ -52,7 +53,7 @@ Item {
                 width:strip.barWindow.vertical ? strip.barWindow.railWidth : moduleId==="title" ? Math.max(0,strip.titleWidth) : implicitWidth
                 readonly property bool participatesInLayout:moduleId==="title" ? strip.barWindow.outputLayout.showFocusedTitle && strip.barWindow.windowTitle!=="" && width>0 : implicitWidth>0
                 visible:participatesInLayout
-                height:Math.max(Theme.barHeight,implicitHeight)
+                height:Math.max(strip.barMetrics.height,implicitHeight)
                 Loader {
                     id:moduleLoader
                     width:moduleFrame.width;height:moduleFrame.height

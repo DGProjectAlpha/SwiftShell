@@ -1,5 +1,23 @@
 # Testing
 
+## Direct per-output bar rendering — 2026-11-08
+
+`scripts/check.sh` exited 0: 128 QML files, 31 QML suites, 260 passed,
+0 failed, 0 skipped, plus passing JavaScript/Python/installer checks.
+`python scripts/test-bar-text-native.py --target-sizes --output-dir
+/tmp/swiftshell-target-size-final` passed actual native controlled captures on
+both outputs at 28/32/42px. Parent transforms stay 1; final fonts/icons resize
+before drawing. Captures have the expected DPR-adjusted pixel dimensions.
+`python scripts/test-bar-settings-native.py` passed hidden save/restart checks;
+a later run with additional loaded-clock assertions was blocked by the fullscreen
+guard and remains pending. No test bypass was used.
+
+Read-only live state confirms the saved DP-1 32px bar now uses native-hinted text,
+font14/icon18 and transform1. HDMI-A-1 remains 28px, DPR1.25, font12/icon16,
+distance-field text and transform1. No monitor or bar preferences were edited.
+Physical-screen acceptance/hotplug remain manual. See decision 0055 for evidence,
+the corrected Canvas AA explanation, scope and source-only recovery.
+
 ## Top bar scope and Settings section controls — 2026-11-08
 
 Final results: `scripts/check.sh` exited 0 (128 QML files checked; 31 QML suites,
