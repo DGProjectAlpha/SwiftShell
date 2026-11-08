@@ -30,6 +30,21 @@ Item {
     property alias modulesOutput:page.layoutOutput
     property string layoutOutput:""
     property bool outputInitialized:false
+    readonly property var outputChoices:HyprlandModel.monitorChoices.map(function(m){return {label:m.label,value:m.name}})
+    readonly property string scopeLabel: {
+        if(layoutOutput==="")return "All displays"
+        const found=HyprlandModel.monitorChoices.find(function(m){return m.name===page.layoutOutput})
+        return found ? found.label : layoutOutput+" (disconnected)"
+    }
+    readonly property real selectedSize:selectedLayout.height*selectedLayout.scale
+    function mixed(field) {
+        if(layoutOutput!=="")return false
+        const values=HyprlandModel.monitorChoices.map(function(m){
+            const layout=SettingsStore.layoutForOutput(m.name)
+            return field==="size" ? layout.height*layout.scale : layout[field]
+        })
+        return values.some(function(value){return value!==values[0]})
+    }
     function chooseInitialOutput() {
         if(outputInitialized)return
         if(layoutOutput!==""){outputInitialized=true;return}
@@ -43,22 +58,23 @@ Item {
     Component.onCompleted:chooseInitialOutput()
     Connections {target:HyprlandModel;function onMonitorChoicesChanged(){page.chooseInitialOutput()}}
     readonly property var selectedLayout:SettingsStore.layoutForOutput(layoutOutput)
-    function editLayout(edge,scale,order,sides) {SettingsStore.setOutputLayout(layoutOutput,edge,scale,order,sides)}
+    function edit(patch) { return SettingsStore.patchBarOutput(layoutOutput,patch) }
     function editModuleSide(id,side) {
-        const layout=SettingsStore.layoutForOutput(modulesOutput),sides=JSON.parse(layout.sides)
-        sides[id]=side
-        SettingsStore.setOutputLayout(modulesOutput,layout.edge,layout.scale,layout.order,JSON.stringify(sides))
+        SettingsStore.setBarModuleSideForScope(modulesOutput,id,side)
     }
     function editModuleOrder(order) {
-        const layout=SettingsStore.layoutForOutput(modulesOutput)
-        SettingsStore.setOutputLayout(modulesOutput,layout.edge,layout.scale,order,layout.sides)
+        edit({order:order})
     }
-    readonly property bool customVisibility:Object.prototype.hasOwnProperty.call(JSON.parse(SettingsStore.hiddenOutputsJson),modulesOutput)
     property alias surfaceOutput:page.layoutOutput
     readonly property var surfaceOverrides: JSON.parse(SettingsStore.barSurfaceOutputsJson)
     readonly property bool hasSurfaceOverride: Object.prototype.hasOwnProperty.call(surfaceOverrides,surfaceOutput)
     readonly property var selectedSurface: hasSurfaceOverride ? surfaceOverrides[surfaceOutput] : ({mode:SettingsStore.barSurfaceMode,color:SettingsStore.barSurfaceColor,opacity:SettingsStore.barSurfaceOpacity})
-    function editSurface(mode,color,opacity) { SettingsStore.setBarSurface(surfaceOutput,mode,color,opacity) }
+    function editSurface(patch) { SettingsStore.patchBarSurfaceForScope(surfaceOutput,patch) }
+    function useSharedSettings() {
+        SettingsStore.inheritOutputLayout(layoutOutput)
+        SettingsStore.clearBarSurface(layoutOutput)
+        SettingsStore.inheritHidden(layoutOutput)
+    }
     property string query: ""
     property string highlightId: ""
     signal revealRequested(real y, real itemHeight)
@@ -80,14 +96,11 @@ Item {
     }
 
     function focusHighlight() {
-        if(page.highlightId==="barEdgeScale"){edgeChoice.forceActiveFocus();return}
         var item = itemFor(page.highlightId)
         Focus.revealAncestors(item);Qt.callLater(function(){Focus.focusFirst(item)})
     }
 
     function itemFor(id) {return Focus.findControl(column,id)}
-
-    function moduleName(id) { return Bar.moduleName(id) }
 
     function hidden(id) {
         var list = SettingsStore.hiddenForOutput(modulesOutput)
@@ -112,382 +125,229 @@ Item {
         Connections {
             target: colorPicker.item
             function onColorChosen(field,value) {
-                const selected=page.pickingOutput && page.surfaceOverrides[page.pickingOutput] ? page.surfaceOverrides[page.pickingOutput] : ({mode:SettingsStore.barSurfaceMode,opacity:SettingsStore.barSurfaceOpacity})
-                SettingsStore.setBarSurface(page.pickingOutput,selected.mode,value,selected.opacity)
+                SettingsStore.patchBarSurfaceForScope(page.pickingOutput,{color:value})
             }
         }
     }
     Column {
-        id: column
-        width: page.width
-        spacing: Theme.settingsSpacing
+        id:column
+        width:page.width
+        spacing:Theme.settingsSpacing
 
         Text {
-            width: parent.width
-            text: "Top bar"
-            color: Theme.settingsText
-            font.family: Theme.settingsFontFamily
-            font.pixelSize: Theme.settingsFontSize + 4
-            font.weight: Font.Medium
+            width:parent.width;text:"Top bar";color:Theme.settingsText
+            font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSize+4;font.weight:Font.Medium
         }
-
-        Text {
-            width: parent.width
-            wrapMode: Text.WordWrap
-            text: "Choose the screens, size and content of your top bar."
-            color: Theme.settingsMuted
-            font.family: Theme.settingsFontFamily
-            font.pixelSize: Theme.settingsFontSizeSmall
-        }
-
-        Text {
-            width: parent.width
-            visible: page.query.trim() !== "" && !page.shows("barSurface") && !page.shows("barHeight") && !page.shows("reserveSpace") && !page.shows("targetMonitor") && !page.shows("showTitle") && !page.shows("clock24") && !page.shows("clockDisplay") && !page.shows("searchLabel") && !page.shows("moduleOrder")
-            text: "No matching settings"
-            color: Theme.settingsText
-            font.family: Theme.settingsFontFamily
-            font.pixelSize: Theme.settingsFontSize
-        }
-
         SettingsSection {
-            sectionId:"bar.background";title:"Background";searchQuery:page.query;controlIds:["barSurface"]
-
-            property string controlId: "barSurface"
-            visible: page.shows("barSurface")
-            width: parent.width
-            spacing: Theme.settingsSpacing
+            sectionId:"bar.displays";title:"Where bars appear"
+            description:"This setting controls all displays."
+            searchQuery:page.query;controlIds:["barPlacement","targetMonitor"]
             SettingsRow {
-                width:parent.width
-                label:"Apply to"
+                controlId:"barPlacement";width:parent.width;label:"Show bars on"
                 ChoiceBox {
-                    choices:[{label:"Default appearance",value:""}].concat(HyprlandModel.monitorChoices.map(function(m){return {label:m.label,value:m.name}}))
-                    selectedValue:page.surfaceOutput
-                    onChosen:function(value){page.selectOutput(value)}
-                }
-            }
-            SettingsToggle {
-                visible:page.surfaceOutput !== ""
-                label:"Use all-screen background"
-                checked:!page.hasSurfaceOverride
-                onToggled:function(next) {
-                    if(next) SettingsStore.clearBarSurface(page.surfaceOutput)
-                    else page.editSurface(SettingsStore.barSurfaceMode,SettingsStore.barSurfaceColor,SettingsStore.barSurfaceOpacity)
-                }
-            }
-            SettingsRow {
-                width:parent.width
-                label:"Style"
-                ChoiceBox {
-                    enabled:page.surfaceOutput === "" || page.hasSurfaceOverride
-                    choices:[{label:"Transparent",value:"transparent"},{label:"Solid",value:"solid"},{label:"Frosted",value:"frosted"}]
-                    selectedValue:page.selectedSurface.mode
-                    onChosen:function(value){page.editSurface(value,page.selectedSurface.color,page.selectedSurface.opacity)}
-                }
-            }
-            SettingsRow {
-                width:parent.width
-                label:"Surface color"
-                Row {
-                    spacing:Theme.settingsSpacing
-                    Rectangle { width:24;height:24;radius:4;color:page.selectedSurface.color;anchors.verticalCenter:parent.verticalCenter }
-                    FlatButton {
-                        enabled:(page.surfaceOutput === "" || page.hasSurfaceOverride) && page.selectedSurface.mode !== "transparent" && colorPicker.status === Loader.Ready
-                        label:"Choose color…"
-                        onActivated:page.openSurfaceColorPicker()
+                    objectName:"barPlacementChoice"
+                    choices:[{label:"All displays",value:"all"},{label:"Focused display",value:"focused"},{label:"Primary display",value:"primary"}].concat(page.outputChoices.map(function(m){return {label:m.label,value:"output:"+m.value}}))
+                    selectedValue:SettingsStore.targetMonitor!=="" ? "output:"+SettingsStore.targetMonitor : SettingsStore.barPlacement
+                    onChosen:function(value) {
+                        if(value.indexOf("output:")===0)SettingsStore.setTargetMonitor(value.substring(7))
+                        else SettingsStore.setBarPlacement(value)
                     }
                 }
             }
+        }
+        SettingsRow {
+            width:parent.width;label:"Apply to"
+            ChoiceBox {
+                id:modulesOutputChoice
+                objectName:"barModulesOutput"
+                choices:[{label:"All displays",value:""}].concat(page.outputChoices)
+                selectedValue:page.layoutOutput
+                customLabel:page.scopeLabel
+                onChosen:function(value){page.selectOutput(value)}
+            }
+        }
+        Text {
+            objectName:"barScopeDescription"
+            width:parent.width;wrapMode:Text.WordWrap
+            text:page.layoutOutput==="" ? "Controls show shared settings. Each edit updates that setting on every display, including customized bars. Changes save automatically."
+                : "Changes below apply only to "+page.scopeLabel+". Other displays keep their settings."
+            color:Theme.settingsMuted;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall
+        }
+        FlatButton {
+            objectName:"barUseSharedSettings"
+            visible:page.layoutOutput!==""
+            label:"Use shared settings for this display"
+            onActivated:page.useSharedSettings()
+        }
+        Text {
+            width:parent.width;visible:page.query.trim()!=="" && !Nav.filterControls(page.query).some(function(c){return c.category==="bar"})
+            text:"No matching settings";color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSize
+        }
+        SettingsSection {
+            sectionId:"bar.geometry";title:"Size & position"
+            searchQuery:page.query;controlIds:["barHeight","barEdgeScale","reserveSpace"]
             SettingsRow {
-                width:parent.width
-                label:"Surface opacity"
+                controlId:"barHeight";visible:page.shows("barHeight");marked:page.marked("barHeight")
+                width:parent.width;label:"Bar size"
                 Row {
                     spacing:Theme.settingsSpacing
-                    Text { anchors.verticalCenter:parent.verticalCenter;text:Math.round(page.selectedSurface.opacity*100)+"%";color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall }
+                    Text {
+                        anchors.verticalCenter:parent.verticalCenter
+                        text:page.mixed("size") ? "Mixed" : Math.round(page.selectedSize)+" px"
+                        color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall
+                    }
                     CompactSlider {
-                        enabled:(page.surfaceOutput === "" || page.hasSurfaceOverride) && page.selectedSurface.mode !== "transparent"
-                        valueName:"Bar surface opacity"
-                        value:page.selectedSurface.opacity
-                        onMoved:function(value){page.editSurface(page.selectedSurface.mode,page.selectedSurface.color,value)}
+                        objectName:"barSizeSlider"
+                        valueName:"Bar size"
+                        value:Bar.unitFromSize(page.selectedSize)
+                        onMoved:function(next){SettingsStore.setBarSizeForOutput(page.layoutOutput,Bar.sizeFromUnit(next))}
                     }
                 }
             }
             Text {
-                width:parent.width
-                wrapMode:Text.WordWrap
-                text:page.selectedSurface.mode === "frosted" ? (SurfaceService.blurAvailable ? "Frosted uses your desktop’s backdrop blur. Opacity changes the surface tint." : SurfaceService.reason+" A solid, readable background is used instead.") : "Transparent keeps the bar clear. The optional readability gradient is set in Appearance."
-                color:Theme.settingsMuted
-                font.pixelSize:Theme.settingsFontSizeSmall
-            }
-            Text {
-                visible:colorPicker.status === Loader.Error
-                width:parent.width
-                wrapMode:Text.WordWrap
-                text:"Color selection is unavailable on this system."
-                color:Theme.settingsMuted
-                font.pixelSize:Theme.settingsFontSizeSmall
-            }
-            FlatButton {
-                visible:page.surfaceOutput === ""
-                label:"Reset background"
-                onActivated:page.editSurface("transparent","#161616",.75)
-            }
-        }
-
-        SettingsSection {
-            sectionId:"bar.position";title:"Position & scale";searchQuery:page.query;controlIds:["barEdgeScale"]
-
-            property string controlId:"barEdgeScale"
-            width:parent.width;spacing:Theme.settingsSpacing
-            visible:page.shows("barEdgeScale")
-            SettingsRow {
-                width:parent.width;label:"Display"
-                ChoiceBox {
-                    choices:[{label:"All-screen default",value:""}].concat(HyprlandModel.monitorChoices.map(function(m){return {label:m.label,value:m.name}}))
-                    selectedValue:page.layoutOutput
-                    onChosen:function(value){page.selectOutput(value)}
-                }
+                visible:page.shows("barHeight")
+                width:parent.width;wrapMode:Text.WordWrap
+                text:"Resizes the bar, text and icons together. Your desktop’s display scale stays unchanged."
+                color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall
             }
             SettingsRow {
+                controlId:"barEdgeScale";visible:page.shows("barEdgeScale")
                 width:parent.width;label:"Screen edge"
                 ChoiceBox {
                     id:edgeChoice
+                    objectName:"barEdgeChoice"
                     choices:[{label:"Top",value:"top"},{label:"Bottom",value:"bottom"},{label:"Left",value:"left"},{label:"Right",value:"right"}]
                     selectedValue:page.selectedLayout.edge
-                    onChosen:function(value){page.editLayout(value,page.selectedLayout.scale,page.selectedLayout.order,page.selectedLayout.sides)}
+                    displayText:page.mixed("edge") ? "Mixed" : currentText
+                    onChosen:function(value){page.edit({edge:value})}
                 }
             }
+            SettingsToggle {
+                objectName:"barReserveSpace"
+                controlId:"reserveSpace";visible:page.shows("reserveSpace")
+                label:"Keep windows below the bar"
+                checked:page.selectedLayout.reserveSpace
+                onToggled:function(next){page.edit({reserveSpace:next})}
+            }
+        }
+        SettingsSection {
+            sectionId:"bar.background";title:"Background"
+            searchQuery:page.query;controlIds:["barSurface"]
+            property string controlId:"barSurface"
             SettingsRow {
-                width:parent.width;label:"Content scale"
+                width:parent.width;label:"Style"
                 ChoiceBox {
-                    choices:[{label:"75%",value:"0.75"},{label:"90%",value:"0.9"},{label:"100%",value:"1"},{label:"110%",value:"1.1"},{label:"125%",value:"1.25"},{label:"150%",value:"1.5"}]
-                    selectedValue:String(page.selectedLayout.scale)
-                    onChosen:function(value){page.editLayout(page.selectedLayout.edge,Number(value),page.selectedLayout.order,page.selectedLayout.sides)}
+                    objectName:"barSurfaceStyle"
+                    choices:[{label:"Transparent",value:"transparent"},{label:"Solid",value:"solid"},{label:"Frosted",value:"frosted"}]
+                    selectedValue:page.selectedSurface.mode
+                    onChosen:function(value){page.editSurface({mode:value})}
                 }
             }
-            Text {width:parent.width;wrapMode:Text.WordWrap;text:"Scales the bar’s controls on this display, in addition to the display’s desktop scale.";color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall}
-            FlatButton {visible:page.layoutOutput!=="";label:"Use all-screen layout";onActivated:SettingsStore.inheritOutputLayout(page.layoutOutput)}
-        }
-
-        SettingsSection {
-            sectionId:"bar.behavior"
-            title:"Size & behavior"
-            description:""
-            searchQuery:page.query
-            controlIds:["barHeight", "reserveSpace", "barPlacement", "targetMonitor", "showTitle", "fullscreenBarPeek"]
-            width:parent.width
             SettingsRow {
-                controlId: "barHeight"
-                visible: page.shows("barHeight")
-                marked: page.marked("barHeight")
-                width: parent.width
-                label: "Bar height"
-
+                visible:page.selectedSurface.mode!=="transparent"
+                width:parent.width;label:"Color"
                 Row {
-                    spacing: Theme.settingsSpacing
-
-                    Text {
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: SettingsStore.barHeight + " px"
-                        color: Theme.settingsMuted
-                        font.family: Theme.settingsFontFamily
-                        font.pixelSize: Theme.settingsFontSizeSmall
-                    }
-
+                    spacing:Theme.settingsSpacing
+                    Rectangle {width:24;height:24;radius:4;color:page.selectedSurface.color;anchors.verticalCenter:parent.verticalCenter}
+                    FlatButton {label:"Choose color…";enabled:colorPicker.status===Loader.Ready;onActivated:page.openSurfaceColorPicker()}
+                }
+            }
+            SettingsRow {
+                visible:page.selectedSurface.mode!=="transparent"
+                width:parent.width;label:"Opacity"
+                Row {
+                    spacing:Theme.settingsSpacing
+                    Text {anchors.verticalCenter:parent.verticalCenter;text:Math.round(page.selectedSurface.opacity*100)+"%";color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall}
                     CompactSlider {
-                        valueName: "Bar height"
-                        value: Bar.unitFromHeight(SettingsStore.barHeight)
-                        onMoved: function (next) { SettingsStore.setBarHeight(Bar.heightFromUnit(next)) }
+                        objectName:"barSurfaceOpacity"
+                        valueName:"Bar surface opacity";value:page.selectedSurface.opacity
+                        onMoved:function(value){page.editSurface({opacity:value})}
                     }
                 }
             }
-            SettingsToggle {
-                controlId: "reserveSpace"
-                visible: page.shows("reserveSpace")
-                marked: page.marked("reserveSpace")
-                label: "Reserve space"
-                checked: SettingsStore.reserveSpace
-                onToggled: function (next) { SettingsStore.setReserveSpace(next) }
+            Text {
+                width:parent.width;wrapMode:Text.WordWrap
+                text:page.selectedSurface.mode==="frosted" ? (SurfaceService.blurAvailable ? "Uses your desktop’s backdrop blur. Opacity controls the tint." : SurfaceService.reason+" A readable background is used instead.") : "Transparent leaves your wallpaper visible behind the bar."
+                color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall
             }
-            SettingsRow {
-                controlId: "barPlacement"
-                visible: page.shows("barPlacement")
-                marked: page.marked("barPlacement")
-                width: parent.width
-                label: "Screens"
-
-                Row {
-                    spacing: Theme.settingsSpacing
-
-                    FlatButton {
-                        label: "Focused"
-                        emphasized: SettingsStore.barPlacement === "focused"
-                        onActivated: SettingsStore.setBarPlacement("focused")
-                    }
-
-                    FlatButton {
-                        label: "Primary"
-                        emphasized: SettingsStore.barPlacement === "primary"
-                        onActivated: SettingsStore.setBarPlacement("primary")
-                    }
-
-                    FlatButton {
-                        label: "All"
-                        emphasized: SettingsStore.barPlacement === "all"
-                        onActivated: SettingsStore.setBarPlacement("all")
-                    }
-                }
+            Text {
+                visible:colorPicker.status===Loader.Error
+                width:parent.width;wrapMode:Text.WordWrap;text:"Color selection is unavailable on this system."
+                color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall
             }
-            Column {
-                property string controlId: "targetMonitor"
-                visible: page.shows("targetMonitor")
-                width: parent.width
-                spacing: Theme.settingsSpacing
-                Text {
-                    text: "Use one monitor"
-                    color: Theme.settingsMuted
-                    font.pixelSize: Theme.settingsFontSizeSmall
-                }
-                Repeater {
-                    model: HyprlandModel.monitorChoices
-                    delegate: FlatButton {
-                        required property var modelData
-                        width: Math.min(implicitWidth, page.width)
-                        label: modelData.label
-                        emphasized: SettingsStore.targetMonitor === modelData.name
-                        onActivated: SettingsStore.setTargetMonitor(modelData.name)
-                    }
-                }
-                Text {
-                    visible: SettingsStore.targetMonitor !== ""
-                    width: parent.width
-                    wrapMode: Text.WordWrap
-                    text: "Selected: " + SettingsStore.targetMonitor + ". Disconnected outputs fall back to the focused screen. Focused, Primary, or All clears this selection."
-                    color: Theme.settingsMuted
-                    font.pixelSize: Theme.settingsFontSizeSmall
-                }
-            }
-            SettingsToggle {
-                controlId: "showTitle"
-                visible: page.shows("showTitle")
-                marked: page.marked("showTitle")
-                label: "Focused title"
-                checked: SettingsStore.showFocusedTitle
-                onToggled: function (next) { SettingsStore.setShowFocusedTitle(next) }
-            }
-            SettingsToggle {
-                width:parent.width
-                controlId:"fullscreenBarPeek"
-                label:"Reveal bar in fullscreen"
-                checked:SettingsStore.fullscreenBarPeek
-                onToggled:function(next){SettingsStore.setFullscreenBarPeek(next)}
-            }
-            Text {width:parent.width;wrapMode:Text.WordWrap;text:"Move to the display edge to reveal the bar over a fullscreen app.";color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall}
         }
-
         SettingsSection {
-            sectionId:"bar.clock"
-            title:"Clock & search"
-            description:""
-            searchQuery:page.query
-            controlIds:["clock24", "searchLabel", "clockDisplay"]
-            width:parent.width
-            SettingsToggle {
-                controlId: "clock24"
-                visible: page.shows("clock24")
-                marked: page.marked("clock24")
-                label: "24-hour clock"
-                checked: SettingsStore.use24Hour
-                onToggled: function (next) { SettingsStore.setUse24Hour(next) }
+            sectionId:"bar.widgets";title:"Widgets"
+            description:"Show or hide widgets, choose a group, and drag handles to reorder."
+            searchQuery:page.query;controlIds:["moduleOrder","showTitle"]
+            BarModuleOrderList {
+                id:moduleOrder
+                objectName:"barModuleOrderList"
+                property string controlId:"moduleOrder"
+                width:parent.width
+                entries:page.selectedLayout.order
+                hidden:SettingsStore.hiddenForOutput(page.modulesOutput)
+                sides:page.selectedLayout.sides
+                onReordered:function(id,destination){page.editModuleOrder(Bar.moveModuleTo(entries,id,destination))}
+                onVisibilityToggled:function(id){SettingsStore.setBarWidgetVisible(page.modulesOutput,id,page.hidden(id))}
+                onSideChosen:function(id,side){page.editModuleSide(id,side)}
             }
+        }
+        SettingsSection {
+            sectionId:"bar.clock";title:"Clock & labels"
+            searchQuery:page.query;controlIds:["clock24","clockDisplay","searchLabel"]
             SettingsToggle {
-                controlId:"searchLabel"
-                visible:page.shows("searchLabel")
-                label:"Show Search label"
-                checked:SettingsStore.searchLabel
-                onToggled:function(value){SettingsStore.setSearchLabel(value)}
+                objectName:"barClock24"
+                controlId:"clock24";visible:page.shows("clock24")
+                label:"24-hour clock";checked:page.selectedLayout.use24Hour
+                onToggled:function(value){page.edit({use24Hour:value})}
             }
             Column {
                 property string controlId:"clockDisplay"
                 width:parent.width;spacing:Theme.settingsSpacing
                 visible:page.shows("clockDisplay")
-                SectionHeader {text:"Clock"}
                 SettingsToggle {
-                    label:"Show seconds";checked:SettingsStore.clockSeconds
-                    onToggled:function(value){SettingsStore.setClockOptions(value,SettingsStore.clockDate,SettingsStore.clockDateFormat)}
+                    objectName:"barClockSeconds"
+                    label:"Show seconds";checked:page.selectedLayout.showSeconds
+                    onToggled:function(value){page.edit({showSeconds:value})}
                 }
                 SettingsToggle {
-                    label:"Show date";checked:SettingsStore.clockDate
-                    onToggled:function(value){SettingsStore.setClockOptions(SettingsStore.clockSeconds,value,SettingsStore.clockDateFormat)}
+                    objectName:"barClockDate"
+                    label:"Show date";checked:page.selectedLayout.showDate
+                    onToggled:function(value){page.edit({showDate:value})}
                 }
                 SettingsRow {
                     width:parent.width;label:"Date style"
                     ChoiceBox {
-                        enabled:SettingsStore.clockDate
+                        objectName:"barDateFormat"
+                        enabled:page.selectedLayout.showDate
                         choices:[{label:"Day and month",value:"short"},{label:"Weekday and date",value:"weekday"},{label:"Year–month–day",value:"iso"}]
-                        selectedValue:SettingsStore.clockDateFormat
-                        onChosen:function(value){SettingsStore.setClockOptions(SettingsStore.clockSeconds,SettingsStore.clockDate,value)}
+                        selectedValue:page.selectedLayout.dateFormat
+                        onChosen:function(value){page.edit({dateFormat:value})}
                     }
                 }
             }
+            SettingsToggle {
+                objectName:"barSearchLabel"
+                controlId:"searchLabel";visible:page.shows("searchLabel")
+                label:"Show Search label";checked:page.selectedLayout.searchLabel
+                onToggled:function(value){page.edit({searchLabel:value})}
+            }
         }
-
         SettingsSection {
-            sectionId:"bar.widgets";title:"Widgets";searchQuery:page.query;controlIds:["moduleOrder"]
-
-            id: modules
-            property string controlId: "moduleOrder"
-            visible: page.shows("moduleOrder")
-            width: parent.width
-            spacing: Theme.settingsSpacing
-
-            Text {
-                width: parent.width
-                text: "Widget order"
-                color: Theme.settingsText
-                font.family: Theme.settingsFontFamily
-                font.pixelSize: Theme.settingsFontSize
-                font.weight: page.marked("moduleOrder") ? Font.Medium : Font.Normal
-            }
-
-            SettingsRow {
-                width:parent.width;label:"Customize display"
-                ChoiceBox {
-                    id:modulesOutputChoice
-                    objectName:"barModulesOutput"
-                    choices:[{label:"Default for inheriting displays",value:""}].concat(HyprlandModel.monitorChoices.map(function(m){return {label:m.label,value:m.name}}))
-                    selectedValue:page.modulesOutput
-                    onChosen:function(value){page.selectOutput(value)}
-                }
+            sectionId:"bar.fullscreen";title:"Fullscreen apps"
+            searchQuery:page.query;controlIds:["fullscreenBarPeek"]
+            SettingsToggle {
+                objectName:"barFullscreenPeek"
+                controlId:"fullscreenBarPeek"
+                label:"Reveal bar at the screen edge"
+                checked:page.selectedLayout.fullscreenPeek
+                onToggled:function(next){page.edit({fullscreenPeek:next})}
             }
             Text {
                 width:parent.width;wrapMode:Text.WordWrap
-                text:page.modulesOutput!=="" ? "Visibility changes apply to this display and its right-click menu." : "Displays with their own visibility choices keep them. Select a display to change its bar."
+                text:"Move the pointer to the bar’s screen edge to reveal it over a fullscreen app."
                 color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall
-            }
-            FlatButton {
-                visible:page.modulesOutput!=="" && page.customVisibility
-                label:"Use default visibility"
-                onActivated:SettingsStore.inheritHidden(page.modulesOutput)
-            }
-            Text {
-                width:parent.width;wrapMode:Text.WordWrap
-                visible:page.modulesOutput==="" && Object.keys(JSON.parse(SettingsStore.hiddenOutputsJson)).length>0
-                text:"Some displays have their own visibility choices. Select one above to change its widgets."
-                color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall
-            }
-            FlatButton {label:"Reset grouping";onActivated:{const layout=SettingsStore.layoutForOutput(page.modulesOutput);SettingsStore.setOutputLayout(page.modulesOutput,layout.edge,layout.scale,layout.order,"{}")}}
-            Text {width:parent.width;wrapMode:Text.WordWrap;text:"Choose each display’s visible widgets, grouping and order. On side bars, Left and Right groups become Start and End.";color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall}
-            Text {width:parent.width;wrapMode:Text.WordWrap;text:"Drag a handle to reorder widgets. Group and visibility stay independent.";color:Theme.settingsMuted;font.pixelSize:Theme.settingsFontSizeSmall}
-            BarModuleOrderList {
-                id:moduleOrder
-                objectName:"barModuleOrderList"
-                width:parent.width
-                entries:SettingsStore.layoutForOutput(page.modulesOutput).order
-                hidden:SettingsStore.hiddenForOutput(page.modulesOutput)
-                sides:SettingsStore.layoutForOutput(page.modulesOutput).sides
-                onReordered:function(id,destination){page.editModuleOrder(Bar.moveModuleTo(entries,id,destination))}
-                onVisibilityToggled:function(id){SettingsStore.setHiddenForOutput(page.modulesOutput,Bar.toggleHidden(SettingsStore.hiddenForOutput(page.modulesOutput),id))}
-                onSideChosen:function(id,side){page.editModuleSide(id,side)}
             }
         }
     }

@@ -103,6 +103,15 @@ FloatingWindow {
     readonly property bool searchHasFocus: search.activeFocus
     readonly property int pageStatus: pageLoader.status
     function activePage() { return pageLoader.item }
+    function setAllSectionsExpanded(expanded) {
+        // Search deliberately opens matching sections. Clear it so a requested
+        // collapse takes effect rather than leaving the page visually expanded.
+        search.text=""
+        Qt.callLater(function(){
+            SettingsStore.setSettingsSections(Focus.sectionIds(window.activePage()),expanded)
+            scroller.contentY=0
+        })
+    }
     function capturePreview(path) {content.grabToImage(function(image){image.saveToFile(path)})}
     function frameGeometry() {return {x:content.x,y:content.y,width:content.width,height:content.height,resizeInset:0,resizeBand:7,ready:placementReady}}
     function uiGeometry() {
@@ -323,18 +332,20 @@ FloatingWindow {
                     }
                 }
             }
-            Row {
-                id:appearanceActions
+            Flow {
+                id:pageActions
                 x:20;y:searchFrame.y+searchFrame.height+8
-                visible:SettingsStore.settingsWindowCategory==="appearance"
+                width:Math.max(120,parent.width-40)
                 spacing:6
-                FlatButton {label:"Undo appearance";enabled:window.canUndo;onActivated:window.undo()}
-                FlatButton {label:"Reset appearance…";onActivated:window.resetAppearance()}
+                FlatButton {objectName:"collapseAllSections";label:"Collapse all";onActivated:window.setAllSectionsExpanded(false)}
+                FlatButton {objectName:"expandAllSections";label:"Expand all";onActivated:window.setAllSectionsExpanded(true)}
+                FlatButton {visible:SettingsStore.settingsWindowCategory==="appearance";label:"Undo appearance";enabled:window.canUndo;onActivated:window.undo()}
+                FlatButton {visible:SettingsStore.settingsWindowCategory==="appearance";label:"Reset appearance…";onActivated:window.resetAppearance()}
             }
             Flickable {
                 id:scroller
                 objectName:"settingsScroller"
-                anchors.left:parent.left;anchors.right:parent.right;anchors.top:appearanceActions.visible ? appearanceActions.bottom : searchFrame.bottom;anchors.topMargin:14
+                anchors.left:parent.left;anchors.right:parent.right;anchors.top:pageActions.bottom;anchors.topMargin:14
                 anchors.bottom:transaction.visible ? transaction.top : (windowNotice.visible ? windowNotice.top : parent.bottom);anchors.bottomMargin:16
                 clip:true;boundsBehavior:Flickable.StopAtBounds
                 contentWidth:width

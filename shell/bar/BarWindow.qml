@@ -21,7 +21,7 @@ PanelWindow {
     readonly property var outputLayout:SettingsStore.layoutForOutput(monitorKey)
     readonly property string edge:outputLayout.edge
     readonly property bool vertical:edge === "left" || edge === "right"
-    readonly property real contentScale:outputLayout.scale
+    readonly property real contentScale:outputLayout.scale*outputLayout.height/Theme.barHeight
     readonly property bool outputFullscreen:HyprlandModel.fullscreenOutputs.indexOf(monitorKey)>=0
     readonly property bool peekOpen:peekController.open
     // A compositor-hidden layer can still intercept pointer input. Keep the
@@ -100,9 +100,9 @@ PanelWindow {
     WlrLayershell.namespace: "swiftshell-bar"
     WlrLayershell.layer: window.peekOpen ? WlrLayer.Overlay : WlrLayer.Top
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
-    BarPeekController {id:peekController;barWindow:window;requested:SettingsStore.fullscreenBarPeek;popupOpen:popovers.visible}
+    BarPeekController {id:peekController;barWindow:window;requested:window.outputLayout.fullscreenPeek;popupOpen:popovers.visible}
 
-    readonly property bool reserveSpace: SettingsStore.reserveSpace
+    readonly property bool reserveSpace: outputLayout.reserveSpace
     readonly property string hyprlandMonitorName: HyprlandModel.hyprlandNameForScreen(modelData)
     readonly property string monitorKey: hyprlandMonitorName !== "" ? hyprlandMonitorName : (modelData && modelData.name ? modelData.name : "")
     readonly property string analysisKey: modelData && modelData.name ? modelData.name : monitorKey
@@ -303,7 +303,7 @@ PanelWindow {
 
             FocusedTitle {
                 anchors.fill: parent
-                title: SettingsStore.showFocusedTitle ? window.windowTitle : ""
+                title: window.outputLayout.showFocusedTitle ? window.windowTitle : ""
                 textMuted: window.foregroundFor("title",true)
             }
         }
@@ -345,7 +345,7 @@ PanelWindow {
                     Rectangle {width:parent.width*.48;height:1.5;rotation:45;x:parent.width*.51;y:parent.height*.73;color:parent.ink}
                 }
                 BarLabel {
-                    visible:SettingsStore.searchLabel
+                    visible:window.outputLayout.searchLabel
                     text:"Search"
                     color:searchButton.containsMouse || searchButton.activeFocus ? window.foregroundFor("search",false) : window.foregroundFor("search",true)
                 }
@@ -359,6 +359,10 @@ PanelWindow {
         ClockModule {
             id: clockModule
             vertical:window.vertical
+            use24Hour:window.outputLayout.use24Hour
+            showSeconds:window.outputLayout.showSeconds
+            showDate:window.outputLayout.showDate
+            dateFormat:window.outputLayout.dateFormat
             Component.onCompleted:{window.calendarAnchor=clockModule;window.clockItem=clockModule}
             Component.onDestruction:{if(window.calendarAnchor===clockModule)window.calendarAnchor=null;if(window.clockItem===clockModule)window.clockItem=null}
             textPrimary: window.foregroundFor("clock",false)

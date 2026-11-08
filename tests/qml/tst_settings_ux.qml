@@ -4,6 +4,7 @@ import "../../shell/components" as Components
 import "../../shell/settings" as Settings
 import "../../shell/services" as Services
 import "../../shell/logic/settingsFocus.js" as Focus
+import "../../shell/logic/settingsNav.js" as Nav
 
 TestCase {
     id:test
@@ -107,5 +108,50 @@ TestCase {
         window.undo()
         compare(Services.SettingsStore.fontSize,before)
         window.destroy()
+    }
+    function test_collapse_expand_on_every_page_data() {
+        return Nav.categories().map(function(category){return {tag:category.id,category:category.id}})
+    }
+    function test_collapse_expand_on_every_page(data) {
+        const saved=Services.SettingsStore.snapshot()
+        const component=Qt.createComponent("../../shell/settings/SettingsWindow.qml")
+        compare(component.status,Component.Ready,component.errorString())
+        Services.SettingsStore.setSettingsCategory(data.category)
+        const window=component.createObject(test,{width:1000,height:700,visible:true})
+        verify(window!==null)
+        const collapse=findChild(window,"collapseAllSections"),expand=findChild(window,"expandAllSections")
+        verify(collapse!==null);verify(expand!==null)
+        verify(collapse.visible);verify(expand.visible)
+        const search=findChild(window,"settingsSearch")
+        verify(collapse.mapToItem(window,0,0).y>search.mapToItem(window,0,0).y)
+        const ids=Focus.sectionIds(window.activePage())
+        verify(ids.length>0,"Every Settings page must expose its sections: "+data.category)
+        Services.SettingsStore.setSettingsSection("test.unrelated",true)
+        collapse.activated()
+        tryVerify(function(){const states=JSON.parse(Services.SettingsStore.settingsSectionsJson);return ids.every(function(id){return states[id]===false})})
+        compare(JSON.parse(Services.SettingsStore.settingsSectionsJson)["test.unrelated"],true)
+        // Revisit the page: the disclosure choice is remembered.
+        Services.SettingsStore.setSettingsCategory(data.category==="appearance" ? "bar" : "appearance")
+        Services.SettingsStore.setSettingsCategory(data.category)
+        const states=JSON.parse(Services.SettingsStore.settingsSectionsJson)
+        for(const id of ids)compare(states[id],false)
+        expand.activated()
+        tryVerify(function(){const current=JSON.parse(Services.SettingsStore.settingsSectionsJson);return ids.every(function(id){return current[id]===true})})
+        window.destroy()
+        Services.SettingsStore.applyDocument(saved)
+    }
+    function test_collapse_during_search_clears_filter_and_collapses() {
+        const saved=Services.SettingsStore.snapshot()
+        const component=Qt.createComponent("../../shell/settings/SettingsWindow.qml")
+        compare(component.status,Component.Ready,component.errorString())
+        const window=component.createObject(test,{width:1000,height:700,visible:true})
+        const search=findChild(window,"settingsSearch")
+        search.text="opacity"
+        compare(Services.SettingsStore.settingsWindowCategory,"appearance")
+        findChild(window,"collapseAllSections").activated()
+        tryCompare(search,"text","")
+        tryVerify(function(){return window.uiGeometry().sections.every(function(section){return !section.effectiveExpanded})})
+        window.destroy()
+        Services.SettingsStore.applyDocument(saved)
     }
 }

@@ -1,5 +1,42 @@
 # Testing
 
+## Top bar scope and Settings section controls — 2026-11-08
+
+Final results: `scripts/check.sh` exited 0 (128 QML files checked; 31 QML suites,
+254 passed, 0 failed, 0 skipped; JavaScript, Python and installer checks passed).
+`python scripts/test-bar-settings-native.py` exited 0 on the local session.
+`git diff --check` passed. These are automated and hidden-native results, not a
+human visual acceptance claim.
+
+`scripts/check.sh` covers the actual BarPage controls through
+`tests/qml/tst_bar_scope.qml`: a real slider click targets HDMI-A-1 only; size,
+edge, space reservation, background, widget visibility, clock, Search label and
+fullscreen reveal leave DP-1 unchanged. All displays updates existing custom
+outputs and future inheritance, while preserving unrelated fields. Serialization
+and restore, legacy title visibility, focus changes and disconnection are checked.
+`tests/bar-layouts.test.js` covers sparse validation, invalid inputs, old records,
+size range and per-property shared inheritance. The existing module-drag suite
+still exercises full-page pointer ordering and context-menu visibility.
+
+`tests/qml/tst_settings_ux.qml` exercises Collapse all / Expand all below Search
+on all 13 pages, remembered disclosure states, isolation from other pages and
+collapse during an active search.
+
+Opt-in local native check: `python scripts/test-bar-settings-native.py`. It runs
+the fullscreen safety preflight before creating hidden BarWindows and Settings.
+It uses a temporary shell tree and temporary XDG config/state/cache directories.
+On the local Quickshell / Qt 6.12 / Hyprland 0.57.1 session, native construction,
+42px versus 28px bar geometry, independent reservation, atomic preferences save,
+collapsed categories and fresh-process readback passed. All audit windows stayed
+unmapped; no compositor dispatch or pointer/focus changes were made.
+
+NOT VERIFIED by those tests: visual legibility, human pointer use of every new
+control, actual compositor work-area changes at each size, physical hotplug and
+other hardware. Manual check: select one output in Apply to, resize it and confirm
+the other bar is unchanged; select All displays and resize again. Try individual
+background/widget/clock edits, then Collapse all / Expand all on several pages.
+Use shared settings for this display restores its fallback values.
+
 Automated logic, QML and installer checks are separate from native desktop acceptance. Dated local evidence below records actual Quickshell/Hyprland tests; older cloud-only entries remain historical and do not imply hardware coverage.
 
 ## Commands

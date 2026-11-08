@@ -466,9 +466,15 @@ Singleton {
     }
     function setFullscreenBarPeek(value) {barSettings.fullscreenPeek=value===true}
     function setSettingsSection(id,expanded) {
-        if(typeof id!=="string" || !/^[a-zA-Z][a-zA-Z0-9_.-]{0,79}$/.test(id) || ["constructor","prototype","__proto__"].indexOf(id)>=0 || typeof expanded!=="boolean")return false
+        return setSettingsSections([id],expanded)
+    }
+    function setSettingsSections(ids,expanded) {
+        if(!Array.isArray(ids) || typeof expanded!=="boolean")return false
         const states=JSON.parse(windowSettings.sectionsJson || "{}")
-        states[id]=expanded
+        for(const id of ids) {
+            if(typeof id!=="string" || !/^[a-zA-Z][a-zA-Z0-9_.-]{0,79}$/.test(id) || ["constructor","prototype","__proto__"].indexOf(id)>=0)return false
+            states[id]=expanded
+        }
         const result=Settings.validateSettings({settingsWindow:{sectionsJson:JSON.stringify(states)}})
         if(!result.ok)return false
         windowSettings.sectionsJson=result.settings.settingsWindow.sectionsJson;return true
@@ -539,33 +545,95 @@ Singleton {
         barSettings.moduleSidesJson=JSON.stringify(sides)
     }
     function resetModuleSides() { barSettings.moduleSidesJson="{}" }
-    function hiddenForOutput(output) { return Bar.hiddenForOutput(hiddenModules,hiddenOutputsJson,output) }
+    function hiddenForOutput(output) {
+        const hidden=Bar.hiddenForOutput(hiddenModules,hiddenOutputsJson,output)
+        if(!layoutForOutput(output).showFocusedTitle && hidden.indexOf("title")<0)hidden.push("title")
+        return hidden
+    }
     function setHiddenForOutput(output,hidden) {
         if(!Array.isArray(hidden) || !Bar.hiddenModulesValid(hidden)) return false
-        if(output === "") { setHiddenModules(hidden);return true }
+        if(output === "") { setHiddenModules(hidden);patchBarOutput(output,{showFocusedTitle:true});return true }
         const next=currentBar(),outputs=JSON.parse(hiddenOutputsJson)
         if(["__proto__","constructor","prototype"].indexOf(output)>=0) return false
         outputs[output]=hidden;next.hiddenOutputsJson=JSON.stringify(outputs)
         const result=Settings.validateSettings({bar:next})
         if(!result.ok) return false
         barSettings.hiddenOutputsJson=result.settings.bar.hiddenOutputsJson
+        patchBarOutput(output,{showFocusedTitle:true})
         return true
     }
     function inheritHidden(output) {
         const outputs=JSON.parse(hiddenOutputsJson)
         delete outputs[output]
         barSettings.hiddenOutputsJson=JSON.stringify(outputs)
+        const layouts=JSON.parse(layoutOutputsJson)
+        if(layouts[output]) {
+            delete layouts[output].showFocusedTitle
+            if(Object.keys(layouts[output]).length===0)delete layouts[output]
+            barSettings.layoutOutputsJson=JSON.stringify(layouts)
+        }
     }
 
-    function layoutForOutput(output) { return Bar.layoutForOutput(layoutOutputsJson,output,moduleOrder,moduleSidesJson) }
-    function setOutputLayout(output, edge, scale, order, sides) {
-        const values=JSON.parse(layoutOutputsJson),next=currentBar()
-        if(["__proto__","constructor","prototype"].indexOf(output)>=0)return false
-        values[output]={edge:edge,scale:scale,order:order,sides:JSON.parse(sides)}
-        next.layoutOutputsJson=JSON.stringify(values)
+    function layoutForOutput(output) {
+        return Bar.layoutForOutput(layoutOutputsJson,output,moduleOrder,moduleSidesJson,{
+            height:barHeight,reserveSpace:reserveSpace,showFocusedTitle:showFocusedTitle,
+            fullscreenPeek:fullscreenBarPeek,searchLabel:searchLabel,use24Hour:use24Hour,
+            showSeconds:clockSeconds,showDate:clockDate,dateFormat:clockDateFormat
+        })
+    }
+    function patchBarOutput(output,patch) {
+        if(typeof output!=="string" || ["__proto__","constructor","prototype"].indexOf(output)>=0)return false
+        const next=currentBar()
+        next.layoutOutputsJson=Bar.patchOutputLayouts(layoutOutputsJson,output,patch)
         const result=Settings.validateSettings({bar:next})
         if(!result.ok)return false
         barSettings.layoutOutputsJson=result.settings.bar.layoutOutputsJson
+        return true
+    }
+    function setOutputLayout(output, edge, scale, order, sides) {
+        return patchBarOutput(output,{edge:edge,scale:scale,order:order,sides:JSON.parse(sides)})
+    }
+    function setBarSizeForOutput(output,height) { return patchBarOutput(output,{height:height,scale:1}) }
+    function setBarWidgetVisible(output,id,visible) {
+        if(Bar.BAR_MODULES.indexOf(id)<0 || typeof visible!=="boolean")return false
+        let targets=[output]
+        if(output==="") {
+            const layouts=JSON.parse(layoutOutputsJson)
+            targets=targets.concat(Object.keys(JSON.parse(hiddenOutputsJson)),Object.keys(layouts).filter(function(key){return key!=="" && layouts[key].showFocusedTitle!==undefined}))
+        }
+        // Capture effective visibility before editing the shared defaults.
+        const lists={}
+        for(const key of targets)lists[key]=hiddenForOutput(key)
+        for(const key of Object.keys(lists)) {
+            const hidden=lists[key].filter(function(module){return module!==id})
+            if(!visible)hidden.push(id)
+            if(!setHiddenForOutput(key,hidden))return false
+        }
+        return true
+    }
+    function patchBarSurfaceForScope(output,patch) {
+        const base={mode:barSurfaceMode,color:barSurfaceColor,opacity:barSurfaceOpacity}
+        const overrides=JSON.parse(barSurfaceOutputsJson)
+        const selected=Object.assign({},output!=="" && overrides[output] ? overrides[output] : base,patch)
+        if(!setBarSurface(output,selected.mode,selected.color,selected.opacity))return false
+        if(output==="")for(const key of Object.keys(overrides)) {
+            const surface=Object.assign({},overrides[key],patch)
+            setBarSurface(key,surface.mode,surface.color,surface.opacity)
+        }
+        return true
+    }
+    function setBarModuleSideForScope(output,id,side) {
+        if(Bar.BAR_MODULES.indexOf(id)<0 || ["left","center","right"].indexOf(side)<0)return false
+        const layouts=JSON.parse(layoutOutputsJson),patch={}
+        const sides=JSON.parse(layoutForOutput(output).sides)
+        sides[id]=side;patch.sides=sides
+        if(!patchBarOutput(output,patch))return false
+        if(output==="")for(const key of Object.keys(layouts)) {
+            if(key==="" || !layouts[key].sides)continue
+            const custom=Object.assign({},layouts[key].sides)
+            custom[id]=side
+            patchBarOutput(key,{sides:custom})
+        }
         return true
     }
     function inheritOutputLayout(output) {

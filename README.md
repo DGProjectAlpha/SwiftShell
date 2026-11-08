@@ -594,3 +594,10 @@ color/opacity and optional per-monitor overrides. Transparent stays the default.
 Native layer blur is verified on both connected outputs without compositor rules;
 unsupported systems use a readable fallback. Scope and recovery are documented in
 [decision 0033](docs/decisions/0033-bar-surface-modes.md).
+
+Top bar settings uses one **Apply to** selector for per-display size, position,
+background, widgets, clock and fullscreen behavior. **All displays** applies the
+edited setting to existing custom bars too; unrelated preferences are preserved.
+Every Settings page has **Collapse all** / **Expand all** below Search. See
+[the scope decision](docs/decisions/0052-bar-settings-scope.md) for compatibility,
+test coverage and recovery.

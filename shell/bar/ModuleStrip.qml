@@ -50,7 +50,7 @@ Item {
                 implicitWidth:moduleLoader.implicitWidth
                 implicitHeight:moduleLoader.implicitHeight
                 width:strip.barWindow.vertical ? strip.barWindow.railWidth : moduleId==="title" ? Math.max(0,strip.titleWidth) : implicitWidth
-                readonly property bool participatesInLayout:moduleId==="title" ? SettingsStore.showFocusedTitle && strip.barWindow.windowTitle!=="" && width>0 : implicitWidth>0
+                readonly property bool participatesInLayout:moduleId==="title" ? strip.barWindow.outputLayout.showFocusedTitle && strip.barWindow.windowTitle!=="" && width>0 : implicitWidth>0
                 visible:participatesInLayout
                 height:Math.max(Theme.barHeight,implicitHeight)
                 Loader {

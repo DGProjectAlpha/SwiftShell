@@ -24,3 +24,15 @@ function focusFirst(node) {
     for(let i=0;i<children.length;i++)if(focusFirst(children[i]))return true;
     return false;
 }
+
+function sectionIds(node) {
+    const ids=[];
+    function visit(item) {
+        if(!item)return;
+        if(typeof item.sectionId === "string" && item.sectionId!=="" && ids.indexOf(item.sectionId)<0)ids.push(item.sectionId);
+        const children=item.children || [];
+        for(let i=0;i<children.length;i++)visit(children[i]);
+    }
+    visit(node);
+    return ids;
+}

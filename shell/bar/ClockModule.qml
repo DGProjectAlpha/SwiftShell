@@ -9,8 +9,13 @@ import "../themes"
 MouseArea {
     id: root
 
+    property bool use24Hour:SettingsStore.use24Hour
+    property bool showSeconds:SettingsStore.clockSeconds
+    property bool showDate:SettingsStore.clockDate
+    property string dateFormat:SettingsStore.clockDateFormat
+
     readonly property int updatePrecision:clock.precision
-    readonly property string labelText:(SettingsStore.clockDate ? Qt.formatDate(clock.date,Clock.datePattern(SettingsStore.clockDateFormat))+" · " : "")+Clock.formatTime(clock.date,SettingsStore.use24Hour,SettingsStore.clockSeconds)
+    readonly property string labelText:(root.showDate ? Qt.formatDate(clock.date,Clock.datePattern(root.dateFormat))+" · " : "")+Clock.formatTime(clock.date,root.use24Hour,root.showSeconds)
     property bool vertical:false
     readonly property bool timerVisible:ClockService.state.timer.status === "running" || ClockService.state.timer.status === "paused" || ClockService.finished
     readonly property bool stopwatchVisible:ClockService.state.stopwatch.status === "running" || ClockService.state.stopwatch.status === "paused"
@@ -47,7 +52,7 @@ MouseArea {
 
     SystemClock {
         id: clock
-        precision: SettingsStore.clockSeconds ? SystemClock.Seconds : SystemClock.Minutes
+        precision: root.showSeconds ? SystemClock.Seconds : SystemClock.Minutes
     }
 
     Grid {
@@ -58,7 +63,7 @@ MouseArea {
         MouseArea {
             id:dateHit
             objectName:"barDateButton"
-            visible:SettingsStore.clockDate
+            visible:root.showDate
             width:visible ? dateLabel.implicitWidth : 0
             height:Theme.barHeight
             cursorShape:Qt.PointingHandCursor
@@ -76,13 +81,13 @@ MouseArea {
                 id:dateLabel
                 height:Theme.barHeight
                 verticalAlignment:Text.AlignVCenter
-                text:Qt.formatDate(clock.date,Clock.datePattern(SettingsStore.clockDateFormat))
+                text:Qt.formatDate(clock.date,Clock.datePattern(root.dateFormat))
                 font.family:"Noto Sans Mono"
                 color:dateHit.containsMouse || dateHit.activeFocus ? root.textHover : root.textPrimary
             }
         }
         BarLabel {
-            visible:SettingsStore.clockDate && !root.vertical
+            visible:root.showDate && !root.vertical
             text:" · "
             font.family:"Noto Sans Mono"
             color:root.textPrimary
@@ -92,7 +97,7 @@ MouseArea {
         BarLabel {
             id:label
             objectName:"barTimeLabel"
-            text:Clock.formatTime(clock.date,SettingsStore.use24Hour,SettingsStore.clockSeconds)
+            text:Clock.formatTime(clock.date,root.use24Hour,root.showSeconds)
             font.family:"Noto Sans Mono"
             height:Theme.barHeight
                 verticalAlignment:Text.AlignVCenter
