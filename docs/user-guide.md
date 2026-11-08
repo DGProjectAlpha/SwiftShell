@@ -197,6 +197,11 @@ to capture an area or the focused display, or click the camera in the bar. Revie
 the image, then choose Copy PNG or Save as… for a local PNG file. Area selection
 supports Escape to cancel; optional 3/5-second delays let you prepare the screen.
 Capturing never overwrites the clipboard until you choose Copy PNG.
+The Capture utility stays open when you click elsewhere or open Spotlight. Close
+it with Close, or Escape while Capture has keyboard focus. To capture Spotlight
+or another panel, set a 3/5-second delay, start Capture, then open the target panel.
+Only Capture itself hides during acquisition and returns afterward; target panels
+are left visible.
 
 Clipboard history is off by default. Enable it in Settings → Spotlight Search to
 remember text copied from then on. Type `clip` or `clip some text` to browse/search
@@ -273,7 +278,9 @@ from fading into the wallpaper when the desktop appearance integration is enable
 Settings opens on the display where its button was clicked. Reopening keeps its
 saved size and centers it on that display. Resize at the visible window edge or
 corner. **Top bar → Peek in fullscreen** optionally reveals the bar when the
-pointer pauses at its display edge; it starts off.
+pointer pauses at its display edge; it starts off. While hidden, the bar passes
+all clicks through to the fullscreen application. Its controls become clickable
+when the peek is visible, and stop accepting clicks when it hides again.
 
 ### Desktop shortcuts
 
@@ -291,14 +298,16 @@ cannot be safely linked explicitly show that the choice is used only by SwiftShe
 
 ### Lock, sleep and switching desktops
 
-Use the bar's Power panel or Spotlight's bottom actions. **Lock** opens the secure
-lock screen immediately. **Suspend**, **Log out**, **Restart** and **Shut down** ask
-for a second confirmation. Log out ends this Hyprland session and returns control
-to the login manager, where you can select another desktop.
+Use the bar's Power panel or Spotlight's bottom actions. **Lock** uses Hyprlock
+and keeps your apps running. Use your normal Linux login password to unlock.
+**Suspend** locks first, waits for the compositor to confirm the secure lock, then
+sleeps. Wake returns to the lock screen with your apps preserved. **Log out** closes
+your apps and returns to the system login screen, where you can choose a desktop.
+Suspend, Log out, Restart and Shut down require confirmation.
 
-Lock and lock-before-suspend require `hyprlock`. If it is missing, install the
-package through your package manager; the controls explain why they are unavailable.
-An existing Hyprlock configuration is respected, otherwise SwiftShell supplies a
-neutral fallback. Hyprlock handles your unlock password directly. Suspend waits
-for a secure lock before asking the system to sleep and respects applications'
-sleep inhibitors. Refused or failed actions show an error in the panel or Spotlight.
+To check the actual Hyprlock PAM profile without locking the desktop, run
+`python scripts/test-hyprlock-auth.py` locally in this checkout. Enter your password
+only in that local diagnostic dialog. It makes one authentication attempt and
+reports only a success flag/PAM code; no password is accepted in command arguments,
+saved or printed. A failure leaves the desktop accessible. Do not repeatedly retry
+failed authentication, since the system's normal failed-attempt policy still applies.

@@ -22,7 +22,7 @@ Column {
     Text {
         width: parent.width
         wrapMode: Text.WordWrap
-        text: "Lock immediately, or choose another action and confirm."
+        text: "Lock keeps your apps open. Suspend locks first, then sleeps. Log out closes your apps and returns to the login screen."
         color: Theme.settingsMuted
         font.family: Theme.settingsFontFamily
         font.pixelSize: Theme.settingsFontSizeSmall

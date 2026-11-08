@@ -1039,6 +1039,7 @@ def main():
         "unprobed blur capabilities remain unavailable": 'available: false' in (SHELL / "logic" / "capabilities.js").read_text(encoding="utf-8") and "active surface backend confirms support" in (SHELL / "logic" / "capabilities.js").read_text(encoding="utf-8"),
         "wallpaper is a background layer": "WlrLayer.Background" in (SHELL / "wallpaper" / "WallpaperSurface.qml").read_text(encoding="utf-8") and "WlrKeyboardFocus.None" in (SHELL / "wallpaper" / "WallpaperSurface.qml").read_text(encoding="utf-8") and "ExclusionMode.Ignore" in (SHELL / "wallpaper" / "WallpaperSurface.qml").read_text(encoding="utf-8") and 'source: "wallpaper/WallpaperHost.qml"' in shell_qml,
         "spotlight settings opens the window": "settingsRequested" in (SHELL / "services" / "LauncherModel.qml").read_text(encoding="utf-8"),
+        "capture preparation preserves target shell panels": not re.search(r"function\s+onCaptureRequested\s*\([^)]*\)\s*\{[^}]*\b(?:closeLauncher|closeOverview|closePanels)\s*\(", shell_qml),
     }
     for name, ok in checks.items():
         if not ok:

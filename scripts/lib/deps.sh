@@ -111,7 +111,7 @@ swiftshell_report_dependencies() {
         swiftshell_warn "Hyprland was not reported by a local version command."
     fi
     if ! command -v hyprlock >/dev/null 2>&1; then
-        swiftshell_warn "hyprlock is not installed; secure Lock and lock-before-Suspend will be unavailable."
+        swiftshell_warn "hyprlock is not installed; secure Lock and lock-before-Suspend are unavailable."
     fi
     return "$ok"
 }

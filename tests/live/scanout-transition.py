@@ -13,6 +13,8 @@ import time
 parser=argparse.ArgumentParser()
 parser.add_argument('--live',action='store_true',required=True)
 parser.parse_args()
+from fullscreen_guard import require_idle_desktop
+require_idle_desktop()
 root=Path(__file__).resolve().parents[2]
 sys.path.insert(0,str(root/'shell/helpers'))
 from displayctl import ipc,logical_size

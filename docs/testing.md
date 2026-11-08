@@ -1428,3 +1428,223 @@ Final validation: `scripts/check.sh` passed all static/logic/helper checks and
 30 QML suites / 231 cases. Native fullscreen-startup regression passed again after
 cleanup hardening. Production runtime had zero TypeError, ReferenceError, binding
 loop and configuration-load failures; source watching was restored.
+
+## Fullscreen peek layer commit — 2026-11-05
+
+The saved fullscreen peek option was off. Preferences were backed up to
+`/tmp/swiftshell-before-enabling-fullscreen-peek.json`, then enabled atomically.
+A real DP-1 test exposed a second failure: peek=true while the native bar remained
+on layer 2 at alpha=0. Quickshell 0.3.2 queues layer changes until a surface commit;
+a fullscreen-hidden surface can remain frame-throttled. Versioned implementation:
+https://github.com/quickshell-mirror/quickshell/blob/v0.3.2/src/wayland/wlr_layershell/surface.cpp
+
+BarWindow now briefly unmaps/remaps only its own surface when peek changes, which
+commits the requested layer on mapping. Its QML controller remains alive. No
+permanent overlay, compositor rule, display mode or user Lua edit is involved.
+Source backup: `/tmp/swiftshell-peek-backup`. Revert this slice and restart only
+SwiftShell for recovery; disabling fullscreen peek stops edge sampling.
+
+After a scoped restart, actual DP-1 hover reached layer 3 / alpha=1. Screenshots
+visibly showed the bar over RuneScape and absent again after leaving the edge.
+Pointer/focus were restored, and the owner subsequently confirmed it works.
+Layer 2 alpha alone cannot prove hidden state; Hyprland can omit that layer above
+fullscreen even with alpha=1.
+
+`python tests/live/bar-fullscreen.py --live --allow-active-game` passed: owned
+HDMI-only fullscreen client, private cursor samples, native fullscreen metadata,
+visible overlay alpha=1, stable dimensions, return below fullscreen and Clock
+popout dismissal. The explicit flag retains the default gaming safety gate.
+The regression now tolerates intended remap gaps and verifies actual compositor
+visibility rather than requiring the same native surface. `scripts/check.sh`
+passed all checks, including 30 QML suites / 231 cases. No real game input or
+Noctalia changes were made.
+
+## Persistent Capture alongside Spotlight — 2026-11-05
+
+Capture previously used an exclusive keyboard grab, closed on focus-grab loss and
+closed on outside clicks. Starting acquisition also globally dismissed Spotlight,
+overview and bar panels, making screenshots of those surfaces impossible.
+ScreenshotWindow now accepts input only within its card, uses on-demand keyboard
+focus and remains open until explicit Close/Escape. Spotlight's focus grab accepts
+the visible Capture window as a companion, so operating Capture does not dismiss
+the target. Acquisition hides only Capture itself and returns it afterward; the
+global target-panel dismissal connection was removed.
+
+`scripts/check.sh` passed all checks, 30 QML suites / 231 cases. Extended
+`python tests/live/screenshot-review.py --live` passed on HDMI-A-1 and DP-1:
+Capture survives opening/closing real Spotlight with keyboard focus, capture leaves
+Spotlight open, preview loads, private PNG clipboard transport works and native
+Save As exports a real PNG. These tests use owned opaque checkerboard surfaces,
+isolated preferences and a private clipboard sink; desktop clipboard is unchanged.
+A root-wiring static regression prevents acquisition from closing target panels.
+
+The tested change was activated with a scoped SwiftShell restart. Production logs
+showed no TypeError, ReferenceError, binding loop, configuration-load or Capture
+surface errors. Source watching was restored. User preferences, compositor config,
+Noctalia, modes and autostart were unchanged. Physical user acceptance: open Capture,
+set a delay, start it, open Spotlight and verify Spotlight appears in the resulting
+image. The native regression checks Spotlight lifetime and owned-region acquisition,
+not a manual user's region selection of Spotlight pixels.
+
+Recovery: revert this feature commit and restart only SwiftShell. Source backup:
+`/tmp/swiftshell-capture-persistence-backup`.
+
+## System login-screen semantics — 2026-11-06
+
+The owner rejected Hyprlock and explicitly requested that Lock sign out to the
+boot login screen, and Suspend sleep with that login screen on wake. Decision
+0050 supersedes 0049. Lock/Log out now exit only the validated current Hyprland
+session. Suspend uses a real logind sleep-delay inhibitor: request sleep while
+authorization is available, wait for PreparingForSleep, finish this compositor,
+then release the delay. Both actions explain that apps close and require
+confirmation. SwiftShell no longer starts Hyprlock or supplies a password screen.
+
+Read-only probes verified active Plasma Login 6.8.2 and its DisplayManager/Seat0
+interfaces, valid current graphical session, available logind capabilities, actual
+JSON boolean/seat property formats, and autologin/relogin off. `lock --dry-run` and
+`suspend --dry-run` report the new routes. A harmless `systemd-inhibit --what=sleep
+--mode=delay ... /usr/bin/true` successfully acquired/released an inhibitor without
+sleeping. No existing service, user Lua, PAM, Noctalia or display configuration was
+edited, and no package was removed or installed.
+
+`scripts/check.sh` passed: 128 QML files, 30 QML suites / 231 cases. Python session
+helper tests: 21 passing cases, including sign-out without any locker, sleep
+acceptance ordering, denial/timeout without sign-out, compositor-exit wait and
+validated-session-only termination fallback. Native `tests/live/session-actions.py
+--live` passed Power/Spotlight confirmations and shared refusal/busy/error reporting
+with an isolated helper that cannot perform any real session action.
+
+Actual logout, greeter arrival, physical sleep and resume were not triggered.
+Owner acceptance: save work; Lock → Confirm Lock should end apps and show Plasma
+Login. After logging in, save work; Suspend → Confirm Suspend should end apps and
+sleep; wake should show Plasma Login. No separate SwiftShell/Hyprlock password UI
+should appear. Failed pre-sleep authorization should leave the desktop open.
+Recovery: revert this slice and restart only SwiftShell; backup is
+`/tmp/swiftshell-greeter-actions-backup`.
+
+Activated through a scoped SwiftShell restart. Production SessionActions snapshot
+reports all five actions available, ready=true, no error; settings persistence is
+ready. Runtime logs have no TypeError, ReferenceError, binding loop or load failure.
+Development file watching restored. No live session-ending or sleep action ran.
+
+## Non-locking Hyprlock authentication probe — 2026-11-06
+
+The owner requested restoring Hyprlock, contingent on safely testing the password
+failure. `scripts/test-hyprlock-auth.py` opens a local password dialog and calls the
+actual current user's `hyprlock` PAM service with pam_start/pam_authenticate/pam_end,
+matching Hyprlock's authentication API. It never launches a locker or opens a PAM
+session. One attempt per invocation prevents automatic retry loops; ordinary PAM
+failed-attempt policy still applies. Password input stays local/in memory; stdout
+contains only service, authenticated boolean and PAM code, never prompt contents
+or password. It does not accept credentials via command arguments or environment.
+
+Read-only checks: current faillock tally empty, login shell listed in /etc/shells,
+installed Hyprlock 0.9.7 PAM profile includes login/system-local-login/system-login/
+system-auth. Both actual SwiftShell and the test process have NoNewPrivs=0 and
+Seccomp=0; unix_chkpwd retains packaged privileged permissions. No PAM files or
+account policies were modified. These checks do not prove password acceptance.
+
+The native test window was launched and moved/focused on HDMI-A-1 so it would not
+be obscured by the DP-1 game. At this checkpoint it is awaiting the owner's local
+password entry; no authentication result has been reported and no lock was taken.
+Hyprlock restoration was prepared and passed scripts/check.sh (231 QML cases),
+19 backend tests and native isolated session-action routing, but was then held
+outside the active tree pending real PAM success. Prepared patch/config:
+/tmp/swiftshell-hyprlock-prepared.patch and /tmp/swiftshell-hyprlock-prepared.conf.
+The current committed session controls remain unchanged. Do not claim the original
+password rejection is diagnosed or that restored Hyprlock is activated yet.
+
+## Verified PAM success and Hyprlock restoration — 2026-11-06
+
+The local non-locking password test returned exactly:
+`{"authenticated":true,"pamCode":0,"service":"hyprlock"}`.
+The owner separately confirmed the test passed. This tests the real current user's
+PAM service, not a mock password comparison. Password data was not sent through
+commands, stdout, files or environment variables. The prepared restoration was
+applied only after this result. Decision 0051 supersedes the sign-out semantics
+of 0050: Lock preserves apps behind Hyprlock, Suspend securely locks before sleep,
+and Log out returns to the boot greeter and closes apps. Power/Spotlight explain
+these differences; the dependency warning and bundled neutral fallback are back.
+
+The earlier password rejection's cause is still unproven; no PAM/account settings
+were changed to make this test pass. Actual lock-screen input, unlocking and
+physical sleep/resume are not established by a successful pam_authenticate call.
+No real lock or sleep action was triggered by the agent. Recovery information is
+in decision 0051; source backups remain in /tmp/swiftshell-hyprlock-restore-backup.
+
+Restoration validation: scripts/check.sh passed (128 QML files; 30 QML suites,
+231 cases), 19 session helper tests and the native isolated session-action fixture
+passed. Non-disruptive dry runs report hyprlock / locked-logind-suspend routes.
+Activated by restarting only SwiftShell; live actions are ready/available without
+error, persistence ready, and no TypeError/ReferenceError/binding-loop/load failures
+appear in runtime logs. Source watching restored. No actual lock or sleep was run.
+
+## Hidden fullscreen bar does not intercept input — 2026-11-06
+
+The native bar previously stayed mapped below fullscreen when peek closed.
+Compositor invisibility is not a reliable input boundary. BarWindow now binds
+native visibility to non-fullscreen or visible peek, with the existing brief
+layer-binding settle before reveal. The QML controller and optional edge watcher
+stay alive while the native window is unmapped. No invisible hit area remains;
+normal desktop mapping returns automatically when leaving fullscreen. Input state
+is exposed in path-free rendering diagnostics.
+
+`python tests/live/bar-fullscreen.py --live --allow-active-game --input-check`
+passed on the actual mixed-scale HDMI output with an owned fullscreen client:
+initially no native bar surface, real click at the bar's position delivered to the
+client; visible overlay at alpha=1, real Clock click delivered to the bar rather
+than the client; hide again removes the surface and restores client clicks;
+leaving fullscreen restores the normal interactive bar. Popout dismissal and
+stable dimensions also pass. Virtual input is restricted to the owned HDMI client
+and its bar; no game click/key was sent. Pointer and monitor focus are restored,
+and the owned process/rule are cleaned up even if a check fails.
+
+The test uses compositor-reported bar geometry and disables only its private bar's
+space reservation to avoid stacking beneath the running bar. An earlier reveal
+assertion clicked the wrong vertical position due to that stacking; this was a
+test error, not evidence of a product click-delivery defect. Pointer-movement
+safety checks refused gestures during user motion; the final click test ran after
+the owner confirmed the pointer could remain still. The private cursor helper
+still controls reveal intent without moving the real pointer to the game edge.
+
+`scripts/check.sh` passed (128 QML files, 30 QML suites / 231 cases). Production
+SwiftShell was restarted by config path. Live diagnostics: DP-1 fullscreen=true,
+peek=false, acceptsInput=false, edge watcher active; `hyprctl -j layers` contains
+no DP-1 SwiftShell bar. HDMI retains its layer-2 normal bar and acceptsInput=true.
+Runtime logs show no TypeError, ReferenceError, binding loop or load failure.
+The current compositor reports Hyprland 0.57.1. Source watching was restored.
+No preference, monitor mode, user Lua, Noctalia or existing service changes.
+
+Recovery: revert this feature commit and restart only SwiftShell. Source/test
+backup: `/tmp/swiftshell-hidden-bar-input-backup`. Owner acceptance: click game
+controls near the hidden bar, then deliberately dwell at the edge and confirm the
+revealed bar responds; moving away should return all clicks to the game.
+
+## Game-safe native testing and DP-1 audit — 2026-11-06
+
+The owner reported repeated game fullscreen loss during the preceding HDMI fixture
+runs. No exact transition trace was preserved; do not claim another monitor or
+no-initial-focus guarantees game safety. Remove the active-game bypass and refuse
+interactive tests while any existing mapped app is compositor- or client-fullscreen.
+The shared tests/live/fullscreen_guard.py is now used by bar-fullscreen,
+scanout-transition, screenshot-review and bar-inputs before creating windows,
+rules or sending input. AGENTS.md records the broader prohibition while gaming.
+
+Six new pure tests cover observed named-workspace RuneScape data, client-only
+fullscreen after demotion, other fullscreen apps/states, maximized/windowed apps,
+failed/malformed IPC and a strictly read-only probe. Live validation invoked each
+of the four guarded entry points while the game was fullscreen: all refused before
+mutation, and its address/output/workspace/internal/client fullscreen snapshot was
+unchanged. No native fixture, pointer gesture, restart or mode switch was performed
+for this task. Backup: /tmp/swiftshell-live-test-safety-backup.
+
+The read-only display report is docs/reports/dp1-display-audit-2026-11-06.md. DP-1
+matches the native EDID high-refresh mode, scale and configured 10-bit depth; VRR
+is active. HDR is supported and automatic switching enabled, but not currently
+active in the SDR game. Direct scanout is configured but blocked by SW; hardware
+cursors are not in use. These limitations were reported rather than silently
+changing HDR, cursor or user-authored Lua settings during gameplay.
+
+Final checks: scripts/check.sh passed (128 QML files, 30 QML suites / 231 cases,
+six additional live-desktop guard unit cases). Production shell source was not
+changed and required no reload. No Hyprland or monitor settings were written.

@@ -323,7 +323,7 @@ Rectangle {
         Text {
             width:parent.width;visible:LauncherModel.notice!=="" || LauncherModel.confirmId!==""
             textFormat:Text.PlainText
-            text:LauncherModel.confirmId!=="" ? "Select again to confirm · Escape to cancel" : LauncherModel.notice
+            text:LauncherModel.confirmId!=="" ? (LauncherModel.confirmId==="logout" ? "Closes your apps and returns to login. Select again to confirm · Escape to cancel" : LauncherModel.confirmId==="suspend" ? "Locks your screen and sleeps; your apps stay open. Select again to confirm · Escape to cancel" : "Select again to confirm · Escape to cancel") : LauncherModel.notice
             color:Theme.settingsText;font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSizeSmall;horizontalAlignment:Text.AlignHCenter;elide:Text.ElideRight
         }
         Row {

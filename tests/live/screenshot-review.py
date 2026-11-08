@@ -17,6 +17,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--live", action="store_true", required=True)
 parser.add_argument("--interactive", action="store_true")
 args=parser.parse_args()
+from fullscreen_guard import require_idle_desktop
+require_idle_desktop()
 ROOT = Path(__file__).parents[2]
 sys.path.insert(0, str(ROOT / "shell/helpers"))
 from displayctl import ipc
@@ -80,6 +82,7 @@ import Quickshell.Io
 import Quickshell.Wayland
 import "services"
 import "screenshots"
+import "launcher"
 ShellRoot {
  id:root
  property string lastAction:""
@@ -93,10 +96,11 @@ ShellRoot {
   Canvas {anchors.fill:parent;onPaint:{const c=getContext("2d");for(let y=0;y<height;y+=8)for(let x=0;x<width;x+=8){c.fillStyle=(x+y)%16===0 ? "#eeeeee" : "#202020";c.fillRect(x,y,8,8)}}}
  }
  ScreenshotWindow {id:review}
+ LauncherWindow {id:spotlight;companionWindows:review.visible ? [review] : []}
  function find(item,name){if(item.objectName===name)return item;for(let i=0;i<item.children.length;i++){const match=find(item.children[i],name);if(match)return match}return null}
  IpcHandler {
   target:"audit"
-  function state():string {const image=root.find(review.contentItem,"screenshotPreview");return JSON.stringify({lastAction:root.lastAction,output:root.output ? root.output.name : "",ready:SettingsStore.persistenceState==="ready",available:ScreenshotService.available,open:ScreenshotService.open,busy:ScreenshotService.busy,hasImage:ScreenshotService.hasImage,imageReady:!!image && image.status===Image.Ready,failed:ScreenshotService.failed,message:ScreenshotService.message,token:ScreenshotService.token,review:review.diagnostics()})}
+  function state():string {const image=root.find(review.contentItem,"screenshotPreview");return JSON.stringify({spotlight:LauncherModel.open,searchFocus:spotlight.searchHasFocus,lastAction:root.lastAction,output:root.output ? root.output.name : "",ready:SettingsStore.persistenceState==="ready",available:ScreenshotService.available,open:ScreenshotService.open,busy:ScreenshotService.busy,hasImage:ScreenshotService.hasImage,imageReady:!!image && image.status===Image.Ready,failed:ScreenshotService.failed,message:ScreenshotService.message,token:ScreenshotService.token,review:review.diagnostics()})}
   function action(next:string):void {
    root.lastAction=next
    if(next==="open-review")ScreenshotService.show(root.output.name)
@@ -105,6 +109,8 @@ ShellRoot {
    else if(next==="save-dialog")ScreenshotService.saveAs()
    else if(next==="discard")ScreenshotService.discard()
    else if(next==="close")ScreenshotService.close()
+   else if(next==="spotlight")LauncherModel.openLauncher()
+   else if(next==="close-spotlight")LauncherModel.closeLauncher()
   }
   function accept(destination:string):void {
    const loader=root.find(review.contentItem,"screenshotSaveDialogLoader")
@@ -140,9 +146,18 @@ ShellRoot {
                 wait(lambda: state()["ready"] and state()["available"])
                 call("action", "open-review")
                 wait(lambda: state()["review"]["visible"])
+                call("action", "spotlight")
+                wait(lambda: state()["spotlight"] and state()["searchFocus"])
+                time.sleep(.3)
+                assert state()["review"]["visible"], "Opening Spotlight dismissed Capture"
+                call("action", "close-spotlight")
+                wait(lambda: not state()["spotlight"])
+                assert state()["review"]["visible"], "Closing Spotlight dismissed Capture"
                 time.sleep(0.25)
                 backgrounds=[item for output in json.loads(ipc("j/layers")).values() for group in output.get("levels",{}).values() for item in group if item.get("namespace")=="swiftshell-screenshot-owned-pattern"]
                 pattern=next(item for item in backgrounds if item["x"]<=monitor["x"]+32 and item["y"]<=monitor["y"]+32 and item["x"]+item["w"]>=monitor["x"]+96 and item["y"]+item["h"]>=monitor["y"]+96)
+                call("action", "spotlight")
+                wait(lambda: state()["spotlight"] and state()["searchFocus"])
                 call("action", "capture")
                 if args.interactive:
                     wait(lambda:state()["busy"] and not state()["review"]["visible"])
@@ -162,6 +177,8 @@ ShellRoot {
                     result.check_returncode()
                 wait(lambda: state()["hasImage"] and state()["imageReady"] and not state()["busy"])
                 assert not state()["failed"], state()["message"]
+                assert state()["spotlight"], "Capture dismissed the target Spotlight panel"
+                call("action", "close-spotlight")
                 time.sleep(0.2)
                 frame=state()["review"]["frame"]
                 x=monitor["x"]+round(frame["x"]);y=monitor["y"]+round(frame["y"])
