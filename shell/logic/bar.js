@@ -1,7 +1,10 @@
 var BAR_MODULES = ["workspaces", "title", "search", "clock", "control", "media", "tray", "battery", "network", "power", "notifications", "screenshot", "clipboard", "performance", "weather"];
 
-function textRenderMode(devicePixelRatio, contentScale, curveAvailable) {
-    return devicePixelRatio === 1 && contentScale === 1 && curveAvailable === true ? "curve" : "distance-field";
+function textRenderMode(devicePixelRatio, contentScale) {
+    // Platform rasterization can grid-fit small glyphs at their actual size.
+    // Preserve the known-good distance-field path whenever the compositor or
+    // user scales content, avoiding resampling a hinted glyph texture.
+    return devicePixelRatio === 1 && contentScale === 1 ? "native" : "distance-field";
 }
 
 function snapModulePosition(position, devicePixelRatio, contentScale) {

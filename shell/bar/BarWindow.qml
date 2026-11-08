@@ -36,10 +36,10 @@ PanelWindow {
         Qt.callLater(restoreBar)
     }
     function restoreBar() { remapping=false }
-    readonly property int barTextRenderType:Bar.textRenderMode(devicePixelRatio,contentScale,typeof Text["CurveRendering"]==="number")==="curve" ? Text["CurveRendering"] : Text.QtRendering
+    readonly property int barTextRenderType:Bar.textRenderMode(devicePixelRatio,contentScale)==="native" ? Text.NativeRendering : Text.QtRendering
     function snapModule(position) {return Bar.snapModulePosition(position,devicePixelRatio,contentScale)}
     function renderingDiagnostics() {
-        return {devicePixelRatio:devicePixelRatio,screenDevicePixelRatio:screen ? screen.devicePixelRatio : 0,contentScale:contentScale,textMode:barTextRenderType===Text.QtRendering ? "distance-field" : "curve",fullscreen:outputFullscreen,peek:peekOpen,acceptsInput:acceptsBarInput,cursorWatching:peekController.watching,origins:[leftModules.renderingGeometry(),centerModules.renderingGeometry(),rightModules.renderingGeometry()]}
+        return {devicePixelRatio:devicePixelRatio,screenDevicePixelRatio:screen ? screen.devicePixelRatio : 0,contentScale:contentScale,effectiveRasterScale:devicePixelRatio*contentScale,logicalSize:{width:screen ? screen.width : 0,height:screen ? screen.height : 0},rasterSize:{width:screen ? Math.round(screen.width*devicePixelRatio) : 0,height:screen ? Math.round(screen.height*devicePixelRatio) : 0},textMode:barTextRenderType===Text.NativeRendering ? "native-hinted" : "distance-field",fullscreen:outputFullscreen,peek:peekOpen,acceptsInput:acceptsBarInput,cursorWatching:peekController.watching,origins:[leftModules.renderingGeometry(),centerModules.renderingGeometry(),rightModules.renderingGeometry()]}
     }
     readonly property real railWidth:168
     implicitHeight: vertical ? (screen ? screen.height : 1080) : Math.ceil(Theme.barHeight*contentScale)
@@ -341,8 +341,8 @@ PanelWindow {
                 Item {
                     width:Theme.barIcon;height:Theme.barIcon
                     readonly property color ink:searchButton.containsMouse || searchButton.activeFocus ? window.foregroundFor("search",false) : window.foregroundFor("search",true)
-                    Rectangle {width:parent.width*.6;height:width;radius:width/2;anchors.left:parent.left;anchors.top:parent.top;color:"transparent";border.width:1.5;border.color:parent.ink}
-                    Rectangle {width:parent.width*.48;height:1.5;rotation:45;x:parent.width*.51;y:parent.height*.73;color:parent.ink}
+                    Rectangle {antialiasing:true;width:parent.width*.6;height:width;radius:width/2;anchors.left:parent.left;anchors.top:parent.top;color:"transparent";border.width:1.5;border.color:parent.ink}
+                    Rectangle {antialiasing:true;width:parent.width*.48;height:1.5;rotation:45;x:parent.width*.51;y:parent.height*.73;color:parent.ink}
                 }
                 BarLabel {
                     visible:window.outputLayout.searchLabel

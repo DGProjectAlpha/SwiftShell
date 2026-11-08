@@ -14,7 +14,7 @@ Item {
     visible: report.available
 
     Text {
-        renderType:Theme.barTextRendering(root)
+        renderType:Theme.barTextRendering(root);antialiasing:true;font.hintingPreference:Font.PreferVerticalHinting
         id: label
         anchors.verticalCenter: parent.verticalCenter
         text: root.report.text

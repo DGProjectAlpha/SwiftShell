@@ -21,8 +21,7 @@ TestCase {
             property real contentScale:1
             property bool vertical:false
             property real railWidth:168
-            property bool curveAvailable:typeof Text["CurveRendering"]==="number"
-            readonly property int barTextRenderType:Bar.textRenderMode(devicePixelRatio,contentScale,curveAvailable)==="curve" ? Text["CurveRendering"] : Text.QtRendering
+            readonly property int barTextRenderType:Bar.textRenderMode(devicePixelRatio,contentScale)==="native" ? Text.NativeRendering : Text.QtRendering
             readonly property Item contentItem:context
             function componentFor(id){return renderModule}
             Component {id:renderModule;Item {implicitWidth:37.375;implicitHeight:30;Components.BarLabel {objectName:"renderLabel";text:"12:34"}}}
@@ -147,23 +146,36 @@ TestCase {
         compare(service.cpuHistory.length,0)
         service.retry();verify(!service.failed);verify(service.sampling)
     }
-    function test_low_dpi_rendering_context_has_guarded_fallback() {
+    function test_native_hinted_rendering_is_scoped_to_one_to_one_bar_context() {
         panel=renderContextComponent.createObject(test)
         verify(panel!==null)
         const label=findChild(panel,"renderLabel")
         verify(label!==null)
-        const expected=typeof Text["CurveRendering"]==="number" ? Text["CurveRendering"] : Text.QtRendering
-        compare(label.renderType,expected)
+        compare(label.renderType,Text.NativeRendering)
+        verify(label.antialiasing)
+        compare(label.font.hintingPreference,Font.PreferVerticalHinting)
         panel.devicePixelRatio=1.25
         compare(label.renderType,Text.QtRendering)
         panel.devicePixelRatio=1;panel.contentScale=.9
         compare(label.renderType,Text.QtRendering)
-        panel.contentScale=1;panel.curveAvailable=false
-        compare(label.renderType,Text.QtRendering)
+        panel.contentScale=1
+        compare(label.renderType,Text.NativeRendering)
         const component=Qt.createComponent("../../shell/components/BarLabel.qml")
         const standalone=component.createObject(test,{text:"Outside bar"})
         compare(standalone.renderType,Text.QtRendering)
         standalone.destroy()
+    }
+    function test_bar_canvas_glyphs_antialias_without_geometry_changes() {
+        const widget=Qt.createComponent("../../shell/bar/WidgetIndicator.qml").createObject(test,{kind:"notifications"})
+        verify(widget!==null)
+        const canvas=findChild(widget,"barWidgetGlyph")
+        verify(canvas!==null);verify(canvas.antialiasing);verify(canvas.smooth)
+        for(const path of ["PerformanceGlyph.qml","WeatherGlyph.qml"]) {
+            const glyph=Qt.createComponent("../../shell/components/"+path).createObject(test)
+            verify(glyph!==null);verify(glyph.antialiasing);verify(glyph.smooth)
+            glyph.destroy()
+        }
+        widget.destroy()
     }
     function test_module_origins_snap_only_on_unscaled_one_to_one_output() {
         panel=renderContextComponent.createObject(test)

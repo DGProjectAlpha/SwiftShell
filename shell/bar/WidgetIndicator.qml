@@ -23,6 +23,9 @@ MouseArea {
     }
     Canvas {
         id:glyph
+        objectName:"barWidgetGlyph"
+        antialiasing:true
+        smooth:true
         anchors.centerIn:parent
         width:Theme.barIcon;height:Theme.barIcon
         onWidthChanged:requestPaint()

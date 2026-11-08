@@ -20,6 +20,6 @@ MouseArea {
     Row {
         id:content;anchors.verticalCenter:parent.verticalCenter;spacing:5
         WeatherGlyph {width:Math.max(16,Theme.barIcon);height:width;code:WeatherService.forecast ? WeatherService.forecast.current.code : null;daylight:!WeatherService.forecast || WeatherService.forecast.current.isDay;foreground:root.containsMouse || root.activeFocus ? root.textHover : root.textPrimary}
-        Text {text:WeatherService.barText;textFormat:Text.PlainText;color:root.containsMouse || root.activeFocus ? root.textHover : root.textPrimary;font.family:Theme.fontFamily;font.pixelSize:Theme.barFont;renderType:Theme.barTextRendering(root);anchors.verticalCenter:parent.verticalCenter}
+        Text {text:WeatherService.barText;textFormat:Text.PlainText;color:root.containsMouse || root.activeFocus ? root.textHover : root.textPrimary;font.family:Theme.fontFamily;font.pixelSize:Theme.barFont;renderType:Theme.barTextRendering(root);antialiasing:true;font.hintingPreference:Font.PreferVerticalHinting;anchors.verticalCenter:parent.verticalCenter}
     }
 }
