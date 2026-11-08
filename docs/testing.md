@@ -1,5 +1,25 @@
 # Testing
 
+## Popout dismissal clears blur on the first click — 2026-11-08
+
+`python tests/live/popover-close.py --live --output HDMI-A-1` is the reusable native
+regression: real context-menu right-click, one click on the empty bar inset,
+then verify the popout is unmapped and no longer requests blur. The current
+owner-authorized HDMI-only manual run passed while fullscreen was active, using
+the same regression function without launching fixtures. The normal CLI still
+enforces fullscreen preflight. Cursor and original focus were restored.
+
+Observed final state: visible=false, blur=false, phase=closed, opacity=0,
+grab=false and interactive=false. The source fix replaces a Behavior-owned
+Animation.onFinished callback, which Qt does not emit, with actual opacity
+endpoint observation. Shared code covers both bars; this live check targeted
+HDMI-A-1 as requested. See decision 0056 for cause, scope and recovery.
+
+`scripts/check.sh` exited 0: 128 QML files; 31 QML suites, 260 passed,
+0 failed, 0 skipped; JavaScript/Python/installer checks passed. `git diff --check`
+passed. No source-only test is presented as compositor blur evidence; the live
+HDMI run verified the actual existing popout’s blur and mapped state.
+
 ## Direct per-output bar rendering — 2026-11-08
 
 `scripts/check.sh` exited 0: 128 QML files, 31 QML suites, 260 passed,
