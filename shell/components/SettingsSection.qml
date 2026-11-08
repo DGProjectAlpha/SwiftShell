@@ -13,6 +13,10 @@ Column {
     property var controlIds:[]
     property bool defaultExpanded:true
     property bool adaptiveColumns:false
+    readonly property int contentIndent:16
+    property bool animationReady:false
+    readonly property real disclosureHeight:viewport.height
+    readonly property real expandedHeight:body.implicitHeight+18
     readonly property bool searching:searchQuery.trim()!==""
     readonly property bool matchesSearch:!searching || controlIds.some(function(id){return Nav.controlVisible(searchQuery,id)}) || (title+" "+description+" "+searchKeywords).toLowerCase().indexOf(searchQuery.trim().toLowerCase())>=0
     readonly property bool expanded:{
@@ -24,8 +28,9 @@ Column {
     default property alias content:body.data
     property alias contentItem:body
     width:parent ? parent.width : 560
-    spacing:effectiveExpanded ? 8 : 0
+    spacing:0
     visible:matchesSearch
+    Component.onCompleted:animationReady=true
     function setExpanded(next) {
         if(searching)return
         if(!next)header.forceActiveFocus()
@@ -61,12 +66,13 @@ Column {
         }
         Text {
             id:heading
-            anchors.left:parent.left;anchors.leftMargin:4
+            objectName:"sectionHeading"
+            anchors.left:parent.left
             anchors.right:disclosure.left;anchors.rightMargin:10
             y:4
             text:section.title;textFormat:Text.PlainText
             color:Theme.settingsText
-            font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSize+1;font.weight:Font.DemiBold
+            font.family:Theme.settingsFontFamily;font.pixelSize:Theme.settingsFontSize+1;font.weight:Font.Bold
             elide:Text.ElideRight
         }
         Text {
@@ -80,17 +86,32 @@ Column {
         Text {
             id:disclosure
             anchors.right:parent.right;anchors.rightMargin:8;anchors.verticalCenter:parent.verticalCenter
-            text:section.effectiveExpanded ? "⌄" : "›"
+            text:"›"
+            rotation:section.effectiveExpanded ? 90 : 0
+            Behavior on rotation {NumberAnimation {duration:section.effectiveExpanded ? Theme.motionOpen : Theme.motionClose;easing.type:Easing.OutCubic}}
             color:header.activeFocus ? Theme.controlAccent : Theme.settingsMuted
             font.pixelSize:18
         }
     }
-    Flow {
-        id:body
-        readonly property real cellWidth:section.adaptiveColumns && width>=900 ? (width-Theme.settingsSpacing)/2 : width
+    Item {
+        id:viewport
+        objectName:"sectionViewport"
         width:section.width
-        visible:section.effectiveExpanded
-        spacing:Theme.settingsSpacing
+        height:section.effectiveExpanded ? section.expandedHeight : 0
+        visible:section.effectiveExpanded || height>0
+        enabled:section.effectiveExpanded
+        clip:true
+        Behavior on height {
+            enabled:section.animationReady
+            NumberAnimation {duration:section.effectiveExpanded ? Theme.motionOpen : Theme.motionClose;easing.type:Easing.OutCubic}
+        }
+        Flow {
+            id:body
+            x:section.contentIndent;y:8
+            readonly property real cellWidth:section.adaptiveColumns && width>=900 ? (width-Theme.settingsSpacing)/2 : width
+            width:Math.max(0,section.width-section.contentIndent)
+            spacing:Theme.settingsSpacing
+        }
     }
-    Item {width:1;height:section.effectiveExpanded ? 10 : 3}
+    Item {width:1;height:3}
 }

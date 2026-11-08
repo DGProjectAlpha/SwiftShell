@@ -13,7 +13,7 @@ TestCase {
         const mode=page.itemFor("mode"),font=page.itemFor("fontSize")
         verify(mode!==null);verify(font!==null)
         wait(0)
-        compare(mode.width,600)
+        compare(mode.width,584)
         tryVerify(function(){return font.y>mode.y})
         page.width=1100;wait(0)
         compare(page.itemFor("mode"),mode)
@@ -21,7 +21,7 @@ TestCase {
         tryVerify(function(){return font.x>mode.x})
         compare(font.y,mode.y)
         page.width=440;wait(0)
-        compare(mode.width,440)
+        compare(mode.width,424)
         tryVerify(function(){return font.y>mode.y})
         page.destroy()
     }

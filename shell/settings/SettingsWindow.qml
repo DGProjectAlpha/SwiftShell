@@ -103,6 +103,20 @@ FloatingWindow {
     readonly property bool searchHasFocus: search.activeFocus
     readonly property int pageStatus: pageLoader.status
     function activePage() { return pageLoader.item }
+    function clampScroll(view) {
+        view.contentY=Math.max(0,Math.min(Math.max(0,view.contentHeight-view.height),view.contentY))
+    }
+    function scrollWheel(view,event) {
+        let focused=content.Window.window ? content.Window.window.activeFocusItem : null
+        while(focused) {
+            if(focused.adjusting===true || focused.pressed===true) {event.accepted=false;return}
+            focused=focused.parent
+        }
+        const delta=event.pixelDelta.y || event.angleDelta.y/120*Theme.controlHeight*3
+        view.contentY-=delta
+        clampScroll(view)
+        event.accepted=true
+    }
     function setAllSectionsExpanded(expanded) {
         // Search deliberately opens matching sections. Clear it so a requested
         // collapse takes effect rather than leaving the page visually expanded.
@@ -274,8 +288,18 @@ FloatingWindow {
                 color:Qt.rgba(.5,.5,.5,.035)
             }
             Flickable {
+                id:navigationScroller
+                objectName:"settingsNavigationScroller"
                 anchors.fill:parent;anchors.margins:14
                 contentHeight:navigationColumn.implicitHeight
+                onContentHeightChanged:window.clampScroll(navigationScroller)
+                onHeightChanged:window.clampScroll(navigationScroller)
+                interactive:false
+                WheelHandler {
+                    target:null
+                    acceptedDevices:PointerDevice.Mouse | PointerDevice.TouchPad
+                    onWheel:function(event) {window.scrollWheel(navigationScroller,event)}
+                }
                 clip:true;boundsBehavior:Flickable.StopAtBounds
                 Column {
                     id:navigationColumn
@@ -350,6 +374,20 @@ FloatingWindow {
                 clip:true;boundsBehavior:Flickable.StopAtBounds
                 contentWidth:width
                 contentHeight:pageLoader.height+16
+                onContentHeightChanged:window.clampScroll(scroller)
+                onHeightChanged:window.clampScroll(scroller)
+                interactive:false
+                WheelHandler {
+                    target:null
+                    acceptedDevices:PointerDevice.Mouse | PointerDevice.TouchPad
+                    onWheel:function(event) {window.scrollWheel(scroller,event)}
+                }
+                Keys.onPressed:function(event) {
+                    if(event.key===Qt.Key_PageDown)scroller.contentY=Math.min(Math.max(0,contentHeight-height),contentY+height*.8)
+                    else if(event.key===Qt.Key_PageUp)scroller.contentY=Math.max(0,contentY-height*.8)
+                    else return
+                    event.accepted=true
+                }
                 Controls.ScrollBar.vertical: Controls.ScrollBar { policy:Controls.ScrollBar.AsNeeded }
                 Loader {
                     id:pageLoader

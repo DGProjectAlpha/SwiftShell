@@ -51,7 +51,7 @@ PanelWindow {
     function motionOptions() {
         return Popover.dismissalMotion(panelSurface ? panelSurface.opacity : 0, {
             instantOpen: Theme.motionOpen === 0,
-            instantClose: true,
+            instantClose: Theme.motionClose === 0,
         })
     }
 
@@ -248,7 +248,9 @@ PanelWindow {
             maximumHeight:popup.barWindow && popup.barWindow.screen ? popup.barWindow.screen.height-Theme.barHeight-Theme.panelGap-Theme.panelMargin*2 : 10000
 
             opacity: popup.popupState.opacity
-            y: popup.popupState.offset
+            // Open downward and retract upward; keep the established open
+            // position. Closing already releases keyboard, grab and input mask.
+            y: popup.popupState.offset === 0 ? -8 : popup.popupState.offset
 
             Behavior on opacity {
                 enabled: (popup.popupState.phase === "closing" ? Theme.motionClose : Theme.motionOpen) > 0
