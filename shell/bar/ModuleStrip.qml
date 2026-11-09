@@ -1,7 +1,6 @@
 import QtQuick
 import "../components"
 import "../themes"
-import "../services"
 import "../logic/bar.js" as Bar
 Item {
     id:strip

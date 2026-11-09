@@ -1,52 +1,31 @@
-# Capability matrix
+# Capability status
 
-Status values are **PASS**, **FAIL**, or **NOT RUN**. A cloud check is not a hardware pass. This alpha is not stable.
+As of 2026-11-08. **Implemented** means present with repository coverage.
+**Local evidence** means the dated reference-session checks below, not certification
+of all hardware, every workflow or every later commit. This remains an alpha.
 
-Later source repairs were checked with `scripts/check.sh` through 11:05 PM America/New_York on 30 Oct 2026. Each of those runs exited 0. They had no Hyprland session and no `qs` binary. A source pass is not a session pass.
+| Area | Implementation and local evidence | Remaining acceptance / limits |
+|---|---|---|
+| Bars and mixed scale | Per-output geometry, material, layout and visibility; native two-output rendering and persistence checks | Physical hotplug, other DPI/hardware combinations, sustained GPU load |
+| Bar text/icons | Final-size metrics without texture magnification; native size captures on both outputs | Broader fonts/output configurations |
+| Settings | Native window, pages, search, persistence, shared controls; local move/resize and initial UI/blur checks | Full accessibility and clean-user acceptance |
+| Spotlight | App grid, favorites, Settings/window search, local providers; native interaction evidence | Broad desktop-entry and catalog performance matrix |
+| Wallpaper | Per-output images, folder scan, slideshow, crop contrast; local rendering evidence | Physical disconnect during fades, long resource profiling |
+| Blur/material | Native rounded backdrop on supported reference protocol; fallback elsewhere | Unsupported compositor/GPU combinations |
+| Displays | Staged modes/topology with independent Apply/Keep/Revert watchdog; native transaction/recovery evidence | Physical hotplug, unsupported hardware modes; no speculative HDR promise |
+| Shortcuts | Effective viewer, owned actions and source-backed edits with validation/undo; native recorder evidence | Opaque/generated Lua stays read-only; no arbitrary rewrite |
+| Audio/media/tray | Shared PipeWire/MPRIS/native tray controls; local fixture/service checks | Wider device hotplug and real app combinations |
+| Network/Bluetooth/power | Capability-detected real controls, profiles and operation state; native fixtures/snapshots | Real Wi-Fi authentication, pairing and hardware-specific actions need owner testing |
+| Notifications | Opt-in host, policy/history/actions/replies/sounds; native protocol/fixture evidence | General daemon handoff/restore, persistent-history privacy design |
+| Capture/clipboard/performance | Native surfaces, typed helpers, opt-in bounded clipboard and shared telemetry; local tests | Long-running load, sensitive real clipboard and broader sensors |
+| Weather | Opt-in provider-backed search, cache and forecasts; local navigation/service tests | Provider/network availability; location is never automatic |
+| Lock/session | Restored Hyprlock path and non-locking PAM probe; scoped helper tests | Physical lock/unlock, suspend/resume, logout/reboot acceptance |
+| Install/package | Hermetic install/reinstall/rollback/uninstall and shared-root layout tests | Clean-user live install, Arch package build, chosen license/tag/checksum |
+| Release | Repository CI definition and local test suite | Hosted CI result must be observed separately; no stable certification |
 
-`.github/workflows/check.yml` runs `scripts/check.sh` on GitHub-hosted Ubuntu. This workspace did not observe that workflow. Do not treat the file as a green check.
-
-| Test | Source | Session | Notes |
-|---|---|---|---|
-| Start/stop in an existing Hyprland session | NOT RUN | NOT RUN | An earlier bar launch was seen with Noctalia stopped. This alpha has not been relaunched |
-| Single-monitor laptop (`eDP-*`) | NOT RUN | NOT RUN | Placement can be focused, the first screen, or every screen. No laptop output was present |
-| Multi-monitor 1080p + 1440p | NOT RUN | NOT RUN | Source does not hardcode connector names in defaults |
-| Fractional scale 1.5 and scale 2.0 | NOT RUN | NOT RUN | Sizes are logical pixels. Scale was not measured |
-| Output hotplug / focused-output change | NOT RUN | NOT RUN | |
-| Bar height minimum, default, and maximum | NOT RUN | NOT RUN | Source derives font, icon, gap, and the reserved zone from heights 22, 28, and 52 |
-| Maximized versus true fullscreen | NOT RUN | NOT RUN | Reservation is a settings flag. Fullscreen policy was not observed |
-| Spotlight search | NOT RUN | NOT RUN | Source ranks a catalog and shows 24 rows. Dolphin and Helium were missed on an earlier launch |
-| Settings floating window | NOT RUN | NOT RUN | Source uses one `FloatingWindow`. Move, resize, and focus were not shown |
-| Settings search and migration | PASS | NOT RUN | Temporary files kept the original backup bytes, unknown keys, and a malformed file |
-| Wallpaper choose image/folder | PASS | NOT RUN | Required Qt modules compile in provisioned CI; this workspace lacks them. Folder scans sort and cap supported files at 64, with path-entry fallback |
-| Wallpaper slideshow | PASS | NOT RUN | Timing/list changes preserve the current item; output generations gate preload and finish; failed current images are skipped. Crossfade and hotplug remain unobserved on a compositor |
-| Adaptive color | PASS | NOT RUN | Cover/Contain crop sampling, per-output state, stale-response rejection, and PNG allocation limits are source-tested. Not shown on a display |
-| Real Gaussian blur | NOT RUN | NOT RUN | Expected result on a session is a scrim, not blur |
-| Displays drag and drop | NOT RUN | NOT RUN | Preview only. Apply stays disabled |
-| Shortcut recording | NOT RUN | NOT RUN | Source stores chords and does not install them |
-| Audio | NOT RUN | NOT RUN | Stream nodes are added to the tracker. No device volume was changed |
-| Network and Bluetooth | NOT RUN | NOT RUN | Network stays unavailable. Bluetooth does not start a scan |
-| Tray, MPRIS, brightness, and battery | NOT RUN | NOT RUN | Brightness stays unavailable. A tray menu uses the clicked position in source only |
-| Notifications | PASS | NOT RUN | Policy routing precedes native tracking; replacements, close, dismiss, expiration, and bounded history are covered in source/logic tests. D-Bus ownership and focused-output placement remain unverified |
-| Locked, fullscreen, or high GPU load | NOT RUN | NOT RUN | No CPU or GPU number is claimed |
-| Clean install, reinstall, update, and uninstall | PASS | NOT RUN | Temporary home passed, including doctor and settings rollback. The draft package was not built |
-
-## Labeled limits
-
-| Capability | Status in this alpha |
-|---|---|
-| Backdrop blur | Unavailable. Scrim only. No Hyprland rule file is written |
-| Rounded blur clipping | Not provided. Qt Quick clip is rectangular and is left off |
-| NetworkManager | No Quickshell 0.2 type, and this workspace has no Qt D-Bus QML module. No connection is attempted |
-| Hardware brightness | No documented backlight or DDC call. The picture is not dimmed |
-| Notification sounds | Not played |
-| Display apply | Disabled. No verified Lua layout transaction |
-| Shortcut install | Not done. Super+Space is unchanged |
-| Slideshow folder scan | Not done here. `QtQuick.Dialogs` and a folder-list module are not installed in this workspace |
-| Jpeg and webp sampling | Not done. The files can still be displayed |
-| Bluetooth discovery | Not started |
-| Settings backup | Original file text. An old `document` wrapper is unwrapped on rollback |
-| Bar screens | `focused` by default, or `primary`, or `all`. A named monitor wins |
-| High contrast | Saved text setting. Manual hex and automatic png text still win |
-| Package | Draft only. Shared-root start/activate/uninstall behavior passes a hermetic package-layout test. License is unchosen and PKGBUILD is not built on Arch |
-| Product stability | Not claimed |
+Command-level evidence and explicit NOT RUN notes are in the
+[native validation record](reports/native-validation.md). Use
+[testing](testing.md) for current checks and [remaining work](roadmap-progress.md)
+for debt. Old cloud-only milestone reports were removed because their claims
+that blur, network, display apply and shortcut editing were unavailable no longer
+matched the code. Their original snapshots remain in Git history.

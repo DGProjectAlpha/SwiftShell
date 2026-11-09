@@ -2,7 +2,6 @@ import QtQuick
 import QtQuick.Controls.Basic as Controls
 import QtQuick.Controls as ControlTypes
 import "../components"
-import "../services"
 import "../themes"
 
 Item {

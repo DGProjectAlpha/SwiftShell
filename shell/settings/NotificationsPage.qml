@@ -4,7 +4,6 @@ import "../logic/notifications.js" as Notifications
 import "../logic/settingsNav.js" as Nav
 import "../services"
 import "../themes"
-import "../notifications"
 
 Item {
     id: page

@@ -4,9 +4,9 @@
 **Intended repository location:** `docs/MASTER_IMPLEMENTATION_SPEC.md`  
 **Target:** Quickshell / Qt 6 / Hyprland, initially Arch Linux and CachyOS  
 **Audience:** Cursor autonomous coding agent and reviewers  
-**Status:** Long-term instructions for every milestone after the in-flight M3.2 Spotlight / monitor-autodetection work.
+**Status:** Long-term product contract. Milestone headings describe the implementation sequence, not the current assignment.
 
-> **Current implementation evidence (2026-11-02):** Section 1 records the original baseline. See `docs/roadmap-progress.md`, `docs/testing.md` and `docs/user-guide.md` for the current native Settings, notifications, overview, device and Spotlight implementation. Installed API behavior, including notification timeout units and window preview limitations, is recorded in `docs/compatibility.md`. Safety and opt-in boundaries below still apply.
+> **Current implementation evidence (2026-11-08):** Section 1 records the historical specification baseline, not current capability. See `docs/roadmap-progress.md`, `docs/testing.md` and `docs/user-guide.md` for the current native Settings, notifications, overview, device and Spotlight implementation. Installed API behavior, including notification timeout units and window preview limitations, is recorded in `docs/compatibility.md`. Safety and opt-in boundaries below still apply.
 
 > **The product:** A fully integrated, elegant desktop shell that a normal user installs with one guided command, without editing JSON, Lua, or twelve unrelated utilities. The UI must feel native and unified: transparent top bar, centered Spotlight, a genuinely floating Settings window, first-class wallpaper/slideshow, responsive color adaptation, reliable system controls and notifications, and polished individually frosted panels.
 >
@@ -58,9 +58,9 @@ A feature is **complete** only when: (1) its GUI is operable by pointer and keyb
 
 ---
 
-## 1. Reality check: what is built, and what failed before
+## 1. Historical specification baseline and permanent lessons
 
-**Currently present in repo (not all live-verified):** Quickshell root; top bar; multi-output discovery base; workspace indicators and Lua-compatible switching; clock/calendar; basic control-center popover; working PipeWire volume slice; Spotlight launcher/model, desktop entries and themed icons; atomic JSON SettingsStore; developer launch/stop scripts; installer; test stubs and a default crimson wallpaper PNG. Native Settings application, wallpaper renderer, true backdrop blur, monitor-layout GUI, service-rich controls and a notification daemon do not yet exist as complete features.
+**Present when this specification was written (superseded by the current capability matrix):** Quickshell root; top bar; multi-output discovery base; workspace indicators and Lua-compatible switching; clock/calendar; basic control-center popover; working PipeWire volume slice; Spotlight launcher/model, desktop entries and themed icons; atomic JSON SettingsStore; developer launch/stop scripts; installer; test stubs and a default crimson wallpaper PNG. Native Settings application, wallpaper renderer, true backdrop blur, monitor-layout GUI, service-rich controls and a notification daemon do not yet exist as complete features.
 
 **Known defects and permanent lessons:**
 
@@ -178,7 +178,7 @@ Move toward a versioned schema (e.g. v2 after migration) with domains: `general`
 
 ## 4. Native Settings application: exact UX and feature catalog
 
-**This is the highest-priority major feature after M3.2.** A floating, normal, independent desktop window. A polished first-party Settings experience, not a reskinned JSON editor or control-center popup. Implement it in slices, but plan the architecture for every category below. Never fill incomplete pages with live-looking fake switches.
+**Original priority after M3.2; native Settings now exists.** A floating, normal, independent desktop window. A polished first-party Settings experience, not a reskinned JSON editor or control-center popup. Implement it in slices, but plan the architecture for every category below. Never fill incomplete pages with live-looking fake switches.
 
 ### 4.1 Window and navigation requirements
 
@@ -452,7 +452,7 @@ Notification store: bounded queue/history, optional persistence, safe redaction 
 
 ### 8.1 Spotlight target behavior
 
-M3.2 is already under development. After merging, it must open centered on the **focused Hyprland monitor** independently of bar location. Super+Space must be opted into through a reversible change, not stealth-installed. The existing `scripts/request-launcher.sh` / `swiftshell request-launcher` request channel should be reused where suitable. Escape, outside click and repeat request close the overlay and release focus. Search field remains visible while results scroll, keyboard works without dedicated arrows, DesktopEntries index loads asynchronously, app icon themes resolve, `DesktopEntry.execute()` launches apps without shell interpolation.
+M3.2 established that Spotlight must open centered on the **focused Hyprland monitor** independently of bar location. Super+Space must be opted into through a reversible change, not stealth-installed. The existing `scripts/request-launcher.sh` / `swiftshell request-launcher` request channel should be reused where suitable. Escape, outside click and repeat request close the overlay and release focus. Search field remains visible while results scroll, keyboard works without dedicated arrows, DesktopEntries index loads asynchronously, app icon themes resolve, `DesktopEntry.execute()` launches apps without shell interpolation.
 
 Later enhancements: safe file search with explicit user-selected scope and exclusions; arithmetic using bounded parser; Settings search; optional command mode with visible opt-in and a no-execute-by-accident policy. Search must remain fast and offline by default. Never upload local file content for app discovery. Do not add an always-running second launcher daemon.
 
@@ -776,13 +776,12 @@ SwiftShell reaches a genuine initial public release only when:
 
 ---
 
-## 15. First action for Cursor after receiving this specification
+## 15. Starting subsequent tasks
 
-1. Confirm M3.2's state on current `main` / open PRs. Do not assume it is merged.
-2. Inspect actual SettingsStore/schema and QML root APIs. Identify the **minimum safe implementation for a real floating Settings window** and how the chosen QML/Qt version supports it. Put a brief feasibility note in docs/decisions.
-3. Start **M4.0 only**, not wallpaper, notifications and everything at once. Build Settings schema foundation, native window smoke test, capabilities and shared components with real migration/load tests.
-4. Do not modify Noctalia, the actual Hyprland Lua files, compositor blur settings, startup, notification daemon or hardware output modes.
-5. Produce a reviewable PR with required test evidence, known blockers and exact on-machine verification checklist.
-6. After M4.0 is accepted, follow the milestone sequence above. Revisit this specification at each PR start and update the lessons learned when failures are discovered.
+Use `docs/CURSOR_START_HERE.md` and `AGENTS.md` for the current workflow. Native
+Settings and the later service integrations already exist; do not restart the
+original M4.0 assignment. Check `docs/capability-matrix.md`, relevant source and
+dated validation before choosing the next scoped task. Historical “current”
+wording in milestone requirements is context, not a live status claim.
 
 **End of master specification.**
