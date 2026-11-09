@@ -1,6 +1,5 @@
 import QtQuick
 import "../themes"
-import "../services"
 
 MouseArea {
     id: control

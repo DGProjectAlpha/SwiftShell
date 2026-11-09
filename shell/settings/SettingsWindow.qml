@@ -471,7 +471,6 @@ FloatingWindow {
     Component { id:shortcutsComponent;ShortcutsPage {query:search.text} }
     Component { id:audioComponent;AudioPage {query:search.text} }
     Component { id:networkComponent;NetworkPage {query:search.text} }
-    Component { id:bluetoothComponent;BluetoothPage {query:search.text} }
     Component { id:powerComponent;PowerPage {query:search.text} }
     Component { id:notificationsComponent;NotificationsPage {query:search.text} }
 }

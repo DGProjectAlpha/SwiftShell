@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Controls.Basic as Controls
 import "../themes"
-import "../services"
 
 Controls.ComboBox {
     id: control

@@ -71,7 +71,6 @@ TestCase {
         "shell/settings/DefaultAppsPage.qml",
 
         "shell/shell.qml",
-        "shell/WorkspaceAudit.qml",
         "shell/bar/BarHost.qml",
         "shell/bar/BarWindow.qml",
         "shell/bar/ModuleStrip.qml",
@@ -99,7 +98,6 @@ TestCase {
         "shell/popovers/PopoverHost.qml",
         "shell/popovers/PopoverSurface.qml",
         "shell/popovers/CalendarPanel.qml",
-        "shell/popovers/ControlCenterPanel.qml",
         "shell/popovers/AudioSection.qml",
         "shell/popovers/MediaSection.qml",
         "shell/popovers/TraySection.qml",
@@ -200,7 +198,6 @@ TestCase {
         "shell/components/SettingsToggle.qml",
         "shell/popovers/PopoverSurface.qml",
         "shell/popovers/CalendarPanel.qml",
-        "shell/popovers/ControlCenterPanel.qml",
         "shell/popovers/AudioSection.qml",
         "shell/popovers/MediaSection.qml",
         "shell/popovers/TraySection.qml",
@@ -355,7 +352,7 @@ TestCase {
         return null
     }
 
-    function test_calendar_control_and_slider_sizes() {
+    function test_calendar_audio_panel_and_slider_sizes() {
         var calendarComponent = componentFor("shell/popovers/CalendarPanel.qml")
         var calendar = calendarComponent.createObject(this)
         verify(calendar !== null)
@@ -370,15 +367,14 @@ TestCase {
         verify(month.monthModel.weeks.length >= 4)
         verify(month.monthModel.weeks.length <= 6)
 
-        var controlComponent = componentFor("shell/popovers/ControlCenterPanel.qml")
+        var controlComponent = componentFor("shell/popovers/AudioPanel.qml")
         var control = controlComponent.createObject(this)
         verify(control !== null)
-        compare(control.implicitWidth, 248)
-        compare(control.width, 248)
+        compare(control.implicitWidth, 360)
+        compare(control.width, 360)
         compare(control.height, control.implicitHeight)
         verify(control.implicitHeight > 80)
-        compare(control.children[0].width, 248)
-        compare(control.children[0].children[0].width, 248)
+        compare(control.children[0].width, 360)
 
         var audioHost = Qt.createQmlObject("import QtQuick; Item { width: 248; height: 200 }", this, "audio-host")
         var audio = componentFor("shell/popovers/AudioSection.qml").createObject(audioHost)
@@ -406,8 +402,8 @@ TestCase {
         var controlColumn = findChild(controlCard,"popoverBody")
         var loader = Qt.createQmlObject("import QtQuick; Loader {}", controlColumn, "control-loader")
         loader.sourceComponent = controlComponent
-        tryVerify(function() { return loader.item !== null && loader.implicitWidth === 248 }, 1000)
-        tryVerify(function() { return controlCard.implicitWidth >= 248 + 34 && controlCard.implicitHeight > control.implicitHeight }, 1000)
+        tryVerify(function() { return loader.item !== null && loader.implicitWidth === 360 }, 1000)
+        tryVerify(function() { return controlCard.implicitWidth >= 360 + 34 && controlCard.implicitHeight > control.implicitHeight }, 1000)
 
         calendar.destroy()
         control.destroy()

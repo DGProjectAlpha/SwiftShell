@@ -1,14 +1,27 @@
 #!/bin/sh
-# Opt-in live Quickshell test: hidden window, temporary settings, no dispatch.
+# Opt-in live Quickshell tests: hidden settings or windowless read-only snapshot.
 set -eu
 ROOT=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
 AUDIT_TMP=$(mktemp -d /tmp/swiftshell-workspace-settings.XXXXXX)
 trap 'rm -rf "$AUDIT_TMP"' EXIT HUP INT TERM
 cp -RL "$ROOT/shell" "$AUDIT_TMP/shell"
-cp "$ROOT/tests/live/settings-workspaces.qml" "$AUDIT_TMP/shell/SettingsAudit.qml"
+if [ "$#" = 1 ] && [ "$1" = "--snapshot" ]; then
+    cp "$ROOT/tests/live/workspace-audit.qml" "$AUDIT_TMP/shell/SettingsAudit.qml"
+elif [ "$#" = 0 ]; then
+    cp "$ROOT/tests/live/settings-workspaces.qml" "$AUDIT_TMP/shell/SettingsAudit.qml"
+else
+    echo "Usage: scripts/test-workspaces-native.sh [--snapshot]" >&2
+    exit 2
+fi
 mkdir -p "$AUDIT_TMP/config/swiftshell" "$AUDIT_TMP/state" "$AUDIT_TMP/cache"
 cp "$ROOT/shell/config/defaults.json" "$AUDIT_TMP/config/swiftshell/settings.json"
 export XDG_CONFIG_HOME="$AUDIT_TMP/config" XDG_STATE_HOME="$AUDIT_TMP/state" XDG_CACHE_HOME="$AUDIT_TMP/cache"
+if [ "${1:-}" = "--snapshot" ]; then
+    qs -p "$AUDIT_TMP/shell/SettingsAudit.qml" >"$AUDIT_TMP/snapshot.log" 2>&1
+    cat "$AUDIT_TMP/snapshot.log"
+    rg -q 'Workspace audit: focused' "$AUDIT_TMP/snapshot.log"
+    exit
+fi
 qs -p "$AUDIT_TMP/shell/SettingsAudit.qml" >"$AUDIT_TMP/write.log" 2>&1
 rg -q 'Workspace settings audit: save completed' "$AUDIT_TMP/write.log" || { cat "$AUDIT_TMP/write.log"; exit 1; }
 python3 - "$AUDIT_TMP/config/swiftshell/settings.json" <<'PY'

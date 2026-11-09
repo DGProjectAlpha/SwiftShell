@@ -85,35 +85,40 @@ if [ -n "${QML_IMPORT_PATH:-}" ]; then
 fi
 export QML_IMPORT_PATH="$IMPORTS"
 
-QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_implicit_size.qml" -platform offscreen
-QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_shell_load.qml" -platform offscreen
-QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_displays.qml" -platform offscreen
-QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_keyed_models.qml" -platform offscreen
-QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_color_picker.qml" -platform offscreen
-QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_clock_tools.qml" -platform offscreen
-QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_clock_context.qml" -platform offscreen
-QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_notifications.qml" -platform offscreen
-QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_overview.qml" -platform offscreen
-QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_spotlight.qml" -platform offscreen
-QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_desktop_tools.qml" -platform offscreen
-QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_performance.qml" -platform offscreen
-QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_clipboard.qml" -platform offscreen
-QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_screenshots.qml" -platform offscreen
-QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_workspace_drag.qml" -platform offscreen
-QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_bar_module_drag.qml" -platform offscreen
-QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_bar_scope.qml" -platform offscreen
-QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_settings_responsive.qml" -platform offscreen
-QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_settings_ux.qml" -platform offscreen
-QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_settings_persistence.qml" -platform offscreen
-QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_appearance_queue.qml" -platform offscreen
-QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_network_devices.qml" -platform offscreen
-QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_power_profiles.qml" -platform offscreen
-QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_session_actions.qml" -platform offscreen
-QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_media.qml" -platform offscreen
-QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_weather.qml" -platform offscreen
-QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_audio.qml" -platform offscreen
-QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_tray.qml" -platform offscreen
-QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/tst_tray_menu.qml" -platform offscreen
+# Keep this list explicit: optional-module suites are gated below.
+for suite in \
+    tst_implicit_size \
+    tst_shell_load \
+    tst_displays \
+    tst_keyed_models \
+    tst_color_picker \
+    tst_clock_tools \
+    tst_clock_context \
+    tst_notifications \
+    tst_overview \
+    tst_spotlight \
+    tst_desktop_tools \
+    tst_performance \
+    tst_clipboard \
+    tst_screenshots \
+    tst_workspace_drag \
+    tst_bar_module_drag \
+    tst_bar_scope \
+    tst_settings_responsive \
+    tst_settings_ux \
+    tst_settings_persistence \
+    tst_appearance_queue \
+    tst_network_devices \
+    tst_power_profiles \
+    tst_session_actions \
+    tst_media \
+    tst_weather \
+    tst_audio \
+    tst_tray \
+    tst_tray_menu
+do
+    QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-offscreen}" "$QMLTESTRUNNER" -input "$ROOT/tests/qml/$suite.qml" -platform offscreen
+done
 
 DIALOGS_AVAILABLE=0
 FOLDER_MODEL_AVAILABLE=0

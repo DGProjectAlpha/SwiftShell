@@ -1,7 +1,6 @@
 import QtQuick
 import "../logic/settingsFocus.js" as Focus
 import "../components"
-import "../logic/material.js" as Material
 import "../logic/settings.js" as Settings
 import "../logic/settingsNav.js" as Nav
 import "../services"

@@ -24,7 +24,7 @@ REQUIRED = [
     SHELL / "popovers" / "PopoverHost.qml",
     SHELL / "popovers" / "PopoverSurface.qml",
     SHELL / "popovers" / "CalendarPanel.qml",
-    SHELL / "popovers" / "ControlCenterPanel.qml",
+    SHELL / "popovers" / "AudioPanel.qml",
     SHELL / "popovers" / "AudioSection.qml",
     SHELL / "bar" / "ControlIndicator.qml",
     SHELL / "themes" / "Theme.qml",
@@ -58,7 +58,8 @@ REQUIRED = [
     SCRIPTS / "lib" / "uninstall.sh",
     ROOT / "install.sh",
     ROOT / "docs" / "install.md",
-    ROOT / "docs" / "RELEASE_CANDIDATE.md",
+    ROOT / "docs" / "architecture.md",
+    ROOT / "docs" / "testing.md",
     ROOT / "tests" / "qml" / "tst_implicit_size.qml",
     ROOT / "tests" / "qml" / "tst_shell_load.qml",
     ROOT / "tests" / "stubs" / "Quickshell" / "qmldir",
@@ -937,7 +938,6 @@ def main():
             banner = path.name == "NotificationHost.qml" and "repeat: false" in text and "repeat: true" not in text
             notification_deadline = path.name == "NotificationsModel.qml" and "running:root.nextWake>0" in text and "repeat:false" in text and "root.nextWake-root.wakeNow" in text and "Process {" not in text
             snapshot = path.name == "HyprlandModel.qml" and "repeat: false" in text and "repeat: true" not in text
-            audit = path.name == "WorkspaceAudit.qml" and "repeat: false" in text and "repeat: true" not in text
             display_confirmation = path.name == "DisplayService.qml" and "running: root.pending" in text
             window_debounce = path.name == "SettingsWindow.qml" and "repeat:false" in text
             playback = path.name == "MediaSection.qml" and "root.controls.playing" in text and "!Theme.reducedMotion" in text
@@ -948,7 +948,7 @@ def main():
             weather_refresh = path.name == "WeatherService.qml" and "running:root.weatherEnabled && root.configured" in text and "Math.max(10,SettingsStore.weatherRefreshMinutes)" in text
             fullscreen_peek = path.name == "BarPeekController.qml" and "running:root.requested && root.fullscreen" in text
             owned_service = path.name in ("ClockService.qml", "DesktopTools.qml", "OverviewService.qml", "DesktopAppearance.qml", "ShortcutsService.qml", "SettingsStore.qml", "NetworkService.qml", "PowerProfiles.qml", "BluetoothSection.qml", "ScreenshotService.qml", "ClipboardWindow.qml")
-            if not slideshow and not banner and not notification_deadline and not snapshot and not audit and not display_confirmation and not window_debounce and not clock_ui and not owned_service and not recording_timeout and not playback and not drag_scroll and not weather_refresh and not fullscreen_peek and not tray_loading:
+            if not slideshow and not banner and not notification_deadline and not snapshot and not display_confirmation and not window_debounce and not clock_ui and not owned_service and not recording_timeout and not playback and not drag_scroll and not weather_refresh and not fullscreen_peek and not tray_loading:
                 errors.append(str(path.relative_to(ROOT)) + " polls or spawns a process")
         errors.extend(nesting_errors(text, str(path.relative_to(ROOT)), component_roots))
         errors.extend(readonly_implicit_errors(text, str(path.relative_to(ROOT)), component_roots))
