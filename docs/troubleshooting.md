@@ -1,42 +1,58 @@
-# Troubleshooting the alpha
+# Troubleshooting
 
-These notes are for the first live run. They are not a record of a session that already passed.
+## Missing bar or startup failure
 
-## The bar does not appear
+Run `swiftshell doctor`, then `swiftshell start` and inspect the terminal/log.
+The supported floors are Quickshell 0.3.2, Hyprland 0.57 and Qt 6.9. A default
+Quickshell config does not prevent explicit `--path` launch. Development launch
+and installed launch use different source trees; reinstall after updating source
+if you intend to run the installed copy. A lazy-loaded component may require a
+scoped restart to test a fresh definition.
 
-Run `swiftshell doctor`. It should find Quickshell at 0.2.0 or newer. Then run `swiftshell start` and read the terminal. `swiftshell stop` stops only the SwiftShell path.
+## Another shell overlaps
 
-If another Quickshell config is already the default `shell.qml`, `swiftshell start` is still the launch command. `activate` does not replace that file.
+SwiftShell never stops Noctalia or another wallpaper service. Coordinate output
+placement and reservation before running both bars. Turn Draw wallpaper off to
+remove SwiftShell's background layer. Stop only the selected SwiftShell config;
+Noctalia is a separate executable, not a `qs` instance to kill.
 
-## Noctalia and SwiftShell overlap
+## Blur or a service is unavailable
 
-That can happen. SwiftShell does not stop Noctalia. Set `bar.reserveSpace` to `false` while both draw on the same output, or stop Noctalia yourself with its own command. Do not use a Quickshell kill to stop Noctalia.
+Check the Appearance capability message and [compatibility](compatibility.md).
+Real blur needs supported compositor protocols; transparency alone is not blur.
+Missing audio/network/Bluetooth/power hardware or tools produces disabled controls
+and a reason. Hardware brightness has no packaged backend. Do not insert random
+compositor rules or install packages merely to hide an unavailable state.
 
-## The panels look flat
+## A change affects the wrong display
 
-That is the current material. Quickshell 0.2 has no backdrop-blur type, and this shell does not change Hyprland blur rules. A translucent scrim is the surface. The corner radius is not a clipped blur mask.
+Top bar's Apply to controls the scope of the property you edit. Select one display
+for a local override; All displays updates that property across custom bars too.
+Where bars appear is global. Use shared settings for this display removes that
+bar's customizations. Output identity currently follows connector matching;
+reconnecting through a different port may require selecting the new output.
 
-## Wallpaper did not replace the other wallpaper
+## Preferences or geometry look wrong
 
-SwiftShell draws its own background layer. It does not kill hyprpaper or swww. Turn **Draw wallpaper** off to unload SwiftShell's layer. If the picture is missing or rejected, the crimson image is used.
+Inspect Settings' save/error state. Existing files are validated and migrations
+backed up; malformed/future files are protected. `swiftshell rollback-settings`
+restores only its own backup. Back up the current file before manual recovery.
+Do not overwrite settings blindly or reset compositor configuration. Native
+Settings placement and geometry are compositor-controlled, not QML x/y promises.
 
-## Settings look wrong after an update
+## Notifications, app search or shortcuts
 
-`git pull` and `./install.sh` do not rewrite an existing settings file. `swiftshell rollback-settings` restores the SwiftShell backup if that file exists. If doctor says the settings file is unreadable, move it aside and start again so a new file can be created. Doctor will not print the file.
+Notification ownership starts off and requires explicit confirmation. Another
+owner may keep the bus; constructing a host is not proof of a handoff. Turning
+SwiftShell ownership off does not restart another daemon automatically.
 
-## Notifications did not move
+Spotlight indexes DesktopEntries asynchronously; check the desktop entry and
+selected search mode. Terminal apps use the selected supported terminal. Search
+text is never executed as shell code. Source-backed shortcut edits require an
+unambiguous recognized Lua source and compiler validation; generated/opaque
+bindings remain read-only. Do not rewrite binds.lua as a workaround.
 
-Ownership starts at off. The page asks a second time before the server is created. If another program already owns notifications, SwiftShell leaves that owner in place when the server cannot be created. Release ownership from the page to hand it back. Sounds are not played.
-
-## A control does nothing
-
-Network, brightness, display apply, and shortcut install are labeled unavailable on purpose. Bluetooth does not start a scan. A tray item with no action is hidden. A player button stays idle when the player says the action is not allowed.
-
-## The launcher misses an application
-
-Search uses Quickshell's application list. A desktop id has to be visible to that list. The query is not run as a shell command. At most 24 matches are shown.
-
-## Removing it
+## Safe stop and removal
 
 ```sh
 swiftshell stop
@@ -44,4 +60,8 @@ swiftshell deactivate
 swiftshell uninstall
 ```
 
-Hyprland config files are not part of that removal. Add `--purge-settings` only when you also want `~/.config/swiftshell` gone.
+Use `scripts/stop.sh` for the checkout. If path shutdown cannot see the process,
+inspect `qs list --all` and kill only that instance ID. Uninstall retains settings;
+`--purge-settings` explicitly removes only SwiftShell preferences. Recovery for
+live integrations is subsystem-specific; see the relevant decision and recorded
+backup rather than assuming a Git revert restores session state.

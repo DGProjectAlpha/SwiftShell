@@ -1,8 +1,8 @@
-# SwiftShell alpha
+# Historical alpha merges — 2026-10-30
 
-This tree is an installable alpha. It is not stable. Cloud checks do not show a Hyprland session. The next useful step is to install it, start it beside Noctalia, and debug what you see.
-
-Revert any milestone by reverting its merge commit. The merges below are on `main`.
+This is the original milestone history, not the current capability inventory.
+Use [the capability matrix](capability-matrix.md), [user guide](user-guide.md)
+and [native validation record](reports/native-validation.md) for later work.
 
 | Milestone | Pull request | Merge | What landed |
 |---|---|---|---|
@@ -24,28 +24,3 @@ Revert any milestone by reverting its merge commit. The merges below are on `mai
 | M8.1 Doctor | #25 | `407668a` | Read-only doctor and settings-only rollback |
 
 Times above are the merge commits. The later ones were merged on 30 Oct 2026 between 9:04 PM and 10:25 PM America/New_York.
-
-## Install
-
-```sh
-git clone https://github.com/DGProjectAlpha/SwiftShell.git
-cd SwiftShell
-./install.sh
-swiftshell doctor
-swiftshell activate
-swiftshell start
-```
-
-`./install.sh` does not edit Hyprland or Noctalia. If both shells draw on the same output, set `bar.reserveSpace` to `false` in `~/.config/swiftshell/settings.json` before judging the layout. Stop SwiftShell with `swiftshell stop`. Remove it with `swiftshell uninstall`. Settings stay unless you pass `--purge-settings`.
-
-## What this alpha does not claim
-
-- Backdrop blur. Panels are a translucent scrim. The corner radius is not a rounded blur mask.
-- Network management or hardware brightness. Those pages say why.
-- Notification sounds.
-- Applying a display layout.
-- Installing a shortcut. Super+Space stays on the compositor until `docs/launcher-shortcut.md` is applied by hand.
-- A scanned Bluetooth inquiry. The page can use devices the adapter already knows.
-- Jpeg and webp contrast sampling. They can still be shown as wallpaper.
-- A folder scan for the slideshow. Slides are paths you add.
-- Stable behavior on a live session. That has not been run for this alpha.

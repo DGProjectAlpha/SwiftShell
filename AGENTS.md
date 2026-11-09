@@ -40,10 +40,6 @@ For each task:
 7. Report files changed, test evidence, assumptions, known limitations, and recovery instructions.
 8. Commit a reviewable change.
 
-## First task ONLY
-
-Read-only runtime audit (Quickshell, Hyprland Lua wrapper, monitors, Noctalia ownership) and M0/M1: a named, separately launched Quickshell prototype with transparent bar on HDMI-A-1, workspace indicators and clock. No Noctalia replacement, autostart change, shortcut capture or notification daemon. Use version-accurate launch commands and verify shutdown/recovery.
-
 ## Coding quality
 
 - Central tokens for visual parameters and reusable QML components.
@@ -59,11 +55,28 @@ Read-only runtime audit (Quickshell, Hyprland Lua wrapper, monitors, Noctalia ow
 
 Safety > correct behavior > accessibility > performance > visual polish > experimental features.
 
-Do not interpret README's long-term roadmap as permission to implement M2–M8 in the first task. After M3.2, follow `docs/MASTER_IMPLEMENTATION_SPEC.md` one milestone at a time. That sequence does not override the safety boundaries in this file.
+Follow the user’s current task and the master specification one coherent increment at a time. Historical milestone assignments do not restart development at M0 or M4.0. The roadmap never overrides these safety boundaries.
 
-## Repository status
+## Current repository and entry points
 
-M0/M1, M2, and the M3 launcher source live in `shell/`. The reference session is CachyOS, Lua-based Hyprland, and Noctalia as its own `noctalia` executable rather than a `qs` process. That session's settings file keeps DP-1 on workspaces 1–3 and HDMI-A-1 on 4–6. The monitors use mixed scale. Those ids are personal settings, not the new-install default. On that session, with Noctalia stopped, SwiftShell has loaded, the bar has rendered, the calendar and control center have opened, and workspace switching works after the Lua dispatch fix. The same session showed a `targetScreens` binding loop, a false `bar.workspaceIds` warning for `[4, 5, 6]`, bar overlap while `reserveSpace` was false, a Wayland text-input diagnostic, a launcher that did not find Dolphin or Helium, monogram icons, and `BarLabel is not a type` until `shell/bar/BarWindow.qml` imported `../components`. M3.2 is merged. Spotlight centering, focused-monitor placement, and the manual Super+Space handoff exist in source. Gate A hardware checks are not done. M4.0 and M4.1 settings-window source exists and has not been shown on a session. Do not mark that placement, exclusive-zone behavior, focus return, application launch, theme icons, or the refreshed catalog as hardware-verified from cloud tests. The checklist is `docs/testing.md`. Do not edit Noctalia, `binds.lua`, or autostart. Super+Space stays where the user put it until they apply `docs/launcher-shortcut.md` themselves.
+- Runtime: `shell/shell.qml`, with per-output bars, Spotlight, overview, Capture,
+  clipboard, wallpaper and optional notifications; Settings is loaded lazily.
+- State and OS adapters: `shell/services/`; fixed Python backends:
+  `shell/helpers/`; pure algorithms: `shell/logic/`. Shared presentation belongs
+  in `shell/components/` and `shell/themes/`.
+- `README.md`, `docs/architecture.md` and `docs/compatibility.md` describe the
+  current tree. `docs/capability-matrix.md` distinguishes implementation from
+  hardware acceptance; `docs/testing.md` lists checks and links dated evidence.
+  Read the relevant decision records, not every historical report for every task.
+- `scripts/check.sh` runs repository checks. `scripts/launch.sh` and
+  `scripts/stop.sh` select this checkout only. Native tests are opt-in and live
+  fixtures belong in `tests/live/`, outside the installed `shell/` tree.
+- Preserve legacy settings identifiers and migration paths when removing old
+  implementations. Verify dynamic Loader sources, qmldir exports, IPC strings,
+  installer manifests and native fixtures before declaring code unused.
+- The reference workstation has mixed-scale outputs and uses Hyprland Lua.
+  Connector names and workspace choices are personal preferences, never defaults.
+  Noctalia runs as its own `noctalia` executable. Never kill it with a `qs` command.
 
 ## Rules learned from the running session
 

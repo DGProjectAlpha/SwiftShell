@@ -1,67 +1,22 @@
-# Using the SwiftShell alpha
+# Using SwiftShell
 
-SwiftShell draws its own bar, launcher, settings window, wallpaper layer, and optional notification host. Hyprland still owns windows. Noctalia is left in place.
+SwiftShell provides bars, Spotlight, native Settings, wallpaper and optional
+notifications/tools. Hyprland owns application windows; existing shells and
+services are not stopped automatically. This is an alpha with
+[documented capability limits](capability-matrix.md).
 
-## Install and start
+For installation and scoped start/stop use [install](install.md). Development
+uses `scripts/launch.sh` and `scripts/stop.sh`. User preferences are stored under
+`$XDG_CONFIG_HOME/swiftshell`; existing preferences survive installation.
+Use [first run](first-run.md) for the smoke checklist and
+[troubleshooting](troubleshooting.md) for recovery.
 
-From a checkout:
-
-```sh
-./install.sh
-swiftshell doctor
-swiftshell activate
-swiftshell start
-```
-
-`swiftshell start` runs Quickshell against the installed copy. It does not replace another config. `swiftshell stop` stops that copy only. Noctalia is the `noctalia` executable. Do not stop it with a Quickshell kill.
-
-If `~/.local/bin` is not on `PATH`, the installer says so and does not edit your shell startup files.
-
-A new settings file reserves space for the bar. An older file that still says `"reserveSpace": false` stays an overlay. Leave it false while Noctalia is also drawing on that output.
-
-## Bar
-
-The bar follows the focused monitor, then the first screen, unless `bar.targetMonitor` names a connector or a Hyprland description. Workspace clicks use the Lua dispatch `hl.dsp.focus({ workspace = N })` unless the settings file selects `legacy`.
-
-The clock opens the calendar. The mark at the right opens the control center. Search opens Spotlight on the monitor that is focused at that moment. `swiftshell` does not capture Super+Space. See `docs/launcher-shortcut.md` if you want to point that chord at SwiftShell yourself.
-
-## Settings
-
-Open Settings from Spotlight or from the control center. It is one normal window. The compositor's move and resize binds are what move it. Escape closes it. A second request raises the same window.
-
-Appearance, the top bar, wallpaper, the display preview, preferred chords, audio, and notification rules are stored in `~/.config/swiftshell/settings.json`. Undo and Reset on Appearance write that file. Search hides controls that do not match. Escape in a filled search field clears the query before the next Escape closes the window.
-
-Every page has **Collapse all** and **Expand all** directly below Search. They
-affect that page’s categories and remember the choice when you return. Collapse
-all clears an active search first, since search normally opens matching groups.
-
-High contrast is a text setting. A manual hex color still wins. Automatic text still follows a sampled png.
-
-## Wallpaper
-
-One background layer is drawn per output when wallpaper is enabled. An empty path uses the packaged crimson image. Cover crops. Contain shows the whole picture. Turning wallpaper off removes SwiftShell's layers and does not stop hyprpaper or swww.
-
-The slideshow walks the paths stored in settings. It does not scan a folder. The clock waits at least one minute. Jpeg and webp can be shown. Only png pixels are sampled for contrast.
-
-## Services
-
-The control center volume slider writes the default PipeWire sink when that service is present. A microphone row appears when PipeWire has a default source. Play, pause, next, and previous run only when the player allows them. A tray icon activates on click, or opens its menu when that is the only action. An icon that cannot be used is not shown.
-
-Bluetooth lists devices the adapter already knows. This shell does not start a scan. Battery reads UPower when the display device is ready. Lock, suspend, restart, and shut down ask for a second confirmation, then run `loginctl`.
-
-Network and brightness stay unavailable. The pages say so. There is no scan button and no software dimming presented as hardware brightness.
-
-## Notifications
-
-Ownership stays off until Settings asks a second time. The preview card is labeled Preview and does not take the bus. Do not disturb keeps an ordinary notification in history and still banners a critical one. Hide drops an application, including a critical notification. Quiet keeps a normal notification in history. Sounds are not played.
-
-## Recovery
-
-`swiftshell doctor` prints versions, says blur is unavailable, and reports notification ownership without printing the settings file. It does not edit Hyprland or Noctalia.
-
-`swiftshell rollback-settings` restores `settings.json` from `settings.json.bak-swiftshell` only. Copy the settings file aside before the first launch of a new version if it contains keys the settings window does not know.
-
-`swiftshell uninstall` removes the installed copy and keeps settings. `--purge-settings` removes `~/.config/swiftshell` and nothing else under `~/.config`.
+Open Settings from Spotlight or a bar menu. Every page has Collapse all / Expand
+all below Search; search temporarily expands matching sections. Collapse all
+clears an active search. Settings validates and atomically saves preferences.
+Wallpaper supports image/folder selection, slideshow and crop-aware contrast;
+optional module/decoder absence has an explicit fallback. Network/Bluetooth,
+audio/media/tray and power controls follow actual backend capability.
 
 ## Native Settings window
 
@@ -103,7 +58,7 @@ Right-click a bar to choose modules for that monitor, inherit the global choices
 or open Bar settings. Bar settings also provides per-monitor visibility, compact
 left/center/right placement, module order, optional Search text, 12/24-hour time,
 seconds and date styles. Reset positions restores the arrangement derived from
-module order. Calendar and Control Center share the Settings material; Escape or
+module order. Calendar and the dedicated panels share the Settings material; Escape or
 an outside click closes them. Opening Settings or Spotlight dismisses bar panels.
 
 ### Clock and dedicated bar widgets
@@ -124,7 +79,7 @@ not publishing an icon will not appear merely because it has a background proces
 
 ### Spotlight Search
 
-Super+Space opens Spotlight. Use All apps, Favorites or Recent; choose the default
+After an explicit shortcut handoff, Super+Space opens Spotlight. Use All apps, Favorites or Recent; choose the default
 opening view in **Settings → Spotlight Search**. Right-click an app or use Ctrl+D
 to add/remove a favorite. In Favorites, drag tiles to arrange them; Alt+Shift+H/L
 also moves a selected favorite. Ordering and the default view survive restart.
@@ -157,7 +112,7 @@ Wi-Fi needs an existing profile; pairing may require your system's pairing dialo
 available. Terminal/calendar shell preferences are used by SwiftShell; existing
 custom shortcuts that name a program are not rewritten. **Shortcuts** shows your
 active desktop bindings and lets you record/apply/remove managed actions with
-collision checks and Undo. Existing opaque Lua actions remain read-only.
+collision checks and Undo. Existing opaque Lua actions remain read-only unless a supported source-backed edit can preserve them.
 
 
 ### Notifications and Clock activity
@@ -177,7 +132,7 @@ the notification drawer, with Open Clock actions that select the correct tab.
 
 ### Workspace overview and bar layout
 
-Alt+Tab opens the focused display's workspace overview. Press it again to move the
+When its optional shortcut integration is enabled, Alt+Tab opens the focused display's workspace overview. Press it again to move the
 selection, use arrow keys or Tab, then Enter to choose a desktop. Click a miniature
 to focus its window; Escape or an empty-background click closes the overview.
 Windows retain their compositor arrangement in each workspace card. A client that
@@ -302,8 +257,7 @@ restores the preceding edit. Generated or ambiguous shortcuts stay visible but
 cannot yet be edited individually. Existing 60% keyboard combinations are retained.
 
 Selecting a terminal in **Default apps** also updates a safely recognized desktop
-terminal shortcut. On the reference desktop, Super+Enter now follows Konsole.
-**Undo** in the terminal row restores the preceding choice. Configurations which
+terminal shortcut. **Undo** in the terminal row restores the preceding choice. Configurations which
 cannot be safely linked explicitly show that the choice is used only by SwiftShell.
 
 ### Lock, sleep and switching desktops

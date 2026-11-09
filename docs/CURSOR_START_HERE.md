@@ -1,21 +1,29 @@
-# Cursor — SwiftShell Implementation Kickoff
+# Start a SwiftShell task
 
-**You are implementing SwiftShell, not generating mockups.** The binding master specification is `docs/MASTER_IMPLEMENTATION_SPEC.md`. Read it in full, along with `README.md`, `AGENTS.md`, current tests, compatibility notes and architecture, before writing code.
+Read `MASTER_IMPLEMENTATION_SPEC.md`, the root README and `AGENTS.md` first.
+The master spec is the product contract, not an instruction to rebuild the
+prototype or restart M4.0. Follow the owner's current request.
 
-## Immediate sequence
+1. Inspect branch, worktree, `origin/main` and in-flight changes. Preserve work
+   belonging to other sessions. Use a small branch and reviewable commits.
+2. Read `architecture.md`, `compatibility.md`, `testing.md`, `install.md` and the
+   decisions relevant to the touched subsystem. `capability-matrix.md` records
+   current limits; reports contain dated evidence rather than marching orders.
+3. Trace the actual runtime entry, dynamic loaders, settings compatibility and
+   packaging before editing. Verify version-dependent APIs before using them.
+4. State the smallest deliverable, desktop risks and validation plan. Implement
+   the requested slice, with regressions for defects. Avoid speculative rewrites.
+5. Run `scripts/check.sh` and relevant focused checks. Native tests are opt-in;
+   interactive tests must pass `tests/live/fullscreen_guard.py` first. Never
+   bypass an active fullscreen game to create windows, move focus or send input.
+6. Commit verified work. Merge or activate only when authorized. Do not change
+   Noctalia, live Hyprland configuration, displays, binds, autostart or service
+   ownership without the owner's explicit authorization and a recovery plan.
 
-1. Inspect `origin/main` and open PRs. Confirm whether M3.2 Spotlight / hardware-independent monitors is merged and whether its acceptance criteria are met. Do not overwrite in-flight work.
-2. Audit current code, version-dependent Quickshell/Qt APIs, settings schema, QML root loading and real hardware constraints.
-3. Start **M4.0: Settings architecture and a real floating/movable/resizable window**. Don't build wallpaper, display editor and notifications into the same PR.
-4. If the target Wayland runtime isn't available in your environment, do repository-only implementation, write precise tests and mark hardware-dependent claims **NOT VERIFIED**. Do not improvise a fake native window or pretend a translucent panel is Gaussian blur.
-5. No changes to user's live Noctalia, Hyprland Lua configuration, displays, shortcut ownership, autostart or notification daemon without explicit authorization.
-6. For every PR, follow Sections 0, 10, 11, 12 and 13 of the master spec: narrow vertical slice, test evidence, manual acceptance and rollback. Add a regression test for each discovered defect.
-7. Update `AGENTS.md` to require reading `docs/MASTER_IMPLEMENTATION_SPEC.md` at the start of every future coding task. Retain the existing safety restrictions; do not replace them.
+Keep the shared restrained visual language, real backends, truthful capability
+states and hardware-independent logical geometry. This applies to maintenance
+as well as feature work.
 
-## Non-negotiable design
-
-True transparent top bar with optional subtle contrast gradient. Individually rounded frosted floaters, monochrome accents, readable dynamic contrast, no outlines, no giant Material cards, no bouncy animations. One GUI for user configuration; no requirement to hand-edit JSON or Lua. Hardware-agnostic from first run.
-
-## Completion format
-
-Describe what **really works**, tests executed and their results, APIs/versions verified, **hardware tests not run**, known limitations, exact steps for the owner to validate, and rollback. A green headless test is not a real desktop pass.
+Report the actual changes, files, exact checks/results, hardware checks not run,
+remaining limits and rollback. Follow the master spec's completion fields for
+substantial feature PRs. A green offscreen suite is not a compositor pass.
