@@ -31,6 +31,10 @@ Open Settings from Spotlight or from the control center. It is one normal window
 
 Appearance, the top bar, wallpaper, the display preview, preferred chords, audio, and notification rules are stored in `~/.config/swiftshell/settings.json`. Undo and Reset on Appearance write that file. Search hides controls that do not match. Escape in a filled search field clears the query before the next Escape closes the window.
 
+Every page has **Collapse all** and **Expand all** directly below Search. They
+affect that page’s categories and remember the choice when you return. Collapse
+all clears an active search first, since search normally opens matching groups.
+
 High contrast is a text setting. A manual hex color still wins. Automatic text still follows a sampled png.
 
 ## Wallpaper
@@ -80,10 +84,11 @@ change the painted surface. Frosted uses actual compositor blur when available;
 otherwise SwiftShell shows a readable solid fallback. The optional readability
 gradient remains independent in Appearance. Corner radius follows Appearance.
 
-Apply to All screens changes the shared background. To customize one output,
-choose its monitor name and turn off Use all-screen background. Turn that switch
-back on to inherit again. Reset background restores the shared transparent style;
-individual overrides remain until you return those monitors to inheritance.
+Choose the display once in **Apply to** at the top of the Top bar page. Background
+controls immediately customize that display; no inheritance switch is required.
+**All displays** updates the edited background property on every bar, preserving
+unrelated colors, styles or opacity. **Use shared settings for this display**
+removes that display’s bar customizations and follows the shared settings again.
 
 ## Choosing colors
 
@@ -180,14 +185,19 @@ cannot provide a preview gets a labeled fallback. Workspaces settings provides a
 Open overview button and an Alt+Tab switch; turning the switch off restores the
 original window-cycle binding. Custom/unknown bindings are preserved.
 
-Settings → Top bar lets each display use Top, Bottom, Left or Right placement,
-additional content scaling, widget visibility, grouping and order. Drag a handle
+Settings → Top bar has one **Apply to** selector for size, edge, reserved space,
+background, widgets, clock labels and fullscreen reveal. Select a display to
+change only its bar. **Bar size** resizes its text, icons and reserved strip
+together, without changing desktop resolution or scale. **All displays** applies
+the setting you edit to every bar, including bars with custom values. When sizes
+or edges differ, those controls show **Mixed**. **Where bars appear** is a separate,
+explicitly global control for All, Focused, Primary or one specific display.
+
+Drag a handle
 in Widget order to move an item; Escape cancels, and the list scrolls at its edges
 while dragging. Alt J/K on a focused handle also reorders. Hover hints no longer
-cover bar controls. Side bars use
-vertical groups. Desktop monitor modes/scales are unchanged; bar scale is extra
-control sizing. Select the same display to change its background. Use the all-screen
-layout option to remove a display override.
+cover bar controls. Side bars use vertical groups. Widget visibility and grouping
+have one control each; Focused title is managed in the widget list.
 
 ### Spotlight desktop tools
 

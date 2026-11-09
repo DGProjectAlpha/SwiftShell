@@ -1,7 +1,10 @@
 var BAR_MODULES = ["workspaces", "title", "search", "clock", "control", "media", "tray", "battery", "network", "power", "notifications", "screenshot", "clipboard", "performance", "weather"];
 
-function textRenderMode(devicePixelRatio, contentScale, curveAvailable) {
-    return devicePixelRatio === 1 && contentScale === 1 && curveAvailable === true ? "curve" : "distance-field";
+function textRenderMode(devicePixelRatio, contentScale) {
+    // Platform rasterization can grid-fit small glyphs at their actual size.
+    // Preserve the known-good distance-field path whenever the compositor or
+    // user scales content, avoiding resampling a hinted glyph texture.
+    return devicePixelRatio === 1 && contentScale === 1 ? "native" : "distance-field";
 }
 
 function snapModulePosition(position, devicePixelRatio, contentScale) {
@@ -56,6 +59,23 @@ function barMetrics(height, iconScale) {
         moduleSpacing: Math.max(8, Math.round(next * 0.43)),
         workspaceGap: Math.max(2, Math.round(next * 0.07)),
     };
+}
+
+// Resolve the saved size/legacy scale into real item dimensions. No scene graph
+// scale is required: fonts and Canvas images are rasterized at their final size.
+function targetBarMetrics(baseHeight, targetHeight, iconScale, bodyFont) {
+    const base=barMetrics(baseHeight,iconScale);
+    const height=typeof targetHeight==="number" && Number.isFinite(targetHeight) && targetHeight>0 ? targetHeight : base.height;
+    const ratio=height/base.height;
+    function sized(value) {return Math.max(1,Math.round(value*ratio));}
+    const text=typeof bodyFont==="number" && Number.isFinite(bodyFont) ? bodyFont : 13;
+    return {height:height,hit:height,sizeScale:ratio,
+        font:sized(base.font),icon:sized(base.icon),marginH:sized(base.marginH),
+        moduleSpacing:sized(base.moduleSpacing),workspaceGap:sized(base.workspaceGap),
+        bodyFont:sized(text),smallFont:sized(Math.max(11,text-1)),
+        valueFont:sized(Math.max(10,base.font-1)),temperatureFont:sized(Math.max(10,base.font-2)),
+        performanceIcon:sized(Math.max(13,base.icon-2)),weatherIcon:sized(Math.max(16,base.icon)),
+        railWidth:sized(168)};
 }
 
 function heightFromUnit(unit) {
@@ -219,18 +239,47 @@ function moduleName(id) {
     return ({workspaces:"Workspaces",title:"Focused title",search:"Search",clock:"Clock",control:"Audio",media:"Media",tray:"Tray",battery:"Battery",network:"Network & Devices",power:"Power",notifications:"Notifications",screenshot:"Screenshot",clipboard:"Clipboard",performance:"Performance",weather:"Weather"})[id] || id;
 }
 
-function layoutForOutput(json, output, order, sides) {
+function layoutForOutput(json, output, order, sides, defaults) {
     let values={};
     try {values=JSON.parse(json || "{}")} catch(error) {}
-    const inherited=values[""] || {};
-    const item=values[output] || inherited;
+    const item=Object.assign({},defaults || {},values[""] || {},values[output] || {});
     return {edge:item.edge || "top",scale:item.scale || 1,
+        height:item.height === undefined ? 28 : item.height,
+        reserveSpace:item.reserveSpace !== false,
+        showFocusedTitle:item.showFocusedTitle !== false,
+        fullscreenPeek:item.fullscreenPeek === true,
+        searchLabel:item.searchLabel !== false,
+        use24Hour:item.use24Hour !== false,
+        showSeconds:item.showSeconds === true,
+        showDate:item.showDate === true,
+        dateFormat:item.dateFormat || "short",
         order:item.order ? normalizeModuleOrder(item.order) : normalizeModuleOrder(order),
         sides:item.sides ? JSON.stringify(item.sides) : sides};
 }
 
+// Empty output means all displays, including existing overrides and future
+// outputs. Only the edited fields are replaced; unrelated customizations stay.
+function patchOutputLayouts(json, output, patch) {
+    const values=JSON.parse(json || "{}");
+    values[output]=Object.assign({},values[output] || {},patch);
+    if(output === "") {
+        for(const key of Object.keys(values)) {
+            if(key === "")continue;
+            for(const field of Object.keys(patch))delete values[key][field];
+            if(Object.keys(values[key]).length===0)delete values[key];
+        }
+    }
+    return JSON.stringify(values);
+}
+
+function sizeFromUnit(unit) { return Math.round(22 + clamp01(unit) * 56); }
+function unitFromSize(size) { return clamp01((size - 22) / 56); }
+
 var swiftshellBar = {
     layoutForOutput: layoutForOutput,
+    patchOutputLayouts:patchOutputLayouts,
+    sizeFromUnit:sizeFromUnit,
+    unitFromSize:unitFromSize,
     surfaceForOutput: surfaceForOutput,
     textRenderMode:textRenderMode,
     snapModulePosition:snapModulePosition,
@@ -242,6 +291,7 @@ var swiftshellBar = {
     moduleName:moduleName,
     BAR_MODULES: BAR_MODULES,
     barMetrics: barMetrics,
+    targetBarMetrics:targetBarMetrics,
     heightFromUnit: heightFromUnit,
     unitFromHeight: unitFromHeight,
     normalizeModuleOrder: normalizeModuleOrder,

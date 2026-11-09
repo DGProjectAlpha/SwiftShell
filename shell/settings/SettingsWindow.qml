@@ -25,6 +25,7 @@ FloatingWindow {
     property bool closing: false
     property int mapAttempts: 0
     property bool placementReady: false
+    function presentationDiagnostics() {return {contentOpacity:content.opacity,pageReady:pageStatus===Loader.Ready,blurRequested:WindowService.blurRegionApplied,placementReady:placementReady}}
     property int resizeRequests: 0
     property bool lastResizeAccepted: false
     readonly property int shadowInset: WindowService.maximized ? 0 : Theme.surfaceShadowInset
@@ -103,8 +104,31 @@ FloatingWindow {
     readonly property bool searchHasFocus: search.activeFocus
     readonly property int pageStatus: pageLoader.status
     function activePage() { return pageLoader.item }
+    function clampScroll(view) {
+        view.contentY=Math.max(0,Math.min(Math.max(0,view.contentHeight-view.height),view.contentY))
+    }
+    function scrollWheel(view,event) {
+        let focused=content.Window.window ? content.Window.window.activeFocusItem : null
+        while(focused) {
+            if(focused.adjusting===true || focused.pressed===true) {event.accepted=false;return}
+            focused=focused.parent
+        }
+        const delta=event.pixelDelta.y || event.angleDelta.y/120*Theme.controlHeight*3
+        view.contentY-=delta
+        clampScroll(view)
+        event.accepted=true
+    }
+    function setAllSectionsExpanded(expanded) {
+        // Search deliberately opens matching sections. Clear it so a requested
+        // collapse takes effect rather than leaving the page visually expanded.
+        search.text=""
+        Qt.callLater(function(){
+            SettingsStore.setSettingsSections(Focus.sectionIds(window.activePage()),expanded)
+            scroller.contentY=0
+        })
+    }
     function capturePreview(path) {content.grabToImage(function(image){image.saveToFile(path)})}
-    function frameGeometry() {return {x:content.x,y:content.y,width:content.width,height:content.height,resizeInset:0,resizeBand:7,ready:placementReady}}
+    function frameGeometry() {return {x:content.x,y:content.y,width:content.width,height:content.height,resizeInset:0,resizeBand:7,ready:placementReady,presentation:presentationDiagnostics()}}
     function uiGeometry() {
         function box(item){const point=item.mapToItem(content.parent,0,0);return {x:point.x,y:point.y,width:item.width,height:item.height}}
         const sections=[],sliders=[]
@@ -199,19 +223,21 @@ FloatingWindow {
         anchors.fill: content
         source: "SettingsShadow.qml"
         active: !WindowService.maximized
-        visible: Theme.shadowOpacity > 0 && window.placementReady
+        visible: Theme.shadowOpacity > 0
         onStatusChanged: {
             if(status === Loader.Ready) SettingsModel.shadowAvailable=true
             else if(status === Loader.Error) SettingsModel.shadowAvailable=false
         }
     }
     Loader {
-        active: window.placementReady && WindowService.blurAvailable && SettingsStore.panelBlur > 0
+        active: window.visible && WindowService.blurAvailable && SettingsStore.panelBlur > 0
         sourceComponent: Component { BlurAdapter { targetWindow:window;surface:content } }
     }
     Rectangle {
         id: content
-        opacity:window.placementReady ? 1 : 0
+        objectName:"settingsContent"
+        // The prepare rule already places this toplevel. Draw the complete UI
+        // in its first buffer instead of mapping a blank, auto-blurred window.
         anchors.fill: parent
         anchors.margins: window.shadowInset
         radius: WindowService.maximized ? 0 : Theme.radius
@@ -265,8 +291,18 @@ FloatingWindow {
                 color:Qt.rgba(.5,.5,.5,.035)
             }
             Flickable {
+                id:navigationScroller
+                objectName:"settingsNavigationScroller"
                 anchors.fill:parent;anchors.margins:14
                 contentHeight:navigationColumn.implicitHeight
+                onContentHeightChanged:window.clampScroll(navigationScroller)
+                onHeightChanged:window.clampScroll(navigationScroller)
+                interactive:false
+                WheelHandler {
+                    target:null
+                    acceptedDevices:PointerDevice.Mouse | PointerDevice.TouchPad
+                    onWheel:function(event) {window.scrollWheel(navigationScroller,event)}
+                }
                 clip:true;boundsBehavior:Flickable.StopAtBounds
                 Column {
                     id:navigationColumn
@@ -323,22 +359,38 @@ FloatingWindow {
                     }
                 }
             }
-            Row {
-                id:appearanceActions
+            Flow {
+                id:pageActions
                 x:20;y:searchFrame.y+searchFrame.height+8
-                visible:SettingsStore.settingsWindowCategory==="appearance"
+                width:Math.max(120,parent.width-40)
                 spacing:6
-                FlatButton {label:"Undo appearance";enabled:window.canUndo;onActivated:window.undo()}
-                FlatButton {label:"Reset appearance…";onActivated:window.resetAppearance()}
+                FlatButton {objectName:"collapseAllSections";label:"Collapse all";onActivated:window.setAllSectionsExpanded(false)}
+                FlatButton {objectName:"expandAllSections";label:"Expand all";onActivated:window.setAllSectionsExpanded(true)}
+                FlatButton {visible:SettingsStore.settingsWindowCategory==="appearance";label:"Undo appearance";enabled:window.canUndo;onActivated:window.undo()}
+                FlatButton {visible:SettingsStore.settingsWindowCategory==="appearance";label:"Reset appearance…";onActivated:window.resetAppearance()}
             }
             Flickable {
                 id:scroller
                 objectName:"settingsScroller"
-                anchors.left:parent.left;anchors.right:parent.right;anchors.top:appearanceActions.visible ? appearanceActions.bottom : searchFrame.bottom;anchors.topMargin:14
+                anchors.left:parent.left;anchors.right:parent.right;anchors.top:pageActions.bottom;anchors.topMargin:14
                 anchors.bottom:transaction.visible ? transaction.top : (windowNotice.visible ? windowNotice.top : parent.bottom);anchors.bottomMargin:16
                 clip:true;boundsBehavior:Flickable.StopAtBounds
                 contentWidth:width
                 contentHeight:pageLoader.height+16
+                onContentHeightChanged:window.clampScroll(scroller)
+                onHeightChanged:window.clampScroll(scroller)
+                interactive:false
+                WheelHandler {
+                    target:null
+                    acceptedDevices:PointerDevice.Mouse | PointerDevice.TouchPad
+                    onWheel:function(event) {window.scrollWheel(scroller,event)}
+                }
+                Keys.onPressed:function(event) {
+                    if(event.key===Qt.Key_PageDown)scroller.contentY=Math.min(Math.max(0,contentHeight-height),contentY+height*.8)
+                    else if(event.key===Qt.Key_PageUp)scroller.contentY=Math.max(0,contentY-height*.8)
+                    else return
+                    event.accepted=true
+                }
                 Controls.ScrollBar.vertical: Controls.ScrollBar { policy:Controls.ScrollBar.AsNeeded }
                 Loader {
                     id:pageLoader

@@ -39,23 +39,29 @@ MouseArea {
 
     Rectangle {
         id: track
+        objectName:"toggleTrack"
         width: 32
         height: 18
         radius: 9
         anchors.right: parent.right
         anchors.verticalCenter: parent.verticalCenter
         color: control.checked ? Theme.controlAccent : Theme.settingsSelected
+        Behavior on color {ColorAnimation {duration:Theme.motionOpen;easing.type:Easing.OutCubic}}
         border.width: control.activeFocus ? 1 : 0
         border.color: Theme.settingsText
         Rectangle {
+            objectName:"toggleThumb"
             width:12; height:12; radius:6
             x:control.checked ? 17 : 3; y:3
             color: control.checked ? Theme.accentForeground : Theme.settingsMuted
+            Behavior on x {NumberAnimation {duration:Theme.motionOpen;easing.type:Easing.OutCubic}}
+            Behavior on color {ColorAnimation {duration:Theme.motionOpen;easing.type:Easing.OutCubic}}
         }
     }
 
     Text {
         id: labelText
+        objectName:"toggleLabel"
         anchors.left: parent.left
         anchors.right: track.left
         anchors.leftMargin: 0

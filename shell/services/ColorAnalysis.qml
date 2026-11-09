@@ -103,7 +103,8 @@ Singleton {
         root.nextToken += 1
         var nextOutputs = Object.assign({}, root.outputs)
         const layout=SettingsStore.layoutForOutput(name)
-        config = Object.assign({}, config, {token:root.nextToken,edge:layout.edge,barThickness:Math.round((layout.edge === "left" || layout.edge === "right" ? 168 : SettingsStore.barHeight)*layout.scale)})
+        const thickness=layout.edge === "left" || layout.edge === "right" ? 168*layout.height/SettingsStore.barHeight : layout.height
+        config = Object.assign({}, config, {token:root.nextToken,edge:layout.edge,barThickness:Math.round(thickness*layout.scale)})
         nextOutputs[name] = config
         root.outputs = nextOutputs
         if (choice.source !== "file") {

@@ -2033,9 +2033,9 @@ test("desktop quick tool panels open, switch, and release focus", function () {
     }
 });
 
-test("low DPI bar rendering keeps fractional and unavailable-curve fallbacks", function () {
-    assert.equal(bar.textRenderMode(1, 1, true), "curve");
-    assert.equal(bar.textRenderMode(1, 1, false), "distance-field");
+test("hinted native bar text is restricted to an unscaled one-to-one output", function () {
+    assert.equal(bar.textRenderMode(1, 1), "native");
+    assert.equal(bar.textRenderMode(1, 1, false), "native");
     assert.equal(bar.textRenderMode(1.25, 1, true), "distance-field");
     assert.equal(bar.textRenderMode(1, .9, true), "distance-field");
     assert.equal(bar.textRenderMode(undefined, 1, true), "distance-field");
@@ -2044,6 +2044,17 @@ test("low DPI bar rendering keeps fractional and unavailable-curve fallbacks", f
     assert.equal(bar.snapModulePosition(10.375, 1.25, 1), 10.375);
     assert.equal(bar.snapModulePosition(10.375, 1, 1.25), 10.375);
     assert.equal(bar.snapModulePosition(10.375, undefined, 1), 10.375);
+    // Connector names, advertised resolution and physical pixel density do not
+    // change the raster policy for an equivalent actual Qt/render transform.
+    for(const display of [
+        {name:"eDP-random",width:2560,height:1440,dpi:110,dpr:1},
+        {name:"USB-C-unknown",width:3840,height:2160,dpi:160,dpr:1},
+        {name:"projector",width:1920,height:1080,dpi:40,dpr:1}
+    ]) {
+        assert.equal(bar.textRenderMode(display.dpr,1),"native");
+        assert.equal(bar.textRenderMode(display.dpr,32/28),"distance-field");
+    }
+    assert.equal(bar.textRenderMode(1.25,.8),"distance-field");
 });
 
 test("fullscreen bar peek is output-local and ignores maximized or inactive workspaces", function () {

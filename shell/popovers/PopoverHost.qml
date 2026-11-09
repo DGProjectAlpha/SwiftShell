@@ -47,11 +47,14 @@ PanelWindow {
         return {x:popup.screen ? popup.screen.x+Math.round(popup.placement.x) : 0,y:popup.screen ? popup.screen.y+Math.round(popup.placement.y) : 0,width:popup.width,height:popup.height,
             details:bodyLoader.item && bodyLoader.item.diagnostics ? bodyLoader.item.diagnostics() : null,items:bodyLoader.item && bodyLoader.item.geometry ? bodyLoader.item.geometry() : []}
     }
+    function lifecycleDiagnostics() {
+        return {phase:popupState.phase,opacity:panelSurface.opacity,grab:focusGrab.active,interactive:popupState.interactive}
+    }
 
     function motionOptions() {
         return Popover.dismissalMotion(panelSurface ? panelSurface.opacity : 0, {
             instantOpen: Theme.motionOpen === 0,
-            instantClose: true,
+            instantClose: Theme.motionClose === 0,
         })
     }
 
@@ -216,7 +219,7 @@ PanelWindow {
         targetWindow:popup
         surface:panelSurface.blurSurface
         cornerRadius:Theme.radius
-        enabled:popup.visible && SettingsStore.panelBlur>0
+        enabled:popup.visible && panelSurface.opacity>0.001 && SettingsStore.panelBlur>0
     }
 
     Item {
@@ -248,14 +251,22 @@ PanelWindow {
             maximumHeight:popup.barWindow && popup.barWindow.screen ? popup.barWindow.screen.height-Theme.barHeight-Theme.panelGap-Theme.panelMargin*2 : 10000
 
             opacity: popup.popupState.opacity
-            y: popup.popupState.offset
+            // Animation.finished is not emitted for animations inside Behavior.
+            // Observe the rendered endpoint instead, including zero-duration
+            // transitions, so an invisible window cannot retain its blur region.
+            onOpacityChanged: {
+                if(Math.abs(opacity-popup.popupState.opacity)<=0.001)
+                    Qt.callLater(popup.finishMotion)
+            }
+            // Open downward and retract upward; keep the established open
+            // position. Closing already releases keyboard, grab and input mask.
+            y: popup.popupState.offset === 0 ? -8 : popup.popupState.offset
 
             Behavior on opacity {
                 enabled: (popup.popupState.phase === "closing" ? Theme.motionClose : Theme.motionOpen) > 0
                 NumberAnimation {
                     duration: popup.popupState.phase === "closing" ? Theme.motionClose : Theme.motionOpen
                     easing.type: Easing.OutCubic
-                    onFinished: popup.finishMotion()
                 }
             }
 

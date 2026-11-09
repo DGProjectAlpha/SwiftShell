@@ -48,3 +48,45 @@ assert.equal(new Set(movedOrder).size,Bar.BAR_MODULES.length);
 for(const destination of [-1,100,1.5,NaN])assert.deepEqual(Bar.moveModuleTo(originalOrder,'clock',destination),originalOrder);
 assert.deepEqual(Bar.moveModuleTo(originalOrder,'missing',1),originalOrder);
 console.log('PASS direct module drop insertion preserves membership and rejects invalid destinations');
+
+// A size-only edit must inherit other fields, survive serialization and never
+// rewrite the sibling output (the original Top bar Apply-to defect).
+const base={height:28,reserveSpace:true,use24Hour:true,showDate:true};
+let scoped=Bar.patchOutputLayouts(json,'HDMI-A-1',{height:42,scale:1,reserveSpace:false,showSeconds:true});
+assert.deepEqual(JSON.parse(scoped)['DP-1'],custom);
+let validated=Settings.validateSettings({bar:{layoutOutputsJson:scoped}});
+assert.equal(validated.ok,true);
+scoped=JSON.parse(Settings.serializeSettings(validated.settings)).bar.layoutOutputsJson;
+assert.equal(Bar.layoutForOutput(scoped,'HDMI-A-1',defaults.bar.moduleOrder,'{}',base).height,42);
+assert.equal(Bar.layoutForOutput(scoped,'DP-1',defaults.bar.moduleOrder,'{}',base).height,28);
+scoped=Bar.patchOutputLayouts(scoped,'',{height:36,scale:1,showSeconds:false});
+for(const output of ['DP-1','HDMI-A-1','new-output']) {
+ const layout=Bar.layoutForOutput(scoped,output,defaults.bar.moduleOrder,'{}',base);
+ assert.equal(layout.height,36);assert.equal(layout.scale,1);assert.equal(layout.showSeconds,false);
+}
+assert.equal(Bar.layoutForOutput(scoped,'DP-1',defaults.bar.moduleOrder,'{}',base).edge,'right');
+assert.equal(Bar.layoutForOutput(scoped,'HDMI-A-1',defaults.bar.moduleOrder,'{}',base).reserveSpace,false);
+scoped=Bar.patchOutputLayouts(scoped,'HDMI-A-1',{height:24});
+assert.equal(Bar.layoutForOutput(scoped,'HDMI-A-1',defaults.bar.moduleOrder,'{}',base).height,24);
+assert.equal(Bar.layoutForOutput(scoped,'DP-1',defaults.bar.moduleOrder,'{}',base).height,36);
+assert.equal(Bar.layoutForOutput(scoped,'HDMI-A-1',defaults.bar.moduleOrder,'{}',base).showDate,true);
+for(const bad of [{height:0},{height:79},{height:24.5},{height:'32'},{reserveSpace:1},{showSeconds:'yes'},{dateFormat:'nope'}])
+ assert.equal(Settings.validateSettings({bar:{layoutOutputsJson:JSON.stringify({'DP-1':bad})}}).ok,false);
+for(const height of [22,28,52,78])assert.equal(Bar.sizeFromUnit(Bar.unitFromSize(height)),height);
+console.log('PASS per-display size/behavior isolation, sparse inheritance, all-display edits and persisted validation');
+
+// Target dimensions replace the old whole-container transform. Device DPR is
+// deliberately absent: Qt applies it once when rasterizing each native output.
+for(const [height,font,icon] of [[28,12,16],[32,14,18],[42,18,24],[78,33,45]]) {
+ const metrics=Bar.targetBarMetrics(28,height,1,13);
+ assert.equal(metrics.height,height);
+ assert.equal(metrics.font,font);
+ assert.equal(metrics.icon,icon);
+ for(const key of ['font','icon','marginH','moduleSpacing','workspaceGap','bodyFont','smallFont','valueFont','temperatureFont','railWidth'])
+  assert.equal(Number.isInteger(metrics[key]),true,key+' must be drawn at its final target size');
+}
+const left=Bar.targetBarMetrics(28,32,1,13),right=Bar.targetBarMetrics(28,28,1,13);
+assert.equal(left.font,14);assert.equal(right.font,12);
+assert.equal(Bar.targetBarMetrics(28,28*1.25,1,13).height,35);
+assert.equal(Bar.targetBarMetrics(28,NaN,1,13).height,28);
+console.log('PASS direct target-size font/icon metrics and independent/legacy bar sizes without DPR multiplication');

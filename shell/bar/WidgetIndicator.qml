@@ -2,6 +2,8 @@ import QtQuick
 import "../themes"
 MouseArea {
     id:root
+    readonly property var barSizing:Theme.barMetricsFor(root)
+    function sized(value) {return Math.round(value*barSizing.sizeScale)}
     property string kind:"audio"
     property string label:"Audio"
     property bool muted:false
@@ -11,8 +13,8 @@ MouseArea {
     property color textHover:Theme.textPrimary
     readonly property color foreground:containsMouse || activeFocus ? textHover : textPrimary
     signal activated()
-    implicitWidth:Math.max(Theme.barIcon,Theme.barHeight*.8)
-    implicitHeight:Theme.barHeight
+    implicitWidth:Math.max(root.barSizing.icon,root.barSizing.height*.8)
+    implicitHeight:root.barSizing.height
     width:implicitWidth;height:implicitHeight
     hoverEnabled:true;activeFocusOnTab:true;cursorShape:Qt.PointingHandCursor
     Accessible.role:Accessible.Button
@@ -23,8 +25,11 @@ MouseArea {
     }
     Canvas {
         id:glyph
+        objectName:"barWidgetGlyph"
+        antialiasing:true
+        smooth:true
         anchors.centerIn:parent
-        width:Theme.barIcon;height:Theme.barIcon
+        width:root.barSizing.icon;height:root.barSizing.icon
         onWidthChanged:requestPaint()
         onHeightChanged:requestPaint()
         Connections {
@@ -62,5 +67,5 @@ MouseArea {
             }
         }
     }
-    Rectangle {anchors.centerIn:parent;width:parent.width;height:parent.height-4;radius:4;color:"transparent";border.width:root.activeFocus ? 1 : 0;border.color:root.foreground}
+    Rectangle {anchors.centerIn:parent;width:parent.width;height:parent.height-root.sized(4);radius:root.sized(4);color:"transparent";border.width:root.activeFocus ? 1 : 0;border.color:root.foreground}
 }

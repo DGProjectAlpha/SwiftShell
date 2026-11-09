@@ -1,5 +1,95 @@
 # Testing
 
+## Settings initial presentation — 2026-11-08
+
+Settings no longer maps a fully transparent UI while waiting for the placement
+helper. Actual HDMI-A-1 opening passed: contentOpacity=1, pageReady=true and
+blurRequested=true before placementReady, with final blur active and the native
+client on HDMI-A-1. The test closed Settings and restored focus. The reusable
+regression is `python tests/live/settings-first-frame.py --live --output HDMI-A-1`;
+it retains fullscreen preflight. The owner-requested run used the actual Settings
+app, without fixture windows. This is UI-state evidence, not a video benchmark.
+
+`scripts/check.sh` exited 0: 128 QML files, 31 QML suites, 261 passed,
+0 failed, 0 skipped; JavaScript, Python and installer checks passed.
+SettingsInteraction passed 26 cases, including actual component initialization
+before placement acknowledgement. See decision 0057 for cause and recovery.
+
+## Popout dismissal clears blur on the first click — 2026-11-08
+
+`python tests/live/popover-close.py --live --output HDMI-A-1` is the reusable native
+regression: real context-menu right-click, one click on the empty bar inset,
+then verify the popout is unmapped and no longer requests blur. The current
+owner-authorized HDMI-only manual run passed while fullscreen was active, using
+the same regression function without launching fixtures. The normal CLI still
+enforces fullscreen preflight. Cursor and original focus were restored.
+
+Observed final state: visible=false, blur=false, phase=closed, opacity=0,
+grab=false and interactive=false. The source fix replaces a Behavior-owned
+Animation.onFinished callback, which Qt does not emit, with actual opacity
+endpoint observation. Shared code covers both bars; this live check targeted
+HDMI-A-1 as requested. See decision 0056 for cause, scope and recovery.
+
+`scripts/check.sh` exited 0: 128 QML files; 31 QML suites, 260 passed,
+0 failed, 0 skipped; JavaScript/Python/installer checks passed. `git diff --check`
+passed. No source-only test is presented as compositor blur evidence; the live
+HDMI run verified the actual existing popout’s blur and mapped state.
+
+## Direct per-output bar rendering — 2026-11-08
+
+`scripts/check.sh` exited 0: 128 QML files, 31 QML suites, 260 passed,
+0 failed, 0 skipped, plus passing JavaScript/Python/installer checks.
+`python scripts/test-bar-text-native.py --target-sizes --output-dir
+/tmp/swiftshell-target-size-final` passed actual native controlled captures on
+both outputs at 28/32/42px. Parent transforms stay 1; final fonts/icons resize
+before drawing. Captures have the expected DPR-adjusted pixel dimensions.
+`python scripts/test-bar-settings-native.py` passed hidden save/restart checks;
+a later run with additional loaded-clock assertions was blocked by the fullscreen
+guard and remains pending. No test bypass was used.
+
+Read-only live state confirms the saved DP-1 32px bar now uses native-hinted text,
+font14/icon18 and transform1. HDMI-A-1 remains 28px, DPR1.25, font12/icon16,
+distance-field text and transform1. No monitor or bar preferences were edited.
+Physical-screen acceptance/hotplug remain manual. See decision 0055 for evidence,
+the corrected Canvas AA explanation, scope and source-only recovery.
+
+## Top bar scope and Settings section controls — 2026-11-08
+
+Final results: `scripts/check.sh` exited 0 (128 QML files checked; 31 QML suites,
+254 passed, 0 failed, 0 skipped; JavaScript, Python and installer checks passed).
+`python scripts/test-bar-settings-native.py` exited 0 on the local session.
+`git diff --check` passed. These are automated and hidden-native results, not a
+human visual acceptance claim.
+
+`scripts/check.sh` covers the actual BarPage controls through
+`tests/qml/tst_bar_scope.qml`: a real slider click targets HDMI-A-1 only; size,
+edge, space reservation, background, widget visibility, clock, Search label and
+fullscreen reveal leave DP-1 unchanged. All displays updates existing custom
+outputs and future inheritance, while preserving unrelated fields. Serialization
+and restore, legacy title visibility, focus changes and disconnection are checked.
+`tests/bar-layouts.test.js` covers sparse validation, invalid inputs, old records,
+size range and per-property shared inheritance. The existing module-drag suite
+still exercises full-page pointer ordering and context-menu visibility.
+
+`tests/qml/tst_settings_ux.qml` exercises Collapse all / Expand all below Search
+on all 13 pages, remembered disclosure states, isolation from other pages and
+collapse during an active search.
+
+Opt-in local native check: `python scripts/test-bar-settings-native.py`. It runs
+the fullscreen safety preflight before creating hidden BarWindows and Settings.
+It uses a temporary shell tree and temporary XDG config/state/cache directories.
+On the local Quickshell / Qt 6.12 / Hyprland 0.57.1 session, native construction,
+42px versus 28px bar geometry, independent reservation, atomic preferences save,
+collapsed categories and fresh-process readback passed. All audit windows stayed
+unmapped; no compositor dispatch or pointer/focus changes were made.
+
+NOT VERIFIED by those tests: visual legibility, human pointer use of every new
+control, actual compositor work-area changes at each size, physical hotplug and
+other hardware. Manual check: select one output in Apply to, resize it and confirm
+the other bar is unchanged; select All displays and resize again. Try individual
+background/widget/clock edits, then Collapse all / Expand all on several pages.
+Use shared settings for this display restores its fallback values.
+
 Automated logic, QML and installer checks are separate from native desktop acceptance. Dated local evidence below records actual Quickshell/Hyprland tests; older cloud-only entries remain historical and do not imply hardware coverage.
 
 ## Commands

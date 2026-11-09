@@ -130,8 +130,14 @@ function layoutOutputsValue(value, errors) {
         for (const key of Object.keys(entries)) {
             const item=entries[key];
             if (key.length>256 || /[\x00-\x1f]/.test(key) || ["__proto__","prototype","constructor"].indexOf(key)>=0 || !isPlainObject(item)) throw new Error();
-            if (["top","bottom","left","right"].indexOf(item.edge)<0 || typeof item.scale!=="number" || !Number.isFinite(item.scale) || item.scale<.75 || item.scale>1.5) throw new Error();
-            const entry={edge:item.edge,scale:item.scale};
+            const entry={};
+            if(item.edge!==undefined) {if(["top","bottom","left","right"].indexOf(item.edge)<0)throw new Error();entry.edge=item.edge}
+            if(item.scale!==undefined) {if(typeof item.scale!=="number" || !Number.isFinite(item.scale) || item.scale<.75 || item.scale>1.5)throw new Error();entry.scale=item.scale}
+            if(item.height!==undefined) {if(!Number.isInteger(item.height) || item.height<22 || item.height>78)throw new Error();entry.height=item.height}
+            for(const name of ["reserveSpace","showFocusedTitle","fullscreenPeek","searchLabel","use24Hour","showSeconds","showDate"]) {
+                if(item[name]!==undefined) {if(typeof item[name]!=="boolean")throw new Error();entry[name]=item[name]}
+            }
+            if(item.dateFormat!==undefined) {if(["short","weekday","iso"].indexOf(item.dateFormat)<0)throw new Error();entry.dateFormat=item.dateFormat}
             if(item.order!==undefined) {if(!moduleOrderValid(item.order))throw new Error();entry.order=normalizeModuleOrder(item.order)}
             if(item.sides!==undefined) {const failures=[];entry.sides=JSON.parse(moduleSidesValue(JSON.stringify(item.sides),failures));if(failures.length)throw new Error()}
             clean[key]=entry;

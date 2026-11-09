@@ -2,6 +2,8 @@ import QtQuick
 import "../logic/weather.js" as Weather
 Canvas {
     id:glyph
+    antialiasing:true
+    smooth:true
     property var code:null
     property bool daylight:true
     property color foreground:"white"

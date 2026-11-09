@@ -1,6 +1,8 @@
 import QtQuick
 Canvas {
     id:root
+    antialiasing:true
+    smooth:true
     property string kind:"cpu"
     property color foreground:"white"
     implicitWidth:16
