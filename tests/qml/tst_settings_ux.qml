@@ -191,6 +191,18 @@ TestCase {
         verify(window.mask.item!==null)
         window.destroy()
     }
+    function test_settings_first_buffer_contains_ui_before_placement_reply() {
+        const component=Qt.createComponent("../../shell/settings/SettingsWindow.qml")
+        compare(component.status,Component.Ready,component.errorString())
+        const window=component.createObject(test,{visible:true,placementReady:false})
+        verify(window!==null)
+        compare(findChild(window,"settingsContent").opacity,1)
+        verify(window.activePage()!==null)
+        compare(window.presentationDiagnostics().contentOpacity,1)
+        verify(window.presentationDiagnostics().pageReady)
+        compare(window.placementReady,false)
+        window.destroy()
+    }
     function test_one_slider_gesture_is_one_undo_step() {
         const component=Qt.createComponent("../../shell/settings/SettingsWindow.qml")
         compare(component.status,Component.Ready,component.errorString())

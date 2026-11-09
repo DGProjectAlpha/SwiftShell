@@ -25,6 +25,7 @@ FloatingWindow {
     property bool closing: false
     property int mapAttempts: 0
     property bool placementReady: false
+    function presentationDiagnostics() {return {contentOpacity:content.opacity,pageReady:pageStatus===Loader.Ready,blurRequested:WindowService.blurRegionApplied,placementReady:placementReady}}
     property int resizeRequests: 0
     property bool lastResizeAccepted: false
     readonly property int shadowInset: WindowService.maximized ? 0 : Theme.surfaceShadowInset
@@ -127,7 +128,7 @@ FloatingWindow {
         })
     }
     function capturePreview(path) {content.grabToImage(function(image){image.saveToFile(path)})}
-    function frameGeometry() {return {x:content.x,y:content.y,width:content.width,height:content.height,resizeInset:0,resizeBand:7,ready:placementReady}}
+    function frameGeometry() {return {x:content.x,y:content.y,width:content.width,height:content.height,resizeInset:0,resizeBand:7,ready:placementReady,presentation:presentationDiagnostics()}}
     function uiGeometry() {
         function box(item){const point=item.mapToItem(content.parent,0,0);return {x:point.x,y:point.y,width:item.width,height:item.height}}
         const sections=[],sliders=[]
@@ -222,19 +223,21 @@ FloatingWindow {
         anchors.fill: content
         source: "SettingsShadow.qml"
         active: !WindowService.maximized
-        visible: Theme.shadowOpacity > 0 && window.placementReady
+        visible: Theme.shadowOpacity > 0
         onStatusChanged: {
             if(status === Loader.Ready) SettingsModel.shadowAvailable=true
             else if(status === Loader.Error) SettingsModel.shadowAvailable=false
         }
     }
     Loader {
-        active: window.placementReady && WindowService.blurAvailable && SettingsStore.panelBlur > 0
+        active: window.visible && WindowService.blurAvailable && SettingsStore.panelBlur > 0
         sourceComponent: Component { BlurAdapter { targetWindow:window;surface:content } }
     }
     Rectangle {
         id: content
-        opacity:window.placementReady ? 1 : 0
+        objectName:"settingsContent"
+        // The prepare rule already places this toplevel. Draw the complete UI
+        // in its first buffer instead of mapping a blank, auto-blurred window.
         anchors.fill: parent
         anchors.margins: window.shadowInset
         radius: WindowService.maximized ? 0 : Theme.radius

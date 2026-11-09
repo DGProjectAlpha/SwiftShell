@@ -1,5 +1,20 @@
 # Testing
 
+## Settings initial presentation — 2026-11-08
+
+Settings no longer maps a fully transparent UI while waiting for the placement
+helper. Actual HDMI-A-1 opening passed: contentOpacity=1, pageReady=true and
+blurRequested=true before placementReady, with final blur active and the native
+client on HDMI-A-1. The test closed Settings and restored focus. The reusable
+regression is `python tests/live/settings-first-frame.py --live --output HDMI-A-1`;
+it retains fullscreen preflight. The owner-requested run used the actual Settings
+app, without fixture windows. This is UI-state evidence, not a video benchmark.
+
+`scripts/check.sh` exited 0: 128 QML files, 31 QML suites, 261 passed,
+0 failed, 0 skipped; JavaScript, Python and installer checks passed.
+SettingsInteraction passed 26 cases, including actual component initialization
+before placement acknowledgement. See decision 0057 for cause and recovery.
+
 ## Popout dismissal clears blur on the first click — 2026-11-08
 
 `python tests/live/popover-close.py --live --output HDMI-A-1` is the reusable native
