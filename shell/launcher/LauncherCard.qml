@@ -46,13 +46,14 @@ Rectangle {
             if(immediate) providers.push(immediate);
             const clipboard=DesktopTools.clipboardResults(query)
             for(const row of clipboard)providers.push(row)
-            const windows=LauncherModel.windowResults(query)
+            // Generic providers are fallbacks; explicit window commands still win.
+            const windows=(!found.length || /^windows?(?:\s|$)/i.test(query)) ? LauncherModel.windowResults(query) : []
             for(const row of windows)providers.push(row)
             if(/^(screenshot|capture)(?:\s|$)/i.test(query)) {
                 if(DesktopTools.regionAvailable)providers.unshift({kind:"screenshot",id:"capture-region",name:"Screenshot a region",detail:"Select an area · Preview, copy or save PNG",mode:"region"})
                 if(DesktopTools.screenshotAvailable)providers.push({kind:"screenshot",id:"capture-output",name:"Screenshot this display",detail:"Preview, copy or save PNG",mode:"output"})
             }
-            const controls=Navigation.filterControls(query);
+            const controls=found.length ? [] : Navigation.filterControls(query);
             const used={};
             for(let index=0;index<controls.length && providers.length<6;index++) {
                 const control=controls[index];
@@ -62,7 +63,7 @@ Rectangle {
             }
             for(let i=0;i<quickActions.length;i++) {
                 const action=quickActions[i];
-                if(action.name.toLowerCase().indexOf(query.toLowerCase())>=0 || action.id===query.toLowerCase())
+                if(!found.length && (action.name.toLowerCase().indexOf(query.toLowerCase())>=0 || action.id===query.toLowerCase()))
                     providers.push(action);
             }
             if(!found.length && !providers.length) {

@@ -47,3 +47,15 @@ console.log('Spotlight saved opening modes preserve existing favorites and rejec
 assert.deepEqual(launcher.reorderFavorite(["a.desktop","missing.desktop","b.desktop","c.desktop"],"a.desktop","c.desktop"),["missing.desktop","b.desktop","c.desktop","a.desktop"]);
 assert.deepEqual(launcher.reorderFavorite(["a.desktop","b.desktop","c.desktop"],"c.desktop","a.desktop"),["c.desktop","a.desktop","b.desktop"]);
 assert.deepEqual(launcher.reorderFavorite(["a.desktop"],"unknown.desktop","a.desktop"),["a.desktop"]);
+
+// Short app-name queries remain useful; loose description subsequences do not.
+const prefixApps=[
+    {id:"weather.desktop",name:"Weather",comment:"drawings",keywords:["forecast"]},
+    {id:"org.example.Discord.desktop",name:"Discord",comment:"Chat"},
+    {id:"disk.desktop",name:"Disk Usage",comment:"Storage"}
+];
+for(const query of ["dis","DIS"," disc ","discord","dsc"])
+    assert.equal(launcher.rank(prefixApps,query)[0].name,"Discord",query);
+assert.deepEqual(launcher.rank([prefixApps[0]],"dis"),[]);
+assert.equal(launcher.rank([prefixApps[0]],"forecast")[0].name,"Weather");
+console.log('Spotlight app prefixes, case folding and name fuzzy matches outrank unrelated metadata');

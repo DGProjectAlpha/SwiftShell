@@ -105,6 +105,32 @@ TestCase {
         tryCompare(popup,"opened",false);
         compare(Services.SettingsStore.pinnedIds.length,0);
     }
+    function test_short_app_prefix_takes_selection_before_settings() {
+        Services.LauncherModel.applications=[
+            {id:"discord.desktop",name:"Discord",icon:""},
+            {id:"disk.desktop",name:"Disk Usage",icon:""}
+        ];
+        card.focusInput();
+        keyClick(Qt.Key_D);
+        keyClick(Qt.Key_I);
+        keyClick(Qt.Key_S);
+        compare(Services.LauncherModel.query,"dis");
+        compare(card.appRows[0].name,"Discord");
+        compare(card.providerRows.length,0);
+        compare(card.selectedRow().kind,"application");
+        compare(card.selectedRow().id,"discord.desktop");
+        // A settings-only query still reaches its exact control.
+        Services.LauncherModel.setQuery("weather updates");
+        compare(card.appRows.length,0);
+        compare(card.selectedRow().kind,"setting-result");
+        compare(card.selectedRow().controlId,"weatherRefresh");
+    }
+    function test_calculator_keeps_priority_over_matching_app() {
+        Services.LauncherModel.applications=[{id:"calc.desktop",name:"2+2",icon:""}];
+        Services.LauncherModel.setQuery("2+2");
+        compare(card.appRows.length,1);
+        compare(card.selectedRow().kind,"calculation");
+    }
     function test_calculator_and_web_fallback_are_local_rows() {
         Services.LauncherModel.setQuery("2+2");
         compare(card.providerRows[0].kind,"calculation");
