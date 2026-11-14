@@ -259,7 +259,7 @@ function fuzzy(text, query) {
     return last - first <= query.length + 6;
 }
 
-function fieldScore(field, query, base) {
+function fieldScore(field, query, base, allowFuzzy) {
     const text = asText(field).toLowerCase();
     if (text === "")
         return 0;
@@ -274,7 +274,7 @@ function fieldScore(field, query, base) {
     }
     if (text.indexOf(query) !== -1)
         return base + 100;
-    if (fuzzy(text, query))
+    if (allowFuzzy !== false && fuzzy(text, query))
         return base + 40;
     return 0;
 }
@@ -283,10 +283,10 @@ function bestScore(app, query) {
     const chunks = [
         fieldScore(app.name, query, 1000),
         fieldScore(app.id, query, 800),
-        fieldScore(app.genericName, query, 500),
-        fieldScore(app.comment, query, 300),
-        fieldScore(asStringList(app.keywords).join(" "), query, 200),
-        fieldScore(asStringList(app.categories).join(" "), query, 100),
+        fieldScore(app.genericName, query, 500, false),
+        fieldScore(app.comment, query, 300, false),
+        fieldScore(asStringList(app.keywords).join(" "), query, 200, false),
+        fieldScore(asStringList(app.categories).join(" "), query, 100, false),
     ];
     let best = 0;
     for (let i = 0; i < chunks.length; i++) {

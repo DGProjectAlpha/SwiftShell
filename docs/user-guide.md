@@ -79,6 +79,13 @@ not publishing an icon will not appear merely because it has a background proces
 
 ### Spotlight Search
 
+Ordinary searches prioritize matching applications: short names such as `dis`
+find Discord before Settings or open-window suggestions. Settings, window and web
+results provide fallbacks when no app matches. Calculator/conversion results and
+explicit `clip`, `window` and `capture` commands retain their direct behavior.
+App names support partial/fuzzy matching; descriptions and categories require
+literal matches to avoid unrelated suggestions.
+
 After an explicit shortcut handoff, Super+Space opens Spotlight. Use All apps, Favorites or Recent; choose the default
 opening view in **Settings → Spotlight Search**. Right-click an app or use Ctrl+D
 to add/remove a favorite. In Favorites, drag tiles to arrange them; Alt+Shift+H/L
